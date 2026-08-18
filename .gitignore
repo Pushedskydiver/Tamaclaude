@@ -1,7 +1,7 @@
 # Build output
 dist/
 *.tsbuildinfo
-firmware/build/
+**/firmware/build/
 
 # Coverage
 coverage/
@@ -34,3 +34,6 @@ packs/*
 !.claude/agents/**
 !.claude/research/
 !.claude/research/**
+
+# Rendered animation frames — regenerate with tools/svg2frames.ts
+out/

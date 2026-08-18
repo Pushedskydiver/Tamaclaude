@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+  <!--
+    Clawd: typing (Edit / Write / NotebookEdit)
+
+    Generated against assets/clawd/base.svg under the contract in
+    docs/ANIMATION.md: every element of the base geometry appears below at its
+    original coordinates and colours, untouched. All motion is CSS applied by
+    ID — the markup carries no class attributes and no transform attributes, so
+    the base can be re-derived by deleting the <style> block and the #fx group.
+
+    Stage is 21x25 units; the character keeps its own 0..15 x 0..16 space. At
+    8 device pixels per unit that renders 168x200, which sits inside the 172px
+    panel width with room to spare.
+
+    Loop: 1.0s at 8fps = 8 frames. Every sub-animation period divides 1.0s
+    exactly (0.25s, 0.5s, 1.0s) so frame 8 is identical to frame 0 and the loop
+    is seamless. Nothing runs at 0.125s: that is the frame interval itself, so
+    it would sample at the same phase every frame and read as static.
+
+    No rotation anywhere. The base is axis-aligned rects with hard edges, and a
+    rotated edge is diagonal — it cannot land on the pixel grid at any render
+    scale, so it always antialiases into a soft smear against an otherwise
+    razor-sharp sprite. Every transform here lands on a whole device pixel.
+  -->
+  <defs>
+    <style>
+      /* Sampling at 8fps means the fastest perceivable cycle is 0.25s — two
+         frames, alternating. See the note above before shortening anything. */
+      #master-group {
+        animation: body-jitter 0.25s infinite steps(1);
+      }
+
+      /* Claws tap by translating a whole art pixel, not by rotating. Half a
+         cycle out of phase, so one is down while the other lifts. */
+      #left-arm,
+      #right-arm {
+        animation: tap-claw 0.25s infinite steps(1);
+      }
+      #right-arm {
+        animation-delay: -0.125s;
+      }
+
+      /* Eyes track across an imaginary line of code and snap back. */
+      #left-eye,
+      #right-eye {
+        animation: read-line 0.5s infinite steps(1);
+      }
+
+      /* Output rising off each claw.
+         `linear`, not `steps(8)`. A timing function applies per keyframe
+         interval, never across the whole animation, so steps(8) subdivided
+         each opacity segment instead of quantising the rise — it sampled the
+         75%-88% segment at 96% of the way through and rendered a bit at
+         opacity 0.125, the exact intermediate colour the previous comment here
+         claimed was designed out. What actually keeps the rise on the grid is
+         arithmetic: 14 units over 8 frames is 1.75 units, and 1.75 x 8 device
+         pixels per unit is 14 whole pixels per frame. */
+      #fx-data-bits rect {
+        animation: rise 1s infinite linear;
+      }
+      /* Six distinct phases, all multiples of the 0.125s frame interval so
+         each one samples cleanly. Listed individually rather than with an
+         nth-child stride: a stride hands the left and right streams the same
+         delay set, and the two sides then rise as exact mirror images. */
+      #fx-data-bits rect:nth-child(1) { animation-delay: 0s; }
+      #fx-data-bits rect:nth-child(2) { animation-delay: -0.375s; }
+      #fx-data-bits rect:nth-child(3) { animation-delay: -0.75s; }
+      #fx-data-bits rect:nth-child(4) { animation-delay: -0.125s; }
+      #fx-data-bits rect:nth-child(5) { animation-delay: -0.5s; }
+      #fx-data-bits rect:nth-child(6) { animation-delay: -0.875s; }
+
+      @keyframes body-jitter {
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(0.5px); }
+        100% { transform: translateY(0); }
+      }
+
+      @keyframes tap-claw {
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(1px); }
+        100% { transform: translateY(0); }
+      }
+
+      @keyframes read-line {
+        0%   { transform: translateX(0); }
+        50%  { transform: translateX(1px); }
+        100% { transform: translateX(0); }
+      }
+
+      /* Every keyframe percentage lands on an eighth, because frames sample
+         at eighths. 88% did not, which is how the 0.125 ghost got in. Opacity
+         is a hard pop rather than a fade: an intermediate alpha becomes an
+         intermediate colour once the palette is quantised. */
+      @keyframes rise {
+        0%    { transform: translateY(0); opacity: 1; }
+        75%   { opacity: 1; }
+        87.5% { opacity: 0; }
+        100%  { transform: translateY(-14px); opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+
+  <!-- ── additive effects: not part of the base geometry ───────────────── -->
+  <!-- Two streams, one above each claw, at x=0.5 and x=13.5. The torso spans
+       x 2..13, so neither stream ever crosses the body or the eyes — the
+       previous version rose straight through Clawd's face. Third colour group,
+       same pattern as the base's two, so a pack recolours effects with one
+       fill override. -->
+  <g id="fx-data-bits" fill="#7EE787">
+    <rect x="0.5" y="8" width="1" height="1"/>
+    <rect x="0.5" y="8" width="1" height="1"/>
+    <rect x="0.5" y="8" width="1" height="1"/>
+    <rect x="13.5" y="8" width="1" height="1"/>
+    <rect x="13.5" y="8" width="1" height="1"/>
+    <rect x="13.5" y="8" width="1" height="1"/>
+  </g>
+</svg>
