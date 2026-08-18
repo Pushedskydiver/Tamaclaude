@@ -3,6 +3,10 @@ import type { PackManifest } from '@tamaclaude/packs';
 import { packPalette } from '@tamaclaude/packs';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
 
+// Panel band geometry, re-exported so consumers have one import path and
+// `tools/panel-mock.ts` cannot drift from the renderer it is mocking.
+export * from './layout.js';
+
 /**
  * The renderer: a virtual 172x320 screen composed entirely on the host.
  *
