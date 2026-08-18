@@ -30,17 +30,34 @@ bulk transfer.
 | ------------------------------- | ----------: | -------: |
 | Full screen 172×320 RGB565      |     110,080 | 1.1 MB/s |
 | Dirty-rect, 96×96 sprite region |      18,432 | 184 KB/s |
-| Same, RLE'd at ~14:1            |      ~1,300 | ~13 KB/s |
 
-Full-screen uncompressed does **not** fit. Dirty-rect alone clears the budget
-with roughly 4-5x headroom; adding RLE takes that to 54-77x.
+Full-screen uncompressed does **not** fit.
 
-The ~14:1 ratio is **upstream's number, not ours** — it measures their entire
-on-flash sprite corpus (13MB down to ~900KB), not a dirty rectangle of our
-renderer's output, and nothing here has measured a compression ratio yet.
-Dirty-rect is what the budget actually depends on; RLE is margin until it is
-measured. Both are Stage 1 work in `BUILD_PLAN.md` and neither exists in
-`packages/protocol` today.
+### What it actually costs — measured
+
+`tools/measure-compression.ts` runs the real codec over the real frames of
+every animation in the repo, at 8fps, including a 9-byte rect header:
+
+| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio |
+| ------------ | ---------------: | ----------: | --------: | ----: |
+| `gym`        |            556 B |     1,502 B |  4.4 KB/s | 121:1 |
+| `thinking`   |            681 B |     1,870 B |  5.4 KB/s |  99:1 |
+| `typing`     |          1,422 B |     1,510 B | 11.4 KB/s |  47:1 |
+| `bouldering` |          1,604 B |     1,674 B | 12.8 KB/s |  42:1 |
+
+The busiest animation uses **1.8% of a 700 KB/s floor**. That retires the worry
+that a full-stage animation would blow the budget: `bouldering` scrolls its
+entire background every frame, which is the same shape as the road bike, and it
+is the most expensive of the four by a small margin.
+
+These numbers are ours. An earlier version of this section quoted ~14:1, which
+is upstream's figure for their whole on-flash sprite corpus and was never a
+measurement of anything here. Real pixel art on a dirty rect does far better,
+because a dirty rect is mostly flat background.
+
+The codec falls back to raw whenever RLE would be larger, so a future
+photographic asset cannot quietly double a frame — it can only cost raw plus
+one byte.
 
 ### The cost, and its mitigation
 
