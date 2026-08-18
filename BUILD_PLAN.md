@@ -69,7 +69,10 @@ The whole product, minus hardware.
 
 - [ ] Virtual screen: 172×320 RGB565 framebuffer in TS
 - [ ] `@napi-rs/canvas` sink (headless/tests) + browser `<canvas>` sink (dev harness)
-- [ ] Dev harness: local web page, hot reload, scrub through states, fake event injection
+- [x] Dev harness: local web page, scrub through frames, switch layout and
+      orientation live (`pnpm harness`)
+- [ ] Dev harness: hot reload, and fake event injection — the second needs the
+      daemon's state machine, so it lands with Stage 3 rather than here
 - [ ] Departure Mono (SIL OFL) bitmap rendering, nearest-neighbour, `imageSmoothingEnabled = false`
 - [ ] Scene primitives: sprite, text, badge, clock, progress
 - [ ] Pack loader + manifest schema
