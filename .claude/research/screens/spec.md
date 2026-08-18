@@ -1,6 +1,7 @@
 # Screen catalogue — spec
 
-**Status:** draft for grilling. Freeze target **Tue 25 Aug 2026**.
+**Status:** revision 2, after one `spec-grill` discovery round. Freeze target
+**Tue 25 Aug 2026**. §12 records what the grill changed and what it killed.
 **Governs:** the ten remaining animations, the daemon's state machine, and the
 panel layout. Everything downstream of the freeze reads this file.
 
@@ -42,7 +43,11 @@ tinted by state, not separately animated: one shared frame, recoloured.
 
 ## 3. Session model
 
-A session is `{ id, origin, state, tool, lastEventAt, subagents }`.
+A session is
+`{ id, origin, state, tool, startedAt, lastEventAt, subagents, oneshotUntil }`.
+
+`startedAt` drives the tier-2 tie-break; `oneshotUntil` is the expiry a
+pre-emptive oneshot needs and previously had nowhere to live.
 
 `origin` is `local` or a remote host name. Jamie runs a Claude Code agent on a
 Raspberry Pi media server, and that session appearing on the desk — _your house
@@ -56,16 +61,29 @@ Sessions are evicted after **10 minutes** with no event.
 
 Evaluated on every event. First match wins.
 
-1. **Pre-emptive oneshots** — `DONE` and `COMPACTING` seize the stage for their
-   duration regardless of anything else, then resolution runs again. These are
-   the payoff and the punctuation; interrupting them defeats the point.
+1. **Pre-emptive oneshots** — `DONE` and `COMPACTING` seize the stage until
+   `oneshotUntil`, regardless of anything else. These are the payoff and the
+   punctuation; interrupting them defeats the point.
+
+   **On expiry the session transitions to `IDLE`, not back to itself.** Without
+   that, tier 1 re-matches on the next evaluation and one finished session
+   loops the Model 3 forever.
+
+   **Repeated `DONE`s inside one window collapse.** A second `Stop` while
+   `oneshotUntil` is in the future extends nothing and re-triggers nothing —
+   four sessions finishing in a row is one Model 3, not eight seconds of them.
+
 2. **Needs you** — awaiting permission, or failed, or idle 60s+ awaiting input.
 3. **Working** — most recently active.
 4. **Thinking**.
 5. **Idle**, then **asleep**, then **disconnected**.
 
-Within a tier, most recent wins. Ties break to the longest-running session, on
-the grounds that it is the one you have most likely forgotten about.
+Within tier 2, **oldest wins**. §1 says the display exists to surface what is
+costing you time by going unseen, and an eight-minute-old permission prompt is
+costing more than one raised ten seconds ago. Within every other tier, most
+recent wins.
+
+This needs `startedAt` on the session record, which §3 previously omitted.
 
 ## 5. State machine
 
@@ -82,7 +100,9 @@ the grounds that it is the one you have most likely forgotten about.
 | `ASLEEP`           | No session for 5 min          | Curled up                               | 5             |
 | `DISCONNECTED`     | No host                       | Static message                          | 5             |
 
-`WORKING` sub-states, keyed on `PreToolUse.tool_name`:
+`WORKING` sub-states. The first three rows are **session conditions**, checked
+before the tool table and in this order; the rest key on `PreToolUse.tool_name`,
+first match wins:
 
 | Tools                         | Animation                           | Why it fits Jamie                            |
 | ----------------------------- | ----------------------------------- | -------------------------------------------- |
@@ -96,18 +116,45 @@ the grounds that it is the one you have most likely forgotten about.
 
 ## 6. Build order
 
-Art is the critical path with a 2-day hard time-box each, so the catalogue is
-tiered and the tiers are a shipping decision, not a wish list.
+Art is the critical path. The tiers are a shipping decision, not a wish list.
 
-- **Tier A — must ship (7):** idle, asleep, thinking, typing ✅, bouldering,
-  gym, **Model 3**. This set alone is a device worth giving.
-- **Tier B — target (4):** wizard, board game, sweeping, dizzy. Takes it to the
-  11 in `BUILD_PLAN.md`.
+- **Tier A — must ship (9):** idle, asleep, thinking, typing ✅, bouldering,
+  gym, **Model 3**, **permission sign**, **confused**.
+- **Tier B — target (4):** wizard, board game, sweeping, dizzy.
 - **Tier C — stretch (2):** road bike, beacon. Cut without regret.
 
-The Model 3 is in Tier A deliberately. It is the once-per-turn payoff and the
-single most personal frame in the device; a version without it is worse than a
-version missing three working animations.
+The permission sign and the confused stare were absent from every tier in
+revision 1 — the two screens that _are_ §1's governing principle had no art
+budget at all. They are Tier A now. `WAITING` in particular may be the
+most-seen screen on the device, since Claude Code asks for input constantly.
+
+**The 2-day-per-animation box was the wrong model.** Generation is
+embarrassingly parallel — `base.svg` plus a `PLANS.md` entry produces an SVG
+independently per animation, and Alex runs concurrent sessions. The bottleneck
+is **review at true size**, which is serial and needs the harness. So:
+
+- Generate in batches, review in batches, against `PLANS.md`'s "Not wanted"
+  line rather than against taste.
+- The budget is **8 review days** across Stages 4–5, not 2 days per animation.
+- If Tier A is not complete by **Sun 6 Sep**, Tier B is abandoned in full
+  rather than partially. Eight good screens beat nine plus four rough ones.
+
+Two Tier A entries are secretly larger than one animation each, and both need
+their scope written down before the freeze:
+
+**Model 3** is a new multi-rect object with no base geometry to animate against,
+whose entire value is reading as _a Model 3_ rather than "a red car", plus a
+full-stage translate, plus a non-looping oneshot format the pipeline has never
+produced. Four novel problems in one slot, on the item `BUILD_PLAN.md` marks
+"do not cut" — which disarms the only mitigation the risk register names.
+**Fallback, decided now:** if it is not landing, ship a static red-car frame
+with Clawd beside it and the quip. That is 90% of the joke at 10% of the risk,
+and it is a decision made calmly today rather than at midnight on 22 September.
+
+**Idle** is two loops (idle, asleep) plus **Penny**, who is a second character
+designed from photographs and was filed in the easter-egg table as "one
+background prop". Penny is Tier A art, not set dressing, and she is the
+reason idle is budgeted as three slots rather than one.
 
 ## 7. Quips
 
@@ -120,16 +167,26 @@ Two tiers, because the tiering _is_ the joke.
 | `FAILED`           | `Turrrby, Turrrby, Turrrby` |
 | `NEEDS_PERMISSION` | `Wansum?`                   |
 
-**Idle pool** — surfaced rarely, unprompted, roughly 1 idle loop in 20:
-`your mum`, `Beajilpig`, `Vaglig`, `Burst Pistol`.
+**Idle pool** — surfaced rarely and unprompted: `your mum`, `Beajilpig`,
+`Vaglig`, `Burst Pistol`.
 
-Quips render in the message band for 4s. Both tiers live in the pack, so Alex's
-pack carries different text and no code changes.
+**Cadence is wall-clock, never loop counts.** Revision 1 said "1 idle loop in
+20", which at a 1.0s loop is one every twenty seconds — 180 airings an hour of
+four jokes, in a document whose §8 opens "rare by design". The rule is: **at
+most one idle quip every 3 minutes**, and never twice in a row from the same
+entry. Quips render in the message band for 4s.
+
+Mapped quips are keyed by **state**, not by hook name. This matters because of
+§11.6: if `PermissionRequest` turns out not to exist and the screen rehomes onto
+`Notification`, a state-keyed pack survives untouched and a hook-keyed pack
+breaks. `packs/example/manifest.json` currently keys by hook and must be
+changed before the freeze.
 
 ## 8. Easter eggs
 
-Rare by design. Constant references stop being funny; that is the entire
-argument for keeping the personal material as set dressing rather than system.
+Rare by design, and rarity is measured in **minutes of wall clock**, not loop
+counts. Constant references stop being funny; that is the entire argument for
+keeping the personal material as set dressing rather than system.
 
 | Egg                        | Trigger                               | Cost                   |
 | -------------------------- | ------------------------------------- | ---------------------- |
@@ -155,8 +212,11 @@ gitignored pack.
 | Idle → asleep                 | 5 min            |
 | Session eviction              | 10 min           |
 
-All configurable via the pack manifest except frame rate, which is fixed by the
-animation format.
+**None of these are pack-configurable.** Revision 1 claimed they were, which
+would have meant new schema, validation and tests for knobs nobody will ever
+turn — nobody retunes a 60-second threshold via JSON on a birthday present. They
+are constants in `packages/daemon`. The pack manifest stays `name`, `palette`,
+`quips` plus props and logo.
 
 ## 10. Explicitly out of scope for v1
 
@@ -169,21 +229,81 @@ animation format.
 
 ## 11. Open questions
 
-1. **Is one hero plus a strip actually better than upstream's four sprites?**
-   Upstream shows four concurrent Clawds and it demonstrably works on the same
-   panel. This spec argues that at 172px wide it reads as mush and doubles the
-   art, but that is an assertion — upstream is evidence against it.
-2. **Is `DONE` pre-empting correct?** If Jamie has four sessions finishing in a
-   row, the stage is a Model 3 on a loop for eight seconds while real work goes
-   unshown. Should repeated `DONE`s within a window collapse into one?
-3. **Does `WAITING` at 60s fire too often?** Claude Code asks for input
-   constantly. This could be the single most-seen screen, which would make the
-   confused animation Tier A rather than B.
-4. **Is the message band worth 64px?** It is a fifth of the panel for text that
-   is empty most of the time. The alternative is a taller stage and quips
-   overlaid on it.
-5. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
-6. **`PermissionRequest`, `StopFailure`, `SubagentStart` are unverified**
-   against live Claude Code docs (`BUILD_PLAN.md` Stage 3). If
-   `PermissionRequest` does not exist, the `Wansum?` screen loses its trigger
-   and needs rehoming onto `Notification`.
+Three of revision 1's six were answerable by arithmetic or measurement rather
+than opinion, and are now answered. What remains:
+
+1. **Can these animations actually be made?** The base geometry has no joints —
+   four 1x2 leg rects and two 2x2 claws — and rotation is banned. Revision 1
+   specified a gear that cannot turn, a broom that cannot swing and a reach with
+   no elbow. `docs/ANIMATION.md` now documents **pose swapping**: draw the
+   rotated states as additional axis-aligned rects and toggle them by opacity,
+   which is how pixel art has always done rotation. That is a plausible answer,
+   not a proven one — **the next animation built should be `thinking`,
+   specifically because it is the one that most needs it.**
+2. **What is the worst-case dirty area per frame?** The Model 3 crossing the
+   stage and the road bike's scrolling background dirty the full 168x200 every
+   frame: ~537 KB/s uncompressed against a 700KB–1MB/s ceiling. RLE on flat
+   pixel art should rescue it, but nothing here has measured a ratio, and the
+   14:1 figure is upstream's whole-corpus number. Stage 1 must measure before
+   two full-stage animations are committed to.
+3. **Is the message band worth 64px** — a fifth of the panel for text that is
+   empty most of the time?
+4. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
+5. **`PermissionRequest`, `StopFailure`, `SubagentStart` and `LSP` are
+   unverified** against live Claude Code documentation. `LSP` in particular
+   appears nowhere else in this repo and may not be a tool name at all. If
+   `PermissionRequest` does not exist, `NEEDS_PERMISSION` rehomes onto
+   `Notification` — which then drives both it and `WAITING` with no
+   disambiguator, so that fallback needs designing, not just naming.
+
+### Answered since revision 1
+
+**Four concurrent sprites are arithmetically impossible, not merely ugly.**
+Revision 1 argued "43px each reads as mush", which is a number nobody would
+build. The real constraint is `docs/ANIMATION.md`'s pixel-exactness rule — a
+translation is only exact when `distance x scale / frameCount` is whole. Typing's
+data bits rise 14 units over 8 frames:
+
+| Scale | Sprite | Four-up | Bits move     | Legal?                       |
+| ----- | ------ | ------- | ------------- | ---------------------------- |
+| 2     | 30px   | 120px   | 3.5 px/frame  | no — sub-pixel               |
+| 4     | 60px   | 240px   | 7.0 px/frame  | yes, but 240px > 172px panel |
+| 8     | 120px  | 480px   | 14.0 px/frame | hero only                    |
+
+The only legal scales are 4 and 8; four-up needs 240px on a 172px panel. Two-up
+at scale 4 _does_ fit, and §10 records why it was still not taken.
+
+**Quip and easter-egg cadence** was specified in loop counts, which made "rare"
+mean every twenty seconds. Now wall-clock. See §7.
+
+**`WAITING` frequency** decided the tier rather than staying an open question:
+it is Tier A precisely because it is likely the most-seen screen.
+
+## 12. What the grill changed
+
+Recorded rather than absorbed, so the freeze is auditable.
+
+**Killed outright:** the "43px reads as mush" argument, replaced by a proof;
+pack-configurable timings; loop-count rarity.
+
+**Added:** `NEEDS_PERMISSION` and `WAITING` to Tier A (they had no art budget
+anywhere despite being the governing principle); a default row on the `WORKING`
+table (every unlisted tool previously mapped to nothing); `startedAt` and
+`oneshotUntil` on the session record; oneshot expiry and collapse rules; the
+Model 3 fallback; Penny as Tier A art rather than set dressing; pose swapping in
+`docs/ANIMATION.md`; a stage height check in `tools/svg2frames.ts`.
+
+**Still open and honestly so:** whether pose swapping actually works, and the
+dirty-area budget. Both are measurements, and both are scheduled before they
+can hurt.
+
+## 13. The one thing to do first
+
+**Book the afternoon of Mon 24 Aug in the dev harness**, the day before the
+freeze. Three questions — hero-vs-two-up, message band height, strip height —
+are all answerable by looking at real frames at true size for an hour, and are
+otherwise frozen as opinions. `docs/ANIMATION.md` is explicit that judging at
+the wrong size means redoing eleven animations instead of one.
+
+The remaining unknowns are measurements scheduled to happen before they can
+hurt. That is the difference between a freeze and a guess.

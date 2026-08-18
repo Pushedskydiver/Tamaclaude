@@ -54,6 +54,34 @@ problem the approach exists to solve.
 New elements _may_ be added for props and effects — a hammer, sparks, floating
 data bits, a wizard hat. Those are additive and don't touch the base geometry.
 
+## Articulation without rotation
+
+Rotation is banned, and the base geometry has no joints — four 1x2 leg rects and
+two 2x2 claws. That rules out a great deal on its face: a gear that cannot turn,
+a broom that cannot swing, a reach with no elbow.
+
+The way out is the one pixel art has always used. **Rotation is drawn, not
+transformed.** A turning gear is two or three gear shapes swapped in sequence; a
+swinging broom is three broom positions; a reaching claw is two claw positions.
+Discrete poses, toggled by opacity, at 8fps.
+
+Under the contract that means:
+
+- Every base element stays present at its original coordinates and colours.
+- A base element **may be hidden** for part of a loop — `opacity: 0` is a
+  keyframe on an existing element, which the contract already permits.
+- Alternate poses may be **added as new elements**, provided they are
+  axis-aligned rects on the unit grid and inherit their fill from one of the
+  colour groups, so a pack recolour still reaches them.
+
+So a claw reaching up is: hide `#left-arm`, show `#left-arm-raised` — a new rect
+inside `#body-color-group`. The character stays consistent because the palette,
+the grid and the silhouette language are unchanged; only the pose is new.
+
+Prefer translation where translation will do. Reach for pose swapping when the
+motion is genuinely rotational, and keep the pose count to two or three — every
+pose is drawing, which is the thing this pipeline exists to minimise.
+
 ## Canvas conventions
 
 The character occupies `0..15` horizontally and `0..16` vertically. Animations
@@ -63,10 +91,14 @@ the same 15x16 crab a 45x45 stage with headroom for floating data bits.
 
 Keep the character's own coordinates untouched. Grow the stage instead.
 
-**The stage has a ceiling.** At 8 device pixels per unit the panel's 172px width
-allows 21.5 units. `typing.svg` uses 21. Upstream's 45-unit example would render
-360px and be clipped in half, so treat it as an illustration of the technique,
-not of the budget. `tools/svg2frames.ts` warns when a stage exceeds the panel.
+**The stage has a ceiling in both axes.** At 8 device pixels per unit the
+panel's 172px width allows 21.5 units, and the stage band is 200px tall, which
+allows 25. `typing.svg` uses exactly 21 x 25 and that is the fixed stage size —
+the panel's other three bands (status, session strip, message) occupy the
+remaining 120px and a taller stage silently eats them. Upstream's 45-unit
+example would render 360px and be clipped in half, so treat it as an
+illustration of the technique, not of the budget. `tools/svg2frames.ts` warns
+when a stage exceeds either bound.
 
 ## Pipeline
 
