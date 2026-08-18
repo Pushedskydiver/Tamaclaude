@@ -25,11 +25,20 @@ non-artist can build this at all. See `tools/gemini_animate.py` and
 
 Clawd — the crab — is Claude's mascot and is used here in the same spirit.
 
-**What is not shared:** Tamaclaude renders frames on the host in TypeScript and
-treats the ESP32 as a dumb blitter, where Clawd Tank renders on-device in C
-with LVGL and maintains a separate SDL2 simulator. No upstream code or SVG
-assets are copied — the architecture, the implementation and the artwork here
-are our own. The debt is to the idea and the method.
+**What we use directly.** `assets/clawd/base.svg` is upstream's
+`assets/svg-animations/clawd-static-base.svg`, unmodified and byte-identical,
+used under the MIT licence. It is the canonical Clawd geometry that every
+animation in this repo is generated against — a 15x16 integer pixel grid with
+stable element IDs and colour-grouped fills. Reproducing it independently would
+produce a worse file and a needlessly different character.
+
+**What is ours.** Every animation built on that geometry, the entire host-side
+renderer and daemon, the wire protocol, the firmware, and all pack content. No
+upstream firmware, host or tooling code is used. Tamaclaude renders frames on
+the host in TypeScript and treats the ESP32 as a dumb blitter, where Clawd Tank
+renders on-device in C with LVGL and maintains a separate SDL2 simulator.
+
+The debt is to the idea, the method, and one very well-made SVG.
 
 ## Other
 
