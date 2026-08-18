@@ -45,6 +45,8 @@ const SCALE = 8;
  * Playwright never enters the runtime dependency graph. Keep in step by hand.
  */
 const PANEL_WIDTH = 172;
+/** Stage band height. The other three panel bands occupy the remaining 120px. */
+const STAGE_HEIGHT = 200;
 
 type Options = {
   readonly fps: number;
@@ -67,18 +69,20 @@ function seekAnimations(elapsed: number): void {
   });
 }
 
-async function renderFrames(
-  svgPath: string,
-  outDir: string,
-  options: Options,
-): Promise<string[]> {
-  if (!Number.isFinite(options.scale) || options.scale <= 0) {
-    throw new Error(`scale must be a positive number, got ${options.scale}`);
-  }
+type Stage = { readonly width: number; readonly height: number };
 
-  const svg = await readFile(svgPath, 'utf8');
+/**
+ * Resolve an SVG's viewBox to device pixels, warning if it will not fit.
+ *
+ * `docs/ANIMATION.md` tells authors to grow the stage around the character to
+ * make room for props, and both bounds are checked here rather than surfacing
+ * at Stage 2 as a clipped sprite. Height matters as much as width: an over-tall
+ * stage does not overflow the panel, it silently eats the session strip and
+ * message bands below it.
+ */
+function stageDimensions(svg: string, scale: number): Stage {
   const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1];
-  if (!viewBox) throw new Error(`no viewBox in ${svgPath}`);
+  if (!viewBox) throw new Error('no viewBox in input SVG');
   // SVG permits commas as well as whitespace between viewBox values, and
   // leading whitespace is legal. Splitting on whitespace alone shifts the
   // destructure by one and yields a negative width that dies inside Playwright
@@ -92,17 +96,35 @@ async function renderFrames(
     throw new Error(`bad viewBox: "${viewBox}"`);
   }
 
-  const width = Math.round(unitsWide * options.scale);
-  const height = Math.round(unitsTall * options.scale);
+  const width = Math.round(unitsWide * scale);
+  const height = Math.round(unitsTall * scale);
   if (width > PANEL_WIDTH) {
-    // docs/ANIMATION.md tells authors to grow the stage for props. Nothing
-    // states the ceiling, so it is enforced here instead of surfacing at
-    // Stage 2 when the panel finally shows a clipped sprite.
     console.warn(
-      `warning: stage is ${width}px wide at scale ${options.scale}, ` +
-        `wider than the ${PANEL_WIDTH}px panel — it will be clipped`,
+      `warning: stage is ${width}px wide at scale ${scale}, wider than the ` +
+        `${PANEL_WIDTH}px panel — it will be clipped`,
     );
   }
+  if (height > STAGE_HEIGHT) {
+    console.warn(
+      `warning: stage is ${height}px tall at scale ${scale}, taller than the ` +
+        `${STAGE_HEIGHT}px stage band — it will overlap the session strip and ` +
+        `message bands`,
+    );
+  }
+  return { width, height };
+}
+
+async function renderFrames(
+  svgPath: string,
+  outDir: string,
+  options: Options,
+): Promise<string[]> {
+  if (!Number.isFinite(options.scale) || options.scale <= 0) {
+    throw new Error(`scale must be a positive number, got ${options.scale}`);
+  }
+
+  const svg = await readFile(svgPath, 'utf8');
+  const { width, height } = stageDimensions(svg, options.scale);
 
   await mkdir(outDir, { recursive: true });
   const browser = await chromium.launch();

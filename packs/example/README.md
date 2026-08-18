@@ -18,12 +18,17 @@ a second animation set, and the calendar has no room for one. See
 | --- | --- |
 | `name` | Identifier. Also the directory name by convention. |
 | `palette` | RGB triples. **`palette[0]` is the background** — the renderer clears to it, so a pack swap changes the screen's ground with no other code involved. |
-| `quips.mapped` | Keyed by hook event. Fired at that exact moment. |
+| `quips.mapped` | Keyed by **state**, not by hook event. Fired on entering that state. |
 | `quips.idle` | Surfaced rarely when nothing is happening. |
 
 Validated by `@tamaclaude/packs` with Zod. A pack is hand-edited by whoever
 owns the device, so it is a genuine trust boundary — the daemon refuses an
 invalid manifest rather than coercing it.
+
+Keying by state rather than hook is deliberate. If a hook name turns out to be
+wrong or gets renamed, a state-keyed pack survives untouched while a hook-keyed
+one breaks — and three of the hook names this project relies on are still
+unverified against live Claude Code documentation.
 
 ## Why quips have two tiers
 
