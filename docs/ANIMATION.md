@@ -104,6 +104,20 @@ limb stays exactly where the base puts it and something else does the moving.
 This is the constraint that shapes `bouldering`, `sweeping` and `gym`. Plan
 them around a prop or they will cost a day each and be abandoned.
 
+`gym` was built to that rule and it holds: a barbell travels from head height
+to full extension and back, the body dips a whole unit under the load, and not
+one limb moves. The lift reads entirely from the prop. Two refinements came out
+of it:
+
+- **Interior contrasting elements are exempt.** The silhouette problem applies
+  to same-fill blocks on the outline. The eyes are black on a solid body and
+  can be moved or pose-swapped freely — they are read against the torso, not as
+  part of its edge.
+- **Never reach for a scale transform.** Squash-and-stretch is the obvious way
+  to show load, and the pixel arithmetic above covers translation only. A
+  scaled edge lands between pixels and softens everything it touches. `gym`
+  dips a whole unit instead, which costs nothing and stays hard.
+
 ## Canvas conventions
 
 The character occupies `0..15` horizontally and `0..16` vertically. Animations
