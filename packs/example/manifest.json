@@ -1,0 +1,16 @@
+{
+  "name": "example",
+  "palette": [
+    [13, 17, 23],
+    [201, 209, 217],
+    [247, 120, 73],
+    [63, 185, 80]
+  ],
+  "quips": {
+    "mapped": {
+      "StopFailure": "well, that happened",
+      "PermissionRequest": "may I?"
+    },
+    "idle": ["...", "still here", "any minute now"]
+  }
+}

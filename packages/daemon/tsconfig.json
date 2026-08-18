@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist"],
+  "references": [
+    {
+      "path": "../device"
+    },
+    {
+      "path": "../packs"
+    },
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../renderer"
+    }
+  ]
+}

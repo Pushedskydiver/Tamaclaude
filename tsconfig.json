@@ -1,0 +1,12 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/packs" },
+    { "path": "packages/renderer" },
+    { "path": "packages/device" },
+    { "path": "packages/hooks" },
+    { "path": "packages/daemon" },
+    { "path": "packages/cli" }
+  ]
+}
