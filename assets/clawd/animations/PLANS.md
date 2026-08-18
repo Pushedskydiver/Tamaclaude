@@ -74,6 +74,32 @@ fails everywhere, and it fails now rather than in September.
 
 ---
 
+## Gym — `Bash`
+
+Clawd doing the heavy lifting. An overhead press, and the barbell does the
+acting.
+
+- **Action.** A barbell travels from just above his head to full extension and
+  back, once per loop.
+- **Body mechanics.** A one-pixel dip at the bottom of the rep, when the load
+  is on him. Nothing else moves — no squash, because a scale transform has no
+  pixel arithmetic in `docs/ANIMATION.md` and would soften every edge it
+  touches.
+- **Eyes.** Tracking the bar: up at full extension, back down at the bottom.
+- **Effects.** The barbell itself, plus two exertion marks that pop in beside
+  his head during the push.
+
+**Not wanted:** any claw repositioned to hold the bar; any scale transform; a
+bar that overlaps the eyes.
+
+**Why this one is next.** It is the first test of the rule that came out of
+`thinking`: on this geometry props carry the motion and limbs stay where the
+base puts them (`docs/ANIMATION.md` §What pose swapping cannot do). `gym`,
+`bouldering` and `sweeping` are all planned that way now. If the rule does not
+hold, three Tier A screens need rethinking, and it is better to know in August.
+
+---
+
 ## Template
 
 ```
