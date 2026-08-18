@@ -3,9 +3,14 @@
 The reference pack. Deliberately generic — this is the one pack committed to a
 public repo, so it demonstrates the format and nothing else.
 
-A pack is the entire customisation surface: a character, a palette, an
-animation set and a quip table. Point the config at a different pack and every
-screen changes, with no rebuild and no reflash.
+A pack is the customisation surface: a palette, a quip table, props and an
+optional logo. Point the config at a different pack and every screen changes,
+with no rebuild and no reflash.
+
+The character is **not** in the pack. Clawd is shared and recoloured via the
+two colour groups in `assets/clawd/base.svg` — making him swappable would mean
+a second animation set, and the calendar has no room for one. See
+`docs/ARCHITECTURE.md` §Packs.
 
 ## `manifest.json`
 
@@ -29,7 +34,7 @@ unprompted. Putting a mapped quip in the idle pool wastes it.
 
 ## Making your own
 
-Copy this directory to `packs/<name>/` and edit. Everything outside
-`packs/example/` is gitignored, so personal packs stay off the public repo by
-default. That is deliberate: logos, pets, photographs and in-jokes belong to
-the people in them, not to a git history.
+Copy this directory to `packs/<name>/` and edit. Everything **under `packs/`**
+other than `packs/example/` is gitignored, so personal packs stay off the
+public repo by default. That is deliberate: logos, pets, photographs and
+in-jokes belong to the people in them, not to a git history.

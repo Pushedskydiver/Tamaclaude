@@ -1,8 +1,13 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a character, a palette, a set of animations and a set of quips.
- * Swapping the pack changes every screen without a rebuild or a reflash.
+ * A pack is a palette, a quip table, props and an optional logo. The character
+ * is deliberately not part of it — Clawd is shared across packs and recoloured,
+ * so there is one base geometry and one animation set. Swapping the pack
+ * changes every screen without a rebuild or a reflash.
+ *
+ * The schema below is Stage 1's subset: `name`, `palette` and `quips`. Props
+ * and logo land with the renderer.
  */
 
 import { rgb565 } from '@tamaclaude/protocol';

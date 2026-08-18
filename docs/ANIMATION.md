@@ -73,7 +73,7 @@ not of the budget. `tools/svg2frames.ts` warns when a stage exceeds the panel.
 ```
 base.svg + plan prose --LLM--> animation.svg --Playwright--> PNG frames
                                                                  |
-                                           quantise + palette-lock (sharp)
+                                     quantise + palette-lock (planned)
                                                                  |
                                                 RLE RGB565 --> renderer
 ```

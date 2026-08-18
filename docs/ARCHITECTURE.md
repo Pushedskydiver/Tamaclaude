@@ -32,9 +32,15 @@ bulk transfer.
 | Dirty-rect, 96×96 sprite region |      18,432 | 184 KB/s |
 | Same, RLE'd at ~14:1            |      ~1,300 | ~13 KB/s |
 
-Full-screen uncompressed does **not** fit. Dirty-rect plus RLE clears it by two
-orders of magnitude. Both are therefore load-bearing, not optimisations —
-`packages/protocol` owns them and its tests assert the compression ratio.
+Full-screen uncompressed does **not** fit. Dirty-rect alone clears the budget
+with roughly 4-5x headroom; adding RLE takes that to 54-77x.
+
+The ~14:1 ratio is **upstream's number, not ours** — it measures their entire
+on-flash sprite corpus (13MB down to ~900KB), not a dirty rectangle of our
+renderer's output, and nothing here has measured a compression ratio yet.
+Dirty-rect is what the budget actually depends on; RLE is margin until it is
+measured. Both are Stage 1 work in `BUILD_PLAN.md` and neither exists in
+`packages/protocol` today.
 
 ### The cost, and its mitigation
 

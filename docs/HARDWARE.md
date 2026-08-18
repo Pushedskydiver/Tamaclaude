@@ -32,7 +32,8 @@
 
 ## Firmware
 
-Lives in `packages/device/firmware/`. ESP-IDF, C, ~300 lines.
+Will live in `packages/device/firmware/`. ESP-IDF, C, targeting ~300 lines.
+Not written yet — Stage 2.
 
 **Start from Waveshare's demo, not from scratch.** It contains a working
 ST7789 init sequence and the correct pin mapping. Re-deriving those by hand is
