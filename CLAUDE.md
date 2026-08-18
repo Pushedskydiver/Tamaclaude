@@ -60,9 +60,11 @@ table and rationale: `docs/ARCHITECTURE.md`.
   transforms and keyframes to existing elements with existing IDs — never
   redraw the character. This is what makes frames consistent. Breaking it
   breaks the whole art pipeline.
-- **`packs/` is gitignored except `packs/example/`.** Jamie's company logo, his
-  cat and our in-jokes do not go on the public internet. The repo is public;
-  the personal content is not.
+- **`packs/` and `.claude/research/` are gitignored.** The repo is public and
+  the personal content is not: logos, pets, interests, the surprise date and
+  every in-joke live in ignored files. Tracked docs refer to them by role
+  ("the recipient's pack", "its mapped quip"), never by content. Adding a real
+  quip or a pet's name to a tracked file undoes this.
 - **AGENTS.md is a symlink to CLAUDE.md.** No generator, no drift, no CI gate
   needed. If the two ever need to differ, that's the moment to add a generator
   — not before.

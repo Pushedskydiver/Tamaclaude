@@ -21,19 +21,23 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Personal packs — Jamie's company logo, his cat, and our in-jokes stay off the
-# public internet. `packs/example/` is the one committed pack and documents the
-# format. See docs/ARCHITECTURE.md §Packs.
+# Personal packs — logos, pets and in-jokes stay off the public internet.
+# `packs/example/` is the one committed pack and documents the format.
+# See docs/ARCHITECTURE.md §Packs.
 packs/*
 !packs/example/
 !packs/example/**
 
-# Claude Code — everything except reusable agent definitions and research
+# Claude Code — reusable agent definitions only.
+#
+# `.claude/research/` was tracked and is not any more. The briefs and specs in
+# there carry the recipient's cat, his interests, the surprise date and every
+# in-joke verbatim, and this repository is public. The risk register in
+# BUILD_PLAN.md claimed `packs/` being gitignored kept that material off the
+# internet; it never did, because the specs were never in `packs/`.
 .claude/*
 !.claude/agents/
 !.claude/agents/**
-!.claude/research/
-!.claude/research/**
 
 # Rendered animation frames — regenerate with tools/svg2frames.ts
 out/
