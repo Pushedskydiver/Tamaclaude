@@ -113,6 +113,50 @@ config, top-level docs) get no scope label — a type label alone is correct.
 
 Squash merge. The PR title is the commit subject. Alex merges.
 
+## After a PR merges
+
+Run this every time, from the merged branch. It takes seconds and prevents the
+two failure modes below.
+
+```bash
+git checkout main && git pull --ff-only && git fetch --prune
+git branch -D <merged-branch>
+pnpm install --frozen-lockfile
+```
+
+**The remote branch deletes itself.** `delete_branch_on_merge` is enabled on
+the repo, so GitHub removes it. `git fetch --prune` is what clears your stale
+remote-tracking ref for it — without that, `git branch -r` accumulates
+references to branches that no longer exist.
+
+**`git branch -d` will refuse, and that is not a warning worth heeding.** We
+squash-merge, so the branch's own commits never become ancestors of `main` —
+git genuinely cannot tell the work landed and reports _"the branch is not fully
+merged"_. `-D` is the correct tool here, not a workaround.
+
+The safety `-d` would have given you comes from GitHub instead. Confirm before
+force-deleting:
+
+```bash
+gh pr view <n> --json state,mergedAt
+```
+
+`state=MERGED` means the work is on `main` regardless of what git's ancestry
+check says. If it says anything else, stop — `-D` really will discard commits.
+
+**Re-install after pulling.** A merge can move `pnpm-lock.yaml` underneath you.
+`--frozen-lockfile` installs exactly what's committed and fails loudly if your
+tree disagrees, which is what you want; a bare `pnpm install` would quietly
+rewrite the lockfile instead.
+
+Then run the quality suite once on fresh `main` before starting the next
+branch. Every PR was green on its own head, but `main` is a squash of several,
+and this is the only moment the combination gets checked locally.
+
+This is deliberately not wrapped in a `pnpm` script. It force-deletes branches,
+and a single command that does that is one mistyped argument away from
+discarding unmerged work.
+
 ## Blast-radius files
 
 Changes to these need a second look, because they govern how everything else is
