@@ -10,3 +10,10 @@ trim_trailing_whitespace = true
 
 [*.md]
 trim_trailing_whitespace = false
+
+# assets/clawd/base.svg is a byte-identical copy of an upstream file and
+# CREDITS.md asserts that identity with an md5. It has trailing whitespace on
+# three lines, so an editor honouring the [*] rule above would silently break
+# the claim on first save, and nothing in CI would notice.
+[assets/**]
+trim_trailing_whitespace = false

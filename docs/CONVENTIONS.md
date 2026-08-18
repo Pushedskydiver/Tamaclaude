@@ -13,12 +13,16 @@ source file is `.ts`.
 Workspace imports only: `@tamaclaude/protocol`, never a deep relative path
 across a package boundary. No path aliases.
 
-Adding a package means three edits, all required, or lint and knip drift apart:
+Adding a package means three edits:
 
 1. `packages/<name>/` with `package.json` + `tsconfig.json` + `src/index.ts`
-2. `eslint.config.ts` — a `boundaries/elements` entry **and** a
+2. `tsconfig.json` at the root — a `references` entry, or `tsc -b` never
+   visits it and `pnpm typecheck` silently passes over the whole package
+3. `eslint.config.ts` — a `boundaries/elements` entry **and** a
    `boundaries/dependencies` rule
-3. `knip.json` — a `workspaces` entry
+
+`knip.json` needs nothing: it auto-discovers the pnpm workspace, and its only
+entry is for `tools/`, which sits outside that workspace.
 
 ## Validation
 
@@ -37,9 +41,11 @@ Enforced, not discussed — Prettier for formatting, ESLint for the rest.
 - No `any` (enforced)
 - Functions ≤ 50 lines, files ≤ 300 lines, ≤ 3 params, ≤ 3 nesting levels,
   cyclomatic complexity ≤ 10 (all enforced)
-- Prefer pure functions. `functional/no-let` and `immutable-data` are on
-  everywhere **except** `protocol` and `renderer`, where framebuffer and RLE
-  work requires mutation — see `eslint.config.ts` for the reasoning.
+- Prefer pure functions. Four rules — `functional/no-let`,
+  `immutable-data`, `no-loop-statements` and `prefer-readonly-type` — are on
+  everywhere **except** `protocol` and `renderer`, where framebuffer work
+  requires mutation, and `tools/`, which drives a browser sequentially. See
+  `eslint.config.ts` for the reasoning in each case.
 
 When a limit fights you, the usual answer is that the function is doing two
 things. Split it before reaching for a disable comment. If a disable is

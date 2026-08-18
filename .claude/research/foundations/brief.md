@@ -1,7 +1,9 @@
 # Tamaclaude — Foundations Research Brief
 
 **Date:** 2026-08-18
-**Status:** research complete, spec not yet written
+**Status:** research complete. **Superseded in places — see §Corrections.**
+This file records what was believed on 2026-08-18. Where it disagrees with
+`docs/`, `docs/` wins.
 **Author:** Alex + Claude Code
 
 A desk display for Claude Code sessions, inspired by
@@ -179,10 +181,11 @@ quantise. ~40 lines with `sharp`, given clean vector art (Alex has it).
 ### Licence position
 
 Upstream is MIT (© 2026 Marcio Granzotto Rodrigues), which legally covers the
-assets too. We are nonetheless **authoring our own SVGs** rather than
-copy-pasting theirs — it's a bespoke gift, and the technique is the valuable
-part, not the pixels. `CREDITS.md` names the project as the origin of both the
-concept and the animation technique.
+assets too. **This was not what happened.** `assets/clawd/base.svg` is upstream's
+`clawd-static-base.svg`, verbatim and byte-identical — reproducing it would
+have produced a worse file and a needlessly different character. Animations
+built on it are ours. `CREDITS.md` is authoritative on what is borrowed and
+what is not.
 
 ---
 
@@ -263,15 +266,34 @@ with a 36-day deadline.** Porting that ceremony wholesale eats the schedule.
 
 ---
 
-## 7. Open questions
+## 7. Open questions — all resolved
 
-1. Install story: printed card + QR + one-line install, or spend £79/yr on Apple
-   Developer to notarise a zero-touch `.app`?
-2. Public or private repo? Affects whether Marvel/Avatar references and Jamie's
-   company logo are a licensing question.
-3. Does Jamie know it's coming? Gates asking him for a photo of Penny.
-4. Working directory is still `clawd-tank/` — rename to `tamaclaude/`?
-5. What are the shared in-jokes, for the quips file?
+1. **Install story.** Resolved: no notarisation needed. The host is a Node
+   process, not a compiled binary, so Gatekeeper does not apply and the £79/yr
+   Apple Developer account is unnecessary. Cost of that: no menu bar app in v1,
+   since one needs a native shim or Electron. Recorded in `BUILD_PLAN.md`
+   §Deliberately not scheduled.
+2. **Public or private repo.** Resolved: public, chosen by Alex against the
+   recommendation. `packs/` is gitignored except `packs/example/`, so the
+   personal content is not exposed. `BUILD_PLAN.md` §Risks records this as
+   accepted rather than mitigated.
+3. **Does Jamie know.** No. Alex has photos of Penny.
+4. **Directory rename.** Done — `tamaclaude/`, remote `Pushedskydiver/Tamaclaude`.
+5. **In-jokes.** Provided. Two map to states ("Turrrby, Turrrby, Turrrby" on
+   failure, "Wansum?" on a permission request); the rest are a random idle pool.
+   The two-tier split is in `docs/ARCHITECTURE.md` §Packs.
+
+## 10. Corrections
+
+Recorded rather than edited away, because the reasoning is still worth reading
+and a research brief that quietly rewrites itself cannot be trusted.
+
+- **§4 said we would author our own SVGs.** We use upstream's base geometry
+  verbatim. See `CREDITS.md`.
+- **§6 proposed deferring `docs/decisions/`.** Still deferred, but the
+  correction list here is doing some of that job.
+- **The screen catalogue in §5 is a draft**, not a spec. It has never been
+  grilled and the design freeze is 25 Aug.
 
 ## 8. Risks
 
