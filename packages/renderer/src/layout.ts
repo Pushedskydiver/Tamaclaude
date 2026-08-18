@@ -152,6 +152,17 @@ export function stageScale(layout: StageLayout): number {
   return LAYOUT_SCALE[layout];
 }
 
+/**
+ * Authored units of prop headroom that landscape crops off the top.
+ *
+ * Consumers must multiply this by the scale they are actually drawing at, not
+ * by the authoring scale — a two-up landscape sprite is drawn at scale 4, so a
+ * crop computed at scale 8 removes ten units instead of five.
+ */
+export function safeAreaCropUnits(): number {
+  return STAGE_UNITS.portrait.height - STAGE_UNITS.landscape.height;
+}
+
 /** Where each session's sprite is drawn, vertically centred in the stage band. */
 export function spriteSlots(
   layout: StageLayout,

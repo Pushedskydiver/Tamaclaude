@@ -13,9 +13,11 @@
  *   node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing
  *   node tools/panel-mock.ts out/typing out/gym
  *
- * Band geometry comes from `@tamaclaude/renderer`, not from constants copied
- * here, so the mock a decision is made from cannot drift from the code that
- * implements it.
+ * Geometry, scales and the safe-area crop all come from
+ * `@tamaclaude/renderer` rather than from constants copied here, so the mock a
+ * decision is made from cannot drift from the code that implements it. An
+ * earlier version kept the scale and crop locally and got the landscape two-up
+ * candidate wrong — which then went into the spec as a design verdict.
  */
 import type { Orientation, StageLayout } from '@tamaclaude/renderer';
 
@@ -25,16 +27,17 @@ import process from 'node:process';
 
 import { chromium } from 'playwright';
 
-import { panelBands, panelSize, spriteSlots } from '@tamaclaude/renderer';
+import {
+  panelBands,
+  panelSize,
+  safeAreaCropUnits,
+  spriteSlots,
+  stageScale,
+} from '@tamaclaude/renderer';
 
 const PANEL_BACKGROUND = '#0d1117';
 const INK = '#c9d1d9';
 const DIM = '#6e7681';
-/** Device pixels per SVG unit that animations are authored at. */
-const AUTHORED_SCALE = 8;
-/** Units of prop headroom portrait keeps and landscape crops. */
-const SAFE_AREA_CROP_UNITS = 5;
-
 type PanelOptions = {
   readonly layout: StageLayout;
   readonly orientation: Orientation;
@@ -65,9 +68,15 @@ function stageHtml(options: PanelOptions): string {
   // Frames are authored 21x25. Landscape shows only the 21x20 safe area, so
   // the sprite is clipped to its slot and pulled up by the prop headroom that
   // portrait keeps. See docs/ANIMATION.md §Safe area.
+  //
+  // The crop must use the scale this layout actually draws at, not the
+  // authoring scale. A two-up sprite is drawn at scale 4, so a crop computed
+  // at scale 8 removes ten authored units instead of five and leaves a void
+  // beneath. Both constants come from the renderer for the same reason the
+  // bands do.
   const crop =
     options.orientation === 'landscape'
-      ? SAFE_AREA_CROP_UNITS * AUTHORED_SCALE
+      ? safeAreaCropUnits() * stageScale(options.layout)
       : 0;
   return spriteSlots(options.layout, options.orientation)
     .map((slot, index) => {

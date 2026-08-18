@@ -241,15 +241,18 @@ animations built so far clear the safe area, so this costs no art — but it doe
 constrain every future one, which is why `docs/ANIMATION.md` §Safe area now
 states the rule regardless of which orientation ships.
 
-|            | Portrait 172x320                 | Landscape 320x172                          |
-| ---------- | -------------------------------- | ------------------------------------------ |
-| Stage      | 168x200, full authored canvas    | 168x160, safe area only                    |
-| Text bands | Stacked below, message gets 64px | Column beside, message gets 152x116        |
-| Reads as   | A creature in a tank             | A status display with a mascot             |
-| Two-up     | Tight but works                  | Weak — sprites float in an over-tall stage |
+|            | Portrait 172x320                 | Landscape 320x172                                                                                                                                                                                                                  |
+| ---------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stage      | 168x200, full authored canvas    | 168x160, safe area only                                                                                                                                                                                                            |
+| Text bands | Stacked below, message gets 64px | Column beside, message gets 152x116                                                                                                                                                                                                |
+| Reads as   | A creature in a tank             | A status display with a mascot                                                                                                                                                                                                     |
+| Two-up     | Tight but works                  | Workable. An earlier note here called it weak because sprites floated in an over-tall stage — that was a bug in `panel-mock.ts`, which cropped at the authoring scale rather than the drawing scale, not a property of the layout. |
 
 First look at `tools/panel-mock.ts` output: **landscape hero is the strongest
-of the four candidates.** The character keeps full scale and the text column is
+of the four candidates.** Note that this verdict was first recorded from a
+render in which the landscape two-up candidate was cropped wrongly; it survives
+re-rendering, but it was reached across a set where one candidate was
+misrepresented, so treat it as a lead for the 24th rather than a result. The character keeps full scale and the text column is
 far more usable than portrait's cramped band. Portrait keeps the better
 creature read, which is what §1 is really about.
 
