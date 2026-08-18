@@ -253,8 +253,11 @@ than opinion, and are now answered. What remains:
    14:1 figure is upstream's whole-corpus number. Stage 1 must measure before
    two full-stage animations are committed to.
 3. **Is the message band worth 64px** — a fifth of the panel for text that is
-   empty most of the time?
+   empty most of the time? First mock says no: a short quip sits in a large
+   empty box and 40px would carry it.
 4. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
+   First mock says yes — three mini-Clawds and an overflow badge sit
+   comfortably and the band reads as a distinct row rather than clutter.
 5. **`PermissionRequest`, `StopFailure`, `SubagentStart` and `LSP` are
    unverified** against live Claude Code documentation. `LSP` in particular
    appears nowhere else in this repo and may not be a tool name at all. If
@@ -263,6 +266,15 @@ than opinion, and are now answered. What remains:
    disambiguator, so that fallback needs designing, not just naming.
 
 ### Answered since revision 1
+
+**Two-up is legible, and the case against it is now weaker than §10 claims.**
+`tools/panel-mock.ts` renders both candidates at true panel size from real
+animation frames. Two sprites at scale 4 read clearly — the "mush" intuition
+was wrong on the eye as well as on the arithmetic. Hero still gives a stronger
+single-subject read and still matches §1's principle, but this is now a
+genuine trade rather than a settled rejection, and it is what the 24 Aug
+harness afternoon should decide. **Caveat: this was judged on a monitor, not on
+the panel.** Hardware lands 20 Aug; re-judge there before the freeze.
 
 **Four concurrent sprites are arithmetically impossible, not merely ugly.**
 Revision 1 argued "43px each reads as mush", which is a number nobody would
