@@ -11,9 +11,10 @@ spike skipped this step. That omission had a cost: the first version rendered a
 data bit at opacity 0.125 and nothing recorded whether a fade tail was ever
 wanted, so there was no way to tell a bug from a choice.
 
-Each plan states four things — **action**, **body mechanics**, **eyes**,
-**effects** — following the structure upstream clawd-tank uses in its own
-`assets/svg-animations/PLANS.md`. Two constraints apply to all of them, from
+Each plan states **action**, **body mechanics**, **eyes** and **effects**,
+following the structure upstream clawd-tank uses in its own
+`assets/svg-animations/PLANS.md`, plus **props** where the animation has any —
+which, since `gym`, is most of them. Two constraints apply to all of them, from
 `docs/ANIMATION.md`: no rotation, and every transform must land on a whole
 device pixel at the render scale.
 
@@ -145,6 +146,7 @@ in the scroll distance or the loop visibly jumps once a second.
 - **Action.**
 - **Body mechanics.**
 - **Eyes.**
+- **Props.** (where the motion is carried by something other than Clawd)
 - **Effects.**
 
 **Not wanted:** <the things that would look plausible and be wrong>

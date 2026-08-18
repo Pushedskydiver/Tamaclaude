@@ -6,7 +6,8 @@
     docs/ANIMATION.md: every element of the base geometry appears below at its
     original coordinates and colours, untouched. All motion is CSS applied by
     ID — the markup carries no class attributes and no transform attributes, so
-    the base can be re-derived by deleting the <style> block and the #fx group.
+    the base can be re-derived by deleting the <style> block and the three #fx
+    groups (#fx-laptop, #fx-laptop-logo, #fx-data-bits).
 
     Stage is 21x25 units; the character keeps its own 0..15 x 0..16 space. At
     8 device pixels per unit that renders 168x200, which sits inside the 172px
