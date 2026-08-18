@@ -55,8 +55,10 @@ pnpm install
 pnpm build && pnpm test && pnpm lint && pnpm typecheck && pnpm format:check && pnpm knip
 ```
 
-`pnpm dev` — the renderer plus a browser harness, no hardware needed — is Stage
-1 and not built yet; the script currently exits with a reminder to that effect.
+`pnpm dev` builds the panel harness and tells you where to open it — an
+interactive page that animates at 8fps and switches orientation, layout and
+animation live, with no hardware needed. It is driven by rendered frames rather
+than by live Claude Code sessions; that arrives in Stage 3.
 
 To render an animation to frames and review it at true panel size:
 

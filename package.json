@@ -19,7 +19,7 @@
     "format:check": "prettier --check .",
     "knip": "knip",
     "prepare": "husky",
-    "dev": "echo \"dev harness lands in BUILD_PLAN Stage 1\" && exit 1",
+    "dev": "pnpm harness && echo \"open out/harness.html\"",
     "measure": "for a in typing thinking gym bouldering; do node tools/svg2frames.ts \"assets/clawd/animations/$a.svg\" \"out/$a\" >/dev/null; done && node tools/measure-compression.ts out/typing out/thinking out/gym out/bouldering",
     "harness": "for a in typing thinking gym bouldering; do node tools/svg2frames.ts \"assets/clawd/animations/$a.svg\" \"out/$a\" >/dev/null; done && node tools/harness.ts out/typing out/thinking out/gym out/bouldering"
   },

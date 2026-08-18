@@ -78,6 +78,12 @@ const PAGE_STYLE = `
   :root { color-scheme: dark }
   body { margin:0; padding:20px; background:#010409; color:#7d8590;
          font:13px ui-monospace,SFMono-Regular,monospace; }
+  /* The panel renders in the typeface the panel will actually use. Judging
+     whether the message and strip bands earn their height is one of the two
+     reasons this tool exists, and that judgement is worthless in a different
+     font — the browser default is both narrower and differently proportioned
+     than Departure Mono at 13px. */
+  .panel { font-family:'Departure Mono', ui-monospace, monospace }
   h1 { color:#c9d1d9; font-size:14px; font-weight:400; margin:0 0 14px }
   .controls { display:flex; gap:18px; flex-wrap:wrap; align-items:center;
               margin-bottom:18px; padding:10px 12px; background:#0d1117;
@@ -97,7 +103,7 @@ const PAGE_STYLE = `
             padding:0 6px; box-sizing:border-box; color:#c9d1d9 }
   .strip { display:flex; align-items:center; gap:6px; padding:0 8px;
            box-sizing:border-box }
-  .strip img { width:15px; height:16px; image-rendering:pixelated }
+  .strip img { image-rendering:pixelated }
   .message { display:flex; align-items:center; padding:0 8px;
              box-sizing:border-box; color:#c9d1d9 }
   .note { margin-top:16px; max-width:640px; line-height:1.5 }
@@ -139,6 +145,7 @@ const PAGE_SCRIPT = `
       '<div class="panel" style="width:' + size.width + 'px;height:' +
       size.height + 'px">' +
       band('status','status','<span>14:32</span><span>&times;2</span>') +
+      band('stage','','') +
       slots.map((s, i) => slotHtml(s, chosen[i] ?? chosen[0], scale, crop)).join('') +
       band('strip','strip', mini + mini + mini + '<span style="margin-left:auto">+2</span>') +
       band('message','message','<span>' + $('message').value + '</span>') +
@@ -150,7 +157,10 @@ const PAGE_SCRIPT = `
     $('zoomed').firstChild.style.transformOrigin = 'top left';
     $('zoomed').style.width = size.width * zoom + 'px';
     $('zoomed').style.height = size.height * zoom + 'px';
-    $('frameNo').textContent = 'frame ' + (frame % 8);
+    const shown = frame % (chosen[0]?.frames.length ?? 1);
+    $('frameNo').textContent = 'frame ' + shown;
+    $('seek').max = String((chosen[0]?.frames.length ?? 1) - 1);
+    if (document.activeElement !== $('seek')) $('seek').value = String(shown);
   }
 
   for (const id of ['orientation','layout','zoom','slot0','slot1','message','bands']) {
@@ -160,7 +170,12 @@ const PAGE_SCRIPT = `
     playing = !playing;
     $('play').textContent = playing ? 'pause' : 'play';
   });
-  $('step').addEventListener('click', () => { frame += 1; render(); });
+  $('seek').addEventListener('input', () => {
+    playing = false;
+    $('play').textContent = 'play';
+    frame = Number($('seek').value);
+    render();
+  });
   setInterval(() => { if (playing) { frame += 1; render(); } }, 125);
   render();
 `;
@@ -186,9 +201,22 @@ function controls(animations: readonly Animation[]): string {
       <label>zoom <select id="zoom">${optionList(['1', '2', '3', '4'], '2')}</select></label>
       <label><input type="checkbox" id="bands"> show bands</label>
       <button id="play">pause</button>
-      <button id="step">step</button>
+      <label>frame <input type="range" id="seek" min="0" max="7" value="0"></label>
       <span id="frameNo"></span>
     </div>`;
+}
+
+/** Mini-Clawd size, read from the base geometry rather than copied from it. */
+function miniSize(svg: string): { width: number; height: number } {
+  const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1];
+  const parts =
+    viewBox
+      ?.trim()
+      .split(/[\s,]+/)
+      .map(Number) ?? [];
+  if (parts.length !== 4)
+    throw new Error('no viewBox in assets/clawd/base.svg');
+  return { width: parts[2], height: parts[3] };
 }
 
 async function build(frameDirs: readonly string[], outPath: string) {
@@ -196,10 +224,18 @@ async function build(frameDirs: readonly string[], outPath: string) {
     frameDirs.map((dir) => loadAnimation(resolve(dir))),
   );
   const mini = await readFile('assets/clawd/base.svg');
+  const font = await readFile('assets/fonts/DepartureMono-Regular.woff2');
+  const size = miniSize(mini.toString('utf8'));
   const page = `<!doctype html>
 <meta charset="utf-8">
 <title>Tamaclaude harness</title>
-<style>${PAGE_STYLE}</style>
+<style>
+@font-face {
+  font-family: 'Departure Mono';
+  src: url(data:font/woff2;base64,${font.toString('base64')}) format('woff2');
+}
+.strip img { width:${size.width}px; height:${size.height}px }
+${PAGE_STYLE}</style>
 <h1>Tamaclaude &mdash; panel harness</h1>
 ${controls(animations)}
 <div class="stage">
@@ -208,10 +244,15 @@ ${controls(animations)}
 </div>
 <p class="note">
   Driven by rendered frames, not by Claude Code &mdash; wiring it to real
-  session events is Stage 3. Band geometry and sprite slots come from
-  <code>@tamaclaude/renderer</code>, so what you judge here is what gets built.
-  The longest message option is a real MCP tool name, which is the case the
-  message band has to survive.
+  session events is Stage 3. Band geometry, sprite slots, scales and the
+  landscape crop all come from <code>@tamaclaude/renderer</code>, and the panel
+  text renders in Departure Mono, the typeface the panel will use. What is
+  <em>not</em> yet what gets built: the renderer draws none of this today, so
+  text positioning within a band is this page's approximation rather than the
+  real thing. Judge band heights and sprite scale here; judge glyph-level
+  layout once the canvas sink exists.
+  <code>mcp__linear__create_issue</code> is included because a long MCP tool
+  name is the case the message band has to survive.
 </p>
 <script>
   const ANIMATIONS = ${JSON.stringify(animations)};

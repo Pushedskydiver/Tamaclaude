@@ -93,7 +93,9 @@ re-deriving those by hand is a day this project does not have. See
 ## Other
 
 - **[Departure Mono](https://departuremono.com/)** by Helena Zhang — the
-  display typeface. SIL Open Font License. Not yet vendored.
+  display typeface, vendored at `assets/fonts/DepartureMono-Regular.woff2`
+  with its licence alongside. SIL Open Font License 1.1, © 2022–2024 Helena
+  Zhang.
 - **Enclosure** — no STL has been chosen yet. `docs/HARDWARE.md` lists the
   candidates; record the model and its licence here once one is picked and
   printed.
