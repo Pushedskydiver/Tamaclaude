@@ -77,6 +77,55 @@ Written per animation as prose first — action, body mechanics, eyes, effects �
 then handed to the model with the base SVG and one existing animation as an
 example. The prose plan is the reviewable artefact; the SVG is its output.
 
+## Render scale
+
+**Render at 8 device pixels per SVG unit.** `tools/svg2frames.ts` defaults to
+this. It is not an arbitrary choice, and the obvious-looking alternative is
+worse.
+
+The intuition is that pixel art should be rendered at one device pixel per art
+pixel and then upscaled nearest-neighbour — crisp by construction, and 64x
+smaller on the wire (1,050 bytes per frame against 67,200). It was tried during
+the typing spike and the result was markedly worse.
+
+The reason is that the rasteriser does not snap sub-pixel geometry to the
+grid — it _antialiases_ it into intermediate colours. A rotated claw or a
+half-unit body jitter, rendered into a 21x25 buffer, becomes a smear of blended
+browns where the sprite should have hard edges. Upscaling then magnifies the
+mud. At 8x the same sub-pixel motion lands inside a block that is still
+overwhelmingly one colour, so the sprite stays clean and only the moving edge
+softens.
+
+So the constraint runs the other way round from what you would guess: **a high
+render scale is what buys the freedom to use rotation and easing at all.** If
+we ever want genuinely hard-edged, retro-authentic motion, the fix is not a
+lower render scale — it is restricting the animation vocabulary to whole-unit
+translations and `steps()` timing, and that is a different aesthetic decision
+rather than a pipeline setting.
+
+Payload is not a reason to revisit this. We send dirty rectangles, not whole
+sprites, and RLE handles the large flat areas that pixel art is made of.
+
+## Timing
+
+Two rules, both learned the hard way and both easy to violate silently.
+
+**Every sub-animation period must divide the loop duration.** The loop is 1.0s
+at 8fps. Periods of 0.25s, 0.5s and 1.0s all divide it, so frame 8 is identical
+to frame 0 and the loop is seamless. A period of 0.3s does not, and the seam
+appears as a visible hitch once per loop.
+
+**Nothing may run at the frame interval.** 0.125s _is_ one frame at 8fps, so an
+animation with that period is sampled at the same phase every single frame and
+renders as completely static. The fastest perceivable cycle is 0.25s — two
+frames, alternating.
+
+Negative `animation-delay` is how elements are put out of phase with each other
+(the two claws tap alternately via `-0.125s`). This survives rasterisation
+because `tools/svg2frames.ts` pauses animations before the first capture, so
+each one sits at its authored starting phase rather than wherever wall-clock
+time left it.
+
 ## Judging an animation
 
 **Not in a browser at 8x zoom.** A pixel animation looks completely different

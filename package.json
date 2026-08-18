@@ -46,6 +46,7 @@
     "jiti": "^2.7.0",
     "knip": "^6.24.0",
     "lint-staged": "^17.0.8",
+    "playwright": "^1.62.1",
     "prettier": "^3.9.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.62.1",

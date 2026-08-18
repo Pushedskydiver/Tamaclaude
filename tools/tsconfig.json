@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // These scripts run under Node, but the functions passed to
+    // page.evaluate() are serialised and executed inside Chromium — so they
+    // need DOM types even though nothing here touches a DOM locally.
+    "lib": ["ESNext", "DOM"],
+    "noEmit": true
+  },
+  "include": ["*.ts"]
+}
