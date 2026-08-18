@@ -1,10 +1,16 @@
-import type { StageLayout } from './layout.js';
+import type { Orientation, StageLayout } from './layout.js';
 
 import { describe, expect, it } from 'vitest';
 
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
 
-import { panelBands, spriteSlots, STAGE_WIDTH, stageScale } from './layout.js';
+import {
+  panelBands,
+  panelSize,
+  spriteSlots,
+  STAGE_WIDTH,
+  stageScale,
+} from './layout.js';
 
 describe('panelBands', () => {
   it('stacks the four bands with no gap and no overlap', () => {
@@ -74,6 +80,71 @@ describe('spriteSlots', () => {
     for (const layout of ['hero', 'twoUp'] as const satisfies StageLayout[]) {
       const perFrame = (bitsRise * stageScale(layout)) / frames;
       expect(Number.isInteger(perFrame)).toBe(true);
+    }
+  });
+});
+
+describe('landscape', () => {
+  it('swaps the panel dimensions', () => {
+    expect(panelSize('portrait')).toEqual({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+    });
+    expect(panelSize('landscape')).toEqual({
+      width: SCREEN_HEIGHT,
+      height: SCREEN_WIDTH,
+    });
+  });
+
+  it('keeps every band inside the panel', () => {
+    const { width, height } = panelSize('landscape');
+    for (const rect of Object.values(panelBands('landscape'))) {
+      expect(rect.x).toBeGreaterThanOrEqual(0);
+      expect(rect.y).toBeGreaterThanOrEqual(0);
+      expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+      expect(rect.y + rect.height).toBeLessThanOrEqual(height);
+    }
+  });
+
+  it('crops the stage so it fits the short axis', () => {
+    // The whole reason landscape is a different composition rather than a
+    // rotation: the authored stage is 25 units at scale 8 = 200px, and
+    // landscape has 172px of height. The safe area is 20 units = 160px.
+    const stage = panelBands('landscape').stage;
+    expect(stage.height).toBe(20 * 8);
+    expect(stage.height).toBeLessThanOrEqual(panelSize('landscape').height);
+    expect(panelBands('portrait').stage.height).toBe(25 * 8);
+  });
+
+  it('does not overlap the stage with the text column', () => {
+    const bands = panelBands('landscape');
+    for (const name of ['status', 'strip', 'message'] as const) {
+      expect(bands[name].x).toBeGreaterThanOrEqual(
+        bands.stage.x + bands.stage.width,
+      );
+    }
+  });
+
+  it('stacks the text column with no gap', () => {
+    const bands = panelBands('landscape');
+    expect(bands.strip.y).toBe(bands.status.y + bands.status.height);
+    expect(bands.message.y).toBe(bands.strip.y + bands.strip.height);
+    expect(bands.message.y + bands.message.height).toBe(
+      panelSize('landscape').height,
+    );
+  });
+
+  it('keeps sprite slots pixel-exact in both orientations', () => {
+    for (const orientation of [
+      'portrait',
+      'landscape',
+    ] as const satisfies Orientation[]) {
+      for (const layout of ['hero', 'twoUp'] as const) {
+        for (const slot of spriteSlots(layout, orientation)) {
+          expect(Number.isInteger(slot.x)).toBe(true);
+          expect(Number.isInteger(slot.y)).toBe(true);
+        }
+      }
     }
   });
 });

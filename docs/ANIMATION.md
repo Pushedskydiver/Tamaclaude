@@ -118,6 +118,26 @@ of it:
   scaled edge lands between pixels and softens everything it touches. `gym`
   dips a whole unit instead, which costs nothing and stays hard.
 
+## Safe area
+
+The stage is authored 21 x 25 units. **Everything essential must sit inside the
+bottom 20 units** — viewBox y from -4 to 16. The top five are prop headroom
+that portrait keeps and landscape does not.
+
+The reason is mounting. The panel is 172 x 320, so landscape is 320 x 172 and
+the stage at 25 units by 8 device pixels is 200px tall — taller than a
+landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
+because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
+every animation would land between pixels.
+
+All four animations built so far clear it: `gym` and `thinking` top out at
+y=-1, `typing`'s data bits reach y=-2.5 while still visible. `bouldering`'s
+scroll pattern extends past the crop by design and loses nothing, since it
+repeats.
+
+Check it by asking what the topmost _visible_ element reaches — an element at
+zero opacity does not count, which is what gives `typing` its headroom.
+
 ## Scrolling backgrounds
 
 A background that scrolls must **tile**, and tiling is arithmetic rather than

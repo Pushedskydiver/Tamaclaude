@@ -227,6 +227,38 @@ are constants in `packages/daemon`. The pack manifest stays `name`, `palette`,
 | Per-session animation on the strip | Five animated mini-Clawds is five times the blit for a 15px sprite                                   | If bandwidth measurements say it is free        |
 | Menu bar app                       | Needs a native shim or Electron, reintroducing a signed `.app`                                       | Post-birthday                                   |
 
+## 10a. Orientation
+
+**Undecided, and it is a freeze item.** The panel is 172x320 and can be mounted
+either way. Landscape is **not a rotated portrait layout** — the stage as
+authored is 200px tall and a landscape panel is 172px, so it cannot simply
+turn. Rescaling is not an option either: 172/25 is 6.88 device pixels per unit
+and every motion in every animation would land between pixels.
+
+Landscape therefore crops the stage to a 21x20 safe area and puts the three
+text bands in a **column beside** it rather than stacked beneath. All four
+animations built so far clear the safe area, so this costs no art — but it does
+constrain every future one, which is why `docs/ANIMATION.md` §Safe area now
+states the rule regardless of which orientation ships.
+
+|            | Portrait 172x320                 | Landscape 320x172                          |
+| ---------- | -------------------------------- | ------------------------------------------ |
+| Stage      | 168x200, full authored canvas    | 168x160, safe area only                    |
+| Text bands | Stacked below, message gets 64px | Column beside, message gets 152x116        |
+| Reads as   | A creature in a tank             | A status display with a mascot             |
+| Two-up     | Tight but works                  | Weak — sprites float in an over-tall stage |
+
+First look at `tools/panel-mock.ts` output: **landscape hero is the strongest
+of the four candidates.** The character keeps full scale and the text column is
+far more usable than portrait's cramped band. Portrait keeps the better
+creature read, which is what §1 is really about.
+
+Consequence if both ship: the firmware sets display orientation via the ST7789
+MADCTL register and is flashed once, so orientation has to be a **runtime
+command in the protocol** rather than a build-time constant — one byte on
+connect. Cheap now, expensive after the boards are assembled. Also check the
+enclosure STL: it fixes the orientation mechanically.
+
 ## 11. Open questions
 
 Three of revision 1's six were answerable by arithmetic or measurement rather
@@ -255,10 +287,13 @@ than opinion, and are now answered. What remains:
 3. **Is the message band worth 64px** — a fifth of the panel for text that is
    empty most of the time? First mock says no: a short quip sits in a large
    empty box and 40px would carry it.
-4. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
+4. **Portrait or landscape, or both?** See §10a. If both, the protocol needs an
+   orientation byte before the boards are assembled, and the case has to allow
+   it. Decide at the freeze.
+5. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
    First mock says yes — three mini-Clawds and an overflow badge sit
    comfortably and the band reads as a distinct row rather than clutter.
-5. **`PermissionRequest`, `StopFailure`, `SubagentStart` and `LSP` are
+6. **`PermissionRequest`, `StopFailure`, `SubagentStart` and `LSP` are
    unverified** against live Claude Code documentation. `LSP` in particular
    appears nowhere else in this repo and may not be a tool name at all. If
    `PermissionRequest` does not exist, `NEEDS_PERMISSION` rehomes onto
