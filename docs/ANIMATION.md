@@ -82,6 +82,28 @@ Prefer translation where translation will do. Reach for pose swapping when the
 motion is genuinely rotational, and keep the pose count to two or three — every
 pose is drawing, which is the thing this pipeline exists to minimise.
 
+## What pose swapping cannot do
+
+It works for props. It does **not** work for repositioning the character's own
+limbs, and that is a property of the base geometry rather than the technique.
+
+The torso is a single solid 11x7 rect with no head, neck or shoulder
+separation, and the claws are 2x2 blocks in the same fill. A claw moved
+anywhere adjacent to the torso merges into its silhouette and reads as the body
+having grown a lump. Three positions were rendered and judged at true size
+while building `thinking` — beside the head at (0,6), detached above it at
+(0,4), and on the shoulder at (2,4) — and all three failed identically. The
+base arms read as arms only because they sit at the canonical mid-height where
+the eye already expects a crab's claws.
+
+**So let props carry the motion, not limbs.** A sweep is a broom translating
+while the body leans; a lift is a barbell moving while the body squashes; a
+reach is a handhold appearing above while Clawd translates up. In each case the
+limb stays exactly where the base puts it and something else does the moving.
+
+This is the constraint that shapes `bouldering`, `sweeping` and `gym`. Plan
+them around a prop or they will cost a day each and be abandoned.
+
 ## Canvas conventions
 
 The character occupies `0..15` horizontally and `0..16` vertically. Animations

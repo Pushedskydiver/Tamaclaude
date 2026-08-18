@@ -232,14 +232,20 @@ are constants in `packages/daemon`. The pack manifest stays `name`, `palette`,
 Three of revision 1's six were answerable by arithmetic or measurement rather
 than opinion, and are now answered. What remains:
 
-1. **Can these animations actually be made?** The base geometry has no joints —
-   four 1x2 leg rects and two 2x2 claws — and rotation is banned. Revision 1
-   specified a gear that cannot turn, a broom that cannot swing and a reach with
-   no elbow. `docs/ANIMATION.md` now documents **pose swapping**: draw the
-   rotated states as additional axis-aligned rects and toggle them by opacity,
-   which is how pixel art has always done rotation. That is a plausible answer,
-   not a proven one — **the next animation built should be `thinking`,
-   specifically because it is the one that most needs it.**
+1. ~~**Can these animations actually be made?**~~ **Answered by building
+   `thinking`.** Pose swapping works: two cogs, each drawn twice with teeth on
+   the axes and on the diagonals, alternating by opacity, read unmistakably as
+   rotation.
+
+   But it answered a second question nobody asked. Pose swapping works for
+   **props only** — repositioning the character's own limbs fails, because the
+   torso is one solid rect and a same-fill claw moved next to it merges into
+   the silhouette. Three positions were tried and judged at true size. So
+   `bouldering`, `sweeping` and `gym` must be planned around a prop that moves
+   while the limbs stay put: a handhold, a broom, a barbell. Planned any other
+   way they will cost a day each and be abandoned.
+   See `docs/ANIMATION.md` §What pose swapping cannot do.
+
 2. **What is the worst-case dirty area per frame?** The Model 3 crossing the
    stage and the road bike's scrolling background dirty the full 168x200 every
    frame: ~537 KB/s uncompressed against a 700KB–1MB/s ceiling. RLE on flat
