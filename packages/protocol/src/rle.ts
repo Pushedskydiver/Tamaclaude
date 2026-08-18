@@ -58,48 +58,48 @@ function encodeRaw(pixels: Uint16Array): Uint8Array {
   return out;
 }
 
-/**
- * Encode a rectangle's pixels, choosing whichever mode is smaller.
- *
- * The returned buffer starts with the mode byte, so a decoder needs nothing
- * else to read it back.
- */
-export function encodeRect(pixels: Uint16Array): Uint8Array {
+export type Encoded = {
+  readonly mode: number;
+  readonly payload: Uint8Array;
+};
+
+/** Encode a rectangle's pixels, choosing whichever mode is smaller. */
+export function encodeRect(pixels: Uint16Array): Encoded {
   const rle = encodeRuns(pixels);
   const raw = encodeRaw(pixels);
-  const useRle = rle.length < raw.length;
-  const body = useRle ? rle : raw;
-  const out = new Uint8Array(body.length + 1);
-  out[0] = useRle ? RLE_MODE : RAW_MODE;
-  out.set(body, 1);
+  return rle.length < raw.length
+    ? { mode: RLE_MODE, payload: rle }
+    : { mode: RAW_MODE, payload: raw };
+}
+
+function decodeRaw(view: DataView, pixelCount: number): Uint16Array {
+  // Raw used to read pixelCount words and ignore the rest, so a payload that
+  // disagreed with the header decoded short and rendered subtly wrong — while
+  // the RLE path threw on the same corruption. One fault, one behaviour.
+  if (view.byteLength !== pixelCount * 2) {
+    throw new Error(
+      `raw payload is ${view.byteLength} bytes, expected ${pixelCount * 2}`,
+    );
+  }
+  const out = new Uint16Array(pixelCount);
+  for (let index = 0; index < pixelCount; index += 1) {
+    out[index] = view.getUint16(index * 2, true);
+  }
   return out;
 }
 
-/** Decode a buffer produced by `encodeRect` back to pixels. */
-export function decodeRect(
-  encoded: Uint8Array,
-  pixelCount: number,
-): Uint16Array {
-  const mode = encoded[0];
-  const view = new DataView(
-    encoded.buffer,
-    encoded.byteOffset + 1,
-    encoded.byteLength - 1,
-  );
-  const out = new Uint16Array(pixelCount);
-
-  if (mode === RAW_MODE) {
-    for (let index = 0; index < pixelCount; index += 1) {
-      out[index] = view.getUint16(index * 2, true);
-    }
-    return out;
+function decodeRuns(view: DataView, pixelCount: number): Uint16Array {
+  if (view.byteLength % 4 !== 0) {
+    throw new Error(
+      `RLE payload of ${view.byteLength} bytes is not whole runs`,
+    );
   }
-  if (mode !== RLE_MODE) throw new Error(`unknown encoding mode ${mode}`);
-
+  const out = new Uint16Array(pixelCount);
   let written = 0;
-  for (let offset = 0; offset + 3 < view.byteLength; offset += 4) {
+  for (let offset = 0; offset < view.byteLength; offset += 4) {
     const count = view.getUint16(offset, true);
     const value = view.getUint16(offset + 2, true);
+    if (count === 0) throw new Error('RLE run of length zero');
     if (written + count > pixelCount) {
       throw new Error(`RLE overruns ${pixelCount} pixels`);
     }
@@ -110,4 +110,16 @@ export function decodeRect(
     throw new Error(`RLE produced ${written} pixels, expected ${pixelCount}`);
   }
   return out;
+}
+
+/** Decode a payload produced by `encodeRect` back to pixels. */
+export function decodeRect(encoded: Encoded, pixelCount: number): Uint16Array {
+  const view = new DataView(
+    encoded.payload.buffer,
+    encoded.payload.byteOffset,
+    encoded.payload.byteLength,
+  );
+  if (encoded.mode === RAW_MODE) return decodeRaw(view, pixelCount);
+  if (encoded.mode === RLE_MODE) return decodeRuns(view, pixelCount);
+  throw new Error(`unknown encoding mode ${encoded.mode}`);
 }

@@ -13,6 +13,7 @@
  * Frames are decoded in Chromium because it is already a dependency; adding a
  * PNG decoder to ship one number would be worse.
  */
+import type { Frame } from '@tamaclaude/protocol';
 import type { Page } from 'playwright';
 
 import { readdir, readFile } from 'node:fs/promises';
@@ -25,6 +26,7 @@ import {
   dirtyRect,
   encodeRect,
   extractRect,
+  frame as makeFrame,
   RECT_HEADER_BYTES,
 } from '@tamaclaude/protocol';
 
@@ -69,26 +71,20 @@ async function loadFrames(page: Page, frameDir: string) {
     const bytes = await readFile(resolve(frameDir, name));
     const uri = `data:image/png;base64,${bytes.toString('base64')}`;
     const decoded = await page.evaluate(toRgb565, uri);
-    frames.push({
-      pixels: Uint16Array.from(decoded.pixels),
-      width: decoded.width,
-    });
+    frames.push(makeFrame(Uint16Array.from(decoded.pixels), decoded.width));
   }
   return frames;
 }
 
-function summarise(
-  name: string,
-  frames: readonly { pixels: Uint16Array; width: number }[],
-) {
+function summarise(name: string, frames: readonly Frame[]) {
   const stats = frames.map((frame, index) => {
     const previous = frames[(index + frames.length - 1) % frames.length];
-    const rect = dirtyRect(previous.pixels, frame.pixels, frame.width);
+    const rect = dirtyRect(previous, frame);
     if (!rect) return { area: 0, bytes: RECT_HEADER_BYTES };
-    const encoded = encodeRect(extractRect(frame.pixels, rect, frame.width));
+    const encoded = encodeRect(extractRect(frame, rect));
     return {
       area: rect.width * rect.height,
-      bytes: encoded.length + RECT_HEADER_BYTES,
+      bytes: encoded.payload.byteLength + RECT_HEADER_BYTES,
     };
   });
   const total = stats.reduce((sum, s) => sum + s.bytes, 0);

@@ -36,27 +36,25 @@ Full-screen uncompressed does **not** fit.
 ### What it actually costs — measured
 
 `tools/measure-compression.ts` runs the real codec over the real frames of
-every animation in the repo, at 8fps, including the 12-byte rect header
-defined in `packages/protocol/src/packet.ts`.
+every animation in the repo, at 8fps, including the 16-byte rect header defined
+in `packages/protocol/src/packet.ts`. Reproduce with `pnpm measure` — the
+frames are regenerated each time, since `out/` is gitignored.
 
-**The ratio column is against a 67,200-byte stage frame**, not the 110,080-byte
-full screen in the table above — animations are authored and rendered at
-168×200, which is the stage band, and that is what a sprite update actually
-covers.
+**The ratio column is against a 67,200-byte stage frame**, not the
+110,080-byte full screen above. Animations are authored and rendered at
+168×200, which is the stage band, and that is what a sprite update covers.
 
 | Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio vs 67,200 B |
 | ------------ | ---------------: | ----------: | --------: | ----------------: |
-| `gym`        |            559 B |     1,505 B |  4.5 KB/s |             120:1 |
-| `thinking`   |            688 B |     1,873 B |  5.5 KB/s |              98:1 |
-| `typing`     |          1,425 B |     1,513 B | 11.4 KB/s |              47:1 |
-| `bouldering` |          1,607 B |     1,677 B | 12.9 KB/s |              42:1 |
+| `gym`        |            562 B |     1,508 B |  4.5 KB/s |             120:1 |
+| `thinking`   |            691 B |     1,876 B |  5.5 KB/s |              97:1 |
+| `typing`     |          1,428 B |     1,516 B | 11.4 KB/s |              47:1 |
+| `bouldering` |          1,610 B |     1,680 B | 12.9 KB/s |              42:1 |
 
-The busiest animation uses **1.8% of a 700 KB/s floor**. That retires the worry
-that a full-stage animation would blow the budget: `bouldering` scrolls its
-entire background every frame, which is the same shape as the road bike, and it
-costs the most _on average_ — 13% more than `typing`. By worst single frame it
-is second, behind `thinking`'s 1,873 B, and peak is the number a real-time link
-actually has to survive. Both are two orders of magnitude inside budget.
+The busiest uses **1.8% of a 700 KB/s floor**. `bouldering` scrolls its entire
+background every frame, the same shape as the road bike, and costs the most on
+average — 13% more than `typing`. By worst single frame it is second, behind
+`thinking`'s 1,876 B, and peak is the number a real-time link has to survive.
 
 An earlier version of this section quoted ~14:1, which is upstream's figure for
 their whole on-flash sprite corpus and was never a measurement of anything
@@ -64,8 +62,26 @@ here. Real pixel art on a dirty rect does far better, because a dirty rect is
 mostly flat background.
 
 The codec falls back to raw whenever RLE would be larger, so a future
-photographic asset cannot quietly double a frame — it can only cost raw plus
-one byte.
+photographic asset cannot quietly double a frame.
+
+### What that measurement does not cover
+
+**One band of four.** Those frames are the 168×200 stage in isolation. The
+panel also carries a status bar, a session strip and a message band, and the
+differ returns a single bounding box — so the moment a second region changes
+independently, the box spans both and drags every unchanged pixel between them
+onto the wire.
+
+A clock ticking in the message band is exactly that case. Measured with the
+sprite composited into a full 172×320 panel and one small cell changing in a
+detailed lower band, `bouldering`'s worst frame goes from 1,680 B to roughly
+24,000 B — about **8% of the floor** rather than 1.8%. Still comfortable, still
+two orders of magnitude from trouble, but an order of magnitude worse than the
+stage-only figure and worth knowing before the daemon starts compositing.
+
+If it ever bites, the fix is per-band diffing or a list of rects rather than
+one box. Not now: one box keeps the firmware blitter trivial and the budget is
+nowhere near.
 
 ### The cost, and its mitigation
 

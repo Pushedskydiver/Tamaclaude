@@ -7,6 +7,31 @@ const roundTrips = (pixels: Uint16Array) =>
     (value, index) => value === pixels[index],
   );
 
+const encodedBytes = (pixels: Uint16Array) =>
+  encodeRect(pixels).payload.byteLength;
+
+/**
+ * A frame shaped like the ones this project actually sends: a flat background
+ * with a detailed sprite in it. The earlier version of the ratio test used a
+ * three-run buffer and asserted `> 20` against a result of 5,169:1 — it passed
+ * by a factor of 258 and could not have failed.
+ */
+function spriteLikeFrame(): Uint16Array {
+  const width = 168;
+  const height = 200;
+  const pixels = new Uint16Array(width * height).fill(0x0882);
+  for (let y = 60; y < 160; y += 1) {
+    for (let x = 20; x < 148; x += 1) {
+      // 8px blocks with a scatter of single-pixel detail, which is what puts
+      // real run lengths in the tens rather than the thousands.
+      const block = (Math.trunc(x / 8) + Math.trunc(y / 8)) % 3;
+      const speckle = (x * 7 + y * 13) % 29 === 0;
+      pixels[y * width + x] = speckle ? 0x0000 : block === 0 ? 0xde88 : 0xf7be;
+    }
+  }
+  return pixels;
+}
+
 describe('encodeRect / decodeRect', () => {
   it('round-trips a flat run', () => {
     expect(roundTrips(new Uint16Array(1000).fill(0xf800))).toBe(true);
@@ -17,7 +42,7 @@ describe('encodeRect / decodeRect', () => {
       { length: 1000 },
       (_, i) => (i * 37) & 0xffff,
     );
-    expect(encodeRect(noisy)[0]).toBe(RAW_MODE);
+    expect(encodeRect(noisy).mode).toBe(RAW_MODE);
     expect(roundTrips(noisy)).toBe(true);
   });
 
@@ -27,34 +52,53 @@ describe('encodeRect / decodeRect', () => {
   });
 
   it('splits a run longer than a u16 counter can hold', () => {
-    // 0xffff is the longest single run. A full-screen flat frame is 55,040
-    // pixels, so this only bites on a larger buffer — but the encoder must not
-    // silently truncate, and the decoder must not think the frame ended early.
     const long = new Uint16Array(0xffff + 500).fill(0x001f);
     expect(roundTrips(long)).toBe(true);
-    expect(encodeRect(long)[0]).toBe(RLE_MODE);
+    expect(encodeRect(long).mode).toBe(RLE_MODE);
   });
 
-  it('never produces more than raw plus the mode byte', () => {
-    // The whole point of the raw fallback. Without it, alternating pixels cost
-    // four bytes each and a frame could double on the wire.
+  it('never produces more than raw', () => {
     const worst = Uint16Array.from({ length: 2000 }, (_, i) => i % 2);
-    expect(encodeRect(worst).length).toBeLessThanOrEqual(worst.length * 2 + 1);
+    expect(encodedBytes(worst)).toBeLessThanOrEqual(worst.length * 2);
   });
 
-  it('compresses flat pixel art by at least 20:1', () => {
-    // docs/ARCHITECTURE.md's bandwidth argument depends on compression. This
-    // is the floor the wire budget needs, not the ratio we expect — see
-    // tools/measure-compression.ts for what real frames actually achieve.
-    const frame = new Uint16Array(168 * 200).fill(0x0882);
-    frame.fill(0xde88, 5000, 9000);
-    const ratio = (frame.length * 2) / encodeRect(frame).length;
-    expect(ratio).toBeGreaterThan(20);
+  it('compresses a dense sprite frame between 5:1 and 15:1', () => {
+    // Bounded on both sides deliberately. A floor alone passes for any
+    // non-broken codec; the ceiling is what catches the test buffer drifting
+    // into something too flat to mean anything — the version this replaced
+    // asserted > 20 against a three-run buffer that scored 5,169:1.
+    //
+    // This frame is far denser than anything the panel actually sends: every
+    // pixel of a 128x100 region is speckled. Real animations measure 42:1 to
+    // 120:1, because a real dirty rect is mostly flat background. 8:1 here is
+    // the codec working on close to its worst realistic input.
+    const frame = spriteLikeFrame();
+    const ratio = (frame.length * 2) / encodedBytes(frame);
+    expect(ratio).toBeGreaterThan(5);
+    expect(ratio).toBeLessThan(15);
+    expect(roundTrips(frame)).toBe(true);
   });
 
-  it('rejects a corrupt stream rather than returning short data', () => {
-    expect(() => decodeRect(Uint8Array.of(9, 0, 0), 1)).toThrow(/unknown/);
-    const truncated = encodeRect(new Uint16Array(100).fill(1));
-    expect(() => decodeRect(truncated, 200)).toThrow(/expected 200/);
+  it('rejects every shape of corrupt stream, in both modes', () => {
+    expect(() =>
+      decodeRect({ mode: 9, payload: new Uint8Array(2) }, 1),
+    ).toThrow(/unknown/);
+    // Raw used to decode short and silently: four pixels of payload read as
+    // two, rendering a subtly wrong image where RLE would have thrown.
+    expect(() =>
+      decodeRect({ mode: RAW_MODE, payload: Uint8Array.of(1, 0, 2, 0) }, 1),
+    ).toThrow(/raw payload is 4 bytes/);
+    expect(() =>
+      decodeRect(encodeRect(new Uint16Array(100).fill(1)), 200),
+    ).toThrow(/expected 200/);
+    expect(() =>
+      decodeRect({ mode: RLE_MODE, payload: Uint8Array.of(5, 0, 1, 0, 7) }, 5),
+    ).toThrow(/whole runs/);
+    expect(() =>
+      decodeRect({ mode: RLE_MODE, payload: Uint8Array.of(0, 0, 1, 0) }, 5),
+    ).toThrow(/length zero/);
+    expect(() =>
+      decodeRect({ mode: RLE_MODE, payload: Uint8Array.of(9, 0, 1, 0) }, 5),
+    ).toThrow(/overruns/);
   });
 });
