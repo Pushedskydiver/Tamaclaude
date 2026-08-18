@@ -82,9 +82,14 @@ defect.
 
 ## Packs
 
-A pack is the entire customisation surface: a base character SVG, an animation
-set, a palette, a quip table and an optional logo. Config selects one; nothing
-else changes.
+A pack is the customisation surface: a palette, a quip table, props and an
+optional logo. Config selects one; nothing else changes.
+
+**The character is not per-pack.** Clawd is shared — one base geometry, one
+animation set, recoloured and re-dressed per pack. Making the character
+swappable would double the art surface, and the calendar has no room for a
+second character. `assets/clawd/base.svg` and `docs/ANIMATION.md` own the
+character; packs own everything about how he's dressed.
 
 `packs/example/` is committed and documents the format. Real packs
 (`packs/alex/`, `packs/jamie/`) are gitignored — the repo is public and the
