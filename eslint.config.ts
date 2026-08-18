@@ -62,6 +62,11 @@ export default defineConfig(
         { type: 'daemon', pattern: 'packages/daemon/**' },
         { type: 'hooks', pattern: 'packages/hooks/**' },
         { type: 'cli', pattern: 'packages/cli/**' },
+        // Build-time only. Given a type so the graph can say what it may
+        // import — `tools/panel-mock.ts` reaches `@tamaclaude/renderer`, and
+        // that edge was added without the deliberate eslint edit
+        // docs/ARCHITECTURE.md says every edge requires.
+        { type: 'tools', pattern: 'tools/**' },
       ],
     },
     rules: {
@@ -147,6 +152,21 @@ export default defineConfig(
                 { to: { type: 'renderer' } },
                 { to: { type: 'packs' } },
                 { to: { type: 'device' } },
+                { to: { type: 'protocol' } },
+              ],
+            },
+            // Tools may read the pure layers so a mock cannot drift from the
+            // renderer it mocks. They may not reach daemon, cli, device or
+            // hooks — nothing build-time has business in the runtime surface.
+            // Nothing may import `tools`: the default is disallow and no rule
+            // below grants it, which is what keeps Playwright out of the
+            // shipped graph.
+            {
+              from: { type: 'tools' },
+              allow: [
+                { to: { type: 'tools' } },
+                { to: { type: 'renderer' } },
+                { to: { type: 'packs' } },
                 { to: { type: 'protocol' } },
               ],
             },

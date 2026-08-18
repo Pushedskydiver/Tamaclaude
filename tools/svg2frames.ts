@@ -47,6 +47,13 @@ const SCALE = 8;
 const PANEL_WIDTH = 172;
 /** Stage band height. The other three panel bands occupy the remaining 120px. */
 const STAGE_HEIGHT = 200;
+/**
+ * Units of prop headroom landscape crops off the top — `docs/ANIMATION.md`
+ * §Safe area. Everything a frame actually shows must sit below this line, or
+ * the animation is portrait-only and nobody finds out until the panel is
+ * mounted the other way round.
+ */
+const SAFE_AREA_CROP_UNITS = 5;
 
 type Options = {
   readonly fps: number;
@@ -60,6 +67,53 @@ function freezeAnimations(): number[] {
     animation.pause();
     return Number(animation.effect?.getTiming().delay ?? 0);
   });
+}
+
+/**
+ * Topmost visible content in this frame, in SVG user units.
+ *
+ * Three things are excluded, each for a reason:
+ *
+ * - **Zero opacity**, checked up the ancestor chain since hiding a group is
+ *   how pose swapping works. That exemption is what gives `typing` its
+ *   headroom, since its data bits fade out before they reach the crop line.
+ * - **Anything entirely above the viewBox**, which is already invisible in
+ *   portrait and so cannot be a landscape regression.
+ * - **Groups marked `data-safe-area="ignore"`**, for periodic scrolling
+ *   backgrounds. `bouldering`'s wall tiles past the crop by design and loses
+ *   nothing, because the pattern repeats. The marker makes that a stated
+ *   exemption rather than a silently tolerated warning.
+ */
+function topmostVisibleUnit(scale: number): number {
+  const svg = document.querySelector('svg');
+  const viewBoxY = Number(
+    svg?.getAttribute('viewBox')?.split(/[\s,]+/)[1] ?? 0,
+  );
+  const excluded = (element: Element): boolean => {
+    let node: Element | null = element;
+    while (node && node.tagName !== 'svg') {
+      if (getComputedStyle(node).opacity === '0') return true;
+      if (node.getAttribute('data-safe-area') === 'ignore') return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
+  const tops = [...(svg?.querySelectorAll('rect') ?? [])]
+    .filter((element) => !excluded(element))
+    .map((element) => element.getBoundingClientRect().top / scale + viewBoxY)
+    .filter((top) => top >= viewBoxY);
+  return tops.length > 0 ? Math.min(...tops) : Number.POSITIVE_INFINITY;
+}
+
+/** Warn if anything a frame shows sits in the strip landscape crops away. */
+function reportSafeArea(highest: number, viewBoxTop: number): void {
+  const safeAreaTop = viewBoxTop + SAFE_AREA_CROP_UNITS;
+  if (highest >= safeAreaTop) return;
+  console.warn(
+    `warning: content reaches y=${highest} but the safe area starts at ` +
+      `y=${safeAreaTop} — this animation is clipped when the panel is ` +
+      `mounted landscape (docs/ANIMATION.md §Safe area)`,
+  );
 }
 
 /** Seek every animation to `elapsed` ms. The effect applies its own delay. */
@@ -125,6 +179,12 @@ async function renderFrames(
 
   const svg = await readFile(svgPath, 'utf8');
   const { width, height } = stageDimensions(svg, options.scale);
+  const viewBoxTop = Number(
+    /viewBox="([^"]+)"/
+      .exec(svg)?.[1]
+      ?.trim()
+      .split(/[\s,]+/)[1] ?? 0,
+  );
 
   await mkdir(outDir, { recursive: true });
   const browser = await chromium.launch();
@@ -148,6 +208,7 @@ async function renderFrames(
     `${delays.length} animations, ${new Set(delays).size} distinct delays`,
   );
   const written: string[] = [];
+  let highest = Number.POSITIVE_INFINITY;
 
   for (let frame = 0; frame < options.frameCount; frame += 1) {
     const elapsed = (frame / options.fps) * 1000;
@@ -155,7 +216,13 @@ async function renderFrames(
     const path = `${outDir}/frame_${String(frame).padStart(2, '0')}.png`;
     await page.screenshot({ path, omitBackground: true });
     written.push(path);
+    highest = Math.min(
+      highest,
+      await page.evaluate(topmostVisibleUnit, options.scale),
+    );
   }
+
+  reportSafeArea(highest, viewBoxTop);
 
   await browser.close();
   return written;

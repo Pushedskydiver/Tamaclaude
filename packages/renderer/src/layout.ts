@@ -12,7 +12,15 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
  * a decision and the code that implements it.
  */
 
-export type BandName = 'status' | 'stage' | 'strip' | 'message';
+/**
+ * Bands top to bottom. `BandName` is derived from this rather than declared
+ * alongside it, so the order and the name set cannot drift — a band added to
+ * one and forgotten in the other used to yield `undefined` typed as `Rect`,
+ * which every test still passed.
+ */
+const BAND_ORDER = ['status', 'stage', 'strip', 'message'] as const;
+
+export type BandName = (typeof BAND_ORDER)[number];
 
 /**
  * How the board is mounted.
@@ -23,7 +31,9 @@ export type BandName = 'status' | 'stage' | 'strip' | 'message';
  * safe area (`docs/ANIMATION.md` §Safe area) and puts the three text bands in
  * a column beside it rather than stacked beneath.
  */
-export type Orientation = 'portrait' | 'landscape';
+export const ORIENTATIONS = ['portrait', 'landscape'] as const;
+
+export type Orientation = (typeof ORIENTATIONS)[number];
 
 /** Panel dimensions for a given mounting. */
 export function panelSize(orientation: Orientation): {
@@ -46,8 +56,6 @@ const BAND_HEIGHTS: Readonly<Record<BandName, number>> = {
   strip: 32,
   message: 64,
 };
-
-const BAND_ORDER: readonly BandName[] = ['status', 'stage', 'strip', 'message'];
 
 /**
  * Animation stage width in device pixels.
@@ -128,7 +136,9 @@ export function panelBands(
  * would move 3.5 device pixels a frame. Width alone never ruled four-up out;
  * pixel-exactness does.
  */
-export type StageLayout = 'hero' | 'twoUp';
+export const STAGE_LAYOUTS = ['hero', 'twoUp'] as const;
+
+export type StageLayout = (typeof STAGE_LAYOUTS)[number];
 
 /** Device pixels per SVG unit for each layout. Both are pixel-exact scales. */
 const LAYOUT_SCALE: Readonly<Record<StageLayout, number>> = {

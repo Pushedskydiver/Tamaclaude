@@ -27,8 +27,10 @@
         animation: press 1s infinite linear;
       }
 
-      /* The dip is held for the two frames the load is lowest, not
-         interpolated — a fractional dip would soften the whole silhouette. */
+      /* Held for two frames at the bottom of the rep rather than interpolated
+         — a fractional dip would soften the whole silhouette. It covers frames
+         0 and 1, the start of the drive; the bar is also at its lowest on
+         frame 7, on the way down, where he is absorbing rather than pushing. */
       #master-group {
         animation: take-the-load 1s infinite steps(1);
       }
@@ -39,7 +41,9 @@
         animation: watch-the-bar 1s infinite steps(1);
       }
 
-      /* Exertion marks, binary opacity, present only through the push. */
+      /* Exertion marks, binary opacity. Visible frames 2-5, which is the
+         drive plus the first frame of the descent — effort outlasting the
+         movement by a frame reads better than effort stopping dead at lockout. */
       #fx-effort {
         animation: effort 1s infinite steps(1);
       }

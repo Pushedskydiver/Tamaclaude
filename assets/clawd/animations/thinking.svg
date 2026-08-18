@@ -19,11 +19,16 @@
     than a limb. See docs/ANIMATION.md §What pose swapping cannot do.
 
     Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s both divide it. Nothing runs
-    at 0.125s. Every transform is a whole art pixel, so every edge stays hard.
+    at 0.125s. Every transform lands on a whole DEVICE pixel — the sway is half
+    an art pixel, which is exactly 4 device pixels at scale 8, so edges stay
+    hard. A whole art pixel was tried first and lurched.
+
+    Only four of the eight frames differ, because the fastest sub-animation is
+    0.5s. That is deliberate for deliberation, and free on a dirty-rect wire.
   -->
   <defs>
     <style>
-      /* Deliberation, not effort: one pixel of sway across the whole loop,
+      /* Deliberation, not effort: half a pixel of sway across the whole loop,
          a quarter the cadence of typing's jitter. */
       #master-group {
         animation: sway 1s infinite steps(1);

@@ -1,13 +1,13 @@
-import type { Orientation, StageLayout } from './layout.js';
-
 import { describe, expect, it } from 'vitest';
 
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
 
 import {
+  ORIENTATIONS,
   panelBands,
   panelSize,
   spriteSlots,
+  STAGE_LAYOUTS,
   STAGE_WIDTH,
   stageScale,
 } from './layout.js';
@@ -58,7 +58,7 @@ describe('spriteSlots', () => {
 
   it('keeps every slot inside the stage band', () => {
     const stage = panelBands().stage;
-    for (const layout of ['hero', 'twoUp'] as const) {
+    for (const layout of STAGE_LAYOUTS) {
       for (const slot of spriteSlots(layout)) {
         expect(slot.x).toBeGreaterThanOrEqual(stage.x);
         expect(slot.y).toBeGreaterThanOrEqual(stage.y);
@@ -79,7 +79,7 @@ describe('spriteSlots', () => {
     // scale 2 — the one scale the rule forbids.
     const bitsRise = 14;
     const frames = 8;
-    for (const layout of ['hero', 'twoUp'] as const satisfies StageLayout[]) {
+    for (const layout of STAGE_LAYOUTS) {
       const perFrame = (bitsRise * stageScale(layout)) / frames;
       expect(Number.isInteger(perFrame)).toBe(true);
     }
@@ -137,16 +137,66 @@ describe('landscape', () => {
   });
 
   it('keeps sprite slots pixel-exact in both orientations', () => {
-    for (const orientation of [
-      'portrait',
-      'landscape',
-    ] as const satisfies Orientation[]) {
-      for (const layout of ['hero', 'twoUp'] as const) {
+    for (const orientation of ORIENTATIONS) {
+      for (const layout of STAGE_LAYOUTS) {
         for (const slot of spriteSlots(layout, orientation)) {
           expect(Number.isInteger(slot.x)).toBe(true);
           expect(Number.isInteger(slot.y)).toBe(true);
         }
       }
+    }
+  });
+});
+
+describe('every orientation and layout', () => {
+  // These iterate the module's own exported sets rather than a hardcoded copy,
+  // so adding a third layout or orientation cannot slip past by being absent
+  // from a test's literal list.
+  it('keeps every sprite slot inside its stage band', () => {
+    for (const orientation of ORIENTATIONS) {
+      const stage = panelBands(orientation).stage;
+      for (const layout of STAGE_LAYOUTS) {
+        for (const slot of spriteSlots(layout, orientation)) {
+          expect(slot.x).toBeGreaterThanOrEqual(stage.x);
+          expect(slot.y).toBeGreaterThanOrEqual(stage.y);
+          expect(slot.x + slot.width).toBeLessThanOrEqual(
+            stage.x + stage.width,
+          );
+          expect(slot.y + slot.height).toBeLessThanOrEqual(
+            stage.y + stage.height,
+          );
+        }
+      }
+    }
+  });
+
+  it('keeps every band inside its panel', () => {
+    for (const orientation of ORIENTATIONS) {
+      const { width, height } = panelSize(orientation);
+      for (const rect of Object.values(panelBands(orientation))) {
+        expect(rect.x + rect.width).toBeLessThanOrEqual(width);
+        expect(rect.y + rect.height).toBeLessThanOrEqual(height);
+      }
+    }
+  });
+
+  it('centres the landscape stage vertically', () => {
+    // Landscape leaves 12px of panel above and below the stage rather than
+    // filling it, unlike portrait. That is deliberate margin, not a band that
+    // went missing — assert it so the difference is stated rather than assumed.
+    const { height } = panelSize('landscape');
+    const stage = panelBands('landscape').stage;
+    expect(stage.y).toBe(Math.round((height - stage.height) / 2));
+    expect(height - (stage.y + stage.height)).toBe(stage.y);
+  });
+
+  it('offers only scales that keep motion on whole pixels', () => {
+    const bitsRise = 14;
+    const frames = 8;
+    for (const layout of STAGE_LAYOUTS) {
+      expect(Number.isInteger((bitsRise * stageScale(layout)) / frames)).toBe(
+        true,
+      );
     }
   });
 });
