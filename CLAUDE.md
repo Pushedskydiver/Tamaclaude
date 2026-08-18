@@ -60,6 +60,12 @@ table and rationale: `docs/ARCHITECTURE.md`.
   transforms and keyframes to existing elements with existing IDs — never
   redraw the character. This is what makes frames consistent. Breaking it
   breaks the whole art pipeline.
+- **`.claude/research/` is untracked, so git is not backing it up.** Pulling
+  the commit that untracked it deleted the working copies outright — git
+  removes a file the pull deletes, ignored or not, and they came back only
+  because they were still in history. Future edits to the screen spec have no
+  such safety net, and it is the design-freeze artefact. Copy it somewhere real
+  before relying on it.
 - **`packs/` and `.claude/research/` are gitignored.** The repo is public and
   the personal content is not: logos, pets, interests, the surprise date and
   every in-joke live in ignored files. Tracked docs refer to them by role
