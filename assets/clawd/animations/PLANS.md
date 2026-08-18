@@ -30,13 +30,24 @@ Clawd hammering at an invisible keyboard, output streaming off both claws.
 - **Eyes.** Track one art pixel right, then snap back — scanning a line of code
   rather than watching the claws. Half the speed of the tapping, so the two
   never lock into a single visual beat.
+- **Props.** A laptop in front of him, seen from behind the lid — the machine
+  faces him, so what we see is the back of the screen with a logo on it. It
+  occludes the lower torso and the tops of the legs, which is what puts it in
+  front, and it does not jitter with him because it is sitting on a desk.
 - **Effects.** Small squares rising off each claw and popping out near the top
   of the stage. Two streams, never crossing the torso or the eyes. Hard pop in
   and out, no fade: an intermediate alpha becomes an intermediate colour once
   the palette is quantised.
 
 **Not wanted:** a fade tail on the rising bits; any rotation; any motion
-crossing Clawd's face.
+crossing Clawd's face; a lid that covers the eyes.
+
+**Added after review: the laptop.** The first version had Clawd typing on
+nothing, which upstream's own animation does not — theirs has a laptop with a
+glowing logo, and it is the thing that makes "typing" legible rather than just
+"waving". The lid is also the right home for a pack's logo: it is on screen
+every time Claude writes code, where the firmware splash is seen once before
+setup and never again.
 
 ---
 

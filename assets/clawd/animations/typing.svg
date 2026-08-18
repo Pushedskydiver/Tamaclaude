@@ -69,6 +69,27 @@
       #fx-data-bits rect:nth-child(5) { animation-delay: -0.5s; }
       #fx-data-bits rect:nth-child(6) { animation-delay: -0.875s; }
 
+      /* Screen activity, two shades swapping. The laptop itself does not
+         jitter with Clawd — it is sitting on a desk, and #fx-laptop is outside
+         #master-group precisely so it stays put while he vibrates behind it. */
+      #logo-lit {
+        animation: logo-lit 0.5s infinite steps(1);
+      }
+      #logo-dim {
+        animation: logo-dim 0.5s infinite steps(1);
+      }
+
+      @keyframes logo-lit {
+        0%   { opacity: 1; }
+        50%  { opacity: 0; }
+        100% { opacity: 1; }
+      }
+      @keyframes logo-dim {
+        0%   { opacity: 0; }
+        50%  { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
       @keyframes body-jitter {
         0%   { transform: translateY(0); }
         50%  { transform: translateY(0.5px); }
@@ -119,6 +140,30 @@
       <rect id="left-eye" x="4" y="8" width="1" height="2"/>
       <rect id="right-eye" x="10" y="8" width="1" height="2"/>
     </g>
+  </g>
+
+  <!-- ── the laptop, in front of Clawd ─────────────────────────────────── -->
+  <!-- Seen from behind the lid, the way upstream frames it: the machine faces
+       him, so what we see is the back of the screen. That is what makes the lid
+       the natural home for a pack's logo — it is on screen whenever Claude is
+       writing code, rather than once on a splash nobody looks at twice.
+
+       Drawn after #master-group so it occludes the lower torso and the tops of
+       the legs, which is what puts it in front. The lid top sits at y=10,
+       exactly where the eyes end, so it never covers them. The claws at x0-2
+       and x13-15 fall outside the lid, so they stay visible either side —
+       Clawd reaching around a machine rather than hidden behind one. -->
+  <g id="fx-laptop">
+    <rect x="4" y="10" width="7" height="3" fill="#30363B"/>
+    <rect x="3" y="13" width="9" height="1" fill="#8B949E"/>
+  </g>
+
+  <!-- Pack-swappable: one art pixel today, and where a pixelated company logo
+       goes. Two shades alternating rather than a fade — an intermediate alpha
+       becomes an intermediate colour once the palette is quantised. -->
+  <g id="fx-laptop-logo">
+    <rect id="logo-lit" x="7" y="11" width="1" height="1" fill="#58A6FF"/>
+    <rect id="logo-dim" x="7" y="11" width="1" height="1" fill="#1F6FEB"/>
   </g>
 
   <!-- ── additive effects: not part of the base geometry ───────────────── -->
