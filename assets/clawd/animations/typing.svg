@@ -6,7 +6,8 @@
     docs/ANIMATION.md: every element of the base geometry appears below at its
     original coordinates and colours, untouched. All motion is CSS applied by
     ID — the markup carries no class attributes and no transform attributes, so
-    the base can be re-derived by deleting the <style> block and the #fx group.
+    the base can be re-derived by deleting the <style> block and the three #fx
+    groups (#fx-laptop, #fx-laptop-logo, #fx-data-bits).
 
     Stage is 21x25 units; the character keeps its own 0..15 x 0..16 space. At
     8 device pixels per unit that renders 168x200, which sits inside the 172px
@@ -69,6 +70,27 @@
       #fx-data-bits rect:nth-child(5) { animation-delay: -0.5s; }
       #fx-data-bits rect:nth-child(6) { animation-delay: -0.875s; }
 
+      /* Screen activity, two shades swapping. The laptop itself does not
+         jitter with Clawd — it is sitting on a desk, and #fx-laptop is outside
+         #master-group precisely so it stays put while he vibrates behind it. */
+      #logo-lit {
+        animation: logo-lit 0.5s infinite steps(1);
+      }
+      #logo-dim {
+        animation: logo-dim 0.5s infinite steps(1);
+      }
+
+      @keyframes logo-lit {
+        0%   { opacity: 1; }
+        50%  { opacity: 0; }
+        100% { opacity: 1; }
+      }
+      @keyframes logo-dim {
+        0%   { opacity: 0; }
+        50%  { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
       @keyframes body-jitter {
         0%   { transform: translateY(0); }
         50%  { transform: translateY(0.5px); }
@@ -119,6 +141,37 @@
       <rect id="left-eye" x="4" y="8" width="1" height="2"/>
       <rect id="right-eye" x="10" y="8" width="1" height="2"/>
     </g>
+  </g>
+
+  <!-- ── the laptop, in front of Clawd ─────────────────────────────────── -->
+  <!-- Seen from behind the lid, the way upstream frames it: the machine faces
+       him, so what we see is the back of the screen. That is what makes the lid
+       the natural home for a pack's logo — it is on screen whenever Claude is
+       writing code, rather than once on a splash nobody looks at twice.
+
+       Drawn after #master-group so it occludes the lower torso and the tops of
+       the legs, which is what puts it in front. The claws at x0-2 and x13-15
+       fall outside the lid, so they stay visible either side — Clawd reaching
+       around a machine rather than hidden behind one.
+
+       The lid top is at y=11, one unit clear of the eyes rather than flush
+       with them. Flush was tried and was wrong: #master-group jitters half a
+       unit and #fx-laptop deliberately does not, so on every jitter frame the
+       eyes dropped 4 device pixels behind a stationary lid and lost their
+       bottom quarter — the eyes visibly pulsed four times a second. A prop
+       that does not share the character's motion needs clearance from it, not
+       adjacency. -->
+  <g id="fx-laptop">
+    <rect x="4" y="11" width="7" height="3" fill="#30363B"/>
+    <rect x="3" y="14" width="9" height="1" fill="#8B949E"/>
+  </g>
+
+  <!-- Pack-swappable: one art pixel today, and where a pixelated company logo
+       goes. Two shades alternating rather than a fade — an intermediate alpha
+       becomes an intermediate colour once the palette is quantised. -->
+  <g id="fx-laptop-logo">
+    <rect id="logo-lit" x="7" y="12" width="1" height="1" fill="#58A6FF"/>
+    <rect id="logo-dim" x="7" y="12" width="1" height="1" fill="#1F6FEB"/>
   </g>
 
   <!-- ── additive effects: not part of the base geometry ───────────────── -->
