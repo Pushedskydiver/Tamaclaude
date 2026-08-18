@@ -35,6 +35,9 @@ import {
   stageScale,
 } from '@tamaclaude/renderer';
 
+/** Sample text for the message band. A tool label, never a real quip — this
+ *  file is tracked and the quips are not. See CLAUDE.md §Non-obvious constraints. */
+const SAMPLE_MESSAGE = 'Grep';
 const PANEL_BACKGROUND = '#0d1117';
 const INK = '#c9d1d9';
 const DIM = '#6e7681';
@@ -97,7 +100,7 @@ function panelHtml(options: PanelOptions): string {
       <div class="band-status"><span>14:32</span><span>&times;2</span></div>
       ${stageHtml(options)}
       <div class="band-strip">${strip}<span class="overflow">+2</span></div>
-      <div class="band-message"><span>Wansum?</span></div>
+      <div class="band-message"><span>${SAMPLE_MESSAGE}</span></div>
     </div>`;
 }
 
