@@ -71,8 +71,13 @@ The whole product, minus hardware.
 - [ ] `@napi-rs/canvas` sink (headless/tests) + browser `<canvas>` sink (dev harness)
 - [x] Dev harness: local web page, scrub through frames, switch layout and
       orientation live, panel text in Departure Mono (`pnpm harness`)
-- [ ] Dev harness: hot reload, and fake event injection — the second needs the
-      daemon's state machine, so it lands with Stage 3 rather than here
+- [ ] Dev harness: hot reload, scrub through **states**, and fake event
+      injection. Event injection needs the daemon, so it lands with Stage 3.
+      State scrubbing does not — it needs only the state→animation mapping,
+      which the 25 Aug freeze produces, so it waits on the freeze rather than
+      on Stage 3. The earlier split dropped "states" while keeping "frames",
+      which are not the same thing: frames are the eight rasters of one loop,
+      states are the ten catalogue entries the freeze locks.
 - [x] Departure Mono vendored and rendering in the harness
 - [ ] Departure Mono bitmap rendering in the renderer, nearest-neighbour,
       `imageSmoothingEnabled = false`

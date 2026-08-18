@@ -12,9 +12,11 @@
  *   pnpm harness && open out/harness.html
  *
  * Output is a single self-contained file: every frame is inlined, so it can be
- * opened from disk with no server and no network. Band geometry comes from
- * `@tamaclaude/renderer`, not from constants copied here, so what you judge
- * cannot drift from what gets built.
+ * opened from disk with no server and no network. Geometry, slots, scales and
+ * the landscape crop come from `@tamaclaude/renderer` rather than constants
+ * copied here, so those cannot drift. Text layout within a band is this page's
+ * approximation — the renderer draws none of it yet — so judge band heights
+ * and sprite scale here, and glyph positioning once the canvas sink exists.
  *
  * It is driven by rendered frames, not by Claude Code. Wiring it to real
  * session events is Stage 3.
@@ -104,8 +106,17 @@ const PAGE_STYLE = `
   .strip { display:flex; align-items:center; gap:6px; padding:0 8px;
            box-sizing:border-box }
   .strip img { image-rendering:pixelated }
-  .message { display:flex; align-items:center; padding:0 8px;
-             box-sizing:border-box; color:#c9d1d9 }
+  /* min-width:0 and overflow-wrap:anywhere are load-bearing. A flex item
+     defaults to min-width:auto and an underscore is not a wrap
+     opportunity, so a long
+     MCP tool name rendered as one 207px line inside a 172px panel and was
+     clipped by .panel{overflow:hidden} with no marker — five characters gone,
+     while the band looked like one short line in a large box. That is exactly
+     the evidence the 24 Aug session needs to judge this band's height, and
+     hiding it argued for shrinking the band. */
+  .message { display:flex; align-items:flex-start; padding:4px 8px;
+             box-sizing:border-box; color:#c9d1d9; min-width:0 }
+  .message span { min-width:0; overflow-wrap:anywhere }
   .note { margin-top:16px; max-width:640px; line-height:1.5 }
 `;
 
@@ -119,6 +130,12 @@ const PAGE_SCRIPT = `
       'px;width:' + slot.width + 'px;height:' + slot.height + 'px">' +
       '<img src="' + uri + '" style="width:' + slot.width +
       'px;margin-top:-' + crop * scale + 'px"></div>';
+  }
+
+  // The candidate fix for a long tool name, shown beside the problem.
+  function labelFor(raw) {
+    if ($('label').value !== 'strip mcp prefix') return raw;
+    return raw.startsWith('mcp__') ? raw.split('__').slice(2).join('__') : raw;
   }
 
   function render() {
@@ -140,6 +157,12 @@ const PAGE_SCRIPT = `
         '" style="left:' + r.x + 'px;top:' + r.y + 'px;width:' + r.width +
         'px;height:' + r.height + 'px">' + inner + '</div>';
     };
+    // The spec allows up to 5 minis before an overflow badge, so 3 + "+2"
+    // was a state that cannot occur. Session count is a control now, which
+    // also makes the strip's worst case — five minis plus a badge — viewable.
+    const sessions = Number($('sessions').value);
+    const overflow = sessions > 5
+      ? '<span style="margin-left:auto">+' + (sessions - 5) + '</span>' : '';
     const mini = '<img src="' + MINI + '">';
     const panel =
       '<div class="panel" style="width:' + size.width + 'px;height:' +
@@ -147,8 +170,8 @@ const PAGE_SCRIPT = `
       band('status','status','<span>14:32</span><span>&times;2</span>') +
       band('stage','','') +
       slots.map((s, i) => slotHtml(s, chosen[i] ?? chosen[0], scale, crop)).join('') +
-      band('strip','strip', mini + mini + mini + '<span style="margin-left:auto">+2</span>') +
-      band('message','message','<span>' + $('message').value + '</span>') +
+      band('strip','strip', mini.repeat(Math.min(sessions, 5)) + overflow) +
+      band('message','message','<span>' + labelFor($('message').value) + '</span>') +
       '</div>';
 
     $('true').innerHTML = panel;
@@ -160,10 +183,14 @@ const PAGE_SCRIPT = `
     const shown = frame % (chosen[0]?.frames.length ?? 1);
     $('frameNo').textContent = 'frame ' + shown;
     $('seek').max = String((chosen[0]?.frames.length ?? 1) - 1);
-    if (document.activeElement !== $('seek')) $('seek').value = String(shown);
+    // A range input keeps focus after a drag, so guarding on focus alone
+    // froze the slider at a stale value the moment playback resumed.
+    if (playing || document.activeElement !== $('seek')) {
+      $('seek').value = String(shown);
+    }
   }
 
-  for (const id of ['orientation','layout','zoom','slot0','slot1','message','bands']) {
+  for (const id of ['orientation','layout','zoom','slot0','slot1','message','bands','label','sessions']) {
     $(id).addEventListener('input', render);
   }
   $('play').addEventListener('click', () => {
@@ -198,6 +225,8 @@ function controls(animations: readonly Animation[]): string {
       <label>slot 1 <select id="slot0">${optionList(names, names[0] ?? '')}</select></label>
       <label>slot 2 <select id="slot1">${optionList(names, names[1] ?? names[0] ?? '')}</select></label>
       <label>message <select id="message">${optionList(['Grep', 'Bash', 'mcp__linear__create_issue', ''], 'Grep')}</select></label>
+      <label>label <select id="label">${optionList(['full', 'strip mcp prefix'], 'full')}</select></label>
+      <label>sessions <select id="sessions">${optionList(['1', '2', '3', '5', '7'], '3')}</select></label>
       <label>zoom <select id="zoom">${optionList(['1', '2', '3', '4'], '2')}</select></label>
       <label><input type="checkbox" id="bands"> show bands</label>
       <button id="play">pause</button>
@@ -214,9 +243,11 @@ function miniSize(svg: string): { width: number; height: number } {
       ?.trim()
       .split(/[\s,]+/)
       .map(Number) ?? [];
-  if (parts.length !== 4)
-    throw new Error('no viewBox in assets/clawd/base.svg');
-  return { width: parts[2], height: parts[3] };
+  const [, , width, height] = parts;
+  if (parts.length !== 4 || !(width > 0) || !(height > 0)) {
+    throw new Error(`bad viewBox in assets/clawd/base.svg: "${viewBox}"`);
+  }
+  return { width, height };
 }
 
 async function build(frameDirs: readonly string[], outPath: string) {
@@ -239,7 +270,7 @@ ${PAGE_STYLE}</style>
 <h1>Tamaclaude &mdash; panel harness</h1>
 ${controls(animations)}
 <div class="stage">
-  <div><div>true size</div><div id="true"></div></div>
+  <div><div>1:1 pixels &mdash; not physical size, see note</div><div id="true"></div></div>
   <div><div>zoomed</div><div id="zoomed"></div></div>
 </div>
 <p class="note">
