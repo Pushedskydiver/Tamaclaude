@@ -118,6 +118,23 @@ of it:
   scaled edge lands between pixels and softens everything it touches. `gym`
   dips a whole unit instead, which costs nothing and stays hard.
 
+## Scrolling backgrounds
+
+A background that scrolls must **tile**, and tiling is arithmetic rather than
+taste: the pattern's period and the scroll distance have to be the same number.
+`bouldering` repeats its holds every 8 units and scrolls exactly 8 units per
+loop, so the frame at t=1.0s is byte-identical to the frame at t=0 and the loop
+cannot seam. Any other pairing jumps visibly once a second — and once a second
+is exactly the cadence at which the eye notices.
+
+The per-frame step still has to be whole: 8 units over 8 frames at scale 8 is 8
+device pixels a frame. Verify both properties by rendering rather than by
+reading the CSS — screenshot at t=0 and t=1000ms and compare hashes.
+
+Scroll the background _away_ from the direction of travel. Holds moving down
+read as Clawd going up, the same relationship a camera has to a climber it is
+following. `road bike` needs this same technique horizontally.
+
 ## Canvas conventions
 
 The character occupies `0..15` horizontally and `0..16` vertically. Animations

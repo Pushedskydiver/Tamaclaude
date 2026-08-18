@@ -100,6 +100,30 @@ hold, three Tier A screens need rethinking, and it is better to know in August.
 
 ---
 
+## Bouldering — `Read`, `Grep`, `Glob`
+
+Clawd going up a wall, searching for the next hold. Claude reading your
+codebase.
+
+- **Action.** The wall scrolls downward past him. He does not move up the
+  frame; the holds move down, which is what reads as ascending.
+- **Body mechanics.** A one-pixel bob, twice a loop — pulling up.
+- **Eyes.** Raised, hunting for the next hold above.
+- **Effects.** The holds themselves, a repeating column pattern behind him. The
+  ground shadow is hidden: he is on a wall, and a shadow on the floor beneath a
+  climber is worse than no shadow.
+
+**Not wanted:** any claw reaching for a hold; holds that pass in front of him;
+a scroll that seams at the loop boundary.
+
+**Why this one is next.** `gym` proved a prop can carry the motion in a
+straight line. This is the harder case — a _repeating_ prop pattern that must
+tile seamlessly, and the technique every scrolling background depends on
+(`road bike` in Tier C needs exactly this). The hold pattern has to be periodic
+in the scroll distance or the loop visibly jumps once a second.
+
+---
+
 ## Template
 
 ```

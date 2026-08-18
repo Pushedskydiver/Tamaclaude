@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+  <!--
+    Clawd: bouldering (Read / Grep / Glob)
+
+    Generated against assets/clawd/base.svg under the contract in
+    docs/ANIMATION.md. Every base element appears below at its original
+    coordinates and colours; all motion is CSS applied by ID.
+
+    Props carry the motion (docs/ANIMATION.md §What pose swapping cannot do).
+    No claw reaches for a hold. Clawd stays put in the frame and the WALL
+    scrolls downward past him, which is what reads as ascending — the same
+    relationship a camera has to a climber it is following.
+
+    The scroll must TILE. The hold pattern repeats every 8 units and scrolls
+    exactly 8 units per loop, so the last frame is indistinguishable from the
+    first and the loop cannot seam. 8 units over 8 frames at scale 8 is 8
+    device pixels per frame — whole, so every edge stays hard. Any other
+    pairing of pattern period and scroll distance visibly jumps once a second.
+    This is the technique `road bike` needs too.
+
+    The hold pattern is deliberately sparse — two per tile, at the sides where
+    the claws are. A denser scatter was tried and read as falling confetti
+    rather than a wall: at 172px the eye needs few enough marks to track each
+    one, and holds passing through the grip line are what connect him to the
+    surface.
+
+    #ground-shadow is hidden. He is on a wall; a shadow on the floor beneath a
+    climber is worse than no shadow. Hiding a base element is an opacity
+    keyframe on an element that is still present, which the contract permits.
+
+    Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s. Nothing runs at 0.125s.
+  -->
+  <defs>
+    <style>
+      #fx-wall {
+        animation: scroll-wall 1s infinite linear;
+      }
+
+      #ground-shadow {
+        opacity: 0;
+      }
+
+      /* Pulling up: one pixel, twice a loop. */
+      #master-group {
+        animation: pull-up 0.5s infinite steps(1);
+      }
+
+      /* Hunting for the next hold, above and to one side. */
+      #left-eye,
+      #right-eye {
+        animation: look-up 0.5s infinite steps(1);
+      }
+
+      @keyframes scroll-wall {
+        from { transform: translateY(0); }
+        to   { transform: translateY(8px); }
+      }
+
+      @keyframes pull-up {
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(-1px); }
+        100% { transform: translateY(0); }
+      }
+
+      @keyframes look-up {
+        0%   { transform: translate(0, -1px); }
+        50%  { transform: translate(-1px, -1px); }
+        100% { transform: translate(0, -1px); }
+      }
+    </style>
+  </defs>
+
+  <!-- ── the wall, behind Clawd so holds pass out of sight rather than
+       across him ─────────────────────────────────────────────────────── -->
+  <g id="fx-wall" fill="#A371F7">
+    <rect x="-2" y="-14" width="2" height="1"/>
+    <rect x="14" y="-10" width="2" height="1"/>
+    <rect x="-2" y="-6" width="2" height="1"/>
+    <rect x="14" y="-2" width="2" height="1"/>
+    <rect x="-2" y="2" width="2" height="1"/>
+    <rect x="14" y="6" width="2" height="1"/>
+    <rect x="-2" y="10" width="2" height="1"/>
+    <rect x="14" y="14" width="2" height="1"/>
+    <rect x="-2" y="18" width="2" height="1"/>
+    <rect x="14" y="22" width="2" height="1"/>
+  </g>
+
+  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg>
