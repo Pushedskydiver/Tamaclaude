@@ -150,21 +150,28 @@
        writing code, rather than once on a splash nobody looks at twice.
 
        Drawn after #master-group so it occludes the lower torso and the tops of
-       the legs, which is what puts it in front. The lid top sits at y=10,
-       exactly where the eyes end, so it never covers them. The claws at x0-2
-       and x13-15 fall outside the lid, so they stay visible either side —
-       Clawd reaching around a machine rather than hidden behind one. -->
+       the legs, which is what puts it in front. The claws at x0-2 and x13-15
+       fall outside the lid, so they stay visible either side — Clawd reaching
+       around a machine rather than hidden behind one.
+
+       The lid top is at y=11, one unit clear of the eyes rather than flush
+       with them. Flush was tried and was wrong: #master-group jitters half a
+       unit and #fx-laptop deliberately does not, so on every jitter frame the
+       eyes dropped 4 device pixels behind a stationary lid and lost their
+       bottom quarter — the eyes visibly pulsed four times a second. A prop
+       that does not share the character's motion needs clearance from it, not
+       adjacency. -->
   <g id="fx-laptop">
-    <rect x="4" y="10" width="7" height="3" fill="#30363B"/>
-    <rect x="3" y="13" width="9" height="1" fill="#8B949E"/>
+    <rect x="4" y="11" width="7" height="3" fill="#30363B"/>
+    <rect x="3" y="14" width="9" height="1" fill="#8B949E"/>
   </g>
 
   <!-- Pack-swappable: one art pixel today, and where a pixelated company logo
        goes. Two shades alternating rather than a fade — an intermediate alpha
        becomes an intermediate colour once the palette is quantised. -->
   <g id="fx-laptop-logo">
-    <rect id="logo-lit" x="7" y="11" width="1" height="1" fill="#58A6FF"/>
-    <rect id="logo-dim" x="7" y="11" width="1" height="1" fill="#1F6FEB"/>
+    <rect id="logo-lit" x="7" y="12" width="1" height="1" fill="#58A6FF"/>
+    <rect id="logo-dim" x="7" y="12" width="1" height="1" fill="#1F6FEB"/>
   </g>
 
   <!-- ── additive effects: not part of the base geometry ───────────────── -->
