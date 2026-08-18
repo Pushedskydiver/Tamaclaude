@@ -24,9 +24,12 @@
     one, and holds passing through the grip line are what connect him to the
     surface.
 
-    #ground-shadow is hidden. He is on a wall; a shadow on the floor beneath a
-    climber is worse than no shadow. Hiding a base element is an opacity
-    keyframe on an element that is still present, which the contract permits.
+    #ground-shadow is hidden for the whole loop — a static opacity rule, not a
+    keyframe. He is on a wall, and a shadow on the floor beneath a climber is
+    worse than no shadow. docs/ANIMATION.md permits hiding a base element for
+    part of a loop via a keyframe; hiding it for all of one is the same
+    guarantee held for longer, and the element is still present and still
+    recolourable by a pack.
 
     Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s. Nothing runs at 0.125s.
   -->
@@ -71,8 +74,14 @@
   </defs>
 
   <!-- ── the wall, behind Clawd so holds pass out of sight rather than
-       across him ─────────────────────────────────────────────────────── -->
-  <g id="fx-wall" fill="#A371F7">
+       across him.
+
+       data-safe-area="ignore" exempts it from the landscape safe-area check in
+       tools/svg2frames.ts. The tiles deliberately extend past the crop and
+       lose nothing when it applies, because the pattern repeats every 8 units
+       — a scrolling background is the one case where content above the crop
+       line is correct rather than a bug. ─────────────────────────────── -->
+  <g id="fx-wall" fill="#A371F7" data-safe-area="ignore">
     <rect x="-2" y="-14" width="2" height="1"/>
     <rect x="14" y="-10" width="2" height="1"/>
     <rect x="-2" y="-6" width="2" height="1"/>

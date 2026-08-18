@@ -58,8 +58,9 @@ Clawd working a problem out, cogs turning above his head.
 
 - **Action.** Two meshing cogs above his head, turning steadily and in opposite
   directions. Claws stay where the base puts them — see the note below.
-- **Body mechanics.** A slow sway, one art pixel side to side, at a quarter the
-  cadence of typing's jitter. Deliberation, not effort.
+- **Body mechanics.** A slow sway, half an art pixel side to side, at a quarter
+  the cadence of typing's jitter. Deliberation, not effort. A whole pixel was
+  tried during authoring and lurched.
 - **Eyes.** Raised and drifting between two positions — looking up and away at
   the problem, never at the viewer.
 - **Effects.** The cogs. They turn by **pose swapping**, not rotation: each cog
@@ -79,8 +80,8 @@ their own, which is what "not wanted" lines are for: the plan said what the
 screen had to communicate, so dropping a mechanism that was not communicating
 it was an easy call rather than an argument.
 
-**Why this one is next.** It is the first test of pose swapping, and six of the
-ten remaining animations depend on that technique working — a gear that cannot
+**Why this one is next.** It is the first test of pose swapping, and most of
+the animations still to come depend on that technique working — a gear that cannot
 turn, a broom that cannot swing, a reach with no elbow. If it fails here, it
 fails everywhere, and it fails now rather than in September.
 

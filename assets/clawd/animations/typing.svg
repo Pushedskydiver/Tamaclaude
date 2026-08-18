@@ -162,13 +162,22 @@
        that does not share the character's motion needs clearance from it, not
        adjacency. -->
   <g id="fx-laptop">
-    <rect x="4" y="11" width="7" height="3" fill="#30363B"/>
-    <rect x="3" y="14" width="9" height="1" fill="#8B949E"/>
+    <g id="fx-laptop-screen" fill="#30363B">
+      <rect x="4" y="11" width="7" height="3"/>
+    </g>
+    <g id="fx-laptop-body" fill="#8B949E">
+      <rect x="3" y="14" width="9" height="1"/>
+    </g>
   </g>
 
-  <!-- Pack-swappable: one art pixel today, and where a pixelated company logo
-       goes. Two shades alternating rather than a fade — an intermediate alpha
-       becomes an intermediate colour once the palette is quantised. -->
+  <!-- Where a pixelated logo goes. Unlike every other group here, a pack does
+       not recolour this one — it replaces it wholesale, which is why the two
+       rects carry their own fills rather than inheriting a group fill. Two
+       shades alternating rather than a fade: an intermediate alpha becomes an
+       intermediate colour once the palette is quantised.
+
+       The screen and body above DO take group fills, so a pack recolours the
+       machine without touching the logo on it. -->
   <g id="fx-laptop-logo">
     <rect id="logo-lit" x="7" y="12" width="1" height="1" fill="#58A6FF"/>
     <rect id="logo-dim" x="7" y="12" width="1" height="1" fill="#1F6FEB"/>
