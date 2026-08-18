@@ -11,9 +11,10 @@ spike skipped this step. That omission had a cost: the first version rendered a
 data bit at opacity 0.125 and nothing recorded whether a fade tail was ever
 wanted, so there was no way to tell a bug from a choice.
 
-Each plan states four things — **action**, **body mechanics**, **eyes**,
-**effects** — following the structure upstream clawd-tank uses in its own
-`assets/svg-animations/PLANS.md`. Two constraints apply to all of them, from
+Each plan states **action**, **body mechanics**, **eyes** and **effects**,
+following the structure upstream clawd-tank uses in its own
+`assets/svg-animations/PLANS.md`, plus **props** where the animation has any —
+which, since `gym`, is most of them. Two constraints apply to all of them, from
 `docs/ANIMATION.md`: no rotation, and every transform must land on a whole
 device pixel at the render scale.
 
@@ -30,13 +31,24 @@ Clawd hammering at an invisible keyboard, output streaming off both claws.
 - **Eyes.** Track one art pixel right, then snap back — scanning a line of code
   rather than watching the claws. Half the speed of the tapping, so the two
   never lock into a single visual beat.
+- **Props.** A laptop in front of him, seen from behind the lid — the machine
+  faces him, so what we see is the back of the screen with a logo on it. It
+  occludes the lower torso and the tops of the legs, which is what puts it in
+  front, and it does not jitter with him because it is sitting on a desk.
 - **Effects.** Small squares rising off each claw and popping out near the top
   of the stage. Two streams, never crossing the torso or the eyes. Hard pop in
   and out, no fade: an intermediate alpha becomes an intermediate colour once
   the palette is quantised.
 
 **Not wanted:** a fade tail on the rising bits; any rotation; any motion
-crossing Clawd's face.
+crossing Clawd's face; a lid that covers the eyes.
+
+**Added after review: the laptop.** The first version had Clawd typing on
+nothing, which upstream's own animation does not — theirs has a laptop with a
+glowing logo, and it is the thing that makes "typing" legible rather than just
+"waving". The lid is also the right home for a pack's logo: it is on screen
+every time Claude writes code, where the firmware splash is seen once before
+setup and never again.
 
 ---
 
@@ -134,6 +146,7 @@ in the scroll distance or the loop visibly jumps once a second.
 - **Action.**
 - **Body mechanics.**
 - **Eyes.**
+- **Props.** (where the motion is carried by something other than Clawd)
 - **Effects.**
 
 **Not wanted:** <the things that would look plausible and be wrong>
