@@ -119,8 +119,14 @@ export function panelBands(
  * `hero` is the shipping choice: one session at the full authoring scale.
  * `twoUp` exists because the spec grill pointed out it had never been
  * considered — two sprites at scale 4 are 84px each and tile the 168px stage
- * exactly, which is the only multi-sprite layout the pixel-exactness rule in
- * `docs/ANIMATION.md` permits. Four-up would need 240px on a 172px panel.
+ * exactly.
+ *
+ * A sprite on the panel is a whole 21-unit stage, not just the 15-unit
+ * character, so four-up needs 4 x 21 x scale pixels: 336px at scale 4 and
+ * 672px at scale 8. It fits only at scale 2 (168px) — and scale 2 is ruled out
+ * by the pixel-exactness rule in `docs/ANIMATION.md`, since typing's data bits
+ * would move 3.5 device pixels a frame. Width alone never ruled four-up out;
+ * pixel-exactness does.
  */
 export type StageLayout = 'hero' | 'twoUp';
 

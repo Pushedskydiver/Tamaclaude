@@ -220,12 +220,12 @@ are constants in `packages/daemon`. The pack manifest stays `name`, `palette`,
 
 ## 10. Explicitly out of scope for v1
 
-| Deferred                           | Why                                                                                                  | Re-entry                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Notification cards and dismissal   | There is no input device — the protocol is output-only, so a card could never be cleared             | If the BOOT button is wired as an input channel |
-| Multiple full-size sprites         | Four crabs at 43px each on a 172px panel reads as mush, and would need every animation at two scales | Never, at this panel size                       |
-| Per-session animation on the strip | Five animated mini-Clawds is five times the blit for a 15px sprite                                   | If bandwidth measurements say it is free        |
-| Menu bar app                       | Needs a native shim or Electron, reintroducing a signed `.app`                                       | Post-birthday                                   |
+| Deferred                           | Why                                                                                                                                     | Re-entry                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Notification cards and dismissal   | There is no input device — the protocol is output-only, so a card could never be cleared                                                | If the BOOT button is wired as an input channel |
+| Multiple full-size sprites         | Four sprites need 336px at scale 4; the only scale that fits the panel is 2, which the pixel-exactness rule forbids. See §11 §Answered. | Never, at this panel size                       |
+| Per-session animation on the strip | Five animated mini-Clawds is five times the blit for a 15px sprite                                                                      | If bandwidth measurements say it is free        |
+| Menu bar app                       | Needs a native shim or Electron, reintroducing a signed `.app`                                                                          | Post-birthday                                   |
 
 ## 10a. Orientation
 
@@ -311,20 +311,24 @@ genuine trade rather than a settled rejection, and it is what the 24 Aug
 harness afternoon should decide. **Caveat: this was judged on a monitor, not on
 the panel.** Hardware lands 20 Aug; re-judge there before the freeze.
 
-**Four concurrent sprites are arithmetically impossible, not merely ugly.**
-Revision 1 argued "43px each reads as mush", which is a number nobody would
-build. The real constraint is `docs/ANIMATION.md`'s pixel-exactness rule — a
-translation is only exact when `distance x scale / frameCount` is whole. Typing's
-data bits rise 14 units over 8 frames:
+**Four concurrent sprites are out — but not for the reason revisions 1 or 2
+gave.** Revision 1 argued "43px each reads as mush", a number nobody would
+build. Revision 2 replaced it with "four-up needs 240px on a 172px panel",
+which was also wrong: 240 is four _characters_ at scale 4, and what actually
+gets rendered and blitted is the whole **21-unit stage**, not the 15-unit
+character.
 
-| Scale | Sprite | Four-up | Bits move     | Legal?                       |
-| ----- | ------ | ------- | ------------- | ---------------------------- |
-| 2     | 30px   | 120px   | 3.5 px/frame  | no — sub-pixel               |
-| 4     | 60px   | 240px   | 7.0 px/frame  | yes, but 240px > 172px panel |
-| 8     | 120px  | 480px   | 14.0 px/frame | hero only                    |
+| Scale | Sprite (stage) | Two-up           | Four-up          | Bits move     | Legal?         |
+| ----- | -------------- | ---------------- | ---------------- | ------------- | -------------- |
+| 2     | 42px           | 84px             | **168px — fits** | 3.5 px/frame  | no — sub-pixel |
+| 4     | 84px           | **168px — fits** | 336px            | 7.0 px/frame  | yes            |
+| 8     | 168px          | 336px            | 672px            | 14.0 px/frame | hero only      |
 
-The only legal scales are 4 and 8; four-up needs 240px on a 172px panel. Two-up
-at scale 4 _does_ fit, and §10 records why it was still not taken.
+Four-up fits the panel perfectly well at scale 2. What rules it out is that
+scale 2 is the one scale `docs/ANIMATION.md`'s pixel-exactness rule forbids —
+typing's data bits would move 3.5 device pixels a frame. **The width argument on
+its own never ruled four-up out at all.** Two-up at scale 4 tiles the stage
+exactly, which is what `layout.ts` implements.
 
 **Quip and easter-egg cadence** was specified in loop counts, which made "rare"
 mean every twenty seconds. Now wall-clock. See §7.
@@ -336,7 +340,9 @@ it is Tier A precisely because it is likely the most-seen screen.
 
 Recorded rather than absorbed, so the freeze is auditable.
 
-**Killed outright:** the "43px reads as mush" argument, replaced by a proof;
+**Killed outright:** the "43px reads as mush" argument, and its replacement —
+a "240px" figure that was also wrong. Both are gone from §10 and §11, not just
+contradicted there;
 pack-configurable timings; loop-count rarity.
 
 **Added:** `NEEDS_PERMISSION` and `WAITING` to Tier A (they had no art budget

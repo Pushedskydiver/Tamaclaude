@@ -73,8 +73,10 @@ describe('spriteSlots', () => {
   it('only offers scales that keep motion on whole pixels', () => {
     // docs/ANIMATION.md: a translation is pixel-exact when
     // distance x scale / frameCount is whole. The typing animation's data bits
-    // rise 14 units over 8 frames, which is what rules out scale 2 — and with
-    // it any four-up layout, since scale 4 would need 240px on a 172px panel.
+    // rise 14 units over 8 frames, so scale 2 gives 3.5px a frame and is out.
+    // That is what rules out four-up: a sprite is a whole 21-unit stage, so
+    // four of them need 336px at scale 4 and only fit the 172px panel at
+    // scale 2 — the one scale the rule forbids.
     const bitsRise = 14;
     const frames = 8;
     for (const layout of ['hero', 'twoUp'] as const satisfies StageLayout[]) {
