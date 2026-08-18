@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+  <!--
+    Clawd: thinking (UserPromptSubmit)
+
+    Generated against assets/clawd/base.svg under the contract in
+    docs/ANIMATION.md. Every base element appears below at its original
+    coordinates and colours; all motion is CSS applied by ID.
+
+    This is the first animation to use POSE SWAPPING (docs/ANIMATION.md
+    §Articulation without rotation). Rotation is banned and the base geometry
+    has no joints, so a turning cog is drawn rather than transformed: each cog
+    is two shapes — teeth on the axes, teeth on the diagonals — alternating by
+    opacity. Six of the ten remaining animations need this technique, which is
+    why thinking was built before any of them. It works.
+
+    A raised claw was tried and abandoned. Three positions were rendered and
+    judged at true size — (0,6) beside the head, (0,4) detached above it, and
+    (2,4) on the shoulder — and all three read as a lump on the torso rather
+    than a limb. See docs/ANIMATION.md §What pose swapping cannot do.
+
+    Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s both divide it. Nothing runs
+    at 0.125s. Every transform is a whole art pixel, so every edge stays hard.
+  -->
+  <defs>
+    <style>
+      /* Deliberation, not effort: one pixel of sway across the whole loop,
+         a quarter the cadence of typing's jitter. */
+      #master-group {
+        animation: sway 1s infinite steps(1);
+      }
+
+      /* Looking up and away at the problem, drifting between two positions. */
+      #left-eye,
+      #right-eye {
+        animation: look-away 0.5s infinite steps(1);
+      }
+
+      /* The cogs turn by alternating two drawn poses. The small cog is half a
+         cycle out of phase with the large one, which is what reads as meshing
+         gears turning in opposite directions. */
+      #cog-large-axes,
+      #cog-small-diagonals {
+        animation: pose-a 0.5s infinite steps(1);
+      }
+      #cog-large-diagonals,
+      #cog-small-axes {
+        animation: pose-b 0.5s infinite steps(1);
+      }
+
+      /* Half a unit, matching typing's jitter: exactly 4 device pixels at
+         scale 8, so the edge stays hard. A whole unit here lurched. */
+      @keyframes sway {
+        0%   { transform: translateX(0); }
+        50%  { transform: translateX(0.5px); }
+        100% { transform: translateX(0); }
+      }
+
+      @keyframes look-away {
+        0%   { transform: translate(0, -1px); }
+        50%  { transform: translate(1px, -1px); }
+        100% { transform: translate(0, -1px); }
+      }
+
+      /* Binary opacity only — an intermediate alpha becomes an intermediate
+         colour once the palette is quantised. */
+      @keyframes pose-a {
+        0%   { opacity: 1; }
+        50%  { opacity: 0; }
+        100% { opacity: 1; }
+      }
+      @keyframes pose-b {
+        0%   { opacity: 0; }
+        50%  { opacity: 1; }
+        100% { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+
+  <!-- ── additive effects: two meshing cogs, turned by pose swapping ───── -->
+  <g id="fx-cogs" fill="#8B949E">
+    <!-- large cog, 5x5 box at (5,-1). Shared hub, swapped teeth. -->
+    <rect x="6" y="0" width="3" height="3"/>
+    <g id="cog-large-axes">
+      <rect x="7" y="-1" width="1" height="1"/>
+      <rect x="7" y="3" width="1" height="1"/>
+      <rect x="5" y="1" width="1" height="1"/>
+      <rect x="9" y="1" width="1" height="1"/>
+    </g>
+    <g id="cog-large-diagonals">
+      <rect x="5" y="-1" width="1" height="1"/>
+      <rect x="9" y="-1" width="1" height="1"/>
+      <rect x="5" y="3" width="1" height="1"/>
+      <rect x="9" y="3" width="1" height="1"/>
+    </g>
+
+    <!-- small cog, 3x3 box at (10,2), meshing below and right. Lifted one
+         unit: its lower teeth previously sat flush on the torso top edge. -->
+    <rect x="11" y="3" width="1" height="1"/>
+    <g id="cog-small-axes">
+      <rect x="11" y="2" width="1" height="1"/>
+      <rect x="11" y="4" width="1" height="1"/>
+      <rect x="10" y="3" width="1" height="1"/>
+      <rect x="12" y="3" width="1" height="1"/>
+    </g>
+    <g id="cog-small-diagonals">
+      <rect x="10" y="2" width="1" height="1"/>
+      <rect x="12" y="2" width="1" height="1"/>
+      <rect x="10" y="4" width="1" height="1"/>
+      <rect x="12" y="4" width="1" height="1"/>
+    </g>
+  </g>
+</svg>
