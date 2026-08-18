@@ -45,7 +45,7 @@ export type HookEvent = {
  * compression ratio that the USB budget depends on.
  */
 export function rgb565(red: number, green: number, blue: number): number {
-  return ((red & 0xf8) << 8) | ((green & 0xfc) << 3) | (blue >> 3);
+  return ((red & 0xf8) << 8) | ((green & 0xfc) << 3) | ((blue & 0xf8) >> 3);
 }
 
 /** Number of pixels a rectangle covers. */

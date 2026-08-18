@@ -1,7 +1,7 @@
 # Build output
 dist/
 *.tsbuildinfo
-firmware/build/
+**/firmware/build/
 
 # Coverage
 coverage/

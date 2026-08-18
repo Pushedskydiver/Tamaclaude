@@ -20,8 +20,8 @@ viewBox="0 0 15 16"
 
 Fifteen units wide, sixteen tall, every coordinate an integer. The small
 coordinate space is load-bearing, not incidental: it is what lets a language
-model reason reliably about `transform-origin: 2px 10px` without drowning in
-decimal path data.
+model reason reliably about `translateY(1px)` meaning exactly one art pixel,
+without drowning in decimal path data.
 
 | Element ID         | Rect           | Notes                                                              |
 | ------------------ | -------------- | ------------------------------------------------------------------ |
@@ -29,8 +29,8 @@ decimal path data.
 | `master-group`     | —              | Wraps everything animatable                                        |
 | `body-color-group` | fill `#DE886D` | One attribute recolours the whole crab                             |
 | `torso`            | 2,6 11x7       |                                                                    |
-| `left-arm`         | 0,9 2x2        | Shoulder joint at `2px 10px`                                       |
-| `right-arm`        | 13,9 2x2       | Shoulder joint at `13px 10px`                                      |
+| `left-arm`         | 0,9 2x2        | Taps by translating; never rotates                                 |
+| `right-arm`        | 13,9 2x2       | Taps by translating; never rotates                                 |
 | `outer-left-leg`   | 3,13 1x2       |                                                                    |
 | `inner-left-leg`   | 5,13 1x2       |                                                                    |
 | `inner-right-leg`  | 9,13 1x2       |                                                                    |
@@ -62,6 +62,11 @@ character — upstream's typing animation uses `viewBox="-15 -25 45 45"`, giving
 the same 15x16 crab a 45x45 stage with headroom for floating data bits.
 
 Keep the character's own coordinates untouched. Grow the stage instead.
+
+**The stage has a ceiling.** At 8 device pixels per unit the panel's 172px width
+allows 21.5 units. `typing.svg` uses 21. Upstream's 45-unit example would render
+360px and be clipped in half, so treat it as an illustration of the technique,
+not of the budget. `tools/svg2frames.ts` warns when a stage exceeds the panel.
 
 ## Pipeline
 
@@ -97,11 +102,16 @@ overwhelmingly one colour, so the sprite stays clean and only the moving edge
 softens.
 
 So the constraint runs the other way round from what you would guess: **a high
-render scale is what buys the freedom to use rotation and easing at all.** If
-we ever want genuinely hard-edged, retro-authentic motion, the fix is not a
-lower render scale — it is restricting the animation vocabulary to whole-unit
-translations and `steps()` timing, and that is a different aesthetic decision
-rather than a pipeline setting.
+render scale is what makes sub-unit motion safe.** The body jitter translates
+half a unit, which at 8x is exactly 4 device pixels — a whole number, so the
+edge stays hard.
+
+**Rotation is the exception, and it is banned.** A rotated edge is diagonal, so
+unlike a sub-unit translation it cannot land on the pixel grid at _any_ scale.
+It always antialiases into a soft smear against an otherwise razor-sharp
+sprite. The first version of `typing.svg` rotated the claws and looked visibly
+wrong next to the torso; they now tap by translating a whole art pixel. Use
+translation, `steps()` timing, and opacity that is only ever 0 or 1.
 
 Payload is not a reason to revisit this. We send dirty rectangles, not whole
 sprites, and RLE handles the large flat areas that pixel art is made of.
@@ -119,6 +129,19 @@ appears as a visible hitch once per loop.
 animation with that period is sampled at the same phase every single frame and
 renders as completely static. The fastest perceivable cycle is 0.25s — two
 frames, alternating.
+
+**A timing function applies per keyframe interval, never across the whole
+animation.** `steps(8)` on a four-keyframe animation does not quantise the loop
+into eight positions — it subdivides each of the four segments into eight. The
+first `typing.svg` used it on the rising data bits and sampled one segment at
+96% of its way through, rendering a bit at opacity 0.125: precisely the
+intermediate colour the code comment claimed it prevented. Put every keyframe
+percentage on a frame boundary instead, and let `linear` do the interpolating.
+
+**What actually keeps motion on the grid is arithmetic.** A translation stays
+pixel-exact when `distance x scale / frameCount` is a whole number. The data
+bits rise 14 units over 8 frames at scale 8: 14 x 8 / 8 = 14 whole pixels per
+frame. Check this before trusting a render — it is invisible until quantisation.
 
 Negative `animation-delay` is how elements are put out of phase with each other
 — the two claws tap alternately via `-0.125s`. Give each offset element its own

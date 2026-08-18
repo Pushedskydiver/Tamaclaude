@@ -27,7 +27,6 @@
       /* Sampling at 8fps means the fastest perceivable cycle is 0.25s — two
          frames, alternating. See the note above before shortening anything. */
       #master-group {
-        transform-box: view-box;
         animation: body-jitter 0.25s infinite steps(1);
       }
 
@@ -35,7 +34,6 @@
          cycle out of phase, so one is down while the other lifts. */
       #left-arm,
       #right-arm {
-        transform-box: view-box;
         animation: tap-claw 0.25s infinite steps(1);
       }
       #right-arm {
@@ -45,20 +43,26 @@
       /* Eyes track across an imaginary line of code and snap back. */
       #left-eye,
       #right-eye {
-        transform-box: view-box;
         animation: read-line 0.5s infinite steps(1);
       }
 
-      /* Output rising off each claw. Discrete steps and binary opacity keep
-         every bit on the pixel grid and out of the intermediate colours a
-         continuous fade would produce once the palette is quantised. */
+      /* Output rising off each claw.
+         `linear`, not `steps(8)`. A timing function applies per keyframe
+         interval, never across the whole animation, so steps(8) subdivided
+         each opacity segment instead of quantising the rise — it sampled the
+         75%-88% segment at 96% of the way through and rendered a bit at
+         opacity 0.125, the exact intermediate colour the previous comment here
+         claimed was designed out. What actually keeps the rise on the grid is
+         arithmetic: 14 units over 8 frames is 1.75 units, and 1.75 x 8 device
+         pixels per unit is 14 whole pixels per frame. */
       #fx-data-bits rect {
-        animation: rise 1s infinite steps(8);
+        animation: rise 1s infinite linear;
       }
       /* Six distinct phases, all multiples of the 0.125s frame interval so
          each one samples cleanly. Listed individually rather than with an
          nth-child stride: a stride hands the left and right streams the same
          delay set, and the two sides then rise as exact mirror images. */
+      #fx-data-bits rect:nth-child(1) { animation-delay: 0s; }
       #fx-data-bits rect:nth-child(2) { animation-delay: -0.375s; }
       #fx-data-bits rect:nth-child(3) { animation-delay: -0.75s; }
       #fx-data-bits rect:nth-child(4) { animation-delay: -0.125s; }
@@ -83,12 +87,15 @@
         100% { transform: translateX(0); }
       }
 
+      /* Every keyframe percentage lands on an eighth, because frames sample
+         at eighths. 88% did not, which is how the 0.125 ghost got in. Opacity
+         is a hard pop rather than a fade: an intermediate alpha becomes an
+         intermediate colour once the palette is quantised. */
       @keyframes rise {
-        0%   { transform: translateY(0); opacity: 0; }
-        12%  { opacity: 1; }
-        75%  { opacity: 1; }
-        88%  { opacity: 0; }
-        100% { transform: translateY(-14px); opacity: 0; }
+        0%    { transform: translateY(0); opacity: 1; }
+        75%   { opacity: 1; }
+        87.5% { opacity: 0; }
+        100%  { transform: translateY(-14px); opacity: 0; }
       }
     </style>
   </defs>

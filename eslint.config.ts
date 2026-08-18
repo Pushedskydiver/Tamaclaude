@@ -22,7 +22,7 @@ export default defineConfig(
     ignores: [
       '**/dist/',
       'node_modules/',
-      'firmware/**',
+      '**/firmware/**',
       'packs/**',
       '.claude/worktrees/**',
     ],
@@ -50,7 +50,7 @@ export default defineConfig(
 
   // ── All TypeScript files ──────────────────────────────────────
   {
-    files: ['packages/*/src/**/*.ts'],
+    files: ['packages/*/src/**/*.ts', 'tools/**/*.ts'],
     plugins: { functional, sonarjs, boundaries, unicorn, n },
     settings: {
       'import/resolver': { typescript: true },
@@ -176,6 +176,26 @@ export default defineConfig(
   // 10fps. Scoped off here rather than globally weakened.
   {
     files: ['packages/protocol/src/**/*.ts', 'packages/renderer/src/**/*.ts'],
+    rules: {
+      'functional/no-let': 'off',
+      'functional/immutable-data': 'off',
+      'functional/no-loop-statements': 'off',
+      'functional/prefer-readonly-type': 'off',
+    },
+  },
+
+  // ── Build-tool overrides ──────────────────────────────────────
+  // `tools/` drives a headless browser: it seeks animations by assigning to
+  // `currentTime`, and captures frames in a sequential loop because each
+  // screenshot must complete before the next seek. Both are inherently
+  // imperative — a `map` would run the captures concurrently and destroy the
+  // determinism the tool exists to provide. Same reasoning as the
+  // protocol/renderer override above: the functional rules are scoped off
+  // where they are wrong, not weakened globally. Everything else — the
+  // type-checked rules, complexity limits, no-explicit-any — still applies,
+  // which it did not when `tools/` sat outside the rule set entirely.
+  {
+    files: ['tools/**/*.ts'],
     rules: {
       'functional/no-let': 'off',
       'functional/immutable-data': 'off',

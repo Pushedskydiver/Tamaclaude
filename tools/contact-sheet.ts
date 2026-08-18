@@ -24,7 +24,9 @@ import { chromium } from 'playwright';
 const PANEL_BACKGROUND = '#0d1117';
 const INSPECT_SCALE = 3;
 
-async function frameDataUris(frameDir: string): Promise<string[]> {
+type Frame = { readonly uri: string; readonly width: number };
+
+async function readFrames(frameDir: string): Promise<Frame[]> {
   const names = (await readdir(frameDir))
     .filter((name) => name.endsWith('.png'))
     .sort();
@@ -32,20 +34,32 @@ async function frameDataUris(frameDir: string): Promise<string[]> {
   return Promise.all(
     names.map(async (name) => {
       const bytes = await readFile(resolve(frameDir, name));
-      return `data:image/png;base64,${bytes.toString('base64')}`;
+      // PNG IHDR: the 8-byte signature is followed by a 4-byte length and the
+      // "IHDR" tag, putting width at offset 16 as a big-endian uint32. Reading
+      // it here means the sheet's own labels are measured from the frames
+      // rather than hardcoded — a caption that lies about scale is worse than
+      // no caption, given true-size judgement is the point of the artefact.
+      return {
+        uri: `data:image/png;base64,${bytes.toString('base64')}`,
+        width: bytes.readUInt32BE(16),
+      };
     }),
   );
 }
 
-function sheetHtml(uris: readonly string[]): string {
-  const trueSize = uris
+function sheetHtml(frames: readonly Frame[]): string {
+  const frameWidth = frames[0]?.width ?? 0;
+  const trueSize = frames
     .map(
-      (uri, index) =>
-        `<figure><img src="${uri}" alt=""><figcaption>${index}</figcaption></figure>`,
+      (frame, index) =>
+        `<figure><img src="${frame.uri}" alt=""><figcaption>${index}</figcaption></figure>`,
     )
     .join('');
-  const enlarged = uris
-    .map((uri) => `<img class="big" src="${uri}" alt="">`)
+  // Two frames is one full 0.25s cycle at 8fps — the fastest motion in the
+  // sprite, and the pair most worth inspecting pixel by pixel.
+  const enlarged = frames
+    .slice(0, 2)
+    .map((frame) => `<img class="big" src="${frame.uri}" alt="">`)
     .join('');
   return `
     <style>
@@ -58,25 +72,25 @@ function sheetHtml(uris: readonly string[]): string {
       img { display: block; background: ${PANEL_BACKGROUND};
             image-rendering: pixelated; }
       figcaption { text-align: center; padding-top: 6px; }
-      .big { width: ${168 * INSPECT_SCALE}px; }
+      .big { width: ${frameWidth * INSPECT_SCALE}px; }
       .section { margin-top: 28px; }
     </style>
-    <h2>true size &mdash; 8 frames at panel pixel density, 168&times;200 each</h2>
+    <h2>true size &mdash; ${frames.length} frames at ${frameWidth}px wide, panel pixel density</h2>
     <div class="row">${trueSize}</div>
     <div class="section">
       <h2>${INSPECT_SCALE}&times; &mdash; frames 0 and 1 (the fastest cycle)</h2>
-      <div class="row">${enlarged.split('<img class="big"').slice(0, 3).join('<img class="big"')}</div>
+      <div class="row">${enlarged}</div>
     </div>
   `;
 }
 
 async function composeSheet(frameDir: string, outPath: string): Promise<void> {
-  const uris = await frameDataUris(frameDir);
+  const frames = await readFrames(frameDir);
   const browser = await chromium.launch();
   const page = await browser.newPage({
     viewport: { width: 1600, height: 1200 },
   });
-  await page.setContent(sheetHtml(uris));
+  await page.setContent(sheetHtml(frames));
   await page.locator('body').screenshot({ path: outPath });
   await browser.close();
 }

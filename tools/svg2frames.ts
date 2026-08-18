@@ -5,7 +5,7 @@
  * and has no business in the runtime dependency graph. Run with Node's native
  * TypeScript support:
  *
- *   node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing
+ *   node tools/svg2frames.ts <input.svg> [outDir] [scale]
  *
  * Determinism is the whole point: nothing depends on wall-clock time, so the
  * same SVG always produces the same bytes.
@@ -33,10 +33,18 @@ import { chromium } from 'playwright';
 
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
-/** One second of animation. Every sub-animation period must divide this. */
-const FRAME_COUNT = 8;
+/** Loop length. Every sub-animation period must divide this — see docs/ANIMATION.md. */
+const LOOP_SECONDS = 1;
+/** Derived, not coincidental: changing FPS must not silently change loop length. */
+const FRAME_COUNT = FPS * LOOP_SECONDS;
 /** Device pixels per SVG user unit. 21 units x 8 = 168px, inside the 172 panel. */
 const SCALE = 8;
+/**
+ * Panel width in device pixels. Duplicated from `@tamaclaude/protocol`, which
+ * this file cannot import: `tools/` sits outside the workspace on purpose, so
+ * Playwright never enters the runtime dependency graph. Keep in step by hand.
+ */
+const PANEL_WIDTH = 172;
 
 type Options = {
   readonly fps: number;
@@ -64,14 +72,37 @@ async function renderFrames(
   outDir: string,
   options: Options,
 ): Promise<string[]> {
+  if (!Number.isFinite(options.scale) || options.scale <= 0) {
+    throw new Error(`scale must be a positive number, got ${options.scale}`);
+  }
+
   const svg = await readFile(svgPath, 'utf8');
   const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1];
   if (!viewBox) throw new Error(`no viewBox in ${svgPath}`);
-  const [, , unitsWide, unitsTall] = viewBox.split(/\s+/).map(Number);
-  if (!unitsWide || !unitsTall) throw new Error(`bad viewBox: ${viewBox}`);
+  // SVG permits commas as well as whitespace between viewBox values, and
+  // leading whitespace is legal. Splitting on whitespace alone shifts the
+  // destructure by one and yields a negative width that dies inside Playwright
+  // instead of at this guard.
+  const parts = viewBox
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number);
+  const [, , unitsWide, unitsTall] = parts;
+  if (parts.length !== 4 || !(unitsWide > 0) || !(unitsTall > 0)) {
+    throw new Error(`bad viewBox: "${viewBox}"`);
+  }
 
   const width = Math.round(unitsWide * options.scale);
   const height = Math.round(unitsTall * options.scale);
+  if (width > PANEL_WIDTH) {
+    // docs/ANIMATION.md tells authors to grow the stage for props. Nothing
+    // states the ceiling, so it is enforced here instead of surfacing at
+    // Stage 2 when the panel finally shows a clipped sprite.
+    console.warn(
+      `warning: stage is ${width}px wide at scale ${options.scale}, ` +
+        `wider than the ${PANEL_WIDTH}px panel — it will be clipped`,
+    );
+  }
 
   await mkdir(outDir, { recursive: true });
   const browser = await chromium.launch();
@@ -110,7 +141,10 @@ async function renderFrames(
 
 const [svgArg, outArg, scaleArg] = process.argv.slice(2);
 if (!svgArg) {
-  console.error('usage: node tools/svg2frames.ts <input.svg> [outDir]');
+  console.error(
+    'usage: node tools/svg2frames.ts <input.svg> [outDir] [scale]\n' +
+      `       scale defaults to ${SCALE} device pixels per SVG user unit`,
+  );
   process.exit(1);
 }
 const out = outArg ?? `out/${basename(svgArg, '.svg')}`;

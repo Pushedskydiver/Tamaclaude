@@ -16,5 +16,8 @@
   },
   "bin": {
     "tamaclaude-notify": "./dist/index.js"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.9"
   }
 }
