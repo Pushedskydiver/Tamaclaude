@@ -220,12 +220,47 @@ are constants in `packages/daemon`. The pack manifest stays `name`, `palette`,
 
 ## 10. Explicitly out of scope for v1
 
-| Deferred                           | Why                                                                                                  | Re-entry                                        |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Notification cards and dismissal   | There is no input device — the protocol is output-only, so a card could never be cleared             | If the BOOT button is wired as an input channel |
-| Multiple full-size sprites         | Four crabs at 43px each on a 172px panel reads as mush, and would need every animation at two scales | Never, at this panel size                       |
-| Per-session animation on the strip | Five animated mini-Clawds is five times the blit for a 15px sprite                                   | If bandwidth measurements say it is free        |
-| Menu bar app                       | Needs a native shim or Electron, reintroducing a signed `.app`                                       | Post-birthday                                   |
+| Deferred                           | Why                                                                                                                                     | Re-entry                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Notification cards and dismissal   | There is no input device — the protocol is output-only, so a card could never be cleared                                                | If the BOOT button is wired as an input channel |
+| Multiple full-size sprites         | Four sprites need 336px at scale 4; the only scale that fits the panel is 2, which the pixel-exactness rule forbids. See §11 §Answered. | Never, at this panel size                       |
+| Per-session animation on the strip | Five animated mini-Clawds is five times the blit for a 15px sprite                                                                      | If bandwidth measurements say it is free        |
+| Menu bar app                       | Needs a native shim or Electron, reintroducing a signed `.app`                                                                          | Post-birthday                                   |
+
+## 10a. Orientation
+
+**Undecided, and it is a freeze item.** The panel is 172x320 and can be mounted
+either way. Landscape is **not a rotated portrait layout** — the stage as
+authored is 200px tall and a landscape panel is 172px, so it cannot simply
+turn. Rescaling is not an option either: 172/25 is 6.88 device pixels per unit
+and every motion in every animation would land between pixels.
+
+Landscape therefore crops the stage to a 21x20 safe area and puts the three
+text bands in a **column beside** it rather than stacked beneath. All four
+animations built so far clear the safe area, so this costs no art — but it does
+constrain every future one, which is why `docs/ANIMATION.md` §Safe area now
+states the rule regardless of which orientation ships.
+
+|            | Portrait 172x320                 | Landscape 320x172                                                                                                                                                                                                                  |
+| ---------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Stage      | 168x200, full authored canvas    | 168x160, safe area only                                                                                                                                                                                                            |
+| Text bands | Stacked below, message gets 64px | Column beside, message gets 152x116                                                                                                                                                                                                |
+| Reads as   | A creature in a tank             | A status display with a mascot                                                                                                                                                                                                     |
+| Two-up     | Tight but works                  | Workable. An earlier note here called it weak because sprites floated in an over-tall stage — that was a bug in `panel-mock.ts`, which cropped at the authoring scale rather than the drawing scale, not a property of the layout. |
+
+First look at `tools/panel-mock.ts` output: **landscape hero is the strongest
+of the four candidates.** Note that this verdict was first recorded from a
+render in which the landscape two-up candidate was cropped wrongly; it survives
+re-rendering, but it was reached across a set where one candidate was
+misrepresented, so treat it as a lead for the 24th rather than a result. The character keeps full scale and the text column is
+far more usable than portrait's cramped band. Portrait keeps the better
+creature read, which is what §1 is really about.
+
+Consequence if both ship: the firmware sets display orientation via the ST7789
+MADCTL register and is flashed once, so orientation has to be a **runtime
+command in the protocol** rather than a build-time constant — one byte on
+connect. Cheap now, expensive after the boards are assembled. Also check the
+enclosure STL: it fixes the orientation mechanically.
 
 ## 11. Open questions
 
@@ -253,9 +288,15 @@ than opinion, and are now answered. What remains:
    14:1 figure is upstream's whole-corpus number. Stage 1 must measure before
    two full-stage animations are committed to.
 3. **Is the message band worth 64px** — a fifth of the panel for text that is
-   empty most of the time?
-4. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
-5. **`PermissionRequest`, `StopFailure`, `SubagentStart` and `LSP` are
+   empty most of the time? First mock says no: a short quip sits in a large
+   empty box and 40px would carry it.
+4. **Portrait or landscape, or both?** See §10a. If both, the protocol needs an
+   orientation byte before the boards are assembled, and the case has to allow
+   it. Decide at the freeze.
+5. **Does the strip earn 32px** when Alex and Jamie mostly run 2–3 sessions?
+   First mock says yes — three mini-Clawds and an overflow badge sit
+   comfortably and the band reads as a distinct row rather than clutter.
+6. **`PermissionRequest`, `StopFailure`, `SubagentStart` and `LSP` are
    unverified** against live Claude Code documentation. `LSP` in particular
    appears nowhere else in this repo and may not be a tool name at all. If
    `PermissionRequest` does not exist, `NEEDS_PERMISSION` rehomes onto
@@ -264,20 +305,33 @@ than opinion, and are now answered. What remains:
 
 ### Answered since revision 1
 
-**Four concurrent sprites are arithmetically impossible, not merely ugly.**
-Revision 1 argued "43px each reads as mush", which is a number nobody would
-build. The real constraint is `docs/ANIMATION.md`'s pixel-exactness rule — a
-translation is only exact when `distance x scale / frameCount` is whole. Typing's
-data bits rise 14 units over 8 frames:
+**Two-up is legible, and the case against it is now weaker than §10 claims.**
+`tools/panel-mock.ts` renders both candidates at true panel size from real
+animation frames. Two sprites at scale 4 read clearly — the "mush" intuition
+was wrong on the eye as well as on the arithmetic. Hero still gives a stronger
+single-subject read and still matches §1's principle, but this is now a
+genuine trade rather than a settled rejection, and it is what the 24 Aug
+harness afternoon should decide. **Caveat: this was judged on a monitor, not on
+the panel.** Hardware lands 20 Aug; re-judge there before the freeze.
 
-| Scale | Sprite | Four-up | Bits move     | Legal?                       |
-| ----- | ------ | ------- | ------------- | ---------------------------- |
-| 2     | 30px   | 120px   | 3.5 px/frame  | no — sub-pixel               |
-| 4     | 60px   | 240px   | 7.0 px/frame  | yes, but 240px > 172px panel |
-| 8     | 120px  | 480px   | 14.0 px/frame | hero only                    |
+**Four concurrent sprites are out — but not for the reason revisions 1 or 2
+gave.** Revision 1 argued "43px each reads as mush", a number nobody would
+build. Revision 2 replaced it with "four-up needs 240px on a 172px panel",
+which was also wrong: 240 is four _characters_ at scale 4, and what actually
+gets rendered and blitted is the whole **21-unit stage**, not the 15-unit
+character.
 
-The only legal scales are 4 and 8; four-up needs 240px on a 172px panel. Two-up
-at scale 4 _does_ fit, and §10 records why it was still not taken.
+| Scale | Sprite (stage) | Two-up           | Four-up          | Bits move     | Legal?         |
+| ----- | -------------- | ---------------- | ---------------- | ------------- | -------------- |
+| 2     | 42px           | 84px             | **168px — fits** | 3.5 px/frame  | no — sub-pixel |
+| 4     | 84px           | **168px — fits** | 336px            | 7.0 px/frame  | yes            |
+| 8     | 168px          | 336px            | 672px            | 14.0 px/frame | hero only      |
+
+Four-up fits the panel perfectly well at scale 2. What rules it out is that
+scale 2 is the one scale `docs/ANIMATION.md`'s pixel-exactness rule forbids —
+typing's data bits would move 3.5 device pixels a frame. **The width argument on
+its own never ruled four-up out at all.** Two-up at scale 4 tiles the stage
+exactly, which is what `layout.ts` implements.
 
 **Quip and easter-egg cadence** was specified in loop counts, which made "rare"
 mean every twenty seconds. Now wall-clock. See §7.
@@ -289,7 +343,9 @@ it is Tier A precisely because it is likely the most-seen screen.
 
 Recorded rather than absorbed, so the freeze is auditable.
 
-**Killed outright:** the "43px reads as mush" argument, replaced by a proof;
+**Killed outright:** the "43px reads as mush" argument, and its replacement —
+a "240px" figure that was also wrong. Both are gone from §10 and §11, not just
+contradicted there;
 pack-configurable timings; loop-count rarity.
 
 **Added:** `NEEDS_PERMISSION` and `WAITING` to Tier A (they had no art budget

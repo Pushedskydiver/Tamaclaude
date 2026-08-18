@@ -14,6 +14,9 @@ importers:
       '@ianvs/prettier-plugin-sort-imports':
         specifier: ^4.7.1
         version: 4.7.1(prettier@3.9.6)
+      '@tamaclaude/renderer':
+        specifier: workspace:*
+        version: link:packages/renderer
       '@types/node':
         specifier: ^24.10.0
         version: 24.13.3
@@ -129,6 +132,10 @@ importers:
       '@tamaclaude/protocol':
         specifier: workspace:*
         version: link:../protocol
+    devDependencies:
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.10(@types/node@26.2.0)(vite@8.2.1(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))
 
 packages:
 
