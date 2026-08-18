@@ -1,9 +1,9 @@
 /**
  * RLE codec for RGB565 rectangles.
  *
- * `docs/ARCHITECTURE.md`'s bandwidth argument depends on compression, and the
- * ~14:1 figure quoted there is upstream's whole-corpus number, not ours.
- * `tools/measure-compression.ts` measures the real ratio on real frames.
+ * `docs/ARCHITECTURE.md`'s bandwidth argument depends on compression.
+ * `tools/measure-compression.ts` measures the real ratio on real frames, and
+ * that document quotes those measurements.
  *
  * Format: a mode byte, then the payload.
  *

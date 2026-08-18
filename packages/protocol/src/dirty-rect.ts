@@ -2,9 +2,10 @@
  * Dirty-rect diffing: the difference between fitting down the wire and not.
  *
  * `docs/ARCHITECTURE.md` rests the whole host-renders design on only sending
- * what changed. A full 172x320 frame is 110,080 bytes and at 10fps that is
- * 1.1 MB/s against a USB full-speed ceiling of roughly 700KB-1MB/s. A typical
- * sprite region is a fraction of that.
+ * what changed. A full 172x320 frame is 110,080 bytes; at the panel's 8fps
+ * that is 880 KB/s against a USB full-speed ceiling of roughly 700KB-1MB/s,
+ * so full frames do not fit even before the header. A typical sprite region
+ * is a fraction of that — see the measured table in that document.
  */
 
 import type { Rect } from './geometry.js';

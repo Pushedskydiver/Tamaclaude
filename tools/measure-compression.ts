@@ -3,9 +3,9 @@
  * Measure what the wire actually costs, on real frames.
  *
  * `docs/ARCHITECTURE.md` rests the host-renders design on dirty rectangles
- * plus RLE fitting inside a 12 Mbps USB link, and quotes a ~14:1 compression
- * ratio — which is upstream's whole-corpus figure for their on-flash sprites,
- * not a measurement of anything in this repo. This produces ours.
+ * plus RLE fitting inside a 12 Mbps USB link. It used to support that with
+ * upstream's whole-corpus ~14:1 figure, which was never a measurement of
+ * anything in this repo. This produces ours, and the doc quotes these.
  *
  *   node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing
  *   node tools/measure-compression.ts out/typing out/gym
@@ -21,7 +21,12 @@ import process from 'node:process';
 
 import { chromium } from 'playwright';
 
-import { dirtyRect, encodeRect, extractRect } from '@tamaclaude/protocol';
+import {
+  dirtyRect,
+  encodeRect,
+  extractRect,
+  RECT_HEADER_BYTES,
+} from '@tamaclaude/protocol';
 
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
@@ -79,9 +84,12 @@ function summarise(
   const stats = frames.map((frame, index) => {
     const previous = frames[(index + frames.length - 1) % frames.length];
     const rect = dirtyRect(previous.pixels, frame.pixels, frame.width);
-    if (!rect) return { area: 0, bytes: 1 };
+    if (!rect) return { area: 0, bytes: RECT_HEADER_BYTES };
     const encoded = encodeRect(extractRect(frame.pixels, rect, frame.width));
-    return { area: rect.width * rect.height, bytes: encoded.length + 9 };
+    return {
+      area: rect.width * rect.height,
+      bytes: encoded.length + RECT_HEADER_BYTES,
+    };
   });
   const total = stats.reduce((sum, s) => sum + s.bytes, 0);
   const worst = Math.max(...stats.map((s) => s.bytes));
@@ -105,7 +113,9 @@ if (dirs.length === 0) {
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.setContent('<html><body></body></html>');
-console.log(`  at ${FPS}fps, dirty-rect + RLE, 9-byte header per rect\n`);
+console.log(
+  `  at ${FPS}fps, dirty-rect + RLE, ${RECT_HEADER_BYTES}-byte header per rect\n`,
+);
 const rates: number[] = [];
 for (const dir of dirs) {
   const frames = await loadFrames(page, resolve(dir));

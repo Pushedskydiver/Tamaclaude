@@ -36,24 +36,32 @@ Full-screen uncompressed does **not** fit.
 ### What it actually costs — measured
 
 `tools/measure-compression.ts` runs the real codec over the real frames of
-every animation in the repo, at 8fps, including a 9-byte rect header:
+every animation in the repo, at 8fps, including the 12-byte rect header
+defined in `packages/protocol/src/packet.ts`.
 
-| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio |
-| ------------ | ---------------: | ----------: | --------: | ----: |
-| `gym`        |            556 B |     1,502 B |  4.4 KB/s | 121:1 |
-| `thinking`   |            681 B |     1,870 B |  5.4 KB/s |  99:1 |
-| `typing`     |          1,422 B |     1,510 B | 11.4 KB/s |  47:1 |
-| `bouldering` |          1,604 B |     1,674 B | 12.8 KB/s |  42:1 |
+**The ratio column is against a 67,200-byte stage frame**, not the 110,080-byte
+full screen in the table above — animations are authored and rendered at
+168×200, which is the stage band, and that is what a sprite update actually
+covers.
+
+| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio vs 67,200 B |
+| ------------ | ---------------: | ----------: | --------: | ----------------: |
+| `gym`        |            559 B |     1,505 B |  4.5 KB/s |             120:1 |
+| `thinking`   |            688 B |     1,873 B |  5.5 KB/s |              98:1 |
+| `typing`     |          1,425 B |     1,513 B | 11.4 KB/s |              47:1 |
+| `bouldering` |          1,607 B |     1,677 B | 12.9 KB/s |              42:1 |
 
 The busiest animation uses **1.8% of a 700 KB/s floor**. That retires the worry
 that a full-stage animation would blow the budget: `bouldering` scrolls its
 entire background every frame, which is the same shape as the road bike, and it
-is the most expensive of the four by a small margin.
+costs the most _on average_ — 13% more than `typing`. By worst single frame it
+is second, behind `thinking`'s 1,873 B, and peak is the number a real-time link
+actually has to survive. Both are two orders of magnitude inside budget.
 
-These numbers are ours. An earlier version of this section quoted ~14:1, which
-is upstream's figure for their whole on-flash sprite corpus and was never a
-measurement of anything here. Real pixel art on a dirty rect does far better,
-because a dirty rect is mostly flat background.
+An earlier version of this section quoted ~14:1, which is upstream's figure for
+their whole on-flash sprite corpus and was never a measurement of anything
+here. Real pixel art on a dirty rect does far better, because a dirty rect is
+mostly flat background.
 
 The codec falls back to raw whenever RLE would be larger, so a future
 photographic asset cannot quietly double a frame — it can only cost raw plus

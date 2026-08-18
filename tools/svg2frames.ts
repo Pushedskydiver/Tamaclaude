@@ -31,6 +31,8 @@ import process from 'node:process';
 
 import { chromium } from 'playwright';
 
+import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
+
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
 /** Loop length. Every sub-animation period must divide this — see docs/ANIMATION.md. */
@@ -40,11 +42,14 @@ const FRAME_COUNT = FPS * LOOP_SECONDS;
 /** Device pixels per SVG user unit. 21 units x 8 = 168px, inside the 172 panel. */
 const SCALE = 8;
 /**
- * Panel width in device pixels. Duplicated from `@tamaclaude/protocol`, which
- * this file cannot import: `tools/` sits outside the workspace on purpose, so
- * Playwright never enters the runtime dependency graph. Keep in step by hand.
+ * Panel width comes from the package that owns it.
+ *
+ * This was a hand-maintained copy of 172, justified by a claim that `tools/`
+ * could not import the workspace. That was never the mechanism — what keeps
+ * Playwright out of the shipped graph is that nothing imports `tools`, which
+ * `eslint.config.ts` enforces — and it stopped being true at all once the
+ * boundary rule started allowing `tools` to read `protocol`.
  */
-const PANEL_WIDTH = 172;
 /** Stage band height. The other three panel bands occupy the remaining 120px. */
 const STAGE_HEIGHT = 200;
 /**

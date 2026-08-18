@@ -11,5 +11,6 @@ export * from './colour.js';
 export * from './dirty-rect.js';
 export * from './events.js';
 export * from './geometry.js';
+export * from './packet.js';
 export * from './rle.js';
 export * from './screen.js';
