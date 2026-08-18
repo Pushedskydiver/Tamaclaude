@@ -16,6 +16,11 @@
     exactly (0.25s, 0.5s, 1.0s) so frame 8 is identical to frame 0 and the loop
     is seamless. Nothing runs at 0.125s: that is the frame interval itself, so
     it would sample at the same phase every frame and read as static.
+
+    No rotation anywhere. The base is axis-aligned rects with hard edges, and a
+    rotated edge is diagonal — it cannot land on the pixel grid at any render
+    scale, so it always antialiases into a soft smear against an otherwise
+    razor-sharp sprite. Every transform here lands on a whole device pixel.
   -->
   <defs>
     <style>
@@ -23,22 +28,17 @@
          frames, alternating. See the note above before shortening anything. */
       #master-group {
         transform-box: view-box;
-        transform-origin: 7.5px 13px;
-        animation: body-jitter 0.25s infinite alternate ease-in-out;
+        animation: body-jitter 0.25s infinite steps(1);
       }
 
-      /* Shoulder joints, taken from the base geometry: the arms are 2x2 rects
-         at (0,9) and (13,9), so the joint is the inner edge at mid-height. */
-      #left-arm {
-        transform-box: view-box;
-        transform-origin: 2px 10px;
-        animation: tap-left 0.25s infinite ease-in-out;
-      }
+      /* Claws tap by translating a whole art pixel, not by rotating. Half a
+         cycle out of phase, so one is down while the other lifts. */
+      #left-arm,
       #right-arm {
         transform-box: view-box;
-        transform-origin: 13px 10px;
-        animation: tap-right 0.25s infinite ease-in-out;
-        /* Half a cycle out of phase — one claw down while the other lifts. */
+        animation: tap-claw 0.25s infinite steps(1);
+      }
+      #right-arm {
         animation-delay: -0.125s;
       }
 
@@ -46,42 +46,48 @@
       #left-eye,
       #right-eye {
         transform-box: view-box;
-        animation: read-line 0.5s infinite steps(2, jump-none);
+        animation: read-line 0.5s infinite steps(1);
       }
 
+      /* Output rising off each claw. Discrete steps and binary opacity keep
+         every bit on the pixel grid and out of the intermediate colours a
+         continuous fade would produce once the palette is quantised. */
       #fx-data-bits rect {
-        animation: rise 1s infinite linear;
+        animation: rise 1s infinite steps(8);
       }
-      #fx-data-bits rect:nth-child(1) { animation-delay: 0s; }
-      #fx-data-bits rect:nth-child(2) { animation-delay: -0.25s; }
-      #fx-data-bits rect:nth-child(3) { animation-delay: -0.5s; }
-      #fx-data-bits rect:nth-child(4) { animation-delay: -0.75s; }
-      #fx-data-bits rect:nth-child(5) { animation-delay: -0.375s; }
+      /* Six distinct phases, all multiples of the 0.125s frame interval so
+         each one samples cleanly. Listed individually rather than with an
+         nth-child stride: a stride hands the left and right streams the same
+         delay set, and the two sides then rise as exact mirror images. */
+      #fx-data-bits rect:nth-child(2) { animation-delay: -0.375s; }
+      #fx-data-bits rect:nth-child(3) { animation-delay: -0.75s; }
+      #fx-data-bits rect:nth-child(4) { animation-delay: -0.125s; }
+      #fx-data-bits rect:nth-child(5) { animation-delay: -0.5s; }
+      #fx-data-bits rect:nth-child(6) { animation-delay: -0.875s; }
 
       @keyframes body-jitter {
-        from { transform: translateY(0); }
-        to   { transform: translateY(0.5px); }
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(0.5px); }
+        100% { transform: translateY(0); }
       }
 
-      @keyframes tap-left {
-        0%, 100% { transform: rotate(4deg); }
-        50%      { transform: rotate(26deg); }
-      }
-
-      @keyframes tap-right {
-        0%, 100% { transform: rotate(-4deg); }
-        50%      { transform: rotate(-26deg); }
+      @keyframes tap-claw {
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(1px); }
+        100% { transform: translateY(0); }
       }
 
       @keyframes read-line {
         0%   { transform: translateX(0); }
-        100% { transform: translateX(1px); }
+        50%  { transform: translateX(1px); }
+        100% { transform: translateX(0); }
       }
 
       @keyframes rise {
-        0%   { transform: translateY(0);    opacity: 0; }
-        20%  {                              opacity: 1; }
-        80%  {                              opacity: 1; }
+        0%   { transform: translateY(0); opacity: 0; }
+        12%  { opacity: 1; }
+        75%  { opacity: 1; }
+        88%  { opacity: 0; }
         100% { transform: translateY(-14px); opacity: 0; }
       }
     </style>
@@ -109,13 +115,17 @@
   </g>
 
   <!-- ── additive effects: not part of the base geometry ───────────────── -->
-  <!-- Third colour group, same pattern as the base's two, so a pack can
-       recolour the effects with a single fill override. -->
+  <!-- Two streams, one above each claw, at x=0.5 and x=13.5. The torso spans
+       x 2..13, so neither stream ever crosses the body or the eyes — the
+       previous version rose straight through Clawd's face. Third colour group,
+       same pattern as the base's two, so a pack recolours effects with one
+       fill override. -->
   <g id="fx-data-bits" fill="#7EE787">
-    <rect x="3"    y="11" width="1" height="1"/>
-    <rect x="5.5"  y="12" width="1" height="1"/>
-    <rect x="8"    y="11" width="1" height="1"/>
-    <rect x="10.5" y="12" width="1" height="1"/>
-    <rect x="12"   y="11" width="1" height="1"/>
+    <rect x="0.5" y="8" width="1" height="1"/>
+    <rect x="0.5" y="8" width="1" height="1"/>
+    <rect x="0.5" y="8" width="1" height="1"/>
+    <rect x="13.5" y="8" width="1" height="1"/>
+    <rect x="13.5" y="8" width="1" height="1"/>
+    <rect x="13.5" y="8" width="1" height="1"/>
   </g>
 </svg>

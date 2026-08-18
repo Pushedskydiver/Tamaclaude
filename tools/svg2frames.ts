@@ -7,13 +7,22 @@
  *
  *   node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing
  *
- * Determinism is the whole point. Animations are paused *before* the first
- * frame is taken, so every animation sits at its authored starting phase —
- * which is what makes a negative `animation-delay` (how we put the two claws
- * out of phase) survive into the output. Each animation's paused
- * `currentTime` is recorded once, then advanced by an exact frame interval.
- * Nothing depends on wall-clock time, so the same SVG always produces the same
- * bytes.
+ * Determinism is the whole point: nothing depends on wall-clock time, so the
+ * same SVG always produces the same bytes.
+ *
+ * Seeking sets each animation's `currentTime` to the elapsed time and nothing
+ * else. Do **not** compensate for `animation-delay` here, however tempting it
+ * looks: a paused CSS animation reports `currentTime: 0` in Chromium whatever
+ * its delay, which suggests the offset has been lost. It has not. The delay
+ * lives inside the effect, which computes its own active time as
+ * `localTime - delay`, so setting `currentTime = elapsed` already yields the
+ * right phase and subtracting the delay again double-counts it.
+ *
+ * That mistake is close to undetectable by eye. Negative delays are usually a
+ * neat fraction of the period — the two claws tap alternately via `-0.125s`
+ * against a `0.25s` cycle — so double-counting lands an exact whole period
+ * away and renders as perfect lockstep: everything still moves, just together.
+ * Verified by driving both formulas and reading back the computed transforms.
  */
 
 import { mkdir, readFile } from 'node:fs/promises';
@@ -35,18 +44,18 @@ type Options = {
   readonly scale: number;
 };
 
-/** Pause every animation at its authored phase and record where that is. */
+/** Pause every animation, reporting the delays declared in the SVG. */
 function freezeAnimations(): number[] {
   return document.getAnimations().map((animation) => {
     animation.pause();
-    return Number(animation.currentTime ?? 0);
+    return Number(animation.effect?.getTiming().delay ?? 0);
   });
 }
 
-/** Advance every animation to `elapsed` ms past its own authored phase. */
-function seekAnimations(input: { starts: number[]; elapsed: number }): void {
-  document.getAnimations().forEach((animation, index) => {
-    animation.currentTime = (input.starts[index] ?? 0) + input.elapsed;
+/** Seek every animation to `elapsed` ms. The effect applies its own delay. */
+function seekAnimations(elapsed: number): void {
+  document.getAnimations().forEach((animation) => {
+    animation.currentTime = elapsed;
   });
 }
 
@@ -77,12 +86,19 @@ async function renderFrames(
       `*{animation-play-state:paused !important}</style>${svg}`,
   );
 
-  const starts = await page.evaluate(freezeAnimations);
+  const delays = await page.evaluate(freezeAnimations);
+  // Reports what the SVG declares, so a stylesheet that accidentally hands
+  // several elements the same offset — an nth-child stride is the easy way to
+  // do this — shows up as a suspiciously small count rather than as two
+  // streams that mysteriously mirror each other.
+  console.log(
+    `${delays.length} animations, ${new Set(delays).size} distinct delays`,
+  );
   const written: string[] = [];
 
   for (let frame = 0; frame < options.frameCount; frame += 1) {
     const elapsed = (frame / options.fps) * 1000;
-    await page.evaluate(seekAnimations, { starts, elapsed });
+    await page.evaluate(seekAnimations, elapsed);
     const path = `${outDir}/frame_${String(frame).padStart(2, '0')}.png`;
     await page.screenshot({ path, omitBackground: true });
     written.push(path);

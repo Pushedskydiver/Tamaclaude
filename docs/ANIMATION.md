@@ -121,10 +121,19 @@ renders as completely static. The fastest perceivable cycle is 0.25s — two
 frames, alternating.
 
 Negative `animation-delay` is how elements are put out of phase with each other
-(the two claws tap alternately via `-0.125s`). This survives rasterisation
-because `tools/svg2frames.ts` pauses animations before the first capture, so
-each one sits at its authored starting phase rather than wherever wall-clock
-time left it.
+— the two claws tap alternately via `-0.125s`. Give each offset element its own
+explicit delay rather than reaching for an `nth-child` stride: a stride hands
+symmetric groups identical delay sets, and they then animate as exact mirror
+images of each other.
+
+`tools/svg2frames.ts` seeks by setting `currentTime` alone and does not
+compensate for the delay. A paused CSS animation reports `currentTime: 0`
+whatever its delay, which looks like the offset has been lost — it has not. The
+delay lives inside the effect, which derives its own active time as
+`localTime - delay`. Subtracting the delay a second time double-counts it, and
+because delays are usually a neat fraction of the period, the error lands an
+exact whole period away and renders as flawless lockstep. Everything still
+moves; it just all moves together.
 
 ## Judging an animation
 
