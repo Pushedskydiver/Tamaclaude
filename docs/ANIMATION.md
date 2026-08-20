@@ -315,6 +315,47 @@ mouth, which is why he cannot yawn. Upstream's answer is a 3x2 rect at (6,10),
 hidden except during the yawn, and it transfers directly because we share the
 base. An additive element is how you extend the character without touching it.
 
+## Smoothness
+
+Two mistakes made this project's animations noticeably stiffer than upstream's,
+and neither was the constraint we thought it was.
+
+**`steps(1)` was throwing away seven positions in eight.** At 8 device pixels
+per unit, a half-unit move has four sharp intermediate positions and a
+whole-unit move has eight — every one of them lands exactly on a device pixel,
+so every one is antialias-free. `steps(1)` collapses all of that into two
+positions. The rule is: **`steps(N)` where N is the travel in device pixels.**
+A one-unit move at scale 8 is `steps(8)`.
+
+Measured on a one-unit rise, sampled at 8fps:
+
+| Timing        | Positions | Sharp?                     |
+| ------------- | --------- | -------------------------- |
+| `steps(1)`    | 2         | yes                        |
+| `steps(8)`    | 9         | yes                        |
+| `ease-in-out` | 5         | **no — fractional pixels** |
+
+So the smooth option was never the antialiased one. `steps(N)` beats
+`ease-in-out` on both counts at this scale.
+
+**Animating the whole sprite is not animating.** `idle` originally drove
+`#master-group`, which contains the legs, so the entire character slid up and
+down as one rigid block. Nothing deformed, so nothing read as breathing.
+Driving `#torso`, `#left-arm`, `#right-arm` and `#eyes-color-group` while the
+legs stay put makes the body visibly lengthen — and that gap between body and
+legs _is_ the breath. Upstream reaches the same place by pulling the legs out
+of the animated group; naming the parts that move gets there without
+re-parenting anything.
+
+**Easing needs range.** Hand-placed keyframes can shape a curve as long as
+every value lands on a whole device pixel — `1, 3, 7, 12, 15, 16` over sixteen
+device pixels is an ease. Four pixels of travel has no room for one, which is
+another reason small moves feel mechanical.
+
+**One element, one `animation` declaration.** A second one replaces the first
+rather than adding to it, so an eye given a blink and then a look silently
+stops blinking. List them comma-separated.
+
 ## Timing
 
 Two rules, both learned the hard way and both easy to violate silently.

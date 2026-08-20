@@ -41,21 +41,40 @@
       /* Breathing and the yawn rise share one track because they share an
          element: two animations cannot both drive transform. Breathing runs
          four cycles, then stops for the stretch — he is holding it. */
-      #master-group {
-        animation: breathe-and-stretch 16s infinite steps(1);
+      /* The body breathes; the legs do not. Animating #master-group slid the
+         entire sprite as one rigid block — nothing deformed, so nothing read
+         as breathing. Driving the torso, arms and eyes while the legs stay
+         planted makes the body visibly lengthen, and that gap is the breath.
+         Upstream reaches the same place by pulling the legs out of the
+         animated group; we get there without re-parenting by naming the parts
+         that move.
+
+         steps(8), not steps(1). One unit at scale 8 is eight device pixels, so
+         there are eight sharp positions in this move and we were using two.
+         That single character is most of the difference in smoothness — no
+         antialiasing required, because every one of the eight lands on a whole
+         device pixel. */
+      #torso,
+      #left-arm,
+      #right-arm,
+      #eyes-color-group,
+      #fx-mouth,
+      #fx-tear {
+        animation: breathe-and-stretch 16s infinite steps(8);
       }
 
       /* Looking around. Nested inside #master-group, so this composes with the
          rise rather than fighting it. */
-      #eyes-color-group {
-        animation: look-around 16s infinite steps(1);
-      }
-
       /* Two blinks a loop, one frame each, plus the long shut during the yawn.
          One frame is 0.78125% — anything longer reads as a wince. */
+      /* Two animations per element, listed together. A second `animation`
+         declaration would replace this one rather than add to it — the
+         shorthand overrides — and the blink would silently never fire. */
       #left-eye,
       #right-eye {
-        animation: blink 16s infinite steps(1);
+        animation:
+          blink 16s infinite steps(1),
+          look-around 16s infinite steps(1);
       }
 
       /* Lids, shown exactly when the eyes are not. Upstream squashes the eyes
@@ -65,7 +84,9 @@
          says "closed". */
       #lid-left,
       #lid-right {
-        animation: lids 16s infinite steps(1);
+        animation:
+          lids 16s infinite steps(1),
+          look-around 16s infinite steps(1);
       }
 
       #fx-mouth { animation: mouth-open 16s infinite steps(1); }
@@ -73,14 +94,14 @@
 
       @keyframes breathe-and-stretch {
         0%      { transform: translateY(0); }
-        12.5%   { transform: translateY(0.5px); }
+        12.5%   { transform: translateY(-1px); }
         25%     { transform: translateY(0); }
-        37.5%   { transform: translateY(0.5px); }
+        37.5%   { transform: translateY(-1px); }
         50%     { transform: translateY(0); }
-        62.5%   { transform: translateY(0.5px); }
+        62.5%   { transform: translateY(-1px); }
         75%     { transform: translateY(0); }
-        78.125% { transform: translateY(-1px); }
-        90.625% { transform: translateY(-1px); }
+        78.125% { transform: translateY(-2px); }
+        90.625% { transform: translateY(-2px); }
         93.75%  { transform: translateY(0); }
         100%    { transform: translateY(0); }
       }
