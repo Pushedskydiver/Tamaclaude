@@ -36,10 +36,19 @@ import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
 
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
-/** Loop length. Every sub-animation period must divide this — see docs/ANIMATION.md. */
-const LOOP_SECONDS = 1;
-/** Derived, not coincidental: changing FPS must not silently change loop length. */
-const FRAME_COUNT = FPS * LOOP_SECONDS;
+/**
+ * Default loop length. Every sub-animation period must divide it — see
+ * docs/ANIMATION.md.
+ *
+ * An animation may override this with `data-loop-seconds` on its root `<svg>`,
+ * which is how `idle` and `asleep` get a calm cadence. At a one-second loop a
+ * blink happens sixty times a minute and a breath is a pant; a resting
+ * creature needs about four seconds, and idle is the screen that is on most of
+ * the time. The attribute lives in the SVG rather than in an argument so that
+ * every tool downstream — the harness, the contact sheet, the compression
+ * measurement — gets the right frame count without being told.
+ */
+const DEFAULT_LOOP_SECONDS = 1;
 /** Device pixels per SVG user unit. 21 units x 8 = 168px, inside the 172 panel. */
 const SCALE = 8;
 /**
@@ -63,7 +72,6 @@ const SAFE_AREA_CROP_UNITS = 5;
 
 type Options = {
   readonly fps: number;
-  readonly frameCount: number;
   readonly scale: number;
 };
 
@@ -109,6 +117,25 @@ function topmostVisibleUnit(scale: number): number {
     .map((element) => element.getBoundingClientRect().top / scale + viewBoxY)
     .filter((top) => top >= viewBoxY);
   return tops.length > 0 ? Math.min(...tops) : Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Loop length this SVG asks for, in whole seconds.
+ *
+ * Whole seconds only, so the frame count is always an integer and the "every
+ * period divides the loop" invariant in docs/ANIMATION.md stays checkable by
+ * eye.
+ */
+function loopSecondsOf(svg: string): number {
+  const declared = /data-loop-seconds="([^"]+)"/.exec(svg)?.[1];
+  if (declared === undefined) return DEFAULT_LOOP_SECONDS;
+  const seconds = Number(declared);
+  if (!Number.isInteger(seconds) || seconds <= 0) {
+    throw new Error(
+      `data-loop-seconds must be a positive whole number, got "${declared}"`,
+    );
+  }
+  return seconds;
 }
 
 /**
@@ -208,6 +235,7 @@ async function renderFrames(
 
   const svg = await readFile(svgPath, 'utf8');
   const { width, height } = stageDimensions(svg, options.scale);
+  const frameCount = options.fps * loopSecondsOf(svg);
   const viewBoxTop = Number(
     /viewBox="([^"]+)"/
       .exec(svg)?.[1]
@@ -240,7 +268,7 @@ async function renderFrames(
   const distinct = new Set<string>();
   let highest = Number.POSITIVE_INFINITY;
 
-  for (let frame = 0; frame < options.frameCount; frame += 1) {
+  for (let frame = 0; frame < frameCount; frame += 1) {
     const elapsed = (frame / options.fps) * 1000;
     await page.evaluate(seekAnimations, elapsed);
     const path = `${outDir}/frame_${String(frame).padStart(2, '0')}.png`;
@@ -271,7 +299,6 @@ if (!svgArg) {
 const out = outArg ?? `out/${basename(svgArg, '.svg')}`;
 const files = await renderFrames(resolve(svgArg), resolve(out), {
   fps: FPS,
-  frameCount: FRAME_COUNT,
   scale: scaleArg ? Number(scaleArg) : SCALE,
 });
 console.log(`${files.length} frames -> ${out}`);

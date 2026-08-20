@@ -156,12 +156,12 @@ than partially. Eight good screens beat nine plus four rough ones.
       constraint that it may only add transforms and keyframes to existing IDs
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [ ] Palette quantise; RLE pack
-- [ ] Animations, in priority order — ship each as it lands:
-  1. idle / asleep
+- [x] Animations, in priority order — ship each as it lands:
+  1. idle ✅ / asleep ✅
   2. thinking
-  3. typing (Edit/Write)
-  4. bouldering (Read/Grep/Glob)
-  5. gym (Bash)
+  3. typing ✅ (Edit/Write)
+  4. bouldering ✅ (Read)
+  5. gym ✅ (Bash)
   6. **Model 3 pulls up (Stop)** — the payoff. Fallback if it is not landing:
      a static red-car frame with Clawd beside it and the quip, which is 90% of
      the joke at 10% of the risk. "Do not cut" previously disarmed the only

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="4">
+  <!--
+    Clawd: idle (connected, no session working)
+
+    Generated against assets/clawd/base.svg under the contract in
+    docs/ANIMATION.md. Every base element appears below at its original
+    coordinates and colours; all motion is CSS applied by ID.
+
+    This is the screen that is on most of the time — Claude is idle far more
+    than it is running — so it is the one that has to survive being looked at
+    for hours, and the one where restraint matters more than incident. Nothing
+    here does anything. He breathes, and occasionally blinks.
+
+    Loop: 4.0s at 8fps = 32 frames, declared by data-loop-seconds. The default
+    one-second loop is wrong for this animation and it is not a matter of
+    taste: at 1.0s a blink happens sixty times a minute and a breath is a pant.
+    Four seconds gives fifteen of each, which is a resting creature.
+
+    Periods of 4.0s and 2.0s both divide the loop. Nothing runs at 0.125s, the
+    frame interval. Every transform lands on a whole device pixel — the breath
+    is half an art pixel, exactly 4 device pixels at scale 8.
+  -->
+  <defs>
+    <style>
+      /* One slow breath per loop. Fifteen a minute. */
+      #master-group {
+        animation: breathe 4s infinite steps(1);
+      }
+
+      /* One blink per loop, held for a single frame — 1/32 of 4s is 3.125%,
+         which lands exactly on a frame boundary. Any longer reads as a wince
+         rather than a blink. */
+      #left-eye,
+      #right-eye {
+        animation: blink 4s infinite steps(1);
+      }
+
+      @keyframes breathe {
+        0%   { transform: translateY(0); }
+        50%  { transform: translateY(0.5px); }
+        100% { transform: translateY(0); }
+      }
+
+      @keyframes blink {
+        0%      { opacity: 1; }
+        75%     { opacity: 0; }
+        78.125% { opacity: 1; }
+        100%    { opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+</svg>

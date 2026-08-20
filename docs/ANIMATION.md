@@ -252,6 +252,24 @@ translation, `steps()` timing, and opacity that is only ever 0 or 1.
 Payload is not a reason to revisit this. We send dirty rectangles, not whole
 sprites, and RLE handles the large flat areas that pixel art is made of.
 
+## Loop length
+
+The default loop is 1.0s — eight frames at 8fps. An animation may declare its
+own with `data-loop-seconds` on the root `<svg>`, in whole seconds, and
+`tools/svg2frames.ts` reads it. Everything downstream derives its frame count
+from what it is given, so nothing else needs telling.
+
+`idle` and `asleep` use four seconds. That is not a preference. At a
+one-second loop a blink happens sixty times a minute and a breath is a pant; at
+four, both land at fifteen a minute, which is a creature at rest. Idle is the
+screen that is on most of the time, so a one-second repeat would be the thing
+most often looked at and the thing quickest to feel mechanical.
+
+Longer loops are close to free on the wire. `idle` produces three distinct
+frames out of thirty-two, so the dirty rect is empty on most of them: it
+measures 712 B/s against a 700 KB/s floor, the cheapest animation in the repo
+by a wide margin.
+
 ## Timing
 
 Two rules, both learned the hard way and both easy to violate silently.

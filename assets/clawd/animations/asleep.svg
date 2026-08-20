@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="4">
+  <!--
+    Clawd: asleep (no session for five minutes)
+
+    Generated against assets/clawd/base.svg under the contract in
+    docs/ANIMATION.md. Every base element appears below at its original
+    coordinates and colours; all motion is CSS applied by ID.
+
+    Idle and asleep are the two screens that share a silhouette, so they have
+    to be distinguishable at a glance from across a desk. Three things separate
+    them: the eyes are closed rather than blinking, the body sits a whole pixel
+    lower, and there are Zs. Any one alone would be too subtle.
+
+    The closed eyes are pose swapping on interior contrasting elements — the
+    open eyes are hidden and wider, shorter lids shown in their place. That is
+    allowed where repositioning a limb is not, because the eyes are read
+    against the torso rather than as part of its outline. See
+    docs/ANIMATION.md §What pose swapping cannot do.
+
+    The Zs are 4x4, not 3x3. At 3x3 the only way to draw a Z is a bar, a
+    centred pixel and a bar — which is exactly how an I is drawn at 3x3, and it
+    read as one. A fourth row buys a real diagonal and the letter becomes
+    unambiguous. Two art pixels of height is a cheap price for a glyph that
+    says what it means.
+
+    Loop: 4.0s at 8fps = 32 frames. The Zs rise 8 units across the loop, which
+    is 2 whole device pixels per frame at scale 8, and stop exactly on the
+    landscape safe-area line so this animation survives either mounting.
+  -->
+  <defs>
+    <style>
+      /* Settled a pixel lower than idle, and breathing deeper. */
+      #master-group {
+        animation: sleep-breathe 4s infinite steps(1);
+      }
+
+      /* Open eyes off for the whole loop; lids in their place. */
+      #left-eye,
+      #right-eye {
+        opacity: 0;
+      }
+
+      /* The groups animate, not the rects inside them. Delays declared on
+         #z-2 and #z-3 do nothing if the animation is bound to their children,
+         and the three Zs then drift as one — which renders as a single
+         thicker Z rather than a stagger. */
+      #fx-zs > g {
+        animation: drift 4s infinite linear;
+      }
+      /* Selected through the parent so these outrank `#fx-zs > g`, which is
+         an id plus a type and therefore more specific than a bare id. The
+         shorthand above resets animation-delay, so a lower-specificity rule
+         here silently loses and all three Zs drift together. */
+      #fx-zs > #z-2 { animation-delay: -1.25s; }
+      #fx-zs > #z-3 { animation-delay: -2.5s; }
+
+      @keyframes sleep-breathe {
+        0%   { transform: translateY(1px); }
+        50%  { transform: translateY(1.5px); }
+        100% { transform: translateY(1px); }
+      }
+
+      @keyframes drift {
+        0%   { transform: translateY(0); opacity: 0; }
+        12.5%  { opacity: 1; }
+        75%    { opacity: 1; }
+        87.5%  { opacity: 0; }
+        100% { transform: translateY(-8px); opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+
+      <!-- additive pose: closed lids, wider and shorter than an open eye -->
+      <rect id="lid-left" x="4" y="9" width="2" height="1"/>
+      <rect id="lid-right" x="9" y="9" width="2" height="1"/>
+    </g>
+  </g>
+
+  <!-- ── Zs, drifting up and to the side of the head ───────────────────── -->
+  <g id="fx-zs" fill="#8B949E">
+    <g id="z-1"><rect x="14" y="4" width="4" height="1"/><rect x="16" y="5" width="1" height="1"/><rect x="15" y="6" width="1" height="1"/><rect x="14" y="7" width="4" height="1"/></g>
+    <g id="z-2"><rect x="14" y="4" width="4" height="1"/><rect x="16" y="5" width="1" height="1"/><rect x="15" y="6" width="1" height="1"/><rect x="14" y="7" width="4" height="1"/></g>
+    <g id="z-3"><rect x="14" y="4" width="4" height="1"/><rect x="16" y="5" width="1" height="1"/><rect x="15" y="6" width="1" height="1"/><rect x="14" y="7" width="4" height="1"/></g>
+  </g>
+</svg>
