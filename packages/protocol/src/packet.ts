@@ -21,7 +21,21 @@
  * RISC-V core that has to decode this. Moving it into the header leaves the
  * payload pure `u16` data starting on a 16-byte boundary, so the firmware can
  * cast rather than `memcpy`. The reserved halfword exists to keep the `u32`
- * length aligned and to leave somewhere to put a flag later.
+ * length aligned.
+ *
+ * **It must stay zero, and it is no longer free.** The stream carries no sync
+ * word, so a firmware that starts reading mid-packet has to recognise a header
+ * by its contents alone. Two bytes that are always zero are the cheapest and
+ * strongest test available, and the blitter
+ * (`packages/device/firmware/blitter`) rejects any candidate header whose
+ * bytes 14-15 are non-zero. An audit slid that check over 4MB of random data
+ * and 67KB of real pixel payload and found no false header — most of that
+ * strength comes from this field.
+ *
+ * So the "somewhere to put a flag later" this comment used to promise has been
+ * spent. Putting a flag here now would make every packet unrecognisable to the
+ * device. If a flag is genuinely needed, add a real magic prefix and give the
+ * firmware something better to sync on first.
  *
  * Length is `u32` rather than `u16` because a full-screen raw payload is
  * 110,080 bytes and would overflow a 16-bit count — the one case where a

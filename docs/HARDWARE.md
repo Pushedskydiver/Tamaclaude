@@ -56,22 +56,59 @@ rate instead, and that would have been found out at Stage 2 rather than now.
 
 Lives in `packages/device/firmware/`. ESP-IDF, C.
 
-`throughput/` is there now — 83 lines that read USB-CDC and discard, written to
-measure the link and nothing else (`docs/ARCHITECTURE.md` §Why it fits down the
-wire). The blitter is still to come, targeting ~300 lines.
+Two of them:
 
-**Start from Waveshare's demo, not from scratch.** It contains a working
-ST7789 init sequence and the correct pin mapping. Re-deriving those by hand is
-a day nobody has, and the display init sequence is the classic place to lose it.
-
-The firmware does exactly three things:
-
-1. Read framed commands from USB-CDC
-2. Decode RLE RGB565 and blit the rectangle to SPI
-3. Show the embedded splash when no host is connected
+- `throughput/` — 83 lines that read USB-CDC and discard, written to measure
+  the link and nothing else (`docs/ARCHITECTURE.md` §Why it fits down the wire).
+- `blitter/` — the real one. It does exactly three things:
+  1. Read framed commands from USB-CDC
+  2. Decode RLE RGB565 and blit the rectangle to SPI
+  3. Show an embedded splash when nothing has ever driven the panel
 
 It is flashed once. If a change to it seems necessary, that is a strong signal
 the change belongs on the host instead.
+
+**We did not need Waveshare's demo after all.** This section used to insist on
+starting from it, so as not to re-derive the ST7789 init sequence by hand — the
+classic place to lose a day. ESP-IDF's own `esp_lcd` component has an ST7789
+driver, so there is no init sequence to derive. What was actually needed from
+upstream clawd-tank was the pin map, which is six numbers, and one insight
+about the column offset (below). The factory image is backed up regardless.
+
+### Orientation
+
+`PANEL_LANDSCAPE` in `blitter/main/main.c` is a build-time constant, because
+the firmware is flashed once and which way up the device sits is a physical
+fact. **The host must agree** — `tools/blit.ts` takes a matching argument, and
+there is no handshake, so a mismatch is silent: the sprite lands in the wrong
+band and nothing warns you. Both default to landscape.
+
+Landscape is not a rotated portrait layout. The bands are rearranged — Clawd on
+the left at 168x160, the text stacked down the right — because 200px of stage
+does not fit in 172px of height. The host crops the sprite to the safe area,
+which is what the top 5 units of prop headroom in `docs/ANIMATION.md` exist for.
+
+**The 34-pixel offset is the expensive thing to get wrong.** The 172-wide
+window sits centred in the controller's 240-pixel RAM, so 34 columns of its
+memory are dead. Which axis they land on depends on `swap_xy`: with it on,
+CASET addresses rows and the offset belongs on `y_gap`; with it off, on
+`x_gap`. Upstream's landscape code says exactly this in a comment, and it is
+inverted for portrait. Getting it wrong gives a display that looks almost right
+and is shifted.
+
+### Colours
+
+The blitter byte-swaps every pixel on the way to the panel, because the ST7789
+latches big-endian under `esp_lcd`'s default RAMCTRL, and `invert_color(true)`
+is required or every colour comes out as its complement. **Both are verified**
+with `tools/colour-bars.ts`, which paints six known values across the panel.
+
+That tool exists because a wrong byte order and a wrong invert and a wrong
+element order all look like "the colours are off", and each maps that set of
+six somewhere distinguishable — so one look identifies which is in play. Reach
+for it before theorising. Photographs are not evidence here: a warm-lit room
+makes a camera white-balance a neutral panel to blue, which cost an evening of
+chasing a colour bug that did not exist.
 
 ## Enclosure
 
