@@ -58,6 +58,16 @@
         animation: blink 16s infinite steps(1);
       }
 
+      /* Lids, shown exactly when the eyes are not. Upstream squashes the eyes
+         with scaleY(0.1); we cannot scale, so the closed eye is drawn instead
+         — a shorter, wider rect swapped in. Hiding the eye outright reads as a
+         rendering glitch rather than as a blink, because nothing on screen
+         says "closed". */
+      #lid-left,
+      #lid-right {
+        animation: lids 16s infinite steps(1);
+      }
+
       #fx-mouth { animation: mouth-open 16s infinite steps(1); }
       #fx-tear  { animation: tear-fall 16s infinite steps(1); }
 
@@ -93,6 +103,17 @@
         76.5625% { opacity: 0; }
         92.1875% { opacity: 1; }
         100%     { opacity: 1; }
+      }
+
+      @keyframes lids {
+        0%        { opacity: 0; }
+        18.75%    { opacity: 1; }
+        19.53125% { opacity: 0; }
+        43.75%    { opacity: 1; }
+        44.53125% { opacity: 0; }
+        76.5625%  { opacity: 1; }
+        92.1875%  { opacity: 0; }
+        100%      { opacity: 0; }
       }
 
       @keyframes mouth-open {
@@ -135,6 +156,10 @@
     <g id="eyes-color-group" fill="#000000">
       <rect id="left-eye" x="4" y="8" width="1" height="2"/>
       <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+
+      <!-- additive: closed lids, wider and shorter than an open eye -->
+      <rect id="lid-left" x="4" y="9" width="2" height="1"/>
+      <rect id="lid-right" x="10" y="9" width="2" height="1"/>
     </g>
 
     <!-- additive: one pixel of tear at the corner of the eye -->

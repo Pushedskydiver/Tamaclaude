@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
   <!--
-    Clawd: bouldering (Read / Grep / Glob)
+    Clawd: bouldering (Read)
+
+    Grep and Glob appear zero times in 45,000 real tool calls, so Read is the
+    whole trigger — see BUILD_PLAN.md.
 
     Generated against assets/clawd/base.svg under the contract in
     docs/ANIMATION.md. Every base element appears below at its original

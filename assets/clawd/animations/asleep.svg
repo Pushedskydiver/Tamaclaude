@@ -98,7 +98,7 @@
 
       <!-- additive pose: closed lids, wider and shorter than an open eye -->
       <rect id="lid-left" x="4" y="9" width="2" height="1"/>
-      <rect id="lid-right" x="9" y="9" width="2" height="1"/>
+      <rect id="lid-right" x="10" y="9" width="2" height="1"/>
     </g>
   </g>
 

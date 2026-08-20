@@ -35,8 +35,8 @@
 
       /* Held for two frames at the bottom of the rep rather than interpolated
          — a fractional dip would soften the whole silhouette. It covers frames
-         0 and 1, the start of the drive; the bar is also at its lowest on
-         frame 7, on the way down, where he is absorbing rather than pushing. */
+         0 and 1, the start of the drive. Frame 0 is the lowest the bar gets;
+         frame 7 is two units above it, on the way back down. */
       #master-group {
         animation: take-the-load 1s infinite steps(1);
       }
@@ -54,6 +54,13 @@
       #left-eye,
       #right-eye {
         animation: watch-the-bar 1s infinite steps(1);
+      }
+
+      /* Lids, shown exactly when the eyes are not — the closed eye is drawn,
+         never deleted. See docs/ANIMATION.md §Closing an eye. */
+      #lid-left,
+      #lid-right {
+        animation: lids 1s infinite steps(1);
       }
 
       /* Exertion marks, binary opacity. Visible frames 2-5, which is the
@@ -86,6 +93,14 @@
         100%  { opacity: 1; }
       }
 
+      @keyframes lids {
+        0%    { opacity: 0; }
+        12.5% { opacity: 1; }
+        25%   { opacity: 0; }
+        87.5% { opacity: 1; }
+        100%  { opacity: 0; }
+      }
+
       @keyframes effort {
         0%   { opacity: 0; }
         25%  { opacity: 1; }
@@ -113,12 +128,17 @@
     <g id="eyes-color-group" fill="#000000">
       <rect id="left-eye" x="4" y="8" width="1" height="2"/>
       <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+
+      <!-- additive: closed lids for the two frames the bar crosses the face -->
+      <rect id="lid-left" x="4" y="9" width="2" height="1"/>
+      <rect id="lid-right" x="10" y="9" width="2" height="1"/>
     </g>
   </g>
 
   <!-- ── additive props ────────────────────────────────────────────────── -->
-  <!-- Barbell at its lowest position; the whole group translates. Plates sit
-       clear of the torso top edge at y=6 when the bar is down. -->
+  <!-- Barbell at its racked position; the whole group translates. Racked, it
+       lies across the mid-torso and is drawn over it — that overlap is the
+       contact that makes the lift read. -->
   <g id="fx-barbell" fill="#8B949E">
     <rect x="3" y="11" width="9" height="1"/>
     <rect x="2" y="10" width="1" height="3"/>

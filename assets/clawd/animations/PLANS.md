@@ -13,8 +13,9 @@ wanted, so there was no way to tell a bug from a choice.
 
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
-`assets/svg-animations/PLANS.md`, plus **props** where the animation has any —
-which, since `gym`, is most of them. Two constraints apply to all of them, from
+`assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
+Half the plans carry one; `gym` and `bouldering` file theirs under Effects,
+which is a distinction not worth enforcing. Two constraints apply to all of them, from
 `docs/ANIMATION.md`: no rotation, and every transform must land on a whole
 device pixel at the render scale.
 
@@ -54,7 +55,7 @@ setup and never again.
 
 ## Thinking — `UserPromptSubmit`
 
-Clawd working a problem out, cogs turning above his head.
+Clawd working a problem out, a thought bubble above his head.
 
 - **Action.** A thought bubble above his head, three dots filling in one at a
   time then clearing for a beat. Claws stay where the base puts them.
@@ -83,8 +84,8 @@ the cogs never did.
 the chin. Three positions were rendered and judged at true size and all three
 read as a lump on the torso rather than a limb — the finding is in
 `docs/ANIMATION.md` §What pose swapping cannot do, and it changes how
-`bouldering`, `sweeping` and `gym` must be planned. The cogs carry the read on
-their own, which is what "not wanted" lines are for: the plan said what the
+`bouldering`, `sweeping` and `gym` must be planned. The bubble carries the read
+on its own, which is what "not wanted" lines are for: the plan said what the
 screen had to communicate, so dropping a mechanism that was not communicating
 it was an easy call rather than an argument.
 
@@ -100,18 +101,28 @@ fails everywhere, and it fails now rather than in September.
 Clawd doing the heavy lifting. An overhead press, and the barbell does the
 acting.
 
-- **Action.** A barbell travels from just above his head to full extension and
-  back, once per loop.
+- **Action.** A barbell travels from chest height to full extension and back,
+  once per loop. It racks below the eyes, across the mid-torso, and is drawn
+  over the body so it reads as held rather than hovering.
 - **Body mechanics.** A one-pixel dip at the bottom of the rep, when the load
   is on him. Nothing else moves — no squash, because a scale transform has no
   pixel arithmetic in `docs/ANIMATION.md` and would soften every edge it
   touches.
-- **Eyes.** Tracking the bar: up at full extension, back down at the bottom.
+- **Eyes.** Still, and hidden on the two frames the bar crosses them. Tracking
+  was tried and rejected: moving them up to follow the bar walked them into its
+  path on a third frame.
 - **Effects.** The barbell itself, plus two exertion marks that pop in beside
   his head during the push.
 
-**Not wanted:** any claw repositioned to hold the bar; any scale transform; a
-bar that overlaps the eyes.
+**Not wanted:** any claw repositioned to hold the bar; any scale transform.
+
+**Overridden during review: the bar may cross the eyes.** This line originally
+forbade it. Then contact turned out to be the thing that makes the lift read at
+all, and contact at chest height means the bar passes the face on its way
+overhead — on this geometry the two are not separable. The eyes are hidden on
+the two frames it crosses them instead. Recorded as an override rather than
+quietly deleted, because a "not wanted" line edited to match whatever got built
+stops being a check.
 
 **Why this one is next.** It is the first test of the rule that came out of
 `thinking`: on this geometry props carry the motion and limbs stay where the
@@ -121,7 +132,7 @@ hold, three Tier A screens need rethinking, and it is better to know in August.
 
 ---
 
-## Bouldering — `Read`, `Grep`, `Glob`
+## Bouldering — `Read`
 
 Clawd going up a wall, searching for the next hold. Claude reading your
 codebase.
@@ -130,6 +141,9 @@ codebase.
   frame; the holds move down, which is what reads as ascending.
 - **Body mechanics.** A one-pixel bob, twice a loop — pulling up.
 - **Eyes.** Raised, hunting for the next hold above.
+- **Props.** A horizontal panel seam every 8 units, tiling with the holds.
+  These are what make it read as a wall rather than as confetti — without a
+  surface he is a character standing in empty space while blocks fall past.
 - **Effects.** The holds themselves, a repeating column pattern behind him. The
   ground shadow is hidden: he is on a wall, and a shadow on the floor beneath a
   climber is worse than no shadow.

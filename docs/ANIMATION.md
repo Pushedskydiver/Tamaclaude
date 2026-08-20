@@ -78,6 +78,11 @@ So a claw reaching up is: hide `#left-arm`, show `#left-arm-raised` — a new re
 inside `#body-color-group`. The character stays consistent because the palette,
 the grid and the silhouette language are unchanged; only the pose is new.
 
+**Nothing in the repo currently uses this.** `thinking` was the only animation
+that did, and replacing its cogs with a thought bubble removed the last case.
+The technique is documented and was proven once, but nothing shipping exercises
+it — treat the next animation that needs it as a retest.
+
 Prefer translation where translation will do. Reach for pose swapping when the
 motion is genuinely rotational, and keep the pose count to two or three — every
 pose is drawing, which is the thing this pipeline exists to minimise.
@@ -130,8 +135,9 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-All four animations built so far clear it: `gym` and `thinking` top out at
-y=-1, `typing`'s data bits reach y=-2.5 while still visible. `bouldering`'s
+Measured topmost visible content: `gym` +2, `typing` -2.5, `thinking` -4.
+`thinking` sits exactly on the line with no margin, which is worth knowing
+before anything is added above that bubble. `bouldering`'s
 scroll pattern extends past the crop by design and loses nothing, since it
 repeats.
 
@@ -144,11 +150,14 @@ Seeing the animations side by side made one thing obvious that none of them
 showed alone: **the ones that read have a prop touching Clawd, and the ones
 that do not have a prop floating near him.**
 
-`typing` was always the strongest, and it is the only one where the prop
-overlaps him — the laptop sits in front and the claws tap at it. `gym` racked
+`typing` was always the strongest, and at the time it was the only one whose
+prop overlapped him — the laptop sits in front and the claws tap at it. `gym` racked
 its barbell three units clear of the claws and read as a bar hovering above a
-crab; bringing it down to chest height, where the plates overlap the claw line,
-changed the reading completely without touching the motion. `bouldering`
+crab. Bringing it down to chest height changed the reading completely. The
+plates do not literally overlap the claws — they sit in the adjacent pixel
+column, sharing the same rows — but the bar crosses the torso and is drawn over
+it, which is enough. The motion changed with the position: travel doubled from
+four units to eight, so the bar still reaches overhead from its lower start. `bouldering`
 scrolled holds past a character standing in empty space; a horizontal panel
 seam every 8 units gave him a wall to be on and the holds something to be
 fixed to.
@@ -161,13 +170,29 @@ character physically manipulates, not about everything additive.
 Two smaller lessons from the same pass:
 
 - **Contact creates collisions.** Bringing the barbell to chest height put it
-  across the eyes on the two frames it passes the face. Fixed with a strain
-  squint, which is what a lifter's face does anyway — but a prop moved into
-  the character needs checking against every part it now crosses.
+  across the eyes on the two frames it passes the face. Fixed by closing them on
+  those frames — but a prop moved into the character needs checking against
+  every part it now crosses.
 - **Do not track a moving prop with a body part.** The eyes originally
   translated up to follow the bar, which walked them into its path on a frame
-  the squint did not cover. A tracking motion that moves a part into a prop is
-  worse than no tracking.
+  the closed frames did not cover. A tracking motion that moves a part into a
+  prop is worse than no tracking.
+
+## Closing an eye
+
+**A closed eye is drawn, never deleted.** Hiding the eye rect leaves nothing on
+screen saying "closed", and at 8fps that reads as a rendering glitch rather
+than a blink. Swap in a lid instead: a wider, shorter rect in the same colour,
+2x1 at the eye's own column, one row down.
+
+Upstream gets there differently — `clawd-idle-living.svg` squashes the eyes
+with `scaleY(0.1)`, which is the same idea expressed with a transform we cannot
+use. Ours is the pixel-art form of it, and it is pose swapping on interior
+contrasting elements, which is allowed where repositioning a limb is not.
+
+`idle`, `gym` and `asleep` all use it. The invariant worth testing is that
+exactly one of the eye and its lid is visible on every frame — neither leaves a
+hole in the face, both leaves a smudge.
 
 ## Scrolling backgrounds
 

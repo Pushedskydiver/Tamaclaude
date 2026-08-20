@@ -14,10 +14,10 @@
 
     A bubble is better on every axis this project cares about. It needs no
     rotation, which is the constraint that made the cogs hard. Its tail dots
-    touch the torso, so it is attached to Clawd rather than floating above him
-    — the difference between the animations that read and the ones that do not.
-    And three dots filling in sequence is the most legible "thinking" signal
-    there is.
+    descend toward the torso without touching it, which is what a thought
+    bubble does — see the note on the group below, and docs/ANIMATION.md
+    §Props need contact for why that differs from a barbell. And three dots
+    filling in sequence is the most legible "thinking" signal there is.
 
     Loop: 1.0s at 8fps. Every keyframe percentage lands on a quarter, which is
     two frames. Nothing runs at 0.125s. Every transform lands on a whole device
