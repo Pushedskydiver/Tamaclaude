@@ -75,6 +75,20 @@ looks like a slideshow. Blinks squash the eye rather than hiding it; a
 vanished eye reads as a rendering fault. Held props overlap the body that
 holds them; symbolic overlays float clear. The silhouette is still Clawd.
 
+**The body stays over its feet.** Measure the horizontal centre of the torso
+band against the horizontal centre of the leg band, per frame. A lean shifts
+the body while the legs stay planted, which is correct — but past about three
+device pixels the legs stop reading as planted and start reading as bolted on
+askew, and a lean that is _held_ there reads far worse than one passed
+through. Report the maximum offset and the longest unbroken run above it.
+
+Both `idle` and `thinking` shipped this, at six and seven device pixels held
+for fifteen and thirty-four frames, and it survived every other check here —
+distinct frames, clipping, cascade, compression, connected components, and two
+rounds of critics. Nobody was comparing those two centres, so nobody saw it.
+The exception is a character who is meant to be off its feet: a climber whose
+legs track a scrolling wall should show a large offset, briefly.
+
 **It costs what it should.** Compression under ~40000 B/s.
 
 ## Reporting
