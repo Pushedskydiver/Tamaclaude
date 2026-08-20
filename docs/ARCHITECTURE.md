@@ -21,17 +21,55 @@ for a standalone product. It is the worse design here, for three reasons:
    There is nothing to keep in sync.
 3. Jamie's device would need reflashing to receive a fix.
 
-### Why it fits down the wire
+### Why it fits down the wire — measured
 
-USB 2.0 full-speed gives ~1.5 MB/s theoretical, ~700KB–1MB/s realistic for CDC
-bulk transfer.
+**The link carries 562.5 KB/s.** Measured on the board with
+`tools/usb-throughput.ts` against the firmware in
+`packages/device/firmware/throughput`, which reads USB-CDC and discards. A
+real run, wrapped to this file's width:
 
-| Payload                         | Bytes/frame | At 10fps |
-| ------------------------------- | ----------: | -------: |
-| Full screen 172×320 RGB565      |     110,080 | 1.1 MB/s |
-| Dirty-rect, 96×96 sprite region |      18,432 | 184 KB/s |
+```
+per-second: 562.5 KB/s, 562.6 KB/s, 562.7 KB/s, 562.7 KB/s, 562.6 KB/s,
+            562.7 KB/s, 562.5 KB/s, 562.5 KB/s, 562.5 KB/s, 562.6 KB/s
 
-Full-screen uncompressed does **not** fit.
+host and device agree to within 230 B/s — nothing is queueing between them, so
+this rate is real rather than a buffer draining. It is what this firmware
+sustains, not proof the link is saturated.
+```
+
+Two properties make that a dependable floor. The host's own write rate and the
+device's received count agree to 0.04%, so nothing is queueing between them and
+the figure is real rather than a buffer draining. And it holds flat from
+256-byte writes to 64 KB ones — a 256x range, reproducible with
+`pnpm throughput:sweep` — so there is no write size the daemon could choose
+that would do better.
+
+**It is not, however, the wire's limit.** USB full-speed bulk tops out at 19
+transactions of 64 bytes per 1 ms frame, or 1,216,000 B/s; 562.5 KB/s is 47% of
+that. A link running at half its ceiling is the signature of a device-side
+constraint — the `usb_serial_jtag` driver's copy path, the 4 KB rx ring, or the
+single-threaded read loop — rather than a saturated bus. So this is what _this
+firmware_ sustains. Treat it as a conservative floor to design against, and as
+a number the real blitter might beat rather than one it must fit under.
+
+This section previously assumed 700 KB/s, described as a conservative reading
+of what USB 2.0 full-speed gives CDC after overhead. The guess was about 22%
+above the measurement, so every percentage published against it was that much
+too flattering. (`tools/measure-compression.ts` actually divided by 700,000 —
+decimal — which is 683.6 KB/s, so its own figures were 21.5% too generous. Both
+units are binary now.) Reproduce with `pnpm throughput`.
+
+| Payload                         | Bytes/frame | At 8fps  |  vs link |
+| ------------------------------- | ----------: | -------- | -------: |
+| Full screen 172x320 RGB565      |     110,080 | 860 KB/s | **153%** |
+| Stage band only 168x200 RGB565  |      67,200 | 525 KB/s |      93% |
+| Dirty-rect, 96x96 sprite region |      18,432 | 144 KB/s |      26% |
+
+**Uncompressed does not fit, and the margin is thinner than it looks.** A full
+screen needs half as much again as the link has. Even the stage band alone —
+just the sprite, not the status or message bands — would eat 93% of it, which
+is not a budget so much as a coincidence. Dirty rectangles and RLE are load
+bearing here, not an optimisation.
 
 ### What it actually costs — measured
 
@@ -42,19 +80,25 @@ frames are regenerated each time, since `out/` is gitignored.
 
 **The ratio column is against a 67,200-byte stage frame**, not the
 110,080-byte full screen above. Animations are authored and rendered at
-168×200, which is the stage band, and that is what a sprite update covers.
+168x200, which is the stage band, and that is what a sprite update covers.
 
-| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio vs 67,200 B |
-| ------------ | ---------------: | ----------: | --------: | ----------------: |
-| `gym`        |            562 B |     1,508 B |  4.5 KB/s |             120:1 |
-| `thinking`   |            691 B |     1,876 B |  5.5 KB/s |              97:1 |
-| `typing`     |          1,428 B |     1,516 B | 11.4 KB/s |              47:1 |
-| `bouldering` |          1,610 B |     1,680 B | 12.9 KB/s |              42:1 |
+| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio | % of link |
+| ------------ | ---------------: | ----------: | --------: | ----: | --------: |
+| `idle`       |            453 B |       956 B |  3.5 KB/s | 148:1 |     0.63% |
+| `thinking`   |            488 B |     1,228 B |  3.8 KB/s | 138:1 |     0.68% |
+| `asleep`     |            792 B |     1,208 B |  6.2 KB/s |  85:1 |     1.10% |
+| `typing`     |          1,246 B |     1,324 B |  9.7 KB/s |  54:1 |     1.73% |
+| `gym`        |          1,818 B |     2,052 B | 14.2 KB/s |  37:1 |     2.53% |
+| `bouldering` |          2,499 B |     2,696 B | 19.5 KB/s |  27:1 |     3.47% |
 
-The busiest uses **1.8% of a 700 KB/s floor**. `bouldering` scrolls its entire
-background every frame, the same shape as the road bike, and costs the most on
-average — 13% more than `typing`. By worst single frame it is second, behind
-`thinking`'s 1,876 B, and peak is the number a real-time link has to survive.
+**The busiest uses 3.47% of the measured link — 29x headroom.** `bouldering`
+scrolls its entire background every frame, the same shape as the road bike, and
+costs the most both on average and by worst single frame, which is the number a
+real-time link has to survive.
+
+That margin is the answer to the obvious worry about host-rendering: it is not
+close. Even if every animation were four times more expensive than the worst
+one here, and the panel ran at twice the frame rate, it would still fit.
 
 An earlier version of this section quoted ~14:1, which is upstream's figure for
 their whole on-flash sprite corpus and was never a measurement of anything
@@ -72,12 +116,27 @@ differ returns a single bounding box — so the moment a second region changes
 independently, the box spans both and drags every unchanged pixel between them
 onto the wire.
 
-A clock ticking in the message band is exactly that case. Measured with the
-sprite composited into a full 172×320 panel and one small cell changing in a
-detailed lower band, `bouldering`'s worst frame goes from 1,680 B to roughly
-24,000 B — about **8% of the floor** rather than 1.8%. Still comfortable, still
-two orders of magnitude from trouble, but an order of magnitude worse than the
-stage-only figure and worth knowing before the daemon starts compositing.
+A clock ticking in the message band is exactly that case, and it is the one
+place where the corrected link figure makes the picture worse rather than
+better.
+
+**This paragraph previously quoted a composite worst frame of roughly 24,000 B
+and called it 8% of the floor. Both numbers are now unsupportable.** It was
+anchored to a `bouldering` worst frame of 1,680 B, which is 2,696 B after the
+animation rebuild; the floor it was a percentage of has been retired; and
+nothing in the tree composites a sprite into a full panel with a ticking cell,
+so the 24,000 B itself has no reproducer. A review caught all three at once.
+
+What survives is the mechanism, which is real and unchanged: one bounding box
+spanning two bands drags every unchanged pixel between them onto the wire, and
+the cost of that is set by the distance between the changed regions rather than
+by the sprite. It does not scale with the per-animation figures above and
+cannot be derived from them.
+
+**Measure it when the daemon first composites two bands**, and put the
+reproducer in the tree at the same time. Until then this is a known unknown
+rather than a budgeted cost — the stage-only figures above are sound, and they
+are not the whole panel.
 
 If it ever bites, the fix is per-band diffing or a list of rects rather than
 one box. Not now: one box keeps the firmware blitter trivial and the budget is

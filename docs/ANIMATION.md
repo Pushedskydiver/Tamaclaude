@@ -362,8 +362,12 @@ The advantage is structural rather than aesthetic. A pool needs the daemon to
 own a list, pick from it, and decide when to switch; beats need nothing at all
 outside the SVG. The variety lives in the animation.
 
-It is also nearly free. `idle` produces twelve distinct frames out of 128, so
-the dirty rect is empty on most of them — 839 B/s against a 700 KB/s floor.
+It is also the cheapest thing in the repo. `idle` measures 3,620 B/s against
+the 562.5 KB/s the link was measured at — 0.63%, the lowest of the six. The
+figure here used to read 839 B/s against a 700 KB/s floor; both halves were
+stale, the floor because it was never measured and the cost because the palette
+snap changed what the frames contain. `pnpm measure` prints the current
+numbers, and is the only thing that should be quoted.
 
 **Give the character parts he does not have.** Clawd's base geometry has no
 mouth, which is why he cannot yawn. Upstream's answer is a 3x2 rect at (6,10),
