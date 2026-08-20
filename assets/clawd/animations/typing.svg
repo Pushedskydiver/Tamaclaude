@@ -1,145 +1,380 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="2">
   <!--
     Clawd: typing (Edit / Write / NotebookEdit)
 
-    Generated against assets/clawd/base.svg under the contract in
-    docs/ANIMATION.md: every element of the base geometry appears below at its
-    original coordinates and colours, untouched. All motion is CSS applied by
-    ID — the markup carries no class attributes and no transform attributes, so
-    the base can be re-derived by deleting the <style> block and the three #fx
-    groups (#fx-laptop, #fx-laptop-logo, #fx-data-bits).
+    Hammering at a laptop hard enough to shake. The claws alternate — on every
+    frame one is down on the keys and the other is up — the body trembles and
+    settles into the work over the loop, the eyes read a line left to right and
+    snap back, and output rises off both claws and cools as it goes.
 
-    Stage is 21x25 units; the character keeps its own 0..15 x 0..16 space. At
-    8 device pixels per unit that renders 168x200, which sits inside the 172px
-    panel width with room to spare.
+    Loop: 2s at 8fps = 16 frames. Every period divides 2s exactly — 0.5s, 1s,
+    2s — so frame 16 is frame 0 and the wrap cannot seam. Nothing runs at
+    0.125s, which is the frame interval itself and would sample at one fixed
+    phase forever; 0.125s appears only as a *delay*, where it is the thing that
+    puts the two claws on opposite beats.
 
-    Loop: 1.0s at 8fps = 8 frames. Every sub-animation period divides 1.0s
-    exactly (0.25s, 0.5s, 1.0s) so frame 8 is identical to frame 0 and the loop
-    is seamless. Nothing runs at 0.125s: that is the frame interval itself, so
-    it would sample at the same phase every frame and read as static.
+    Two seconds rather than one because the eye track needs the room. A line
+    scan is five holds and a carriage return, and at a one-second loop each
+    hold is a single frame — the eyes read as vibrating rather than reading.
 
-    No rotation anywhere. The base is axis-aligned rects with hard edges, and a
-    rotated edge is diagonal — it cannot land on the pixel grid at any render
-    scale, so it always antialiases into a soft smear against an otherwise
-    razor-sharp sprite. Every transform here lands on a whole device pixel.
+    ── Why every transform lands on a whole device pixel ──────────────────
+
+    The previous version leaned on the palette snap in `tools/svg2frames.ts` to
+    harden rotated and eased edges after the fact. It does not do that. It
+    resolves a soft edge onto *the nearest declared colour*, which is not
+    necessarily either of the two the edge is between. An edge of #DE886D at
+    20–30% coverage over black composites to about (49,30,24); its squared
+    distance to the laptop's cold #30363B is 1802, against 3877 to black and
+    6188 to the warm #6F4436 that was added to rescue it. So every softened
+    body edge in the frame snapped grey, and Clawd wore a cold rim across the
+    top of his head on three frames of every loop. Snapping resolves an edge;
+    it does not choose the side you meant.
+
+    Landing on the grid is a weaker constraint than it sounds, because only 16
+    frames exist. The panel plays the rasterised sequence, so the only values a
+    track ever takes are the 16 it is sampled at, and an easing curve is just
+    one way of choosing those 16 values. Writing them out is another, and it is
+    the one that can also put them on the grid. Every track below is authored
+    as holds spanning the sample points, so the timing function never runs and
+    `linear` says that honestly. 0.5s tracks get keyframes at 0/25/50/75/100%
+    (the sample points of a 0.5s period at 8fps); 1s tracks at multiples of
+    12.5%; 2s tracks at multiples of 6.25%, written as ranges.
+
+    Two things fall out of that, and both are also what
+    `docs/ANIMATION.md`'s element table already asked for:
+
+      - **Nothing rotates.** A rotated edge is diagonal and cannot land on the
+        grid at any scale. On the claws it was worse than a lost invariant: the
+        shoulder pivot puts the claw tip near the *bottom* of its arc, where
+        motion is horizontal, so the -74deg..-99deg sweep moved the visible
+        silhouette 4 device pixels sideways against 0.8 down. It read as a fin
+        flaring in and out, not as a tap.
+      - **Nothing on the body scales.** `scale(1.02, 0.975)` about the hips
+        leaves the torso 88.4 device pixels wide and its top edge on a fraction
+        of a row, so both flanks and the whole 88px top edge fringe at once.
+        The torso translates instead, always downward; the legs sit outside
+        the moving group, so the hips sink into them and never lift off them.
+
+    ── What the tap can and cannot sell ──────────────────────────────────
+
+    The claws do not disappear behind the lid, and no arrangement of this
+    geometry can make them. The visible claw is only ever the part sticking out
+    past the torso — a claw pixel inside x 2..13 is the same colour as the
+    torso behind it — and the lid starts at x=2.25, inside that span. So the
+    tap sells height, not occlusion: on every frame one claw's lowest row is at
+    least six device pixels below the lid's top row (160) and the other's is
+    above it. Contact is the rule `gym` established instead — the lid is drawn
+    over the lower torso, the claws are column-adjacent to the torso, and claw
+    and lid share rows on every strike.
+
+    ── Structure ─────────────────────────────────────────────────────────
+
+    Transforms compose by nesting rather than by stacking declarations on one
+    element, because the `animation` shorthand REPLACES: two `animation:` rules
+    matching the same element means the later one silently wins and the earlier
+    animation never runs. That bug shipped twice in `idle.svg`. Every element
+    below carries at most one `animation` declaration, and anything that needs
+    two motions gets a wrapper group for the second.
+
+    Wrapper groups are `#fx-` prefixed and transparent, but this file is not a
+    pure wrapping of `assets/clawd/base.svg` and the tree says so in two
+    places. Every id, rect, coordinate and fill is base.svg's, and both pack
+    recolour hooks — `#body-color-group` and `#eyes-color-group` — are still
+    single elements carrying a single fill. What differs is nesting order: the
+    legs are listed before `#torso` rather than after it (they are the same
+    fill and do not overlap, so paint order is not observable), and
+    `#eyes-color-group` is a *child* of `#body-color-group` here rather than
+    its sibling. Both follow from the same constraint: the legs must stay
+    outside the group that moves while the eyes must stay inside it, and there
+    is only one `#body-color-group` to put them on opposite sides of.
   -->
   <defs>
     <style>
-      /* Sampling at 8fps means the fastest perceivable cycle is 0.25s — two
-         frames, alternating. See the note above before shortening anything. */
-      #master-group {
-        animation: body-jitter 0.25s infinite steps(1);
+      /* ── the desk track ──────────────────────────────────────────────
+         The shadow reacts to the body it belongs to, tightening on each
+         strike. On the black stage it composites to black and is invisible,
+         exactly as `ground-shadow` already is — this is for a pack that sets a
+         lighter stage, where a shadow that ignored the body would be the one
+         thing on screen not moving. Its opacity is fixed: animating it would
+         manufacture composited tones the document never declares, which is the
+         same mistake the logo swap below exists to avoid. */
+      #ground-shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-press 0.5s infinite linear;
       }
 
-      /* Claws tap by translating a whole art pixel, not by rotating. Half a
-         cycle out of phase, so one is down while the other lifts. */
-      #left-arm,
-      #right-arm {
-        animation: tap-claw 0.25s infinite steps(1);
+      /* ── the body tracks, slow outside fast ──────────────────────────
+         #fx-hunch is the slow one: over the loop he settles one device pixel
+         into the machine and comes back up. #fx-jitter is the fast one nested
+         inside it, dipping to a different depth on every frame. Both translate
+         downward only, in whole device pixels, so they compose to a whole
+         device pixel and the hips never lift off the legs.
+
+         Sum of the two, in device pixels down, frame 0..15:
+         1 0 2 1 2 1 3 1 2 1 3 1 2 0 2 0 — it changes on all 16 frames, and
+         the deepest dip is 3. That last number is a budget, not an
+         observation: the eye rects bottom out at row 151 and the laptop's
+         topmost row is 158, so a dip of 3 leaves three device pixels of body
+         between the eyes and the machine. Deepen it past 6 and the eyes start
+         being eaten on the dips, which is the bug the lid height was chosen to
+         avoid in the first place. */
+      #fx-hunch {
+        animation: hunch 2s infinite linear;
       }
-      #right-arm {
-        animation-delay: -0.125s;
+      #fx-jitter {
+        animation: key-strike 0.5s infinite linear;
       }
 
-      /* Eyes track across an imaginary line of code and snap back. */
-      #left-eye,
+      /* ── the arms ────────────────────────────────────────────────────
+         #fx-tap is the strike, at 0.5s: down 10 device pixels on one beat and
+         7 on the next, up 4 in between, so the pattern does not settle into a
+         metronome. The right claw taps on the opposite beat via a -0.125s
+         delay — exactly one frame — folded into the shorthand rather than
+         declared separately, so no later rule can drop it. Both use the same
+         keyframes; the delay is the whole difference.
+
+         #fx-shoulder is a 2s drift of one device pixel, and the two arms drift
+         on different phases. It is small, and its job is arithmetic rather
+         than expressive: without it the 1s eye track and the 0.5s tap make the
+         second half of the loop repeat the first, and the arms hold only 8
+         distinct height pairs across 16 frames. With it they hold 14. */
+      #fx-shoulder-left {
+        animation: reach-left 2s infinite linear;
+      }
+      #fx-shoulder-right {
+        animation: reach-right 2s infinite linear;
+      }
+      #fx-tap-left {
+        animation: tap 0.5s infinite linear;
+      }
+      #fx-tap-right {
+        animation: tap 0.5s -0.125s infinite linear;
+      }
+
+      /* ── the eyes ────────────────────────────────────────────────────
+         The scan is on the wrapper and the blink is on each eye rect, so the
+         two compose instead of one replacing the other. Every hold spans a
+         frame boundary, which is why the percentages look arbitrary: samples
+         land at multiples of 12.5% of the 1s scan, and a hold that started at
+         a sample instead of before it would be caught mid-ramp. */
+      #fx-eye-scan {
+        animation: scan-line 1s infinite linear;
+      }
+      /* A blink is the eye squashing about its own centre, never the eye
+         disappearing. scaleY(0.25) on a 2-unit eye is half a unit — four whole
+         device pixels, since the eye's centre line at y=9 is on the grid and
+         quarter of a unit either side of it is too — so the shut eye is still
+         a drawn line. A hidden eye reads as a dropped frame. `linear`: a lid
+         that accelerates reads as a wince. */
+      #left-eye {
+        transform-origin: 4.5px 9px;
+        animation: blink 2s infinite linear;
+      }
       #right-eye {
-        animation: read-line 0.5s infinite steps(1);
+        transform-origin: 10.5px 9px;
+        animation: blink 2s infinite linear;
       }
 
-      /* Output rising off each claw.
-         `linear`, not `steps(8)`. A timing function applies per keyframe
-         interval, never across the whole animation, so steps(8) subdivided
-         each opacity segment instead of quantising the rise — it sampled the
-         75%-88% segment at 96% of the way through and rendered a bit at
-         opacity 0.125, the exact intermediate colour the previous comment here
-         claimed was designed out. What actually keeps the rise on the grid is
-         arithmetic: 14 units over 8 frames is 1.75 units, and 1.75 x 8 device
-         pixels per unit is 14 whole pixels per frame. */
-      #fx-data-bits rect {
-        animation: rise 1s infinite linear;
-      }
-      /* Six distinct phases, all multiples of the 0.125s frame interval so
-         each one samples cleanly. Listed individually rather than with an
-         nth-child stride: a stride hands the left and right streams the same
-         delay set, and the two sides then rise as exact mirror images. */
-      #fx-data-bits rect:nth-child(1) { animation-delay: 0s; }
-      #fx-data-bits rect:nth-child(2) { animation-delay: -0.375s; }
-      #fx-data-bits rect:nth-child(3) { animation-delay: -0.75s; }
-      #fx-data-bits rect:nth-child(4) { animation-delay: -0.125s; }
-      #fx-data-bits rect:nth-child(5) { animation-delay: -0.5s; }
-      #fx-data-bits rect:nth-child(6) { animation-delay: -0.875s; }
-
-      /* Screen activity, two shades swapping. The laptop itself does not
-         jitter with Clawd — it is sitting on a desk, and #fx-laptop is outside
-         #master-group precisely so it stays put while he vibrates behind it. */
+      /* ── the screen ──────────────────────────────────────────────────
+         Two shades swapping rather than one fading. An intermediate alpha
+         composites to an intermediate colour, and the snapper resolves that to
+         whichever declared colour happens to be nearest — which is not
+         necessarily either of the two you meant. */
       #logo-lit {
-        animation: logo-lit 0.5s infinite steps(1);
+        animation: logo-lit 1s infinite linear;
       }
       #logo-dim {
-        animation: logo-dim 0.5s infinite steps(1);
+        animation: logo-dim 1s infinite linear;
+      }
+
+      /* ── the output ──────────────────────────────────────────────────
+         Each bit is two rects at the same place on the same rise: a hot one
+         visible for the first half of the climb and a cool one for the second.
+         The handover is the fade — a real fade would blend green into black
+         and the snapper would land the result on the laptop's grey, because
+         that is genuinely the nearest declared colour to it. Declaring a
+         cooler green as its own fill is what makes the tone available instead
+         of manufactured.
+
+         `#2EA043` and not the arithmetic midpoint of green and black. The
+         midpoint of *any* two palette colours is a magnet for every other
+         ramp: `#3F7343` was tried, and because it also sits near the middle of
+         the body-against-black ramp it captured the torso's top edge and drew
+         a green hairline across Clawd's head on every frame the body squashed.
+         Pick a tone that belongs to its own hue, not one that splits a gap.
+
+         `linear`, and every opacity percentage on a frame boundary: a timing
+         function applies per keyframe interval, so easing here would sample an
+         opacity ramp partway and put a half-lit bit on screen. The rise is
+         12 units over 2s, which at 8fps and 8 device pixels per unit is 6
+         whole pixels a frame. */
+      #fx-bits-hot rect {
+        animation: bit-hot 2s infinite linear;
+      }
+      #fx-bits-cool rect {
+        animation: bit-cool 2s infinite linear;
+      }
+      /* One delay per bit, applied to both halves of it so the handover stays
+         put. Written out rather than strided: an nth-child stride hands the
+         left and right streams the same delay set and the two sides then rise
+         as exact mirror images of each other. Delays are all multiples of the
+         0.125s frame interval, so every bit samples at a clean phase. */
+      #fx-bits-hot rect:nth-child(1),
+      #fx-bits-cool rect:nth-child(1) { animation-delay: 0s; }
+      #fx-bits-hot rect:nth-child(2),
+      #fx-bits-cool rect:nth-child(2) { animation-delay: -0.75s; }
+      #fx-bits-hot rect:nth-child(3),
+      #fx-bits-cool rect:nth-child(3) { animation-delay: -1.5s; }
+      #fx-bits-hot rect:nth-child(4),
+      #fx-bits-cool rect:nth-child(4) { animation-delay: -0.25s; }
+      #fx-bits-hot rect:nth-child(5),
+      #fx-bits-cool rect:nth-child(5) { animation-delay: -1s; }
+      #fx-bits-hot rect:nth-child(6),
+      #fx-bits-cool rect:nth-child(6) { animation-delay: -1.75s; }
+
+      /* ── keyframes ───────────────────────────────────────────────────
+         Every value below is a multiple of 0.125px — one device pixel at the
+         8x render scale — and every hold spans at least one sample point. The
+         scale factors are the exception and they are chosen the same way:
+         the shadow rect is 9 units wide about a centre pivot, so 0.944444 and
+         0.972222 move each edge exactly 2 and 1 device pixels inward. */
+
+      @keyframes shadow-press {
+        0%, 100% { transform: scaleX(1); }
+        25%      { transform: scaleX(0.944444); }
+        50%      { transform: scaleX(1); }
+        75%      { transform: scaleX(0.972222); }
+      }
+
+      /* Down one pixel for frames 3..12, level either side of that. Sampled at
+         multiples of 6.25%, so the holds are written to straddle those. */
+      @keyframes hunch {
+        0%,  17%  { transform: translateY(0); }
+        18%, 80%  { transform: translateY(0.125px); }
+        81%, 100% { transform: translateY(0); }
+      }
+
+      /* Four dips of different depths per half second — 1, 0, 2, 0 device
+         pixels. Strikes alternate every frame, so he never fully comes back
+         up; he trembles at four different heights instead, which reads as
+         effort rather than as a bounce. */
+      @keyframes key-strike {
+        0%, 100% { transform: translateY(0.125px); }
+        25%      { transform: translateY(0); }
+        50%      { transform: translateY(0.25px); }
+        75%      { transform: translateY(0); }
+      }
+
+      /* Lift, strike, lift, strike shallower. Up 4 device pixels off the base
+         pose, down 10 and then 7 from it. */
+      @keyframes tap {
+        0%, 100% { transform: translateY(-0.5px); }
+        25%      { transform: translateY(1.25px); }
+        50%      { transform: translateY(-0.5px); }
+        75%      { transform: translateY(0.875px); }
+      }
+
+      /* The shoulder drift. Non-alternating with matching 0% and 100%
+         keyframes, which is the other way to keep a 2s track seamless. The
+         left shoulder is down for frames 7..13, the right for frames 0..3 and
+         12..15 — deliberately different phases, so the two arms never repeat a
+         pair of heights they have already held. */
+      @keyframes reach-left {
+        0%,  43%  { transform: translateY(0); }
+        44%, 87%  { transform: translateY(0.125px); }
+        88%, 100% { transform: translateY(0); }
+      }
+      @keyframes reach-right {
+        0%,  24%  { transform: translateY(0.125px); }
+        25%, 74%  { transform: translateY(0); }
+        75%, 100% { transform: translateY(0.125px); }
+      }
+
+      /* Five holds across the line and a carriage return. Sampled at 0, 12.5,
+         25, 37.5, 50, 62.5, 75 and 87.5% that reads -1, -0.5, 0, 0.5, 1, 1,
+         -1, -1: he reaches the end of the line, dwells on it, and snaps back. */
+      @keyframes scan-line {
+        0%,   6%  { transform: translateX(-1px); }
+        7%,  19%  { transform: translateX(-0.5px); }
+        20%, 31%  { transform: translateX(0); }
+        32%, 44%  { transform: translateX(0.5px); }
+        45%, 69%  { transform: translateX(1px); }
+        70%, 100% { transform: translateX(-1px); }
+      }
+
+      /* One frame shut, once per loop — frame 12, the 75% sample. Held either
+         side of it so neither neighbour catches the ramp. */
+      @keyframes blink {
+        0%,  70%  { transform: scaleY(1); }
+        71%, 80%  { transform: scaleY(0.25); }
+        81%, 100% { transform: scaleY(1); }
       }
 
       @keyframes logo-lit {
-        0%   { opacity: 1; }
-        50%  { opacity: 0; }
-        100% { opacity: 1; }
+        0%, 43.75% { opacity: 1; }
+        50%, 100%  { opacity: 0; }
       }
       @keyframes logo-dim {
-        0%   { opacity: 0; }
-        50%  { opacity: 1; }
-        100% { opacity: 0; }
+        0%, 43.75% { opacity: 0; }
+        50%, 100%  { opacity: 1; }
       }
 
-      @keyframes body-jitter {
-        0%   { transform: translateY(0); }
-        50%  { transform: translateY(0.5px); }
-        100% { transform: translateY(0); }
+      @keyframes bit-hot {
+        0%      { transform: translateY(0); opacity: 1; }
+        43.75%  { opacity: 1; }
+        50%     { opacity: 0; }
+        100%    { transform: translateY(-12px); opacity: 0; }
       }
-
-      @keyframes tap-claw {
-        0%   { transform: translateY(0); }
-        50%  { transform: translateY(1px); }
-        100% { transform: translateY(0); }
-      }
-
-      @keyframes read-line {
-        0%   { transform: translateX(0); }
-        50%  { transform: translateX(1px); }
-        100% { transform: translateX(0); }
-      }
-
-      /* Every keyframe percentage lands on an eighth, because frames sample
-         at eighths. 88% did not, which is how the 0.125 ghost got in. Opacity
-         is a hard pop rather than a fade: an intermediate alpha becomes an
-         intermediate colour once the palette is quantised. */
-      @keyframes rise {
-        0%    { transform: translateY(0); opacity: 1; }
-        75%   { opacity: 1; }
-        87.5% { opacity: 0; }
-        100%  { transform: translateY(-14px); opacity: 0; }
+      @keyframes bit-cool {
+        0%      { transform: translateY(0); opacity: 0; }
+        43.75%  { opacity: 0; }
+        50%     { opacity: 1; }
+        81.25%  { opacity: 1; }
+        87.5%   { opacity: 0; }
+        100%    { transform: translateY(-12px); opacity: 0; }
       }
     </style>
   </defs>
 
-  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <!-- ── base geometry: assets/clawd/base.svg, wrapped but not moved ──── -->
   <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
     <g id="body-color-group" fill="#DE886D">
-      <rect id="torso" x="2" y="6" width="11" height="7"/>
-      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
-      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
-
+      <!-- Planted. The legs sit outside every animated wrapper, so the body
+           can dip against them instead of sliding as one rigid block. Only
+           their bottom unit clears the laptop, which is the part that matters:
+           four feet under the machine, not moving, while everything above them
+           shakes. -->
       <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
       <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
       <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
       <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-    </g>
 
-    <g id="eyes-color-group" fill="#000000">
-      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      <g id="fx-hunch">
+        <g id="fx-jitter">
+          <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+          <g id="fx-shoulder-left">
+            <g id="fx-tap-left">
+              <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+            </g>
+          </g>
+          <g id="fx-shoulder-right">
+            <g id="fx-tap-right">
+              <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+            </g>
+          </g>
+
+          <g id="eyes-color-group" fill="#000000">
+            <g id="fx-eye-scan">
+              <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+              <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+            </g>
+          </g>
+        </g>
+      </g>
     </g>
   </g>
 
@@ -150,51 +385,79 @@
        writing code, rather than once on a splash nobody looks at twice.
 
        Drawn after #master-group so it occludes the lower torso and the tops of
-       the legs, which is what puts it in front. The claws at x0-2 and x13-15
-       fall outside the lid, so they stay visible either side — Clawd reaching
-       around a machine rather than hidden behind one.
+       the legs, which is what puts it in front. It does not tremble with him,
+       because it is sitting on a desk.
 
-       The lid top is at y=11, one unit clear of the eyes rather than flush
-       with them. Flush was tried and was wrong: #master-group jitters half a
-       unit and #fx-laptop deliberately does not, so on every jitter frame the
-       eyes dropped 4 device pixels behind a stationary lid and lost their
-       bottom quarter — the eyes visibly pulsed four times a second. A prop
-       that does not share the character's motion needs clearance from it, not
-       adjacency. -->
+       The lid top at y=11 is the load-bearing number. The eyes sit two units
+       above it and the body dips into it, so the gap is what the dip depth is
+       budgeted against: at the deepest frame the eye rects end on device row
+       154 and the laptop's topmost row is 158. Three device pixels, on every
+       frame — small, and it is the reason #fx-hunch and #fx-jitter are capped
+       where they are rather than a property that survives deepening them. -->
   <g id="fx-laptop">
+    <!-- Two device pixels of warm dark where the machine meets him — the
+         occlusion a pixel artist would hand-place under any object resting
+         against a body. It also puts a tone halfway down the ramp from the
+         body colour to black, so that any body edge that does soften has
+         somewhere warm to land instead of reaching for the screen's grey.
+         That is insurance, not the mechanism: what actually keeps the grey rim
+         off his head is that no body edge softens in the first place. -->
+    <g id="fx-laptop-shade" fill="#6F4436">
+      <rect x="2.25" y="10.75" width="10.5" height="0.25"/>
+    </g>
     <g id="fx-laptop-screen" fill="#30363B">
-      <rect x="4" y="11" width="7" height="3"/>
+      <rect x="2.25" y="11" width="10.5" height="2.5"/>
     </g>
     <g id="fx-laptop-body" fill="#8B949E">
-      <rect x="3" y="14" width="9" height="1"/>
+      <rect x="1.75" y="13.5" width="11.5" height="0.5"/>
     </g>
   </g>
 
   <!-- Where a pixelated logo goes. Unlike every other group here, a pack does
        not recolour this one — it replaces it wholesale, which is why the two
-       rects carry their own fills rather than inheriting a group fill. Two
-       shades alternating rather than a fade: an intermediate alpha becomes an
-       intermediate colour once the palette is quantised.
+       rects carry their own fills rather than inheriting a group fill.
 
        The screen and body above DO take group fills, so a pack recolours the
        machine without touching the logo on it. -->
   <g id="fx-laptop-logo">
-    <rect id="logo-lit" x="7" y="12" width="1" height="1" fill="#58A6FF"/>
-    <rect id="logo-dim" x="7" y="12" width="1" height="1" fill="#1F6FEB"/>
+    <rect id="logo-lit" x="7" y="11.75" width="1" height="1" fill="#58A6FF"/>
+    <rect id="logo-dim" x="7" y="11.75" width="1" height="1" fill="#1F6FEB"/>
   </g>
 
   <!-- ── additive effects: not part of the base geometry ───────────────── -->
-  <!-- Two streams, one above each claw, at x=0.5 and x=13.5. The torso spans
-       x 2..13, so neither stream ever crosses the body or the eyes — the
-       previous version rose straight through Clawd's face. Third colour group,
-       same pattern as the base's two, so a pack recolours effects with one
-       fill override. -->
-  <g id="fx-data-bits" fill="#7EE787">
-    <rect x="0.5" y="8" width="1" height="1"/>
-    <rect x="0.5" y="8" width="1" height="1"/>
-    <rect x="0.5" y="8" width="1" height="1"/>
-    <rect x="13.5" y="8" width="1" height="1"/>
-    <rect x="13.5" y="8" width="1" height="1"/>
-    <rect x="13.5" y="8" width="1" height="1"/>
+  <!-- Two streams, one off each claw, in the columns outside the torso. The
+       torso spans device columns 40..127; the left stream ends at column 37
+       and the right starts at column 130, so a bit is never inside the torso
+       and never 4-adjacent to it either. That second half is the part an
+       earlier version got wrong: the columns were nominally clear, but a bit
+       at x=1 ends exactly where the torso begins and welds itself to the
+       corner. Two device pixels of clearance is what makes it float.
+
+       They do start on the claws, and that is the point — a stream that
+       emerges from a moving part reads as output, and one that appears in
+       empty air reads as confetti.
+
+       Twelve rects, not twelve bits: the hot group and the cool group hold the
+       same six positions, and a matching pair shares a delay so the cool one
+       takes over exactly where the hot one stops. Rise is 12 units from about
+       y=9.5, and the cool half retires at 87.5% of its cycle — topmost visible
+       pixel is y=-0.5, well inside the y=-4 line that landscape crops to. -->
+  <g id="fx-data-bits">
+    <g id="fx-bits-hot" fill="#7EE787">
+      <rect x="0.5" y="9.5" width="1" height="1"/>
+      <rect x="0.75" y="9.25" width="1" height="1"/>
+      <rect x="0.25" y="9.75" width="1" height="1"/>
+      <rect x="13.25" y="9.25" width="1" height="1"/>
+      <rect x="13.5" y="9.5" width="1" height="1"/>
+      <rect x="13.75" y="9.75" width="1" height="1"/>
+    </g>
+    <g id="fx-bits-cool" fill="#2EA043">
+      <rect x="0.5" y="9.5" width="1" height="1"/>
+      <rect x="0.75" y="9.25" width="1" height="1"/>
+      <rect x="0.25" y="9.75" width="1" height="1"/>
+      <rect x="13.25" y="9.25" width="1" height="1"/>
+      <rect x="13.5" y="9.5" width="1" height="1"/>
+      <rect x="13.75" y="9.75" width="1" height="1"/>
+    </g>
   </g>
 </svg>

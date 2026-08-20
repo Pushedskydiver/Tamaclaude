@@ -1,152 +1,538 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="3">
   <!--
     Clawd: gym (Bash)
 
-    Generated against assets/clawd/base.svg under the contract in
-    docs/ANIMATION.md. Every base element appears below at its original
-    coordinates and colours; all motion is CSS applied by ID.
+    Bash is 63.9% of all tool calls, so after `idle` this is the animation seen
+    most. It has to survive being watched, which the first version did not: it
+    was eight frames of a barbell sliding up and down a body that never reacted
+    to it. That was not a failure of care, it was the old contract — rotation,
+    non-uniform scale and easing were all banned to keep every edge on a whole
+    device pixel, and with those gone there is nothing left to act with.
 
-    First animation built to the rule that came out of `thinking`: on this
-    geometry PROPS CARRY THE MOTION and limbs stay exactly where the base puts
-    them (docs/ANIMATION.md §What pose swapping cannot do). No claw is
-    repositioned to hold the bar — the bar travels, the body dips under it, and
-    the lift reads from the prop rather than the limb.
+    The ban is lifted for *small parts turned far*. `tools/svg2frames.ts` snaps
+    antialiased pixels back onto the declared palette after rasterising, which
+    is what upstream clawd-tank does and why theirs move like they have mass.
+    Snapping removes intermediate colours; it does not fix sub-art-pixel
+    geometry, so a large slab turned a few degrees still staircases. Nothing
+    here rotates except the two 2x2 claws, which turn far enough that the
+    result is a shape.
 
-    The bar must make CONTACT at the bottom of the rep. An earlier version
-    racked it three units clear of the claws and it read as a barbell floating
-    above a crab, because a prop that never touches the character is not being
-    held by it. At chest height the plates overlap the claw line and the
-    reading changes completely.
+    The beats — one rep per loop, 24 frames:
 
-    No scale transform anywhere. A squash would be the obvious way to show
-    load, but docs/ANIMATION.md's pixel arithmetic covers translation only, and
-    a scaled edge lands between pixels. The body dips a whole unit instead.
+      f0-f2    racked at the chest, sinking into the dip
+      f3       the bottom of the dip: knees folded, bar sunk with the shoulders
+      f4       the bar breaks off the chest
+      f5-f12   the drive, building off the chest and grinding into lockout
+      f12-f15  the strain hold overhead, the bar shivering in his grip
+      f16-f21  the descent, accelerating, a drop of sweat flicked off his brow
+      f21      the rack — hardest squash in the loop
+      f22-f23  rebound and settle
 
-    Loop: 1.0s at 8fps. The bar travels 8 units over 4 frames — exactly 2
-    units, 16 device pixels, per frame — then back. Periods of 1.0s only. Nothing runs
-    at 0.125s.
+    **Every frame is a keyframe stop.** Twenty-five stops per track, one per
+    rendered frame plus the wrap, so the declared value *is* the rendered
+    value and every track is `linear`. This is not verbosity for its own sake.
+    Two whole classes of defect live in the gap between stops: an eased
+    interpolation next to a hand-placed stop produced a fast-slow-fast stutter
+    off the chest, and a bar landing on a fractional device row rendered 7px
+    thick on some frames and 8px on others — flicker on the brightest, longest
+    element on the panel. With a stop on every frame the drive ramp is stated
+    outright (1, 3, 6, 9, 11, 10, 8, 6, 3 device pixels: monotonically up,
+    then monotonically down) and every `translateY` on the bar is a whole
+    multiple of 0.125 units = one device pixel.
+
+    Three things carry the lift:
+
+    **The arms actually press, and the hands stay on the bar.** Each arm is its
+    base 2x2 rect on its own shoulder pivot — (2,10) and (13,10) — rotating up
+    while `scaleX` extends it along its own axis. Rotation plus axial scale is
+    a limb: 2 units thick throughout, 1.7 long at the rack and 5.7 at lockout.
+    That growth is the elbow, since this geometry has no elbow to bend.
+
+    Length is *derived from* angle, not chosen beside it: `L cos A` is held at
+    the constant 1.65, so the claw's far end sits at x = 0.35 on every frame of
+    the rep and only the angle changes. That constant is the whole fix for a
+    real defect — an independently chosen length let the hand swing outboard of
+    the plate on ten of twenty-four frames, up to a full art unit past the end
+    of the bar, and at true size those frames read as two orange fins flanking
+    the steel rather than as hands holding it. Holding the grip fixed keeps
+    the rotated claw's outer corner between 3.7 and 9.1 device pixels inside
+    the plate's outer edge on every frame, so the widest points of the sprite
+    are always the plates.
+
+    The angle tops out at 73deg rather than going vertical, and that is the
+    difference between a press and a shrug. The shoulder sits at the torso's
+    own edge, so an arm rotated to 90deg sweeps *inward* and vanishes into the
+    silhouette — the first attempt did exactly that and read as sloped
+    shoulders with a bar resting on his head.
+
+    **The bar tracks the claws by arithmetic, not by eye.** Solved the other
+    way round, in fact: the bar's travel is picked first, as whole device
+    pixels, and the arm angle for each frame falls out of it as
+    `tan A = (2.5 - 3 sy + d - tb) / (1.65 sy)` once the body's squash `sy` and
+    knee bend `d` have had their say. Contact is therefore exact — the claw's
+    far-end centre lands on the shaft's centre line to within 0.016 of a device
+    pixel on all 24 frames — instead of holding to a tolerance. Racked, the
+    shaft crosses the mid-torso and the plates overlap the claws; a prop that
+    never touches the character is not being held by it.
+
+    **The legs fold instead of standing still.** They are their own group
+    pivoting at the feet (7.5,15), compressing to 70% at the bottom of the dip.
+    The body's `translateY` is derived from that compression — leg top is
+    `15 - 2k`, body base is `13 + d`, so `d = 2 - 2k` — which is what keeps the
+    hips welded to the knees through a move that shortens both, and it is the
+    reason the torso can never lift off its own legs. The feet never leave
+    y=15.
+
+    Three seconds, not one. The bar travels 7.1 units — 57 device pixels — and
+    a sixteen-frame loop spent 27 of them in a single step, which reads as a
+    teleport rather than a lift. Twenty-four frames put the peak at 14 pixels,
+    on the descent, where gravity is doing the work.
+
+    The eyes are asymmetric, after upstream: the left stays at its base height
+    and the right rides up to 1.2 units higher for as long as the bar is in
+    front of the face. That split is load-bearing, not decoration — the shaft
+    is 1 unit thick and on one row it covered both eyes at once and left a
+    blank forehead. Separated, the shaft can only ever be in front of one of
+    them.
+
+    The other half of that invariant is height. A squashed eye is *shorter*
+    than the shaft, so an eye squinting under load while the bar crosses it is
+    not squashed, it is deleted — which happened, twice a rep, and read as a
+    hole in the face. So the eye the bar is about to cross opens instead: the
+    measured clear run of every eye on every frame is at least 3.6 device
+    pixels, and the squints are spent where the bar is at the chest and
+    crossing nothing. Both eyes squash about their own centres and neither
+    track touches opacity.
+
+    Every element below carries exactly one `animation` declaration in exactly
+    one rule. The shorthand replaces rather than merges, and idle once shipped
+    a part listed in two rules — it silently lost the first animation and hung
+    eight device pixels off the body. Where two motions are needed they nest in
+    groups (`#fx-barbell` travels, `#fx-barbell-strain` inside it shivers) so
+    the transforms compose instead of competing.
+
+    Loop: 3s at 8fps = 24 frames. Every stop is a multiple of 1/24, so each
+    lands on a frame boundary. The two opacity tracks only ever step between
+    stops exactly one frame apart, which is what keeps a half-alpha pixel — and
+    so a colour the artwork never declared — out of the palette snap.
   -->
   <defs>
     <style>
-      /* One press per loop: racked at frame 0, full extension at frame 4. */
+      /* ── the load path ─────────────────────────────────────────────────── */
+
+      #body-group {
+        transform-origin: 7.5px 13px; /* torso base — the hips */
+        animation: press-body 3s infinite linear;
+      }
+
+      #legs-group {
+        transform-origin: 7.5px 15px; /* the floor, between his feet */
+        animation: press-legs 3s infinite linear;
+      }
+
+      #shoulder-left {
+        transform-origin: 2px 10px; /* left shoulder joint */
+        animation: press-arm-left 3s infinite linear;
+      }
+
+      #shoulder-right {
+        transform-origin: 13px 10px; /* right shoulder joint */
+        animation: press-arm-right 3s infinite linear;
+      }
+
       #fx-barbell {
-        animation: press 1s infinite linear;
+        animation: press-bar 3s infinite linear;
       }
 
-      /* Held for two frames at the bottom of the rep rather than interpolated
-         — a fractional dip would soften the whole silhouette. It covers frames
-         0 and 1, the start of the drive. Frame 0 is the lowest the bar gets;
-         frame 7 is two units above it, on the way back down. */
-      #master-group {
-        animation: take-the-load 1s infinite steps(1);
+      /* Nested inside the travelling bar so the shiver composes with the
+         travel. It translates rather than tilts: the shaft is 17 units by 1,
+         the largest slab on the panel, and a slab that size turned even a
+         degree and a half staircases its long edges — the exact failure the
+         palette snap does not fix. A whole-pixel tremble does the same job
+         and every edge stays straight. */
+      #fx-barbell-strain {
+        animation: press-bar-strain 3s infinite linear;
       }
 
-      /* Eyes squeeze shut on the two frames the bar crosses them. Contact at
-         chest height means the bar must pass the face on its way overhead —
-         frames 1 and 7, where it lands on row 9 and the eyes occupy rows 8
-         and 9. Left alone it sliced both eyes in half for a frame each way,
-         the same intermittent-occlusion fault the laptop lid had.
+      /* On the default stage this draws nothing, and that is not a bug being
+         tolerated. The stage band is black; `paletteOf()` composites
+         `#000000` at 0.5 over black, gets black, and the snap resolves black
+         to the background — alpha zero. The element and its track are here
+         because a pack that sets a lighter stage gets a real shadow out of
+         them for free. Nothing in the read of this animation rests on it. */
+      #ground-shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: press-shadow 3s infinite linear;
+      }
 
-         An earlier version also translated the eyes up to track the bar. That
-         looked good and moved them into the bar's path on frame 2, creating a
-         third collision the squint did not cover — a tracking motion that
-         walks a part into a moving prop is worse than no tracking. */
-      #left-eye,
+      /* ── the face ────────────────────────────────────────────────────────
+         Two tracks, not one, and they are not just squinting by different
+         amounts: they sit at different heights. The bar is 1 unit thick and
+         has to pass in front of the face twice a rep, and with both eyes on
+         the same row it covered both at once — a blank forehead with a girder
+         across it, which reads as a rendering fault rather than as a lift.
+         Clamped low and raised high, the shaft can only ever be over one of
+         them, so there is always a whole eye somewhere.
+
+         The second rule is subtler and cost a blocker to learn: an eye
+         squashed to a lid is *shorter* than the 1-unit shaft, so on the frame
+         the bar crosses it, a squinting eye is not squinting, it is gone. So
+         the eye the bar is about to reach opens rather than closes — which is
+         also what a face does when a loaded bar comes past it — and the
+         squints are spent at the rack and at lockout, where the shaft is
+         nowhere near the eye line. Every eye on every frame has at least 3.6
+         device pixels of unbroken clear run; the worst before this rule was
+         zero. Both squash about their own centres, on `linear`, because a lid
+         that accelerates reads as a wince. */
+
+      #left-eye {
+        transform-origin: 4.5px 9px; /* left eye centre */
+        animation: press-eye-left 3s infinite linear;
+      }
+
       #right-eye {
-        animation: watch-the-bar 1s infinite steps(1);
+        transform-origin: 10.5px 9px; /* right eye centre */
+        animation: press-eye-right 3s infinite linear;
       }
 
-      /* Lids, shown exactly when the eyes are not — the closed eye is drawn,
-         never deleted. See docs/ANIMATION.md §Closing an eye. */
-      #lid-left,
-      #lid-right {
-        animation: lids 1s infinite steps(1);
+      /* Clawd's base geometry has no mouth. This is the additive grimace
+         upstream's yawn taught us — drawn only while he is under the bar, and
+         switched between stops one frame apart so it never renders at a half
+         alpha the palette snap would have to invent a colour for. */
+      #fx-grimace {
+        transform-origin: 7.5px 11.5px;
+        animation: press-grimace 3s infinite linear;
       }
 
-      /* Exertion marks, binary opacity. Visible frames 2-5, which is the
-         drive plus the first frame of the descent — effort outlasting the
-         movement by a frame reads better than effort stopping at lockout. */
-      #fx-effort {
-        animation: effort 1s infinite steps(1);
+      /* One drop, once per rep, and only on the way down. At lockout the bar
+         fills the whole band above his head and there is nowhere for a drop to
+         go that is not behind a plate. */
+      #fx-sweat {
+        animation: press-sweat 3s infinite linear;
       }
 
-      /* Eight units over four frames is two units — sixteen whole device
-         pixels — per frame. Racked at chest height where the plates overlap
-         the claws, pressed overhead where they clear the head. */
-      @keyframes press {
-        0%   { transform: translateY(0); }
-        50%  { transform: translateY(-8px); }
-        100% { transform: translateY(0); }
+      /* ── keyframes ───────────────────────────────────────────────────────
+         One stop per rendered frame on every track on the load path. Read any
+         one column down and it is the same rep, frame for frame. */
+
+      @keyframes press-body {
+        0%         { transform: translateY(0.02px) scale(1.015, 0.985); }
+        4.166667%  { transform: translateY(0.04px) scale(1.025, 0.975); }
+        8.333333%  { transform: translateY(0.28px) scale(1.055, 0.93); }
+        12.5%      { transform: translateY(0.58px) scale(1.075, 0.9); }
+        16.666667% { transform: translateY(0.42px) scale(1.055, 0.925); }
+        20.833333% { transform: translateY(0.26px) scale(1.03, 0.955); }
+        25%        { transform: translateY(0.15px) scale(1.012, 0.98); }
+        29.166667% { transform: translateY(0.07px) scale(1.002, 0.998); }
+        33.333333% { transform: translateY(0.01px) scale(0.99, 1.015); }
+        37.5%      { transform: translateY(-0.02px) scale(0.982, 1.03); }
+        41.666667% { transform: translateY(-0.044px) scale(0.978, 1.042); }
+        45.833333% { transform: translateY(-0.064px) scale(0.974, 1.052); }
+        50%        { transform: translateY(-0.08px) scale(0.97, 1.06); }
+        54.166667% { transform: translateY(-0.044px) scale(0.982, 1.046); }
+        58.333333% { transform: translateY(-0.072px) scale(0.972, 1.057); }
+        62.5%      { transform: translateY(-0.04px) scale(0.984, 1.044); }
+        66.666667% { transform: translateY(-0.06px) scale(0.976, 1.05); }
+        70.833333% { transform: translateY(-0.01px) scale(0.995, 1.032); }
+        75%        { transform: translateY(0.02px) scale(1.005, 1.015); }
+        79.166667% { transform: translateY(0.05px) scale(1.015, 0.998); }
+        83.333333% { transform: translateY(0.2px) scale(1.04, 0.958); }
+        87.5%      { transform: translateY(0.6px) scale(1.08, 0.905); }
+        91.666667% { transform: translateY(0.19px) scale(1.005, 0.995); }
+        95.833333% { transform: translateY(0.1px) scale(1.012, 0.978); }
+        100%       { transform: translateY(0.02px) scale(1.015, 0.985); }
       }
 
-      @keyframes take-the-load {
-        0%   { transform: translateY(1px); }
-        25%  { transform: translateY(0); }
-        100% { transform: translateY(0); }
+      @keyframes press-legs {
+        0%         { transform: scale(1.015, 0.99); }
+        4.166667%  { transform: scale(1.025, 0.98); }
+        8.333333%  { transform: scale(1.055, 0.86); }
+        12.5%      { transform: scale(1.075, 0.71); }
+        16.666667% { transform: scale(1.055, 0.79); }
+        20.833333% { transform: scale(1.03, 0.87); }
+        25%        { transform: scale(1.012, 0.925); }
+        29.166667% { transform: scale(1.002, 0.965); }
+        33.333333% { transform: scale(0.99, 0.995); }
+        37.5%      { transform: scale(0.982, 1.01); }
+        41.666667% { transform: scale(0.978, 1.022); }
+        45.833333% { transform: scale(0.974, 1.032); }
+        50%        { transform: scale(0.97, 1.04); }
+        54.166667% { transform: scale(0.982, 1.022); }
+        58.333333% { transform: scale(0.972, 1.036); }
+        62.5%      { transform: scale(0.984, 1.02); }
+        66.666667% { transform: scale(0.976, 1.03); }
+        70.833333% { transform: scale(0.995, 1.005); }
+        75%        { transform: scale(1.005, 0.99); }
+        79.166667% { transform: scale(1.015, 0.975); }
+        83.333333% { transform: scale(1.04, 0.9); }
+        87.5%      { transform: scale(1.08, 0.7); }
+        91.666667% { transform: scale(1.005, 0.905); }
+        95.833333% { transform: scale(1.012, 0.95); }
+        100%       { transform: scale(1.015, 0.99); }
       }
 
-      @keyframes watch-the-bar {
-        0%    { opacity: 1; }
-        12.5% { opacity: 0; }
-        25%   { opacity: 1; }
-        87.5% { opacity: 0; }
-        100%  { opacity: 1; }
+      @keyframes press-arm-left {
+        0%         { transform: rotate(-14.98deg) scaleX(0.854); }
+        4.166667%  { transform: rotate(-17.59deg) scaleX(0.865); }
+        8.333333%  { transform: rotate(-18.38deg) scaleX(0.869); }
+        12.5%      { transform: rotate(-13.99deg) scaleX(0.85); }
+        16.666667% { transform: rotate(-17.46deg) scaleX(0.865); }
+        20.833333% { transform: rotate(-12.7deg) scaleX(0.846); }
+        25%        { transform: rotate(7.4deg) scaleX(0.832); }
+        29.166667% { transform: rotate(36.1deg) scaleX(1.021); }
+        33.333333% { transform: rotate(55.81deg) scaleX(1.468); }
+        37.5%      { transform: rotate(64.97deg) scaleX(1.95); }
+        41.666667% { transform: rotate(69.42deg) scaleX(2.347); }
+        45.833333% { transform: rotate(71.8deg) scaleX(2.641); }
+        50%        { transform: rotate(72.7deg) scaleX(2.774); }
+        54.166667% { transform: rotate(73.13deg) scaleX(2.843); }
+        58.333333% { transform: rotate(72.79deg) scaleX(2.788); }
+        62.5%      { transform: rotate(73.19deg) scaleX(2.853); }
+        66.666667% { transform: rotate(70.58deg) scaleX(2.481); }
+        70.833333% { transform: rotate(67.04deg) scaleX(2.115); }
+        75%        { transform: rotate(58.43deg) scaleX(1.576); }
+        79.166667% { transform: rotate(35.65deg) scaleX(1.015); }
+        83.333333% { transform: rotate(-10.71deg) scaleX(0.84); }
+        87.5%      { transform: rotate(-13.74deg) scaleX(0.849); }
+        91.666667% { transform: rotate(-22.2deg) scaleX(0.891); }
+        95.833333% { transform: rotate(-15.88deg) scaleX(0.858); }
+        100%       { transform: rotate(-14.98deg) scaleX(0.854); }
       }
 
-      @keyframes lids {
-        0%    { opacity: 0; }
-        12.5% { opacity: 1; }
-        25%   { opacity: 0; }
-        87.5% { opacity: 1; }
-        100%  { opacity: 0; }
+      @keyframes press-arm-right {
+        0%         { transform: rotate(14.98deg) scaleX(0.854); }
+        4.166667%  { transform: rotate(17.59deg) scaleX(0.865); }
+        8.333333%  { transform: rotate(18.38deg) scaleX(0.869); }
+        12.5%      { transform: rotate(13.99deg) scaleX(0.85); }
+        16.666667% { transform: rotate(17.46deg) scaleX(0.865); }
+        20.833333% { transform: rotate(12.7deg) scaleX(0.846); }
+        25%        { transform: rotate(-7.4deg) scaleX(0.832); }
+        29.166667% { transform: rotate(-36.1deg) scaleX(1.021); }
+        33.333333% { transform: rotate(-55.81deg) scaleX(1.468); }
+        37.5%      { transform: rotate(-64.97deg) scaleX(1.95); }
+        41.666667% { transform: rotate(-69.42deg) scaleX(2.347); }
+        45.833333% { transform: rotate(-71.8deg) scaleX(2.641); }
+        50%        { transform: rotate(-72.7deg) scaleX(2.774); }
+        54.166667% { transform: rotate(-73.13deg) scaleX(2.843); }
+        58.333333% { transform: rotate(-72.79deg) scaleX(2.788); }
+        62.5%      { transform: rotate(-73.19deg) scaleX(2.853); }
+        66.666667% { transform: rotate(-70.58deg) scaleX(2.481); }
+        70.833333% { transform: rotate(-67.04deg) scaleX(2.115); }
+        75%        { transform: rotate(-58.43deg) scaleX(1.576); }
+        79.166667% { transform: rotate(-35.65deg) scaleX(1.015); }
+        83.333333% { transform: rotate(10.71deg) scaleX(0.84); }
+        87.5%      { transform: rotate(13.74deg) scaleX(0.849); }
+        91.666667% { transform: rotate(22.2deg) scaleX(0.891); }
+        95.833333% { transform: rotate(15.88deg) scaleX(0.858); }
+        100%       { transform: rotate(14.98deg) scaleX(0.854); }
       }
 
-      @keyframes effort {
-        0%   { opacity: 0; }
-        25%  { opacity: 1; }
-        75%  { opacity: 0; }
-        100% { opacity: 0; }
+      @keyframes press-bar {
+        0%         { transform: translateY(0px); }
+        4.166667%  { transform: translateY(0.125px); }
+        8.333333%  { transform: translateY(0.5px); }
+        12.5%      { transform: translateY(0.75px); }
+        16.666667% { transform: translateY(0.625px); }
+        20.833333% { transform: translateY(0.25px); }
+        25%        { transform: translateY(-0.5px); }
+        29.166667% { transform: translateY(-1.625px); }
+        33.333333% { transform: translateY(-3px); }
+        37.5%      { transform: translateY(-4.25px); }
+        41.666667% { transform: translateY(-5.25px); }
+        45.833333% { transform: translateY(-6px); }
+        50%        { transform: translateY(-6.375px); }
+        54.166667% { transform: translateY(-6.375px); }
+        58.333333% { transform: translateY(-6.375px); }
+        62.5%      { transform: translateY(-6.375px); }
+        66.666667% { transform: translateY(-5.625px); }
+        70.833333% { transform: translateY(-4.625px); }
+        75%        { transform: translateY(-3.25px); }
+        79.166667% { transform: translateY(-1.625px); }
+        83.333333% { transform: translateY(0.125px); }
+        87.5%      { transform: translateY(0.75px); }
+        91.666667% { transform: translateY(0.375px); }
+        95.833333% { transform: translateY(0.125px); }
+        100%       { transform: translateY(0px); }
+      }
+
+      @keyframes press-eye-left {
+        0%         { transform: scaleY(1); }
+        4.166667%  { transform: scaleY(1); }
+        8.333333%  { transform: scaleY(0.9); }
+        12.5%      { transform: scaleY(0.75); }
+        16.666667% { transform: scaleY(0.7); }
+        20.833333% { transform: scaleY(0.9); }
+        25%        { transform: scaleY(1); }
+        29.166667% { transform: scaleY(1); }
+        33.333333% { transform: scaleY(1); }
+        37.5%      { transform: scaleY(0.8); }
+        41.666667% { transform: scaleY(0.6); }
+        45.833333% { transform: scaleY(0.45); }
+        50%        { transform: scaleY(0.35); }
+        54.166667% { transform: scaleY(0.4); }
+        58.333333% { transform: scaleY(0.3); }
+        62.5%      { transform: scaleY(0.4); }
+        66.666667% { transform: scaleY(0.6); }
+        70.833333% { transform: scaleY(0.85); }
+        75%        { transform: scaleY(1); }
+        79.166667% { transform: scaleY(1); }
+        83.333333% { transform: scaleY(0.95); }
+        87.5%      { transform: scaleY(0.25); }
+        91.666667% { transform: scaleY(0.5); }
+        95.833333% { transform: scaleY(0.8); }
+        100%       { transform: scaleY(1); }
+      }
+
+      @keyframes press-eye-right {
+        0%         { transform: translateY(0px) scaleY(1); }
+        4.166667%  { transform: translateY(0px) scaleY(0.95); }
+        8.333333%  { transform: translateY(0px) scaleY(0.9); }
+        12.5%      { transform: translateY(-0.4px) scaleY(0.85); }
+        16.666667% { transform: translateY(-0.8px) scaleY(0.85); }
+        20.833333% { transform: translateY(-1.2px) scaleY(0.9); }
+        25%        { transform: translateY(-1.2px) scaleY(0.95); }
+        29.166667% { transform: translateY(-1.2px) scaleY(1); }
+        33.333333% { transform: translateY(-1.2px) scaleY(1); }
+        37.5%      { transform: translateY(-1.2px) scaleY(1); }
+        41.666667% { transform: translateY(-1.2px) scaleY(0.9); }
+        45.833333% { transform: translateY(-1.2px) scaleY(0.8); }
+        50%        { transform: translateY(-1.2px) scaleY(0.7); }
+        54.166667% { transform: translateY(-1.2px) scaleY(0.75); }
+        58.333333% { transform: translateY(-1.2px) scaleY(0.65); }
+        62.5%      { transform: translateY(-1.2px) scaleY(0.75); }
+        66.666667% { transform: translateY(-1.2px) scaleY(0.85); }
+        70.833333% { transform: translateY(-1.2px) scaleY(0.95); }
+        75%        { transform: translateY(-1.2px) scaleY(1); }
+        79.166667% { transform: translateY(-1.2px) scaleY(1); }
+        83.333333% { transform: translateY(-0.6px) scaleY(0.9); }
+        87.5%      { transform: translateY(0px) scaleY(0.45); }
+        91.666667% { transform: translateY(0px) scaleY(0.7); }
+        95.833333% { transform: translateY(0px) scaleY(0.9); }
+        100%       { transform: translateY(0px) scaleY(1); }
+      }
+
+      /* The tremble of a bar held overhead by something running out of arms.
+         Active only across the hold, one whole device pixel either way, and
+         only between stops one frame apart, so it shivers rather than swings.
+         The claws hold their derived position through it, which is what makes
+         it read as the bar moving in his grip rather than his arms moving. */
+      @keyframes press-bar-strain {
+        0%, 50%          { transform: translateY(0px); }
+        54.166667%       { transform: translateY(0.125px); }
+        58.333333%       { transform: translateY(-0.125px); }
+        62.5%            { transform: translateY(0.125px); }
+        66.666667%, 100% { transform: translateY(0px); }
+      }
+
+      /* Wide and dark while the weight is going through him into the floor,
+         narrow and faint at lockout when he is tall. Invisible on the default
+         black stage — see the note on the rule above. */
+      @keyframes press-shadow {
+        0%         { transform: scaleX(1.005); opacity: 0.51; }
+        12.5%      { transform: scaleX(1.13); opacity: 0.7; }
+        16.666667% { transform: scaleX(1.095); opacity: 0.65; }
+        33.333333% { transform: scaleX(1.002); opacity: 0.5; }
+        50%        { transform: scaleX(0.982); opacity: 0.47; }
+        62.5%      { transform: scaleX(0.991); opacity: 0.49; }
+        75%        { transform: scaleX(1.005); opacity: 0.51; }
+        87.5%      { transform: scaleX(1.135); opacity: 0.71; }
+        100%       { transform: scaleX(1.005); opacity: 0.51; }
+      }
+
+      @keyframes press-grimace {
+        0%, 20.833333% { opacity: 0; transform: scaleX(0.6); }
+        25%            { opacity: 1; transform: scaleX(1); }
+        50%            { opacity: 1; transform: scaleX(1.3); }
+        70.833333%     { opacity: 1; transform: scaleX(1); }
+        75%, 100%      { opacity: 0; transform: scaleX(0.6); }
+      }
+
+      /* A flick, not a lift. It leaves the brow sideways — 2 units out for
+         every 1 up, upstream's ratio — because a drop that mostly climbs is
+         the only thing moving on the last two frames of the loop, it is the
+         highest-contrast object on the panel, and the eye follows it up and
+         out of the frame instead of watching the bar come down. Travelling
+         outward it reads as thrown off him.
+
+         It leaves at f20, not f19. A frame earlier the bar is still crossing
+         the brow and the drop launches on top of the shaft, which reads as a
+         blob stuck to the steel rather than as sweat.
+
+         It is also gone by f23 rather than at 100%. A particle that pops out
+         on the last frame puts its only hard cut exactly on the loop's seam,
+         where it is the one thing that changes between the last frame and the
+         first and so is the one thing you notice. Retired a frame early, the
+         wrap has nothing in it but the settle. */
+      @keyframes press-sweat {
+        0%, 79.166667%   { transform: translate(0px, 0px) scale(0.6); opacity: 0; }
+        83.333333%       { transform: translate(0px, 0px) scale(0.6); opacity: 1; }
+        87.5%            { transform: translate(-1.5px, -0.75px) scale(1); opacity: 1; }
+        91.666667%       { transform: translate(-3.6px, -1.8px) scale(0.9); opacity: 1; }
+        95.833333%, 100% { transform: translate(-3.6px, -1.8px) scale(0.9); opacity: 0; }
       }
     </style>
   </defs>
 
-  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <!-- ── base geometry: assets/clawd/base.svg, regrouped, never redrawn ─── -->
   <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
-    <g id="body-color-group" fill="#DE886D">
-      <rect id="torso" x="2" y="6" width="11" height="7"/>
-      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
-      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
-
+    <!-- Planted. Out of the body group on purpose: these fold about the feet
+         while the body squashes about the hips, and the two meet exactly. -->
+    <g id="legs-group" fill="#DE886D">
       <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
       <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
       <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
       <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
     </g>
 
-    <g id="eyes-color-group" fill="#000000">
-      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    <g id="body-group">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
 
-      <!-- additive: closed lids for the two frames the bar crosses the face -->
-      <rect id="lid-left" x="4" y="9" width="2" height="1"/>
-      <rect id="lid-right" x="10" y="9" width="2" height="1"/>
+        <g id="shoulder-left">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        <g id="shoulder-right">
+          <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+        </g>
+      </g>
+
+      <g id="eyes-color-group" fill="#000000">
+        <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+        <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+
+        <!-- additive: the gritted mouth, present only under load -->
+        <rect id="fx-grimace" x="6" y="11" width="3" height="1"/>
+      </g>
     </g>
   </g>
 
   <!-- ── additive props ────────────────────────────────────────────────── -->
-  <!-- Barbell at its racked position; the whole group translates. Racked, it
-       lies across the mid-torso and is drawn over it — that overlap is the
-       contact that makes the lift read. -->
-  <g id="fx-barbell" fill="#8B949E">
-    <rect x="3" y="11" width="9" height="1"/>
-    <rect x="2" y="10" width="1" height="3"/>
-    <rect x="12" y="10" width="1" height="3"/>
+  <!-- Drawn last, so the shaft crosses the mid-torso at the rack and the
+       plates overlap the claws. That overlap is the contact the lift reads
+       from. Bright shaft, grey discs: both sit far enough off the body
+       colour's ramp to black that an antialiased body edge still snaps to
+       body or to background, never to steel. The inner collars at x=1.5 and
+       x=13 mark where a grip belongs, and the claws are held between them and
+       the plates on every frame of the rep. -->
+  <g id="fx-barbell">
+    <g id="fx-barbell-strain">
+      <rect x="-1" y="10" width="17" height="1" fill="#C9D1D9"/>
+      <rect x="-1" y="8.5" width="1.5" height="4" fill="#8B949E"/>
+      <rect x="14.5" y="8.5" width="1.5" height="4" fill="#8B949E"/>
+      <rect x="1.5" y="9.5" width="0.5" height="2" fill="#8B949E"/>
+      <rect x="13" y="9.5" width="0.5" height="2" fill="#8B949E"/>
+    </g>
   </g>
 
-  <g id="fx-effort" fill="#F0883E">
-    <rect x="0" y="7" width="1" height="1"/>
-    <rect x="14" y="7" width="1" height="1"/>
+  <!-- Sits on the brow, not above it: the lower rect straddles the top row of
+       the torso at the frame it appears, so it is a drop coming off him. -->
+  <g transform="translate(3.6, 4.4)">
+    <g id="fx-sweat" fill="#40C4FF">
+      <rect x="0" y="1" width="1.5" height="1.5"/>
+      <rect x="0.25" y="0" width="1" height="1"/>
+    </g>
   </g>
 </svg>

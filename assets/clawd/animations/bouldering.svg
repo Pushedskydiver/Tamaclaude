@@ -1,131 +1,489 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="4">
   <!--
     Clawd: bouldering (Read)
 
     Grep and Glob appear zero times in 45,000 real tool calls, so Read is the
-    whole trigger — see BUILD_PLAN.md.
+    whole trigger — see BUILD_PLAN.md. At 17.6% it is the second-busiest screen
+    after `gym`, which means it gets watched, and neither earlier version
+    survived being watched.
 
-    Generated against assets/clawd/base.svg under the contract in
-    docs/ANIMATION.md. Every base element appears below at its original
-    coordinates and colours; all motion is CSS applied by ID.
+    ── Why this file was rebuilt, twice ───────────────────────────────────
 
-    Props carry the motion (docs/ANIMATION.md §What pose swapping cannot do).
-    No claw reaches for a hold. Clawd stays put in the frame and the WALL
-    scrolls downward past him, which is what reads as ascending — the same
-    relationship a camera has to a climber it is following.
+    The first version banned rotation, non-uniform scale and easing outright,
+    so nothing could reach for anything. Clawd hung motionless in front of a
+    moving wall and the note in the file admitted it.
 
-    The scroll must TILE. The hold pattern repeats every 8 units and scrolls
-    exactly 8 units per loop, so the last frame is indistinguishable from the
-    first and the loop cannot seam. 8 units over 8 frames at scale 8 is 8
-    device pixels per frame — whole, so every edge stays hard. Any other
-    pairing of pattern period and scroll distance visibly jumps once a second.
-    This is the technique `road bike` needs too.
+    The second lifted the ban and overshot into a nine-stop IK table —
+    `rotate()` plus `scaleX` up to 2.136 — solving each claw onto a named hold
+    every frame. Stretched to twice its length a 2x2 claw stops being a claw
+    and becomes a tab, and a tab parked flat against the torso edge at eye
+    height is a snout: for half the loop the sprite read as a pig facing left.
+    The other half read as a startled face, because an additive mouth scaled to
+    a 27x14 black hole sat low on the torso — three times the width of an eye —
+    with both claws splayed sideways beside it. The torso rotated 2deg, which
+    staircased an 88x56 slab into a parallelogram. The feet moved 8 device
+    pixels a loop against the wall's 64: the hands tracked the rock and the
+    feet skated.
 
-    The hold pattern is deliberately sparse — two per tile, at the sides where
-    the claws are. A denser scatter was tried and read as falling confetti
-    rather than a wall: at 172px the eye needs few enough marks to track each
-    one, and holds passing through the grip line are what connect him to the
-    surface.
+    None of that machinery is here. There is no mouth, because two eye holes
+    plus a third dark shape is a face. Nothing rotates but the two claws, and
+    they rotate about their own centres. The torso and the legs only translate.
+    `scaleX` appears nowhere. What replaced the IK table is one number.
 
-    #ground-shadow is hidden for the whole loop — a static opacity rule, not a
-    keyframe. He is on a wall, and a shadow on the floor beneath a climber is
-    worse than no shadow. docs/ANIMATION.md permits hiding a base element for
-    part of a loop via a keyframe; hiding it for all of one is the same
-    guarantee held for longer, and the element is still present and still
-    recolourable by a pack.
+    ── One number holds the scene together ────────────────────────────────
 
-    Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s. Nothing runs at 0.125s.
+    The wall falls a quarter of a unit per frame — two device pixels, a whole
+    number, two units a second — and everything in contact with it falls at
+    exactly that rate:
+
+      the wall        0.25 a frame, all 32 frames
+      a gripping claw 0.25 a frame, the 12 frames it is on the hold
+      a weighted foot 0.25 a frame, the 4 frames it is planted
+
+    Because a claw and the rock descend at the same speed, whatever the claw
+    grabs stays under it for the whole pull without anything being solved: the
+    claw's lower corner sits about half a unit inside the hold's band at the
+    grab and is still there at the release. Nothing slides, because nothing is
+    aimed.
+
+    The same arithmetic lays out the route, backwards. A hand is on for 12
+    frames and off for 4, so it returns to the same place on screen every 16 —
+    by which time the wall has moved 4 units. Four units is therefore the hold
+    spacing, and each hand climbs exactly one hold a cycle. Because a column
+    alternates a 2x1 jug with a smaller crimp every 4 units, alternate grabs
+    take a jug and then a crimp, which is what a route looks like and what
+    keeps a column from reading as a dotted line.
+
+    ── Where a claw may be ────────────────────────────────────────────────
+
+    At the side of the torso and inside the torso's own vertical band, always.
+    The claw's centre travels from y=7.6 down to y=10.6 and overshoots back to
+    7.5 as it settles, so its topmost corner is never higher than y=6.10 and
+    its lowest never deeper than y=12.0, against a torso occupying 6 to 13 —
+    and on the two frames a cycle where the claw is highest the bob has lifted
+    the torso's edge two device pixels further out of its way.
+
+    That bound is the finding this rebuild cost. The first attempt had both
+    claws reaching overhead, two units above the top edge at the corners, and
+    at true size it read as a pig — not faintly, not arguably.
+    Clawd is drawn front-on, and a protrusion at the top corner of a wide slab
+    is an ear whatever angle it is turned to. Two claws out at the *sides* is
+    the pose the geometry already reads as: `idle` parks them there and reads
+    as a crab. So the reach is vertical inside that band, three units of it,
+    and the two sides alternate — one claw high on its hold while the other is
+    low and finishing its pull.
+
+    The turn stays between 36 and 58deg, where a 2x2 block renders as a
+    diamond and is its own shape. At 0deg it is the flat tab that read as a
+    snout and at 90deg it is a square again, so both ends of the range are
+    kept a good 30deg clear. The diamond crosses the torso edge over about
+    eight device pixels and protrudes eighteen — connected at every stop of the
+    loop, and never a lump on the silhouette.
+
+    ── The beats, per 16-frame cycle ──────────────────────────────────────
+
+      f0-f12   the left claw is on its hold and rides it down
+      f12-f16  it snatches up, overshoots by a device pixel and settles onto
+               the next hold — 4 units higher in wall coordinates, and so in
+               exactly the same place on screen
+      f4-f8    the right claw takes its own four frames off, half a cycle out
+               of step, and is on the rock for the other twelve
+
+    One hand is always on the rock and for half the cycle both are: the four
+    frames either claw is off are four the other is well into its pull.
+
+    **The body moves between the hands.** Two nested tracks, both translation:
+    `#climb-sway` leans three device pixels toward whichever claw is high and
+    freshly loaded, once per stride; `#climb-bob` inside it drops one pixel as
+    a grip loads and lifts two through the pull, once per pull. The arms sit
+    inside the sway and outside the bob, which is the whole point of splitting
+    them — a lean that left the arms behind would peel a claw off a torso edge
+    it overlaps by four pixels, while a bob that carried them would move the
+    sprite as a rigid block and drag the grip off the hold.
+
+    **The feet step.** They are why this reads as a wall rather than a
+    backdrop: a climber whose rock moves while his feet do not is standing
+    still. Each leg rides down a whole unit at wall speed over four frames,
+    snaps up in two and waits two to be placed again — a 1s cycle, left pair
+    against right pair at half a cycle, inner and outer one frame apart so four
+    identical stubs never read as one wide foot. Travel is upward from the base
+    position only. A leg is 2 units long and welded to the torso base at y=13,
+    so translating one *down* opens a gap at the hip, and a limb detached from
+    the body is the one misreading that costs something on a panel which also
+    shows real display faults.
+
+    **The gaze leads the reach.** The eyes sit a quarter-unit high throughout —
+    he is looking up the wall — and shift half a unit toward whichever claw is
+    off the rock, arriving two frames before that claw leaves the rock. They never squash: an
+    expression here would be bought at the price of a frame with an eye
+    missing, and a missing eye reads as a dropped frame.
+
+    ── The wall ───────────────────────────────────────────────────────────
+
+    Kept from the previous version, because the wall was never what was wrong.
+    Panel joints every 4 units with the vertical seam alternating side each
+    course, so it reads as bonded sheets of ply rather than as ruled paper.
+    The joints are also what stop the holds reading as falling confetti —
+    without a surface he is a character in empty space with blocks going past.
+
+    Drawn on black rather than on a filled face, which is a look decision that
+    was measured rather than guessed: a filled slate face costs 22235 B/s
+    against this file's 21792, so it was always affordable. It was dropped
+    because at 172px a slate field flattens the scene — the joints sit close
+    enough to the face colour to disappear and the holds stop popping — and
+    every other screen in the set is on black, so one filled background reads
+    as the odd one out in rotation.
+
+    **The scroll must tile.** Each hold column repeats every 8 units, the joint
+    stagger every 8, and the wall travels exactly 8 units a loop, so the last
+    frame is one ordinary step from the first. Any other pairing of period and
+    travel jumps once per loop, which is exactly the cadence at which the eye
+    notices. Verified by rendering two loops and hashing: t=0 and t=4s are
+    byte-identical.
+
+    `#ground-shadow` is present at zero opacity. Every other animation stands
+    him on a floor; here he is on a wall, and a floor shadow under a climber is
+    worse than no shadow — which is what the plan asked for and what the
+    previous version quietly overrode by scaling it into a slab on the wall
+    instead. At its base half opacity it would darken every joint and hold that
+    passed behind his feet, which is a smear rather than a shadow. Zero opacity
+    rather than deletion keeps every base element in the file at its own
+    coordinates, and keeps it out of the safe-area walk, which skips anything
+    transparent.
+
+    `data-safe-area="ignore"` exempts the wall from the landscape safe-area
+    check: its tiles run past the crop and lose nothing, because the pattern
+    repeats. The marker sits on the clip path as well as on the group, since
+    `topmostVisibleUnit` walks every `rect` in the document including the one
+    inside `<clipPath>`, and an unmarked clip rect reports a bounding box at
+    the origin and trips the check. That clip is also what keeps the wall off
+    the frame edge — 2 device pixels clear each side, 4 top and bottom — so no
+    joint scrolling in ever lands in row 0.
+
+    Every element below carries exactly one `animation` declaration in exactly
+    one rule. The shorthand replaces rather than merges, and an earlier idle
+    shipped a part named in two rules: it silently lost the first animation and
+    hung eight device pixels off the body. Concurrent motion is nested instead
+    — `#arm-left-reach` translates and `#claw-left-turn` inside it rotates — so
+    the transforms compose rather than compete.
+
+    Loop: 4s at 8fps = 32 frames. Three periods, 4s, 2s and 1s, each dividing
+    the loop a whole number of times; no track alternates, so the even-count
+    rule does not arise. One frame is 6.25% of a 2s track and 12.5% of a 1s
+    one, and every keyframe below is a whole multiple of its own track's frame.
+    Nothing animates opacity, so no frame can sample a half-alpha pixel the
+    palette snap would have to invent a colour for.
   -->
   <defs>
+    <!-- Marked ignore for the same reason the group is: this rect is real to
+         `querySelectorAll('rect')` even though it never paints. -->
+    <clipPath id="wall-crop" data-safe-area="ignore">
+      <rect x="-2.75" y="-8.5" width="20.5" height="24.25"/>
+    </clipPath>
+
     <style>
-      #fx-wall {
-        animation: scroll-wall 1s infinite linear;
+      /* ── the wall ────────────────────────────────────────────────────────
+         Flat, and linear on purpose. The claws and the feet track it by
+         matching its speed exactly, so any easing here would have to be solved
+         back into every limb keyframe to keep the grips from sliding. A
+         following camera pans steadily anyway; the surge lives in the body. */
+      #fx-wall-scroll {
+        animation: wall-scroll 4s infinite linear;
       }
 
-      #ground-shadow {
-        opacity: 0;
+      /* ── the climber ─────────────────────────────────────────────────────
+         The lean, once per stride, wrapping everything including the arms.
+         Translation only, here and in the bob: a 2.5deg rotation of an 88x56
+         slab was tried in `idle` and staircased into a parallelogram, and
+         non-uniform scale on a part this size walks its edges a whole pixel
+         between frames. A body this large leans by moving, not by turning. */
+      #climb-sway {
+        animation: climb-sway 2s infinite ease-in-out;
       }
 
-      /* Pulling up: one pixel, twice a loop. */
-      #master-group {
-        animation: pull-up 0.5s infinite steps(1);
+      /* The pull, once a second, inside the lean. Torso, legs and eyes only —
+         the arms are outside it so the hands hold their holds while the body
+         travels past them, which is what a pull is. */
+      #climb-bob {
+        animation: climb-bob 1s infinite ease-in-out;
       }
 
-      /* Hunting for the next hold, above and to one side. */
-      #left-eye,
-      #right-eye {
-        animation: look-up 0.5s infinite steps(1);
+      /* ── the arms ────────────────────────────────────────────────────────
+         Two tracks each, nested. The outer one carries the claw up and down
+         the wall; the inner one turns it about its own centre. The turn never
+         leaves the 36-58deg band, where a 2x2 block renders as a diamond: at
+         0deg it is the flat tab against the torso edge that read as a snout,
+         and at 90deg it is a square again. */
+      #arm-left-reach {
+        animation: reach-left 2s infinite linear;
       }
 
-      @keyframes scroll-wall {
+      #claw-left-turn {
+        transform-origin: 1px 10px; /* the left claw's own centre */
+        animation: turn-left 2s infinite linear;
+      }
+
+      /* Half a cycle behind, so one hand is always on the rock. The delay
+         rides inside the shorthand, which resets a separate
+         `animation-delay`. */
+      #arm-right-reach {
+        animation: reach-right 2s -1s infinite linear;
+      }
+
+      #claw-right-turn {
+        transform-origin: 14px 10px; /* the right claw's own centre */
+        animation: turn-right 2s -1s infinite linear;
+      }
+
+      /* ── the face ────────────────────────────────────────────────────────
+         One track, and no strain: the eyes hold their shape for the whole
+         loop. A squashed eye here would buy an expression at the price of
+         frames with an eye missing, which read as dropped frames. */
+      #eyes-look {
+        animation: spot-the-hold 2s infinite ease-in-out;
+      }
+
+      /* ── the legs ────────────────────────────────────────────────────────
+         One cycle shared by all four, put out of phase by delay rather than by
+         four sets of keyframes. Left pair against right pair at half a cycle;
+         outer behind inner by a single frame. */
+      #step-inner-left {
+        animation: step 1s infinite linear;
+      }
+
+      #step-outer-left {
+        animation: step 1s -0.125s infinite linear;
+      }
+
+      #step-inner-right {
+        animation: step 1s -0.5s infinite linear;
+      }
+
+      #step-outer-right {
+        animation: step 1s -0.625s infinite linear;
+      }
+
+      /* ── keyframes ─────────────────────────────────────────────────────── */
+
+      /* 8 units a loop: one joint-stagger period, two hold periods. */
+      @keyframes wall-scroll {
         from { transform: translateY(0); }
         to   { transform: translateY(8px); }
       }
 
-      @keyframes pull-up {
-        0%   { transform: translateY(0); }
-        50%  { transform: translateY(-1px); }
-        100% { transform: translateY(0); }
+      /* Three device pixels toward whichever claw is high and freshly loaded,
+         once per stride. The arms ride inside this one — a lean that left them
+         behind would peel a claw off the torso edge, which is 4 device pixels
+         of overlap and cannot spare 3. */
+      @keyframes climb-sway {
+        0%   { transform: translateX(-0.375px); }
+        50%  { transform: translateX(0.375px); }
+        100% { transform: translateX(-0.375px); }
       }
 
-      @keyframes look-up {
-        0%   { transform: translate(0, -1px); }
-        50%  { transform: translate(-1px, -1px); }
-        100% { transform: translate(0, -1px); }
+      /* One device pixel down as the grip loads, two up through the pull. */
+      @keyframes climb-bob {
+        0%    { transform: translateY(0); }
+        25%   { transform: translateY(0.125px); }
+        62.5% { transform: translateY(-0.25px); }
+        100%  { transform: translateY(0); }
+      }
+
+      /* Twelve frames on the hold, falling 0.25 a frame — the wall's own
+         speed, stated once as a straight line between two stops rather than as
+         twelve solved positions. Then four frames off it: up, a device pixel
+         past, and settled onto the next hold, which is 4 units higher in wall
+         coordinates and so in exactly the same place on screen. The claw's x
+         never changes; the lean carries it sideways instead. */
+      @keyframes reach-left {
+        0%     { transform: translate(0.1px, -2.4px); }
+        75%    { transform: translate(0.1px, 0.6px);
+                 animation-timing-function: cubic-bezier(.2,.75,.3,1); }
+        81.25% { transform: translate(0.1px, -1.1px); }
+        87.5%  { transform: translate(0.1px, -2.5px); }
+        100%   { transform: translate(0.1px, -2.4px); }
+      }
+
+      @keyframes turn-left {
+        0%     { transform: rotate(46deg); }
+        75%    { transform: rotate(36deg); }
+        81.25% { transform: rotate(58deg); }
+        87.5%  { transform: rotate(52deg); }
+        100%   { transform: rotate(46deg); }
+      }
+
+      /* The same arm mirrored about x=7.5. The delay supplies the phase. */
+      @keyframes reach-right {
+        0%     { transform: translate(-0.1px, -2.4px); }
+        75%    { transform: translate(-0.1px, 0.6px);
+                 animation-timing-function: cubic-bezier(.2,.75,.3,1); }
+        81.25% { transform: translate(-0.1px, -1.1px); }
+        87.5%  { transform: translate(-0.1px, -2.5px); }
+        100%   { transform: translate(-0.1px, -2.4px); }
+      }
+
+      @keyframes turn-right {
+        0%     { transform: rotate(-46deg); }
+        75%    { transform: rotate(-36deg); }
+        81.25% { transform: rotate(-58deg); }
+        87.5%  { transform: rotate(-52deg); }
+        100%   { transform: rotate(-46deg); }
+      }
+
+      /* Toward whichever claw is off the rock: right while the right hand
+         swings, left while the left one does, two frames before it goes. Half
+         a unit each way — the nearest claw corner stays a full unit clear of
+         the nearest eye, so this cannot walk an eye into an arm. */
+      @keyframes spot-the-hold {
+        0%     { transform: translate(-0.5px, -0.25px); }
+        12.5%  { transform: translate(0.5px, -0.25px); }
+        50%    { transform: translate(0.5px, -0.25px); }
+        62.5%  { transform: translate(-0.5px, -0.25px); }
+        100%   { transform: translate(-0.5px, -0.25px); }
+      }
+
+      /* Weighted and riding the wall down for four frames, snapped up in two,
+         held tucked for two while the other side takes the load. Up from the
+         base position only — a leg translated below its own rect parts from
+         the hips, and 2 units of leg cannot spare any of them. */
+      @keyframes step {
+        0%   { transform: translateY(-1px); }
+        50%  { transform: translateY(0);
+               animation-timing-function: cubic-bezier(.2,.7,.3,1); }
+        75%  { transform: translateY(-1px); }
+        100% { transform: translateY(-1px); }
       }
     </style>
   </defs>
 
-  <!-- ── the wall, behind Clawd so holds pass out of sight rather than
-       across him.
+  <!-- ── the wall, drawn behind Clawd so a hold passes under a claw rather
+       than across it. Joints every 4 units with the seam alternating side; a
+       hold every 4 in each column, the columns staggered so the two never line
+       up. Both patterns repeat every 8 units — the scroll distance.
+       ──────────────────────────────────────────────────────────────────── -->
+  <g id="fx-wall" clip-path="url(#wall-crop)" data-safe-area="ignore">
+    <g id="fx-wall-scroll">
+      <!-- Panel courses. Each joint is broken by the vertical seam between two
+           sheets of ply, and the seam alternates side every course, so the
+           stagger repeats every 8 units — the scroll distance. -->
+      <g id="fx-wall-joints" fill="#30363D">
+        <rect x="-3" y="-14" width="8.5" height="0.5"/>
+        <rect x="6.5" y="-14" width="11.5" height="0.5"/>
+        <rect x="-3" y="-10" width="13.5" height="0.5"/>
+        <rect x="11.5" y="-10" width="6.5" height="0.5"/>
+        <rect x="-3" y="-6" width="8.5" height="0.5"/>
+        <rect x="6.5" y="-6" width="11.5" height="0.5"/>
+        <rect x="-3" y="-2" width="13.5" height="0.5"/>
+        <rect x="11.5" y="-2" width="6.5" height="0.5"/>
+        <rect x="-3" y="2" width="8.5" height="0.5"/>
+        <rect x="6.5" y="2" width="11.5" height="0.5"/>
+        <rect x="-3" y="6" width="13.5" height="0.5"/>
+        <rect x="11.5" y="6" width="6.5" height="0.5"/>
+        <rect x="-3" y="10" width="8.5" height="0.5"/>
+        <rect x="6.5" y="10" width="11.5" height="0.5"/>
+        <rect x="-3" y="14" width="13.5" height="0.5"/>
+        <rect x="11.5" y="14" width="6.5" height="0.5"/>
+      </g>
 
-       The panel seams are what makes this read as a wall rather than as
-       confetti. Sparse holds alone gave Clawd nothing to be on: the blocks
-       scrolled past a character floating in empty space. A horizontal seam
-       every 8 units — the same period as the holds, so it tiles with them —
-       supplies the surface, and the holds then read as fixed to something.
+      <!-- The route is solved from the claws rather than the other way round.
+           The left claw's lower corner is at y=9.01 when it grabs at t=0 with
+           the wall at offset 0, so a hold band opens at 8.5 to catch it; the
+           right grabs at t=1s with the wall at offset 2, so its band opens at
+           6.5 in wall coordinates. Everything else is those two positions every
+           4 units, alternating a 2x1 jug with a 1.5x0.75 crimp — which makes
+           each column repeat every 8, and gives each hand a jug one cycle and
+           a crimp the next. -->
+      <g id="fx-wall-holds">
+        <!-- The holds were originally drawn with a shaded underside in
+             #4C3475, to read as bolted proud of the wall rather than painted
+             on it. It was removed, and the reason generalises: every colour a
+             file declares becomes a snap target for every *other* colour's
+             antialiased edges. #4C3475 sits between peach and black, so a
+             torso edge pixel at 55-65% coverage landed nearer to it than to
+             the wall grey, and painted a one-pixel violet line across 80 of
+             the torso's 88 pixels for 250ms, twice a loop. Flat holds are a
+             cheaper price than a violet rim on his head — and removing it also
+             took the animation from 21792 B/s to 19992. -->
+        <g fill="#A371F7">
+          <rect x="-0.5" y="-15.5" width="2" height="1"/>
+          <rect x="-0.5" y="-7.5" width="2" height="1"/>
+          <rect x="-0.5" y="0.5" width="2" height="1"/>
+          <rect x="-0.5" y="8.5" width="2" height="1"/>
 
-       data-safe-area="ignore" exempts it from the landscape safe-area check in
-       tools/svg2frames.ts. The tiles deliberately extend past the crop and
-       lose nothing when it applies, because the pattern repeats every 8 units
-       — a scrolling background is the one case where content above the crop
-       line is correct rather than a bug. ─────────────────────────────── -->
-  <g id="fx-wall" fill="#A371F7" data-safe-area="ignore">
-    <rect x="-3" y="-16" width="21" height="1" fill="#1B2028"/>
-    <rect x="-3" y="-8" width="21" height="1" fill="#1B2028"/>
-    <rect x="-3" y="0" width="21" height="1" fill="#1B2028"/>
-    <rect x="-3" y="8" width="21" height="1" fill="#1B2028"/>
-    <rect x="-3" y="16" width="21" height="1" fill="#1B2028"/>
-    <rect x="-2" y="-14" width="2" height="1"/>
-    <rect x="14" y="-10" width="2" height="1"/>
-    <rect x="-2" y="-6" width="2" height="1"/>
-    <rect x="14" y="-2" width="2" height="1"/>
-    <rect x="-2" y="2" width="2" height="1"/>
-    <rect x="14" y="6" width="2" height="1"/>
-    <rect x="-2" y="10" width="2" height="1"/>
-    <rect x="14" y="14" width="2" height="1"/>
-    <rect x="-2" y="18" width="2" height="1"/>
-    <rect x="14" y="22" width="2" height="1"/>
+          <rect x="0" y="-11.5" width="1.5" height="0.75"/>
+          <rect x="0" y="-3.5" width="1.5" height="0.75"/>
+          <rect x="0" y="4.5" width="1.5" height="0.75"/>
+          <rect x="0" y="12.5" width="1.5" height="0.75"/>
+
+          <rect x="13.5" y="-13.5" width="2" height="1"/>
+          <rect x="13.5" y="-5.5" width="2" height="1"/>
+          <rect x="13.5" y="2.5" width="2" height="1"/>
+          <rect x="13.5" y="10.5" width="2" height="1"/>
+
+          <rect x="13.5" y="-9.5" width="1.5" height="0.75"/>
+          <rect x="13.5" y="-1.5" width="1.5" height="0.75"/>
+          <rect x="13.5" y="6.5" width="1.5" height="0.75"/>
+          <rect x="13.5" y="14.5" width="1.5" height="0.75"/>
+        </g>
+
+      </g>
+    </g>
   </g>
 
-  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
-  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+  <!-- ── base geometry: assets/clawd/base.svg, verbatim ──────────────────
+       The shadow is drawn at zero opacity: he is on a wall, and at half
+       opacity it would darken every joint and hold that passed behind his
+       feet, which is a smear rather than a shadow. -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0"/>
 
-  <g id="master-group">
-    <g id="body-color-group" fill="#DE886D">
-      <rect id="torso" x="2" y="6" width="11" height="7"/>
-      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
-      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+  <g id="body-color-group" fill="#DE886D">
+    <!-- The arms sit inside #climb-sway and outside #climb-bob, so they lean
+         with the body but hold still while it pulls past them. Drawn before
+         the torso, so where a claw overlaps the
+         body the torso covers it; both are the same fill, so the join is
+         seamless either way. -->
+    <g id="climb-sway">
+      <g id="arm-left-reach">
+        <g id="claw-left-turn">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+      </g>
 
-      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
-      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
-      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
-      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-    </g>
+      <g id="arm-right-reach">
+        <g id="claw-right-turn">
+          <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+        </g>
+      </g>
 
-    <g id="eyes-color-group" fill="#000000">
-      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+      <g id="climb-bob">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+        <g id="legs-group">
+          <g id="step-outer-left">
+            <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+          </g>
+          <g id="step-inner-left">
+            <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+          </g>
+          <g id="step-inner-right">
+            <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+          </g>
+          <g id="step-outer-right">
+            <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+          </g>
+        </g>
+
+        <!-- Nested inside the body colour group rather than beside it, because
+             the eyes must ride the bob with the torso and a pack recolours by
+             overriding these two fills wherever they sit. -->
+        <g id="eyes-color-group" fill="#000000">
+          <g id="eyes-look">
+            <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+            <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
     </g>
   </g>
 </svg>

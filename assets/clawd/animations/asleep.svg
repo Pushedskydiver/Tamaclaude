@@ -1,78 +1,161 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
-     data-loop-seconds="4">
+     data-loop-seconds="12">
   <!--
     Clawd: asleep (no session for five minutes)
 
-    Generated against assets/clawd/base.svg under the contract in
-    docs/ANIMATION.md. Every base element appears below at its original
-    coordinates and colours; all motion is CSS applied by ID.
+    Twelve seconds, 96 frames. Long, because a sleeping creature should be the
+    calmest thing on the panel and a short loop makes a resting breath into a
+    pant. Three breaths fit the loop, and the middle one is a sigh.
 
-    Idle and asleep are the two screens that share a silhouette, so they have
-    to be distinguishable at a glance from across a desk. Three things separate
-    them: the eyes are closed rather than blinking, the body sits a whole pixel
-    lower, and there are Zs. Any one alone would be too subtle.
+    ── How it is put together ─────────────────────────────────────────────
 
-    The closed eyes are pose swapping on interior contrasting elements — the
-    open eyes are hidden and wider, shorter lids shown in their place. That is
-    allowed where repositioning a limb is not, because the eyes are read
-    against the torso rather than as part of its outline. See
-    docs/ANIMATION.md §What pose swapping cannot do.
+    Two nested groups on the same floor pivot at (7.5,15), so their squashes
+    compose into one scale rather than shearing against each other:
 
-    Two Zs, not three, and offset horizontally. Three at even spacing put them
-    2.5 units apart while each is 4 units tall, so they overlapped into one
-    tall smear. The rise cannot simply grow to spread them: 8 units already
-    takes a Z from y=4 to y=-4, and -4 is the landscape safe-area line. Two Zs
-    half a loop apart clear each other exactly, and two units of horizontal
-    offset makes them read as separate glyphs rather than a column.
+      #sleeper   12s   the sigh — flat over the first breath, deep over the
+                       second, flat again for the third
+      #chest      4s   the breath itself: exhale, hold, inhale, pause
 
-    The Zs are 4x4, not 3x3. At 3x3 the only way to draw a Z is a bar, a
-    centred pixel and a bar — which is exactly how an I is drawn at 3x3, and it
-    read as one. A fourth row buys a real diagonal and the letter becomes
-    unambiguous. Two art pixels of height is a cheap price for a glyph that
-    says what it means.
+    `scaleY` stays below 1 in both tracks. That is the whole trick and it is
+    the opposite of what looks obvious. A breath that *lifts* the torso hauls
+    it off the legs, which are planted outside both groups, and leaves them as
+    four floating stubs — that shipped here, and in `idle`, before it was
+    understood. Compressing about a floor pivot cannot do it: the underside is
+    the pivot, so it is pushed down into the leg tops and never lifts off them.
 
-    Loop: 4.0s at 8fps = 32 frames. The Zs rise 8 units across the loop, which
-    is 2 whole device pixels per frame at scale 8, and stop exactly on the
-    landscape safe-area line so this animation survives either mounting.
+    ── The pose ───────────────────────────────────────────────────────────
+
+    Both claws hang two whole art pixels below where the base geometry puts
+    them, which is what distinguishes this from `idle` at a glance — the arms
+    have gone slack. Only the left one dreams, drifting on its own track.
+
+    They translate; they do not rotate. A 2x2 block turned a few degrees is a
+    staircase, and it lifts its inner corner off the torso and opens a hairline
+    of background at the shoulder. Both artefacts shipped here before. A
+    whole-unit slide keeps the inner edge welded to the body at every frame.
+
+    The eyes squash about their OUTER edge rather than their centre. About the
+    centre a 1x2 rect scaled (2, 0.5) lands half an art pixel off the grid in
+    both axes and straddles four cells; pinned at the outer edge it lands on
+    whole cells and stays symmetric about the torso's centre line.
+
+    ── The Zs ─────────────────────────────────────────────────────────────
+
+    Three of them, one keyframe track and three delays two seconds apart. The
+    columns differ in geometry rather than in animation, so there is nothing to
+    keep in sync.
+
+    Two things about them are hard-won. They start *above* the head and only
+    ever rise: an earlier version took upstream's y=7 start literally, but
+    upstream's crab is splooted flat and ours is standing, so the same
+    coordinate is mid-chest — grey Zs sat across his face on 76 of 96 frames
+    and read as display corruption. And each glyph cell is a whole art pixel.
+    Capping the growth to protect the spacing had them rendering at half a
+    pixel a cell, where the diagonal degenerates and a Z becomes an I.
   -->
   <defs>
     <style>
-      /* Settled a pixel lower than idle, and breathing deeper. */
-      #master-group {
-        animation: sleep-breathe 4s infinite steps(1);
+      /* The sigh wraps the breath on the same pivot, so the two squashes
+         compose into one scale about the floor rather than shearing. */
+      #sleeper {
+        transform-origin: 7.5px 15px;
+        animation: sigh 12s infinite ease-in-out;
       }
 
-      /* Open eyes off for the whole loop; lids in their place. */
-      #left-eye,
+      #chest {
+        transform-origin: 7.5px 15px;
+        animation: breathe 4s infinite ease-in-out;
+      }
+
+      /* Both claws hang two whole art pixels below where the base puts them;
+         only the left one dreams. Translation, not rotation: a 2x2 block
+         turned a few degrees is a staircase and lifts its inner corner off
+         the torso, and both artefacts shipped here before. A whole-unit slide
+         keeps the inner edge welded to x=2 (and to x=13) at every frame. */
+      #left-arm {
+        animation: left-claw 12s infinite linear;
+      }
+
+      #right-arm {
+        transform: translate(0px, 2px);
+      }
+
+      /* Squash about each eye's OUTER edge, not its centre. About the centre
+         a 1x2 rect scaled (2, 0.5) lands on x 3.5..5.5, y 8.5..9.5 — the right
+         size and half an art pixel off the grid in both axes, so the dash
+         straddles four art cells. Pinned at the outer edge it lands on whole
+         cells and stays symmetric about the torso's centre line. */
+      #left-eye {
+        transform-origin: 5px 8px;
+        animation: eyelid 12s infinite linear;
+      }
+
       #right-eye {
+        transform-origin: 10px 8px;
+        animation: eyelid 12s infinite linear;
+      }
+
+      /* Shared setup for all three Zs. Deliberately carries no animation
+         property: `#fx-zs > g` is an id plus a type and so outranks a bare
+         `#z-2`, and an `animation` shorthand here would reset the delays that
+         do the staggering. The zero opacity is the resting state for a viewer
+         with animation disabled, where all three would otherwise sit at the
+         glyph's untransformed origin. */
+      #fx-zs > g {
         opacity: 0;
       }
 
-      /* The groups animate, not the rects inside them. Delays declared on
-         #z-2 and #z-3 do nothing if the animation is bound to their children,
-         and the three Zs then drift as one — which renders as a single
-         thicker Z rather than a stagger. */
-      #fx-zs > g {
-        animation: drift 4s infinite linear;
-      }
-      /* Selected through the parent so these outrank `#fx-zs > g`, which is
-         an id plus a type and therefore more specific than a bare id. The
-         shorthand above resets animation-delay, so a lower-specificity rule
-         here silently loses and all three Zs drift together. */
-      #fx-zs > #z-2 { animation-delay: -2s; }
+      /* One keyframe set, three delays. The three columns differ in the
+         geometry, not in the animation, so there is nothing to keep in sync. */
+      #z-1 { animation: float 6s 0s infinite linear; }
+      #z-2 { animation: float 6s -2s infinite linear; }
+      #z-3 { animation: float 6s -4s infinite linear; }
 
-      @keyframes sleep-breathe {
-        0%   { transform: translateY(1px); }
-        50%  { transform: translateY(1.5px); }
-        100% { transform: translateY(1px); }
+      /* Exhale, hold, inhale, pause. scaleY is below 1 throughout, so the
+         underside is pushed DOWN into the leg tops and never lifts off them. */
+      @keyframes breathe {
+        0%             { transform: scale(1, 1); }
+        31.25%, 43.75% { transform: scale(1.04, 0.95); }
+        78.125%        { transform: scale(1, 1); }
+        100%           { transform: scale(1, 1); }
       }
 
-      @keyframes drift {
-        0%   { transform: translateY(0); opacity: 0; }
-        12.5%  { opacity: 1; }
-        75%    { opacity: 1; }
-        87.5%  { opacity: 0; }
-        100% { transform: translateY(-8px); opacity: 0; }
+      /* Flat over the first breath, deep over the second, flat again for the
+         third. 43.75%-47.917% of 12s is 5.25s-5.75s, which is exactly the
+         second breath's own hold. */
+      @keyframes sigh {
+        0%, 33.333%     { transform: scale(1, 1); }
+        43.75%, 47.917% { transform: scale(1.04, 0.93); }
+        66.667%, 100%   { transform: scale(1, 1); }
+      }
+
+      /* Up fast, back slowly — a twitch, not a wave. Two art pixels of
+         travel, all of it along the torso's own edge. */
+      @keyframes left-claw {
+        0%, 75%       { transform: translate(0px, 2px); }
+        77.083%       { transform: translate(0px, 0px); }
+        80.208%       { transform: translate(0px, 1px); }
+        83.333%, 100% { transform: translate(0px, 2px); }
+      }
+
+      /* Shut throughout; a whole art pixel narrower on the dream beat. Never
+         scale(_, 0), and never narrower than one art pixel. The two steps are
+         one frame apart, so no rendered frame catches an intermediate width. */
+      @keyframes eyelid {
+        0%, 75%         { transform: scale(2, 0.5); }
+        76.042%, 81.25% { transform: scale(1, 0.5); }
+        82.292%, 100%   { transform: scale(2, 0.5); }
+      }
+
+      /* Four art pixels of climb in thirty-two frames: exactly one device
+         pixel per frame, so every rendered position is a whole device pixel
+         and the glyph never antialiases. Opacity is 0 or 1 and nothing else —
+         the step between them is one frame wide. */
+      @keyframes float {
+        0%       { transform: translateY(1px); opacity: 1; }
+        66.667%  { transform: translateY(-3px); opacity: 1; }
+        68.75%   { transform: translateY(-3px); opacity: 0; }
+        100%     { transform: translateY(-3px); opacity: 0; }
       }
     </style>
   </defs>
@@ -80,41 +163,51 @@
   <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
   <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
-  <g id="master-group">
-    <g id="body-color-group" fill="#DE886D">
-      <rect id="torso" x="2" y="6" width="11" height="7"/>
-      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
-      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+  <g id="body-color-group" fill="#DE886D">
+    <!-- Outside both animated groups: the feet are on the floor and stay
+         there while the body settles onto them. -->
+    <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+    <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+    <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+    <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
 
-      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
-      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
-      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
-      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-    </g>
+    <g id="sleeper">
+      <g id="chest">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
 
-    <g id="eyes-color-group" fill="#000000">
-      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
-
-      <!-- additive pose: closed lids, wider and shorter than an open eye -->
-      <rect id="lid-left" x="4" y="9" width="2" height="1"/>
-      <rect id="lid-right" x="10" y="9" width="2" height="1"/>
+        <g id="eyes-color-group" fill="#000000">
+          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
     </g>
   </g>
 
-  <!-- ── Zs, drifting up and to the side of the head ───────────────────── -->
-  <g id="fx-zs" fill="#8B949E">
+  <!-- Zs, one art pixel per glyph cell. Four columns wide and four rows tall,
+       drawn at each column's own x so that one `float` keyframe set can drive
+       all three. The diagonal crosses two interior columns, which is what
+       separates a Z from an I; at three rows the single interior cell sits on
+       the centre line and the glyph rasterises as an I instead. -->
+  <g id="fx-zs" fill="#CFD8DC">
     <g id="z-1">
-      <rect x="14" y="4" width="4" height="1"/>
-      <rect x="16" y="5" width="1" height="1"/>
-      <rect x="15" y="6" width="1" height="1"/>
-      <rect x="14" y="7" width="4" height="1"/>
+      <rect x="0" y="0" width="4" height="1"/>
+      <rect x="2" y="1" width="1" height="1"/>
+      <rect x="1" y="2" width="1" height="1"/>
+      <rect x="0" y="3" width="4" height="1"/>
     </g>
     <g id="z-2">
-      <rect x="12" y="4" width="4" height="1"/>
-      <rect x="14" y="5" width="1" height="1"/>
-      <rect x="13" y="6" width="1" height="1"/>
-      <rect x="12" y="7" width="4" height="1"/>
+      <rect x="5" y="0" width="4" height="1"/>
+      <rect x="7" y="1" width="1" height="1"/>
+      <rect x="6" y="2" width="1" height="1"/>
+      <rect x="5" y="3" width="4" height="1"/>
+    </g>
+    <g id="z-3">
+      <rect x="10" y="0" width="4" height="1"/>
+      <rect x="12" y="1" width="1" height="1"/>
+      <rect x="11" y="2" width="1" height="1"/>
+      <rect x="10" y="3" width="4" height="1"/>
     </g>
   </g>
 </svg>

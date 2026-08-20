@@ -98,37 +98,56 @@ fails everywhere, and it fails now rather than in September.
 
 ## Gym — `Bash`
 
-Clawd doing the heavy lifting. An overhead press, and the barbell does the
-acting.
+Clawd doing the heavy lifting. A barbell overhead press with the weight in it.
 
-- **Action.** A barbell travels from chest height to full extension and back,
-  once per loop. It racks below the eyes, across the mid-torso, and is drawn
-  over the body so it reads as held rather than hovering.
-- **Body mechanics.** A one-pixel dip at the bottom of the rep, when the load
-  is on him. Nothing else moves — no squash, because a scale transform has no
-  pixel arithmetic in `docs/ANIMATION.md` and would soften every edge it
-  touches.
-- **Eyes.** Still, and hidden on the two frames the bar crosses them. Tracking
-  was tried and rejected: moving them up to follow the bar walked them into its
-  path on a third frame.
-- **Effects.** The barbell itself, plus two exertion marks that pop in beside
-  his head during the push.
+- **Action.** One rep per loop: settle, an anticipation dip, an explosive drive
+  off the chest that grinds into lockout, a strain hold overhead, an
+  accelerating descent, and a hard squash as the bar racks. The bar racks
+  across the mid-torso and is drawn over the body, so it reads as held rather
+  than hovering.
+- **Body mechanics.** Squash and stretch about the hips (7.5,13) — he widens
+  as he shortens, so the volume looks conserved. The legs are a separate group
+  folding about the feet (7.5,15) down to 70% at the bottom of the dip; the
+  body's vertical offset is derived from that fold so the hips stay welded to
+  the knees. The feet never leave y=15.
+- **Arms.** Each base 2x2 claw on its own shoulder pivot, rotating up while
+  `scaleX` extends it along its own axis: a 2-unit claw at the rack, a 6.8-unit
+  limb at lockout. The stretch stands in for the elbow this geometry does not
+  have. The angle stops at 72deg, not 90 — the shoulder sits at the torso's own
+  edge, so a vertical arm sweeps inward and disappears into the silhouette.
+- **Eyes.** Asymmetric in _height_, not just in squint: the left clamps shut at
+  its base row, the right rides 1.2 units higher for as long as the bar is in
+  front of the face. That is what keeps a face on the face — on one row the
+  shaft covers both at once.
+- **Effects.** An additive gritted mouth, present only while he is under the
+  bar. One drop of sweat per rep, launched on the way down and retired a frame
+  before the loop wraps.
 
-**Not wanted:** any claw repositioned to hold the bar; any scale transform.
+**Not wanted:** a bar that never touches the claws; a bar that racks above the
+eyes; sweat launched while the shaft is still crossing the brow; any particle
+whose only hard cut lands on the loop seam.
+
+**Overridden during the rebuild: rotation, non-uniform scale and easing.** The
+"no rotation, whole-device-pixel" constraint in this file's preamble was
+written when a soft edge was permanent. `tools/svg2frames.ts` now snaps every
+rasterised pixel back onto the declared palette, which is what upstream
+clawd-tank does, so a rotated or eased edge hardens after the fact instead of
+being forbidden up front. This plan is the first written against the new
+contract; the preamble and the other five plans still describe the old one.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
-forbade it. Then contact turned out to be the thing that makes the lift read at
-all, and contact at chest height means the bar passes the face on its way
-overhead — on this geometry the two are not separable. The eyes are hidden on
-the two frames it crosses them instead. Recorded as an override rather than
-quietly deleted, because a "not wanted" line edited to match whatever got built
-stops being a check.
+forbade it. Contact at chest height means the bar passes the face on its way
+overhead, and on this geometry the two are not separable. The split eye
+heights handle it instead. Recorded as an override rather than quietly
+deleted, because a "not wanted" line edited to match whatever got built stops
+being a check.
 
-**Why this one is next.** It is the first test of the rule that came out of
-`thinking`: on this geometry props carry the motion and limbs stay where the
-base puts them (`docs/ANIMATION.md` §What pose swapping cannot do). `gym`,
-`bouldering` and `sweeping` are all planned that way now. If the rule does not
-hold, three Tier A screens need rethinking, and it is better to know in August.
+**Superseded: "props carry the motion and limbs stay put."** That was the rule
+`thinking` produced, and `gym` was its first test. It failed here — a barbell
+that travels while the claws stay welded to the ribs reads as a prop sliding
+past a crab, not as a lift. What the arms could not do was _rotate_, and now
+they can. `bouldering` and `sweeping` were planned on the same rule and need
+revisiting.
 
 ---
 
@@ -139,16 +158,26 @@ codebase.
 
 - **Action.** The wall scrolls downward past him. He does not move up the
   frame; the holds move down, which is what reads as ascending.
-- **Body mechanics.** A one-pixel bob, twice a loop — pulling up.
+- **Body mechanics.** A bob, four times a loop — pulling up.
 - **Eyes.** Raised, hunting for the next hold above.
-- **Props.** A horizontal panel seam every 8 units, tiling with the holds.
+- **Props.** Horizontal panel joints every 4 units, staggered on a period of
+  8 so they tile with the holds.
   These are what make it read as a wall rather than as confetti — without a
   surface he is a character standing in empty space while blocks fall past.
 - **Effects.** The holds themselves, a repeating column pattern behind him. The
   ground shadow is hidden: he is on a wall, and a shadow on the floor beneath a
   climber is worse than no shadow.
 
-**Not wanted:** any claw reaching for a hold; holds that pass in front of him;
+**Diverged from this plan, deliberately.** The plan said no claw should reach
+for a hold. Both claws now grip one. Without a hand on the rock the wall reads
+as blocks falling past a character standing still — the same rule that governs
+every other prop here (`docs/ANIMATION.md` §Props need contact) applies to the
+wall too. The earlier version broke this line silently and read as a pig; this
+one breaks it on purpose, with the claws held at the side in `idle`'s own claw
+band so no protrusion appears at the top corner of the torso, where it reads as
+an ear.
+
+**Not wanted:** holds that pass in front of him;
 a scroll that seams at the loop boundary.
 
 **Why this one is next.** `gym` proved a prop can carry the motion in a
@@ -178,12 +207,24 @@ interesting on the first. No incident more often than once every few seconds.
 
 ## Asleep — no session for five minutes
 
-- **Action.** Deep slow breathing, two Zs drifting up and away.
-- **Body mechanics.** Settled a whole pixel lower than idle, breathing deeper.
-- **Eyes.** Closed — wider, shorter lids swapped in for the open eyes.
-- **Props.** Two 4x4 Zs, half a loop apart and offset horizontally.
+- **Action.** Deep slow breathing, three Zs drifting up and away.
+- **Body mechanics.** Breathing deeper and slower than idle — three breaths in
+  a twelve-second loop, the middle one a sigh. Both squashes compress about the
+  floor pivot rather than lifting, so the body never leaves the planted legs.
+- **Eyes.** Closed — the open eye squashed to a dash about its outer edge.
+- **Props.** Three Zs on one keyframe track with delays two seconds apart, each
+  glyph cell a whole art pixel, starting above the head and only ever rising.
 
-**Not wanted:** Zs that overlap; a silhouette confusable with idle at a glance.
+**Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
+his face reads as display corruption, and it shipped that way once. A
+silhouette confusable with idle at a glance; the slack claws hanging two art
+pixels low are what separate them.
+
+**Diverged from this plan, deliberately.** It called for two Zs and a body
+settled a pixel lower than idle. Two Zs at the spacing that avoided overlap
+left the loop looking empty, and three on staggered delays solve the overlap
+without it; the torso sits at the same y as idle, and the dropped claws carry
+the difference instead.
 
 ---
 
