@@ -10,13 +10,12 @@
  *   node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing
  *   node tools/measure-compression.ts out/typing out/gym
  *
- * Frames are decoded in Chromium because it is already a dependency; adding a
- * PNG decoder to ship one number would be worse.
+ * PNG decoding lives in `tools/png-rgb565.ts`, shared with `tools/blit.ts` so
+ * the numbers quoted in the architecture doc and the bytes actually put on the
+ * wire cannot come from two different decoders.
  */
 import type { Frame } from '@tamaclaude/protocol';
-import type { Page } from 'playwright';
 
-import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import process from 'node:process';
 
@@ -26,9 +25,10 @@ import {
   dirtyRect,
   encodeRect,
   extractRect,
-  frame as makeFrame,
   RECT_HEADER_BYTES,
 } from '@tamaclaude/protocol';
+
+import { loadFrames } from './png-rgb565.ts';
 
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
@@ -54,49 +54,6 @@ const FPS = 8;
  * possibly a pessimistic one.
  */
 const LINK_BYTES_PER_SECOND = 562.5 * 1024;
-
-/** Decode a PNG to RGB565 in the page, where a canvas already exists. */
-function toRgb565(
-  dataUri: string,
-): Promise<{ pixels: number[]; width: number }> {
-  return new Promise((done, fail) => {
-    const image = new Image();
-    image.addEventListener('load', () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
-      const context = canvas.getContext('2d');
-      if (!context) return fail(new Error('no 2d context'));
-      context.drawImage(image, 0, 0);
-      const { data } = context.getImageData(0, 0, image.width, image.height);
-      const pixels: number[] = [];
-      for (let i = 0; i < data.length; i += 4) {
-        pixels.push(
-          ((data[i] & 0xf8) << 8) |
-            ((data[i + 1] & 0xfc) << 3) |
-            ((data[i + 2] & 0xf8) >> 3),
-        );
-      }
-      done({ pixels, width: image.width });
-    });
-    image.addEventListener('error', () => fail(new Error('decode failed')));
-    image.src = dataUri;
-  });
-}
-
-async function loadFrames(page: Page, frameDir: string) {
-  const names = (await readdir(frameDir))
-    .filter((name) => name.endsWith('.png'))
-    .sort();
-  const frames = [];
-  for (const name of names) {
-    const bytes = await readFile(resolve(frameDir, name));
-    const uri = `data:image/png;base64,${bytes.toString('base64')}`;
-    const decoded = await page.evaluate(toRgb565, uri);
-    frames.push(makeFrame(Uint16Array.from(decoded.pixels), decoded.width));
-  }
-  return frames;
-}
 
 function summarise(name: string, frames: readonly Frame[]) {
   const stats = frames.map((frame, index) => {

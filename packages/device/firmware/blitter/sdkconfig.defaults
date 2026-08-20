@@ -1,0 +1,35 @@
+# Both console channels off. The host streams rect packets down the same
+# USB-Serial/JTAG endpoint the console would use, and a stray log line in the
+# middle of a payload is indistinguishable from pixel data — it would shift
+# every following byte and cost a resync.
+#
+# ESP_CONSOLE_NONE alone is not enough and looks like it is. It sets only the
+# primary channel; the *secondary* choice depends solely on
+# SOC_USB_SERIAL_JTAG_SUPPORTED and defaults to USB_SERIAL_JTAG, so a panic
+# handler would still write into the pixel stream. This was verified on the
+# throughput spike by reading the generated sdkconfig, which had
+# CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG=y with only the primary
+# disabled.
+#
+# Neither option suppresses the ROM bootloader's own output at reset. That
+# lands before app_main runs, so the host will see a few dozen bytes of banner
+# on plug-in. The header validator discards them a byte at a time — this is
+# exactly the case resync exists for.
+CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
+
+# A millisecond tick, so the read timeouts mean what they say. The blitter
+# waits on USB with timeouts measured in tens of milliseconds; at the 100Hz
+# default the smallest expressible wait is 10ms and every timeout rounds up to
+# a multiple of it.
+CONFIG_FREERTOS_HZ=1000
+
+# -O2. The raw decode path is a linear byte-swap over up to 55,040 halfwords
+# and the RLE path is a tight fill loop; both are the kind of code -Og leaves
+# two to three times slower than it needs to be, and neither is ever stepped
+# through in a debugger.
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# The board has 8MB, measured — see docs/HARDWARE.md. The default is 2MB, which
+# works but throws away three quarters of the part.
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
