@@ -10,6 +10,14 @@ statistical**. Every animation is the same geometry with different keyframes,
 so frames cannot drift. That is precisely the failure mode that rules out AI
 image generators for this job.
 
+It does not rule out AI. It relocates it. Upstream's animations are
+LLM-authored — their sprite redesign commit is co-authored by Claude — and so
+are these. The model writes CSS against a fixed geometry, where a wrong answer
+is a visibly wrong transform, rather than generating pixels, where a wrong
+answer is a subtly different crab. Everything downstream of that choice — the
+review loop in §The authoring loop especially — exists because the output is
+code and can be checked like code.
+
 ## The base geometry
 
 `assets/clawd/base.svg` — upstream's `clawd-static-base.svg`, unmodified.
@@ -44,79 +52,75 @@ overriding two `fill` attributes, not by shipping its own character.
 
 ## The generation contract
 
-An animation SVG may **only add CSS transforms and keyframes to elements that
-already exist, by their existing IDs, at their existing coordinates and
-colours**. It may never redraw the character.
+An animation SVG works from `assets/clawd/base.svg` and keeps its palette, its
+proportions and its silhouette. Within that, motion is CSS: transforms and
+keyframes applied to elements by ID.
 
-Break this and animations start drifting from each other, which is the entire
-problem the approach exists to solve.
+New elements _may_ be added for props and effects — a barbell, a laptop, a
+thought bubble, floating data bits, a tear.
 
-New elements _may_ be added for props and effects — a hammer, sparks, floating
-data bits, a wizard hat. Those are additive and don't touch the base geometry.
+**Pose variants may be drawn** where no transform can reach the pose: a sploot
+for sleeping, a squint for reading, legs tucked up. Give the variant its own id
+(`torso-sploot`, `left-eye-squint`, upstream's convention) and keep the fill
+and the rough scale of what it replaces. This is narrower than it sounds — the
+character is eight rectangles, so a variant is a rectangle with different
+numbers in it, not a redrawing.
 
-## Articulation without rotation
+What the contract actually protects is that every animation is recognisably the
+same creature. That comes from the shared base, the two-colour palette and the
+silhouette, not from a rule against ever typing a coordinate. The earlier
+version of this section banned redraws outright; upstream redraws poses freely
+across nineteen animations and they are more consistent than ours, not less.
 
-Rotation is banned, and the base geometry has no joints — four 1x2 leg rects and
-two 2x2 claws. That rules out a great deal on its face: a gear that cannot turn,
-a broom that cannot swing, a reach with no elbow.
+## Articulation
 
-The way out is the one pixel art has always used. **Rotation is drawn, not
-transformed.** A turning gear is two or three gear shapes swapped in sequence; a
-swinging broom is three broom positions; a reaching claw is two claw positions.
-Discrete poses, toggled by opacity, at 8fps.
+Rotation is available, and limbs should use it. The claws are 2x2 blocks
+hanging off the torso at (0,9) and (13,9); given a `transform-origin` at the
+shoulder — around (2,10) and (13,10) — they swing like limbs instead of sliding
+like tiles.
 
-Under the contract that means:
+**Put the pivot where the joint is.** This is most of the difference between a
+part that articulates and a part that slides. The pivots that recur:
 
-- Every base element stays present at its original coordinates and colours.
-- A base element **may be hidden** for part of a loop — `opacity: 0` is a
-  keyframe on an existing element, which the contract already permits.
-- Alternate poses may be **added as new elements**, provided they are
-  axis-aligned rects on the unit grid and inherit their fill from one of the
-  colour groups, so a pack recolour still reaches them.
+| Pivot          | Use                                       |
+| -------------- | ----------------------------------------- |
+| `2px 10px`     | left shoulder                             |
+| `13px 10px`    | right shoulder                            |
+| `7.5px 13px`   | torso base — breathing, stretching        |
+| `7.5px 15px`   | the floor — whole-body squash, sway, lean |
+| `7.5px 9px`    | the eye line — blinks                     |
+| `7.5px 15.5px` | the shadow                                |
 
-So a claw reaching up is: hide `#left-arm`, show `#left-arm-raised` — a new rect
-inside `#body-color-group`. The character stays consistent because the palette,
-the grid and the silhouette language are unchanged; only the pose is new.
+**Scale is how a body deforms.** Non-uniform `scale()` about a floor or
+torso-base pivot gives squash and stretch: `scale(1.02, 1.25)` is a chest
+filling with air, `scale(1.05, 0.95)` is weight landing. Keep volume roughly
+conserved — widen as you shorten — or it reads as the sprite being stretched
+rather than the creature moving.
 
-Prefer translation where translation will do. Reach for pose swapping when the
-motion is genuinely rotational, and keep the pose count to two or three — every
-pose is drawing, which is the thing this pipeline exists to minimise.
+**Scale by size, not by taste.** Rotation and scale earn their place on small
+parts turned far enough for the result to be a _shape_: a 2x2 claw at 45deg
+renders as a diamond and reads as an arm thrown out. They fail on large slabs
+turned a little. A 2.5deg tilt of the torso — 88x56 device pixels — was tried
+in `idle` and looked broken: snapping a shallow diagonal turns a long edge into
+a lumpy staircase that reads as a corrupted sprite. Lean the body by
+translating it against planted legs instead.
 
-## What pose swapping cannot do
-
-It works for props. It does **not** work for repositioning the character's own
-limbs, and that is a property of the base geometry rather than the technique.
+## What a claw cannot do
 
 The torso is a single solid 11x7 rect with no head, neck or shoulder
-separation, and the claws are 2x2 blocks in the same fill. A claw moved
-anywhere adjacent to the torso merges into its silhouette and reads as the body
-having grown a lump. Three positions were rendered and judged at true size
-while building `thinking` — beside the head at (0,6), detached above it at
-(0,4), and on the shoulder at (2,4) — and all three failed identically. The
-base arms read as arms only because they sit at the canonical mid-height where
-the eye already expects a crab's claws.
+separation, and the claws are 2x2 blocks in the same fill. **A claw parked
+adjacent to the torso merges into its silhouette** and reads as the body having
+grown a lump. Three positions were rendered and judged at true size while
+building `thinking` — beside the head at (0,6), detached above it at (0,4), and
+on the shoulder at (2,4) — and all three failed identically.
 
-**So let props carry the motion, not limbs.** A sweep is a broom translating
-while the body leans; a lift is a barbell moving while the body squashes; a
-reach is a handhold appearing above while Clawd translates up. In each case the
-limb stays exactly where the base puts it and something else does the moving.
+Rotation does not repeal this; it routes around it. A claw swung out to 45deg
+or 80deg clears the torso and reads, because it is _outside_ the silhouette and
+turned far enough to be its own shape. A claw rotated 10deg while still touching
+the body has the same problem it always had.
 
-This is the constraint that shapes `bouldering`, `sweeping` and `gym`. Plan
-them around a prop or they will cost a day each and be abandoned.
-
-`gym` was built to that rule and it holds: a barbell travels from head height
-to full extension and back, the body dips a whole unit under the load, and not
-one limb moves. The lift reads entirely from the prop. Two refinements came out
-of it:
-
-- **Interior contrasting elements are exempt.** The silhouette problem applies
-  to same-fill blocks on the outline. The eyes are black on a solid body and
-  can be moved or pose-swapped freely — they are read against the torso, not as
-  part of its edge.
-- **Never reach for a scale transform.** Squash-and-stretch is the obvious way
-  to show load, and the pixel arithmetic above covers translation only. A
-  scaled edge lands between pixels and softens everything it touches. `gym`
-  dips a whole unit instead, which costs nothing and stays hard.
+So: move a claw away from the torso, or turn it far. Do not park it against the
+edge.
 
 ## Safe area
 
@@ -130,26 +134,88 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-All four animations built so far clear it: `gym` and `thinking` top out at
-y=-1, `typing`'s data bits reach y=-2.5 while still visible. `bouldering`'s
+Measured topmost visible content: `gym` +2, `typing` -2.5, `thinking` -4.
+`thinking` sits exactly on the line with no margin, which is worth knowing
+before anything is added above that bubble. `bouldering`'s
 scroll pattern extends past the crop by design and loses nothing, since it
 repeats.
 
 Check it by asking what the topmost _visible_ element reaches — an element at
 zero opacity does not count, which is what gives `typing` its headroom.
 
+## Props need contact
+
+Seeing the animations side by side made one thing obvious that none of them
+showed alone: **the ones that read have a prop touching Clawd, and the ones
+that do not have a prop floating near him.**
+
+`typing` was always the strongest, and at the time it was the only one whose
+prop overlapped him — the laptop sits in front and the claws tap at it. `gym` racked
+its barbell three units clear of the claws and read as a bar hovering above a
+crab. Bringing it down to chest height changed the reading completely. The
+plates do not literally overlap the claws — they sit in the adjacent pixel
+column, sharing the same rows — but the bar crosses the torso and is drawn over
+it, which is enough. The motion changed with the position: travel doubled from
+four units to eight, so the bar still reaches overhead from its lower start. `bouldering`
+scrolled holds past a character standing in empty space; a horizontal panel
+seam every 8 units gave him a wall to be on and the holds something to be
+fixed to.
+
+**The exception is a symbolic overlay.** A thought bubble is not held, and
+attaching it read as a lump growing out of his head — comics float them, with
+the descending dots doing the connecting. So the rule is about props a
+character physically manipulates, not about everything additive.
+
+Two smaller lessons from the same pass:
+
+- **Contact creates collisions.** Bringing the barbell to chest height put it
+  across the eyes on the two frames it passes the face. Fixed by closing them on
+  those frames — but a prop moved into the character needs checking against
+  every part it now crosses.
+- **Do not track a moving prop with a body part.** The eyes originally
+  translated up to follow the bar, which walked them into its path on a frame
+  the closed frames did not cover. A tracking motion that moves a part into a
+  prop is worse than no tracking.
+
+## Closing an eye
+
+**A closed eye is squashed, never deleted.** Hiding the eye rect leaves nothing
+on screen saying "closed", and at 8fps that reads as a rendering glitch rather
+than a blink.
+
+`transform: scaleY(0.1)` about the eye line at `7.5px 9px` collapses the 1x2
+rect to a line, which after the palette snap is a hard 1x1 lid. Upstream does
+exactly this in every animation that blinks, and it is one declaration instead
+of a second drawn element kept mutually exclusive with the first.
+
+Earlier versions of `idle`, `gym` and `asleep` drew a separate lid rect and
+toggled opacity between the two. It worked, but it needed an invariant — that
+exactly one of the eye and its lid is visible on every frame — and an invariant
+maintained by hand is a defect waiting for a distracted edit. The squash cannot
+get out of sync with itself.
+
+**Blink on `linear`, not `ease`.** A lid that accelerates reads as a wince.
+
 ## Scrolling backgrounds
 
 A background that scrolls must **tile**, and tiling is arithmetic rather than
 taste: the pattern's period and the scroll distance have to be the same number.
-`bouldering` repeats its holds every 8 units and scrolls exactly 8 units per
-loop, so the frame at t=1.0s is byte-identical to the frame at t=0 and the loop
-cannot seam. Any other pairing jumps visibly once a second — and once a second
-is exactly the cadence at which the eye notices.
+If the pattern repeats every P units, the background must travel exactly P
+units — or a whole multiple of it — over the loop. Then the last frame lands
+where the first one started and the loop cannot seam. Any other pairing jumps
+visibly once per loop, which is exactly the cadence at which the eye notices.
 
-The per-frame step still has to be whole: 8 units over 8 frames at scale 8 is 8
-device pixels a frame. Verify both properties by rendering rather than by
-reading the CSS — screenshot at t=0 and t=1000ms and compare hashes.
+The per-frame step should also be whole: `P x scale / frameCount` device
+pixels. `bouldering` is the worked example, and its numbers have changed twice,
+so take the rule and not the figures.
+
+**Verify by rendering, not by reading the CSS.** Compare the hash of the last
+frame against frame 0 — they should differ by exactly one step, and a
+mid-loop frame should differ from frame 0 too. This section previously quoted
+`bouldering` as scrolling 8 units over 8 frames when the file had moved to 4
+device pixels over 16, and a critic caught it by measuring rather than
+believing the prose. The doc is not the source of truth for a number the file
+owns.
 
 Scroll the background _away_ from the direction of travel. Holds moving down
 read as Clawd going up, the same relationship a camera has to a climber it is
@@ -187,6 +253,52 @@ Written per animation as prose first — action, body mechanics, eyes, effects �
 then handed to the model with the base SVG and one existing animation as an
 example. The prose plan is the reviewable artefact; the SVG is its output.
 
+## Palette snapping
+
+**The rasteriser quantises every frame to the palette the SVG declares.** This
+is the step that makes everything else in this document possible, and it is the
+one thing upstream had that we did not.
+
+Chromium antialiases a rotated or sub-pixel edge into a gradient. After
+`tools/svg2frames.ts` has captured a frame it composites it over the stage
+background, snaps each pixel to the nearest declared colour, and writes that.
+An antialiased edge collapses back onto one side or the other, so the edge lands
+on a whole device pixel _after the fact_ rather than being forbidden from
+leaving it.
+
+Measured on upstream's idle ported into our viewBox: antialiased pixels 1.51%
+to 0.00%, compression 44:1 to 122:1, wire cost 0.63% of the USB budget. The
+expressive version is both sharper and cheaper than the number the old ban was
+protecting.
+
+The palette is derived from the document, not passed in: every literal
+`fill="#RRGGBB"`, the background, and — separately — any fill an element
+declares at partial opacity, composited over the background. That last part is
+why it is derived. Blending _every_ fill with _every_ opacity would manufacture
+tones halfway between the real ones, and an antialiased edge pixel would then
+find a legitimate-looking neighbour to snap to instead of resolving to one
+side. Only pairs the artwork actually declares are admitted.
+
+Two consequences for authors:
+
+- **Declare colours as literal fills.** A colour that only ever arises from
+  blending is not in the palette, so it gets snapped away. `#40C4FF` on a tear
+  works because the rect says so.
+- **Every colour you declare becomes a snap target for every _other_ colour's
+  edges.** This is the trap, and it caught `bouldering` twice. Its holds were
+  drawn with a shaded underside in `#4C3475`, purely so the holds would read as
+  bolted proud of the wall. That violet sits between the body's peach and the
+  black stage, so a torso edge pixel at 55–65% coverage landed nearer to it
+  than to anything else and painted a **one-pixel violet line across 80 of the
+  torso's 88 pixels**, for 250ms, twice a loop. Deleting the group took it to
+  zero on all 32 frames — and cost less on the wire, 19,992 B/s against
+  21,792. Before adding a colour, ask what edge it now sits between.
+
+- **Semi-transparent effects still work**, because their composited value is a
+  palette entry. The ground shadow is black at 0.5; over the black stage it
+  composites to black and vanishes, which is what the panel already did, and
+  over a pack that sets a lighter stage it stays a real tone.
+
 ## Render scale
 
 **Render at 8 device pixels per SVG unit.** `tools/svg2frames.ts` defaults to
@@ -211,62 +323,179 @@ render scale is what makes sub-unit motion safe.** The body jitter translates
 half a unit, which at 8x is exactly 4 device pixels — a whole number, so the
 edge stays hard.
 
-**Rotation is the exception, and it is banned.** A rotated edge is diagonal, so
-unlike a sub-unit translation it cannot land on the pixel grid at _any_ scale.
-It always antialiases into a soft smear against an otherwise razor-sharp
-sprite. The first version of `typing.svg` rotated the claws and looked visibly
-wrong next to the torso; they now tap by translating a whole art pixel. Use
-translation, `steps()` timing, and opacity that is only ever 0 or 1.
+**Rotation used to be the exception, and it was banned here.** A rotated edge is
+diagonal, so unlike a sub-unit translation it cannot land on the pixel grid at
+_any_ scale — it always antialiases. That was true, and the conclusion drawn
+from it was wrong: the fix is to clean the raster up afterwards rather than to
+forbid the motion. See §Palette snapping. Rotation is now allowed, and 8x is
+what keeps the smear confined to the moving edge in the first place.
 
 Payload is not a reason to revisit this. We send dirty rectangles, not whole
 sprites, and RLE handles the large flat areas that pixel art is made of.
 
+## Loop length
+
+The default loop is 1.0s — eight frames at 8fps. An animation may declare its
+own with `data-loop-seconds` on the root `<svg>`, in whole seconds, and
+`tools/svg2frames.ts` reads it. Everything downstream derives its frame count
+from what it is given, so nothing else needs telling.
+
+The resting states run long. At a one-second loop a blink happens sixty times a
+minute and a breath is a pant. `idle` is sixteen seconds — long enough to hold
+several distinct beats, so the thing on screen most of the time is also the
+thing slowest to feel mechanical. `asleep` is four.
+
+Longer loops are close to free on the wire, because most of the extra frames
+differ from their neighbour in a small rectangle or not at all, and the dirty
+rect is what gets sent. Length is a cheap way to buy variety; see §Variety
+comes from beats, not from files.
+
+## Variety comes from beats, not from files
+
+For a state that is on for hours, one long loop with occasional beats beats a
+pool of separate animations. `idle` runs sixteen seconds: it breathes
+throughout, blinks twice, looks right, looks left, and yawns once. Upstream
+clawd-tank solves the same problem the same way in
+`assets/svg-animations/clawd-idle-living.svg`.
+
+The advantage is structural rather than aesthetic. A pool needs the daemon to
+own a list, pick from it, and decide when to switch; beats need nothing at all
+outside the SVG. The variety lives in the animation.
+
+It is also nearly free. `idle` produces twelve distinct frames out of 128, so
+the dirty rect is empty on most of them — 839 B/s against a 700 KB/s floor.
+
+**Give the character parts he does not have.** Clawd's base geometry has no
+mouth, which is why he cannot yawn. Upstream's answer is a 3x2 rect at (6,10),
+hidden except during the yawn, and it transfers directly because we share the
+base. An additive element is how you extend the character without touching it.
+
+## Smoothness
+
+Four things separate motion that reads as a creature from motion that reads as
+a sprite being nudged. Every one of them was got wrong here first, so they are
+written as corrections.
+
+**Ease, don't step.** The first version of this project banned easing and used
+`steps()` throughout, to keep every edge on a whole device pixel. That is not a
+trade worth making, and since palette snapping landed it is not a trade at all
+— see §Palette snapping. Motion needs acceleration to read as weight; a
+constant-velocity move reads as a slideshow no matter how many positions it
+has. `ease-in-out` is the default; `cubic-bezier` where a beat needs a
+particular attack. Zero of upstream's nineteen animations use `steps()` and all
+nineteen use easing.
+
+**Animating the whole sprite is not animating.** `idle` originally drove
+`#master-group`, which contains the legs, so the entire character slid up and
+down as one rigid block. Nothing deformed, so nothing read as breathing. Keep
+the legs _outside_ the group that moves. The gap that opens between body and
+legs is what the eye reads as a breath — it is the deformation, not the
+displacement, that sells it.
+
+**Layer tracks at different periods.** One keyframe timeline doing everything
+produces motion that visibly repeats. Nest groups instead, slowest outermost,
+so the transforms multiply: a 16s action track wrapping a 2s breathing track
+wrapping the parts. Upstream's typing runs six concurrent periods. Each track
+is simple; the combination is not.
+
+**One element, one `animation` declaration.** The shorthand _replaces_; it does
+not merge. An element named in one rule and given its own rule below silently
+loses the first animation. This shipped twice in `idle.svg` — `#fx-mouth` was
+in the breathing rule and had its own rule underneath, so it lost the breathing
+and hung eight device pixels below the torso through the entire yawn, which is
+the defect that prompted this rewrite.
+
+Comma-separating them works. Nesting groups is better, and is what the rebuilt
+files do: a `<g>` per track means no declaration can shadow another and the
+question stops arising.
+
 ## Timing
 
-Two rules, both learned the hard way and both easy to violate silently.
+**Every sub-animation period must divide the loop duration.** Frame `8N` has to
+be identical to frame 0 or the loop visibly hitches once per cycle. Upstream
+violates this freely — their typing runs 0.08s, 0.12s and 0.15s tracks against
+no common loop — and gets away with it because those periods are too fast to
+see a seam. We render a fixed frame count and play it round, so we cannot.
 
-**Every sub-animation period must divide the loop duration.** The loop is 1.0s
-at 8fps. Periods of 0.25s, 0.5s and 1.0s all divide it, so frame 8 is identical
-to frame 0 and the loop is seamless. A period of 0.3s does not, and the seam
-appears as a visible hitch once per loop.
+**An `alternate` track must divide the loop an _even_ number of times.** An odd
+count ends the loop at the far end of the cycle and seams at the wrap. A 2s
+`alternate` breath in a 16s loop is eight cycles: fine. A 1.6s sway is ten:
+fine. 3.2s would be five, and would jump.
 
 **Nothing may run at the frame interval.** 0.125s _is_ one frame at 8fps, so an
-animation with that period is sampled at the same phase every single frame and
-renders as completely static. The fastest perceivable cycle is 0.25s — two
-frames, alternating.
+animation with that period is sampled at the same phase every frame and renders
+as completely static. The fastest perceivable cycle is 0.25s.
+
+**Put keyframe percentages on frame boundaries.** At a 16s loop one frame is
+0.78125%, so every percentage should be a whole multiple of it. Opacity flips
+in particular want adjacent frames, or a frame samples a half-faded prop and
+the snap resolves it somewhere arbitrary.
 
 **A timing function applies per keyframe interval, never across the whole
-animation.** `steps(8)` on a four-keyframe animation does not quantise the loop
-into eight positions — it subdivides each of the four segments into eight. The
-first `typing.svg` used it on the rising data bits and sampled one segment at
-96% of its way through, rendering a bit at opacity 0.125: precisely the
-intermediate colour the code comment claimed it prevented. Put every keyframe
-percentage on a frame boundary instead, and let `linear` do the interpolating.
+animation.** `steps(8)` on a four-keyframe animation subdivides each of the four
+segments into eight rather than quantising the loop into eight positions. This
+mattered more when we used `steps()`; it still bites anyone reaching for it.
 
-**What actually keeps motion on the grid is arithmetic.** A translation stays
-pixel-exact when `distance x scale / frameCount` is a whole number. The data
-bits rise 14 units over 8 frames at scale 8: 14 x 8 / 8 = 14 whole pixels per
-frame. Check this before trusting a render — it is invisible until quantisation.
-
-Negative `animation-delay` is how elements are put out of phase with each other
-— the two claws tap alternately via `-0.125s`. Give each offset element its own
-explicit delay rather than reaching for an `nth-child` stride: a stride hands
-symmetric groups identical delay sets, and they then animate as exact mirror
-images of each other.
+Negative `animation-delay` puts elements out of phase — two claws swaying half
+a period apart. Carry the offset _inside_ the `animation` shorthand
+(`claw-sway 1.6s -0.8s infinite alternate`) rather than as a separate
+`animation-delay` declaration, which the shorthand resets. Give each offset
+element its own explicit delay rather than an `nth-child` stride: a stride hands
+symmetric groups identical delay sets and they animate as exact mirror images.
 
 `tools/svg2frames.ts` seeks by setting `currentTime` alone and does not
 compensate for the delay. A paused CSS animation reports `currentTime: 0`
 whatever its delay, which looks like the offset has been lost — it has not. The
 delay lives inside the effect, which derives its own active time as
-`localTime - delay`. Subtracting the delay a second time double-counts it, and
-because delays are usually a neat fraction of the period, the error lands an
-exact whole period away and renders as flawless lockstep. Everything still
-moves; it just all moves together.
+`localTime - delay`. Subtracting it again double-counts, and because delays are
+usually a neat fraction of the period the error lands an exact whole period
+away and renders as flawless lockstep. Everything still moves; it just all
+moves together.
+
+## The authoring loop
+
+Author, render, **critique from a fresh context**, iterate. The critique step is
+not optional and it is not the author's own re-read.
+
+This is written down because it demonstrably works and the alternative
+demonstrably does not. All six animations were rebuilt in one pass under it —
+one agent authoring each, a second re-rendering and looking at the frames
+without seeing the author's reasoning — and the second agent caught things the
+first was certain about. Before that, every animation in the repo had been
+self-checked, declared good, and shipped broken.
+
+1. **Author** against this document and `assets/clawd/base.svg`. Read the
+   upstream animation for the same scene first if there is one — nineteen of
+   them are the quality bar, and the technique is worth stealing even where the
+   scene is not.
+2. **Render and self-check:**
+   ```bash
+   node tools/svg2frames.ts assets/clawd/animations/<name>.svg out/<name>
+   node tools/measure-compression.ts out/<name>
+   ```
+   `svg2frames` must print no warnings. Distinct frames should be a large
+   fraction of total frames — all-identical means a keyframe block was lost, and
+   nothing else in the six-command suite notices.
+3. **Critique.** Dispatch `animation-critic` from a fresh context. It
+   re-renders, builds a contact sheet, looks at it, and checks the rules that
+   have actually caught things — the `animation`-shorthand cascade first, then
+   motion, loop seam, escapes, clipping, and whether the pose reads at all.
+4. **Iterate** until the verdict is `ship`.
+
+Mandatory for anything under `assets/clawd/animations/**` — see the review
+trigger table in `CLAUDE.md`. Animations are stylesheets, which is to say they
+are code, and they spent six PRs exempt from review because the table called
+them assets.
 
 ## Judging an animation
 
 **Not in a browser at 8x zoom.** A pixel animation looks completely different
 at 172x320 on a 1.47" panel than it does scaled up on a monitor. Judge in the
-dev harness at true size, and on the panel itself once hardware allows. This is
-why BUILD_PLAN builds the renderer before mass-producing animations — getting
-this wrong means redoing eleven animations instead of one.
+dev harness at true size, and on the panel itself once hardware allows.
+
+**And not by the author.** Every animation in this repo was written, checked by
+the context that wrote it, declared good, and shipped with defects that context
+could not see — a mouth outside the body, a `gym` loop of eight identical
+frames, a yawn that moved one pixel. Dispatch `animation-critic` from a fresh
+context. It is mandatory for anything under `assets/clawd/animations/**`; see
+§The authoring loop.

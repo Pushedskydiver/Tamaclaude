@@ -1,0 +1,422 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="16">
+  <!--
+    Clawd: idle (connected, no session working)
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates and colours; all motion is CSS applied by ID.
+
+    This is the screen that is on most of the time — Claude is idle far more
+    than it is running — so it is seen more than every working animation
+    combined, and it is the one that has to survive being looked at for hours.
+
+    Structured after upstream clawd-tank's clawd-idle-living.svg, which solves
+    the same problem the same way: one long loop with occasional beats rather
+    than a pool of separate files. That needs no state machine at all — the
+    variety lives in the animation instead of in the daemon. Sixteen seconds,
+    128 frames: breathe throughout, blink three times, look right, look left,
+    and once per loop a proper yawn.
+
+    ── Why this file was rebuilt ──────────────────────────────────────────
+
+    The previous version banned rotation, non-uniform scale and easing so that
+    every edge would land on a whole device pixel, and it read as a sprite
+    being nudged about rather than a creature moving. That ban is gone.
+    `tools/svg2frames.ts` now snaps every rasterised pixel to the declared
+    palette, which collapses an antialiased diagonal back onto one side or the
+    other after the fact. The edge still lands on a whole pixel; it is simply
+    no longer the author's job to guarantee it. So this animates with easing,
+    rotation and squash-and-stretch, exactly as upstream does.
+
+    The old file also carried the bug this rebuild exists to kill: #fx-mouth
+    was named in the breathing rule *and* given its own rule underneath. The
+    `animation` shorthand replaces, it does not merge, so the later rule won
+    and the mouth silently lost the breathing — during the yawn it hung eight
+    device pixels below the torso. The fix is structural rather than careful:
+    nothing here carries two animations. Concurrent motion is expressed by
+    nesting groups, so the transforms compose and no declaration can shadow
+    another.
+
+    ── The rule the silhouette is held to ─────────────────────────────────
+
+    The body stays in one piece. The legs are the only part that stands
+    outside the moving groups, so every other track is measured against them:
+    the torso may deform above its planted feet but may not float off them,
+    and a claw may swing but may not leave the torso's edge. A crab rendered
+    as several disconnected slabs does not read as a crab mid-gesture, it
+    reads as a corrupted sprite — which on a panel that also shows genuine
+    display faults is the one misreading that costs something.
+
+    The single beat that breaks contact on purpose is the yawn stretch, where
+    the body lengthens up off the feet for about a second. That is the whole
+    point of a stretch, upstream does the same, and it is short. Everywhere
+    else the deformation is anchored: `breathe` compresses and *sinks* rather
+    than lifting, so the hips press into the legs at the far end of the breath
+    instead of parting from them, and every yawn arm pose keeps the claw
+    overlapping the torso rather than thrown clear of it.
+
+    ── How it is put together ─────────────────────────────────────────────
+
+    Three nested groups, slowest outermost, so the tracks multiply instead of
+    fighting over one `transform`:
+
+      #fx-lean     16s   weight shift for the looking-about beats, passed
+                         through rather than held; the body
+                         carries over while the legs stay where they are
+      #fx-action   16s   the yawn: stretch up, then the heavy drop, pivoted at
+                         the torso base (7.5,13)
+      #fx-breathe   2s   continuous, alternating, so a full breath is four
+                         seconds and four of them fit the loop exactly
+
+    The legs sit outside all three, planted. What reads as breathing is the
+    torso deforming above them — 2% wider for 2% shorter, settling half a unit
+    into its own feet — not the whole sprite moving, which would shift a rigid
+    block and deform nothing. These are upstream's numbers unchanged, because
+    the sign is what matters: a breath that lifted the torso instead left the
+    legs behind as four floating stubs for most of the loop. The shadow
+    narrows and pales as he rises and spreads as he drops; on the black stage
+    that composites away to nothing, but a pack that sets a lighter stage gets
+    it for free.
+
+    Arms hang off shoulder pivots at (2,10) and (13,10), each with its own
+    slow sway nested inside the yawn throw, half a period apart so the claws
+    are never quite in step. Blinks squash the eyes to 0.15 of their height
+    about the eye line at y=9 rather than hiding them — a vanished eye reads
+    as a rendering fault, a flattened one reads as a lid. A tenth was tried
+    and lands a 16px eye on a single device row, which is the floor of
+    legibility rather than a lid; 0.15 resolves to two rows reliably.
+
+    Two elements are additive, both borrowed from upstream. The yawn mouth is
+    a 3x2 rect at (6,10) scaled out of nothing and back, because the base
+    geometry has no mouth and this is how you give him one without touching
+    it. The tear is a single pixel at the outer corner of the left eye, in
+    upstream's #40C4FF, declared as a literal fill so the palette snap keeps
+    it — and parented *inside* #fx-eyes-look, so it falls from wherever the
+    eye currently is. As a sibling it stayed put while the eyes tracked and
+    read as a loose cyan pixel on the cheek.
+
+    ── Loop discipline ────────────────────────────────────────────────────
+
+    16s at 8fps = 128 frames, so one frame is 0.78125% and every keyframe
+    below is a whole multiple of it. Both continuous tracks divide the loop an
+    even number of times — breathing 2s x 8, sway 1.6s x 10 — which `alternate`
+    requires: an odd count would end the loop on the far end of the cycle and
+    seam at the wrap. Opacity flips are placed on adjacent frames so no frame
+    ever samples a half-faded mouth. Frames are sampled exactly on frame
+    boundaries, which is also what lets the claw rotation skip the angles it
+    cannot render cleanly — see arm-l-yawn.
+
+    Beats, in seconds: blink at 1.5; look right 3.0-5.0 with a blink at 4.0
+    inside it; look left 7.0-8.5 with a blink at 7.75; yawn 9.5-13.0 — arms up
+    at 9.75, eyes shut at 9.875, mouth wide at 10.625, a tear at 10.875, the
+    drop at 12.0, settled by 13.0. The blinks sit inside the look beats on
+    purpose: the gaze holds for two seconds, and a hold with nothing in it is
+    the one stretch of this loop that reads as a stalled frame rather than a
+    calm one.
+  -->
+  <defs>
+    <style>
+      /* One animation per element, one element per rule. See the header. */
+
+      #ground-shadow {
+        transform-origin: 7.5px 15.5px;
+        animation: shadow-action 16s infinite ease-in-out;
+      }
+
+      #fx-lean {
+        animation: lean-look 16s infinite ease-in-out;
+      }
+
+      #fx-action {
+        transform-origin: 7.5px 13px;
+        animation: yawn-body 16s infinite ease-in-out;
+      }
+
+      #fx-breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      #fx-arm-l {
+        transform-origin: 2px 10px;
+        animation: arm-l-yawn 16s infinite ease-in-out;
+      }
+
+      #fx-arm-r {
+        transform-origin: 13px 10px;
+        animation: arm-r-yawn 16s infinite ease-in-out;
+      }
+
+      /* Nested inside the throw, and half a period out of step with each
+         other, so the claws idle independently of the breath and of one
+         another. The offset rides in the shorthand rather than in a separate
+         `animation-delay`, which the shorthand would otherwise reset. */
+      #fx-arm-l-sway {
+        animation: claw-sway 1.6s infinite alternate ease-in-out;
+      }
+
+      #fx-arm-r-sway {
+        animation: claw-sway 1.6s -0.8s infinite alternate ease-in-out;
+      }
+
+      #fx-eyes-look {
+        animation: eye-track 16s infinite ease-in-out;
+      }
+
+      /* Linear, not eased: a lid that accelerates reads as a wince. */
+      #fx-eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: eye-blink 16s infinite linear;
+      }
+
+      #fx-mouth {
+        transform-origin: 7.5px 11px;
+        opacity: 0;
+        animation: yawn-mouth 16s infinite ease-in-out;
+      }
+
+      #fx-tear {
+        opacity: 0;
+        animation: tear-fall 16s infinite ease-in-out;
+      }
+
+      /* ── keyframes ─────────────────────────────────────────────────── */
+
+      /* Upstream's breath, sign included: 2% wider for 2% shorter, settling
+         half a unit down. Pivoted at the torso base, so the half unit presses
+         the hips *into* the legs — the far end of the breath overlaps them by
+         four device pixels rather than parting from them. Inverting this to a
+         lift is what left the legs behind as free-floating stubs on 78 of the
+         128 frames, and it is not a subtle failure at 8px per unit: 0.3 units
+         of lift is a 2-3 pixel band of black under a body that has nothing
+         holding it up. */
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* Looking about is a weight shift: the body carries over while the legs
+         stay put, and keeps drifting a little further through the hold rather
+         than freezing where it landed.
+
+         This deliberately does not rotate. A 2.5deg tilt was tried and looked
+         broken: the torso is a 88x56 device-pixel slab, and snapping a shallow
+         diagonal to the palette turns its outline into a lumpy staircase that
+         reads as a corrupted sprite rather than as a lean. Rotation earns its
+         place on the claws, which are small enough and turned far enough for
+         the result to be a shape — see arm-l-yawn. */
+      /* Two device pixels across, one down, both whole. The lean is passed
+         through rather than parked in: the previous version ramped to 0.95
+         units — 7.6 device pixels, not a whole one — and then sat within a
+         pixel of that extreme for fifteen frames, nearly two seconds. What
+         reads at that offset is not a lean, it is legs bolted on askew, and
+         `thinking` shipped the same mistake more visibly. A lean is a moment. */
+      @keyframes lean-look {
+        0%, 12.5%       { transform: translate(0, 0); }
+        21.875%         { transform: translate(0.25px, 0.125px); }
+        37.5%           { transform: translate(0, 0); }
+        46.875%         { transform: translate(-0.25px, 0.125px); }
+        59.375%, 100%   { transform: translate(0, 0); }
+      }
+
+      /* The yawn. Rise slowly over a second and a quarter, hold the stretch,
+         then drop in half a second — the asymmetry is the weight. The 1.07 x
+         0.92 landing widens as it shortens; the small overshoot after it is
+         the body settling rather than stopping dead. That overshoot lengthens
+         the torso without translating it, so the settle happens above feet the
+         body is still standing on. */
+      @keyframes yawn-body {
+        0%, 59.375%     { transform: scale(1, 1) translate(0, 0); }
+        62.5%           { transform: scale(0.98, 1.05) translate(0, -0.5px); }
+        66.40625%       { transform: scale(0.94, 1.12) translate(0, -1.2px); }
+        71.875%         { transform: scale(0.95, 1.1) translate(0, -1.05px); }
+        75%             { transform: scale(1.07, 0.92) translate(0, 0.5px); }
+        79.6875%        { transform: scale(0.99, 1.02) translate(0, 0); }
+        83.59375%, 100% { transform: scale(1, 1) translate(0, 0); }
+      }
+
+      /* Tracks the body: narrow and pale as he lifts off it, broad and dark
+         under the landing. */
+      @keyframes shadow-action {
+        0%, 12.5%       { transform: translateX(0) scaleX(1); opacity: 0.5; }
+        18.75%          { transform: translateX(0.5px) scaleX(1); opacity: 0.5; }
+        31.25%          { transform: translateX(0.62px) scaleX(1); opacity: 0.5; }
+        37.5%           { transform: translateX(0) scaleX(1); opacity: 0.5; }
+        43.75%          { transform: translateX(-0.5px) scaleX(1); opacity: 0.5; }
+        53.125%         { transform: translateX(-0.62px) scaleX(1); opacity: 0.5; }
+        59.375%         { transform: translateX(0) scaleX(1); opacity: 0.5; }
+        62.5%           { transform: translateX(0) scaleX(0.94); opacity: 0.44; }
+        66.40625%       { transform: translateX(0) scaleX(0.86); opacity: 0.36; }
+        71.875%         { transform: translateX(0) scaleX(0.88); opacity: 0.38; }
+        75%             { transform: translateX(0) scaleX(1.12); opacity: 0.62; }
+        79.6875%        { transform: translateX(0) scaleX(0.98); opacity: 0.48; }
+        83.59375%, 100% { transform: translateX(0) scaleX(1); opacity: 0.5; }
+      }
+
+      /* Up to 45deg, where a 2x2 claw renders as a diamond and reads as a
+         shape rather than as a square that has moved. Then it flops the same
+         45deg the other way, because a stretch that stops exactly where it
+         started has no weight in it — and because the two angles a 2x2 claw
+         can hold cleanly are the square and the diamond. Everything between
+         them staircases, so the turn is keyed one frame at a time through the
+         angles it cannot hold: 0 -> 22 -> 45 on the way up, 45 -> 0 -> -45 on
+         the drop. Frames are sampled on frame boundaries, so a keyframe one
+         frame from its neighbour is rendered and never interpolated, and only
+         two frames of the loop carry an angle that staircases.
+
+         The claw stays welded to the torso throughout. The reach was
+         `translate(-1.2px, -4px)` and that put a 4-pixel black gap between
+         claw and shoulder: seven disconnected pieces on screen for two full
+         seconds, with the claws level with the top of the head, which reads
+         as ears rather than arms. The diamond now overlaps the torso's upper
+         corner by half a unit at every pose, and the rise that survived the
+         cut is carried by the translate while the rotation holds at 45deg. */
+      @keyframes arm-l-yawn {
+        0%, 59.375%     { transform: translate(0, 0) rotate(0deg); }
+        60.15625%       { transform: translate(-0.1px, -1px) rotate(22deg); }
+        60.9375%        { transform: translate(-0.2px, -1.2px) rotate(45deg); }
+        66.40625%       { transform: translate(-0.2px, -1.6px) rotate(45deg); }
+        71.875%         { transform: translate(-0.2px, -1.5px) rotate(45deg); }
+        72.65625%       { transform: translate(-0.15px, -1.15px) rotate(45deg); }
+        73.4375%        { transform: translate(0.05px, -0.6px) rotate(0deg); }
+        74.21875%       { transform: translate(0.2px, 0.8px) rotate(-45deg); }
+        79.6875%        { transform: translate(0.05px, 0.3px) rotate(-45deg); }
+        80.46875%       { transform: translate(0.02px, 0.15px) rotate(-22deg); }
+        81.25%, 100%    { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      @keyframes arm-r-yawn {
+        0%, 59.375%     { transform: translate(0, 0) rotate(0deg); }
+        60.15625%       { transform: translate(0.1px, -1px) rotate(-22deg); }
+        60.9375%        { transform: translate(0.2px, -1.2px) rotate(-45deg); }
+        66.40625%       { transform: translate(0.2px, -1.6px) rotate(-45deg); }
+        71.875%         { transform: translate(0.2px, -1.5px) rotate(-45deg); }
+        72.65625%       { transform: translate(0.15px, -1.15px) rotate(-45deg); }
+        73.4375%        { transform: translate(-0.05px, -0.6px) rotate(0deg); }
+        74.21875%       { transform: translate(-0.2px, 0.8px) rotate(45deg); }
+        79.6875%        { transform: translate(-0.05px, 0.3px) rotate(45deg); }
+        80.46875%       { transform: translate(-0.02px, 0.15px) rotate(22deg); }
+        81.25%, 100%    { transform: translate(0, 0) rotate(0deg); }
+      }
+
+      /* The claws lift and settle on a 1.6s alternating cycle — a 3.2s round
+         trip that does not divide the 4s breath, so the two drift in and out
+         of step and no two seconds of the idle look quite alike. One track,
+         two users: the right claw takes it half a period late, which is where
+         the asymmetry comes from.
+
+         A shallow rotation was tried here too and had the same problem the
+         body lean did, at 16 device pixels square. This is a translate — and
+         a vertical one only: a sideways reach of a fifth of a unit opened a
+         two-pixel black gap between claw and torso, which reads as the arm
+         having come off. Sliding along the torso's edge keeps the shoulder
+         covered whatever the claw does. */
+      @keyframes claw-sway {
+        from { transform: translateY(0.12px); }
+        to   { transform: translateY(-0.2px); }
+      }
+
+      /* One unit — a whole eye's width — is the travel. It was 1.5, which put
+         the outer eye half a unit from the edge of the head: four device
+         pixels of cheek against twenty-eight on the other side, which reads
+         as an eye sliding off the face rather than as a glance. A whole unit
+         still moves the eye its own width, and leaves a whole art pixel of
+         head outside it. */
+      @keyframes eye-track {
+        0%, 14.0625%     { transform: translate(0, 0); }
+        18.75%, 31.25%   { transform: translate(1px, 0); }
+        35.9375%         { transform: translate(0, 0); }
+        43.75%, 53.125%  { transform: translate(-1px, 0); }
+        57.8125%         { transform: translate(0, 0); }
+        62.5%, 71.875%   { transform: translate(0, -0.4px); }
+        75%, 100%        { transform: translate(0, 0); }
+      }
+
+      /* Two frames shut per blink. One is a flicker at 8fps, three is a doze.
+         Two of the three land inside a look hold, which is where the loop is
+         otherwise stillest. The long shut in the middle is the yawn, and it
+         is the only one keyed to close over two frames rather than one — a
+         yawn's eyes close slowly. */
+      @keyframes eye-blink {
+        0%, 8.59375%          { transform: scaleY(1); }
+        9.375%, 10.15625%     { transform: scaleY(0.15); }
+        10.9375%, 24.21875%   { transform: scaleY(1); }
+        25%, 25.78125%        { transform: scaleY(0.15); }
+        26.5625%, 47.65625%   { transform: scaleY(1); }
+        48.4375%, 49.21875%   { transform: scaleY(0.15); }
+        50%, 60.15625%        { transform: scaleY(1); }
+        61.71875%, 72.65625%  { transform: scaleY(0.15); }
+        74.21875%, 100%       { transform: scaleY(1); }
+      }
+
+      /* Opacity flips sit on adjacent frames — 78 to 79, 95 to 96 — so no
+         rendered frame ever samples a half-faded mouth, which would snap to
+         whichever palette entry happened to be nearer. */
+      @keyframes yawn-mouth {
+        0%, 60.9375% { opacity: 0; transform: scale(0.2, 0.1); }
+        61.71875%    { opacity: 1; transform: scale(0.55, 0.3); }
+        66.40625%    { opacity: 1; transform: scale(1.15, 1.45); }
+        71.875%      { opacity: 1; transform: scale(0.85, 0.65); }
+        74.21875%    { opacity: 1; transform: scale(0.4, 0.18); }
+        75%, 100%    { opacity: 0; transform: scale(0.2, 0.1); }
+      }
+
+      @keyframes tear-fall {
+        0%, 67.1875% { opacity: 0; transform: translateY(0); }
+        67.96875%    { opacity: 1; transform: translateY(0); }
+        71.875%      { opacity: 1; transform: translateY(1.4px); }
+        73.4375%     { opacity: 1; transform: translateY(1.9px); }
+        74.21875%, 100% { opacity: 0; transform: translateY(2.1px); }
+      }
+    </style>
+  </defs>
+
+  <!-- ── base geometry: assets/clawd/base.svg ───────────────────────────── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <!-- Planted. Outside every moving group on purpose — see the header. -->
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="fx-lean">
+      <g id="fx-action">
+        <g id="fx-breathe">
+          <g id="body-color-group" fill="#DE886D">
+            <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+            <g id="fx-arm-l">
+              <g id="fx-arm-l-sway">
+                <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+              </g>
+            </g>
+
+            <g id="fx-arm-r">
+              <g id="fx-arm-r-sway">
+                <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+              </g>
+            </g>
+          </g>
+
+          <!-- additive: a mouth, which the base geometry does not have -->
+          <rect id="fx-mouth" x="6" y="10" width="3" height="2" fill="#000000"/>
+
+          <g id="fx-eyes-look">
+            <g id="fx-eyes-blink" fill="#000000">
+              <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+              <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+            </g>
+
+            <!-- additive: one pixel of tear at the outer corner of the left
+                 eye, inside the tracking group so it falls from the eye -->
+            <rect id="fx-tear" x="3.5" y="9.3" width="1" height="1" fill="#40C4FF"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

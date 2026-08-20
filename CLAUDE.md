@@ -100,13 +100,20 @@ degrade reasoning accuracy as context grows.
   was the original trigger and it was violated seven PRs running, always in the
   direction of momentum. It is a grep now, not a judgement:
 
-  | Trigger                                          | Review                         |
-  | ------------------------------------------------ | ------------------------------ |
-  | Any change under `packages/**`                   | `da-review`, mandatory         |
-  | Any change to a blast-radius doc (`docs/GIT.md`) | `copilot-surrogate`, mandatory |
-  | Diff over 200 LOC excluding lockfiles            | both                           |
-  | A spec or plan, before code moves against it     | `spec-grill`                   |
-  | Assets plus their own plan entry only            | self-review only               |
+  | Trigger                                            | Review                         |
+  | -------------------------------------------------- | ------------------------------ |
+  | Any change under `packages/**`                     | `da-review`, mandatory         |
+  | Any change under `assets/clawd/animations/**`      | `animation-critic`, mandatory  |
+  | Any change to a blast-radius doc (`docs/GIT.md`)   | `copilot-surrogate`, mandatory |
+  | Diff over 200 LOC excluding lockfiles              | both                           |
+  | A spec or plan, before code moves against it       | `spec-grill`                   |
+  | A static asset with no motion, plus its plan entry | self-review only               |
+
+  The assets row used to read "assets plus their own plan entry only", and
+  every animation went in under it unreviewed. Six shipped that way, carrying a
+  yawn whose mouth hung outside the body. Animations are code — they are
+  stylesheets — and they now get a critic like any other code. Only genuinely
+  static art keeps the exemption.
 
   Dispatch from a fresh context — a context that just wrote something cannot
   see what it assumed. The two times these ran they found a blocking gate hole

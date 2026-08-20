@@ -24,8 +24,11 @@
  * away and renders as perfect lockstep: everything still moves, just together.
  * Verified by driving both formulas and reading back the computed transforms.
  */
+import type { Rgb } from './frame-palette.ts';
+import type { Browser, Page } from 'playwright';
 
-import { mkdir, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import process from 'node:process';
 
@@ -33,12 +36,29 @@ import { chromium } from 'playwright';
 
 import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
 
+import {
+  BACKGROUND,
+  paletteOf,
+  reportSnapping,
+  shadowedAnimations,
+  snapToPalette,
+} from './frame-palette.ts';
+
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
-/** Loop length. Every sub-animation period must divide this — see docs/ANIMATION.md. */
-const LOOP_SECONDS = 1;
-/** Derived, not coincidental: changing FPS must not silently change loop length. */
-const FRAME_COUNT = FPS * LOOP_SECONDS;
+/**
+ * Default loop length. Every sub-animation period must divide it — see
+ * docs/ANIMATION.md.
+ *
+ * An animation may override this with `data-loop-seconds` on its root `<svg>`,
+ * which is how `idle` and `asleep` get a calm cadence. At a one-second loop a
+ * blink happens sixty times a minute and a breath is a pant; a resting
+ * creature needs about four seconds, and idle is the screen that is on most of
+ * the time. The attribute lives in the SVG rather than in an argument so that
+ * every tool downstream — the harness, the contact sheet, the compression
+ * measurement — gets the right frame count without being told.
+ */
+const DEFAULT_LOOP_SECONDS = 1;
 /** Device pixels per SVG user unit. 21 units x 8 = 168px, inside the 172 panel. */
 const SCALE = 8;
 /**
@@ -62,7 +82,6 @@ const SAFE_AREA_CROP_UNITS = 5;
 
 type Options = {
   readonly fps: number;
-  readonly frameCount: number;
   readonly scale: number;
 };
 
@@ -108,6 +127,48 @@ function topmostVisibleUnit(scale: number): number {
     .map((element) => element.getBoundingClientRect().top / scale + viewBoxY)
     .filter((top) => top >= viewBoxY);
   return tops.length > 0 ? Math.min(...tops) : Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Loop length this SVG asks for, in whole seconds.
+ *
+ * Whole seconds only, so the frame count is always an integer and the "every
+ * period divides the loop" invariant in docs/ANIMATION.md stays checkable by
+ * eye.
+ */
+function loopSecondsOf(svg: string): number {
+  const declared = /data-loop-seconds="([^"]+)"/.exec(svg)?.[1];
+  if (declared === undefined) return DEFAULT_LOOP_SECONDS;
+  const seconds = Number(declared);
+  if (!Number.isInteger(seconds) || seconds <= 0) {
+    throw new Error(
+      `data-loop-seconds must be a positive whole number, got "${declared}"`,
+    );
+  }
+  return seconds;
+}
+
+/**
+ * Warn when an animation does not animate.
+ *
+ * A stylesheet can lose a keyframe block — to a bad edit, a stray brace, a
+ * renamed selector — and still render perfectly valid, perfectly identical
+ * frames. Nothing else notices: the six-command suite passes, the safe-area
+ * check passes, the frames are the right size and the right colours. `gym` had
+ * every keyframe but two silently deleted by an over-greedy regex and rendered
+ * eight copies of one static image; the only thing that caught it was
+ * `tools/measure-compression.ts` reporting a dirty rect of nothing at all.
+ */
+function reportMotion(frames: number, distinct: number): void {
+  if (frames > 1 && distinct === 1) {
+    console.warn(
+      'warning: all frames are identical — this animation does not animate',
+    );
+    return;
+  }
+  if (frames > 2 && distinct === 2) {
+    console.warn(`warning: only 2 distinct frames of ${frames}`);
+  }
 }
 
 /** Warn if anything a frame shows sits in the strip landscape crops away. */
@@ -173,6 +234,69 @@ function stageDimensions(svg: string, scale: number): Stage {
   return { width, height };
 }
 
+/**
+ * Load the SVG into a fresh page with every animation frozen at time zero.
+ *
+ * `animation-play-state: paused` in the page's own stylesheet means the
+ * animations never advance between load and capture — without it the first
+ * frame silently depends on how long Chromium took to start.
+ */
+async function openStage(
+  browser: Browser,
+  svg: string,
+  viewport: { width: number; height: number },
+): Promise<Page> {
+  const page = await browser.newPage({ viewport });
+  await page.setContent(
+    `<style>html,body{margin:0;padding:0;background:transparent}` +
+      `svg{display:block;width:${viewport.width}px;height:${viewport.height}px}` +
+      `*{animation-play-state:paused !important}</style>${svg}`,
+  );
+  const shadowed = await page.evaluate(shadowedAnimations);
+  if (shadowed.length > 0) {
+    console.warn(
+      `warning: ${shadowed.length} animation(s) lost to the \`animation\` ` +
+        `shorthand — a later rule replaced an earlier one, it did not merge ` +
+        `(docs/ANIMATION.md §Smoothness): ${shadowed.join('; ')}`,
+    );
+  }
+  const delays = await page.evaluate(freezeAnimations);
+  // Reports what the SVG declares, so a stylesheet that accidentally hands
+  // several elements the same offset — an nth-child stride is the easy way to
+  // do this — shows up as a suspiciously small count rather than as two
+  // streams that mysteriously mirror each other.
+  console.log(
+    `${delays.length} animations, ${new Set(delays).size} distinct delays`,
+  );
+  return page;
+}
+
+/**
+ * Seek to one frame, capture it, snap it to the palette, and write it.
+ *
+ * Capture and snap are two round trips into the page rather than one because
+ * the source is an SVG document, not a canvas: Playwright has to rasterise it
+ * before there are pixels to quantise.
+ */
+async function captureFrame(
+  page: Page,
+  frame: { elapsed: number; palette: Rgb[]; path: string },
+): Promise<{ bytes: Buffer; soft: number }> {
+  await page.evaluate(seekAnimations, frame.elapsed);
+  const raw = await page.screenshot({ omitBackground: true });
+  const snapped = await page.evaluate(snapToPalette, {
+    uri: `data:image/png;base64,${raw.toString('base64')}`,
+    palette: frame.palette,
+    bg: [...BACKGROUND] as unknown as Rgb,
+  });
+  const bytes = Buffer.from(
+    snapped.uri.slice(snapped.uri.indexOf(',') + 1),
+    'base64',
+  );
+  await writeFile(frame.path, bytes);
+  return { bytes, soft: snapped.soft };
+}
+
 async function renderFrames(
   svgPath: string,
   outDir: string,
@@ -184,6 +308,13 @@ async function renderFrames(
 
   const svg = await readFile(svgPath, 'utf8');
   const { width, height } = stageDimensions(svg, options.scale);
+  const frameCount = options.fps * loopSecondsOf(svg);
+  // Width the frame index needs, so filenames sort lexicographically. Every
+  // consumer — the contact sheet, the harness, the compression measurement —
+  // reads the directory and sorts by name. A fixed two-digit pad was fine
+  // while every loop was eight frames; at 128 it puts frame_100 immediately
+  // after frame_10 and silently shuffles the animation.
+  const pad = Math.max(2, String(frameCount - 1).length);
   const viewBoxTop = Number(
     /viewBox="([^"]+)"/
       .exec(svg)?.[1]
@@ -193,34 +324,23 @@ async function renderFrames(
 
   await mkdir(outDir, { recursive: true });
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width, height } });
-
-  // `animation-play-state: paused` in the page's own stylesheet means the
-  // animations never advance between load and capture — without it the first
-  // frame silently depends on how long Chromium took to start.
-  await page.setContent(
-    `<style>html,body{margin:0;padding:0;background:transparent}` +
-      `svg{display:block;width:${width}px;height:${height}px}` +
-      `*{animation-play-state:paused !important}</style>${svg}`,
-  );
-
-  const delays = await page.evaluate(freezeAnimations);
-  // Reports what the SVG declares, so a stylesheet that accidentally hands
-  // several elements the same offset — an nth-child stride is the easy way to
-  // do this — shows up as a suspiciously small count rather than as two
-  // streams that mysteriously mirror each other.
-  console.log(
-    `${delays.length} animations, ${new Set(delays).size} distinct delays`,
-  );
+  const page = await openStage(browser, svg, { width, height });
   const written: string[] = [];
+  const distinct = new Set<string>();
+  const palette = paletteOf(svg);
+  let soft = 0;
   let highest = Number.POSITIVE_INFINITY;
 
-  for (let frame = 0; frame < options.frameCount; frame += 1) {
-    const elapsed = (frame / options.fps) * 1000;
-    await page.evaluate(seekAnimations, elapsed);
-    const path = `${outDir}/frame_${String(frame).padStart(2, '0')}.png`;
-    await page.screenshot({ path, omitBackground: true });
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const path = `${outDir}/frame_${String(frame).padStart(pad, '0')}.png`;
+    const captured = await captureFrame(page, {
+      elapsed: (frame / options.fps) * 1000,
+      palette,
+      path,
+    });
+    soft += captured.soft;
     written.push(path);
+    distinct.add(createHash('md5').update(captured.bytes).digest('hex'));
     highest = Math.min(
       highest,
       await page.evaluate(topmostVisibleUnit, options.scale),
@@ -228,6 +348,8 @@ async function renderFrames(
   }
 
   reportSafeArea(highest, viewBoxTop);
+  reportMotion(written.length, distinct.size);
+  reportSnapping(soft, written.length * width * height);
 
   await browser.close();
   return written;
@@ -244,7 +366,6 @@ if (!svgArg) {
 const out = outArg ?? `out/${basename(svgArg, '.svg')}`;
 const files = await renderFrames(resolve(svgArg), resolve(out), {
   fps: FPS,
-  frameCount: FRAME_COUNT,
   scale: scaleArg ? Number(scaleArg) : SCALE,
 });
 console.log(`${files.length} frames -> ${out}`);

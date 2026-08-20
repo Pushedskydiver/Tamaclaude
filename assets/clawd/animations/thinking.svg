@@ -1,139 +1,382 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="8">
   <!--
     Clawd: thinking (UserPromptSubmit)
 
-    Generated against assets/clawd/base.svg under the contract in
-    docs/ANIMATION.md. Every base element appears below at its original
-    coordinates and colours; all motion is CSS applied by ID.
+    Claude has been handed a prompt and is working out what to do with it. The
+    read is deliberation, not effort: everything here is slow, and nothing is
+    urgent. Typing is the animation that hurries.
 
-    This is the first animation to use POSE SWAPPING (docs/ANIMATION.md
-    §Articulation without rotation). Rotation is banned and the base geometry
-    has no joints, so a turning cog is drawn rather than transformed: each cog
-    is two shapes — teeth on the axes, teeth on the diagonals — alternating by
-    opacity. Six of the ten remaining animations need this technique, which is
-    why thinking was built before any of them. It works.
+    Structured after upstream clawd-tank's clawd-working-thinking.svg, which
+    solves the same scene with the same four parts: a slow contemplative lean,
+    one claw brought up beside the head, slow thoughtful blinks, and loading
+    dots filling in sequence.
 
-    A raised claw was tried and abandoned. Three positions were rendered and
-    judged at true size — (0,6) beside the head, (0,4) detached above it, and
-    (2,4) on the shoulder — and all three read as a lump on the torso rather
-    than a limb. See docs/ANIMATION.md §What pose swapping cannot do.
+    Eight seconds, 64 frames. Four tracks at three periods, nested so their
+    transforms compose rather than fight:
 
-    Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s both divide it. Nothing runs
-    at 0.125s. Every transform lands on a whole DEVICE pixel — the sway is half
-    an art pixel, which is exactly 4 device pixels at scale 8, so edges stay
-    hard. A whole art pixel was tried first and lurched.
+      sway 8s      leans left, through centre, leans right — never held
+      breathe 4s   two breaths a loop, on the torso base
+      tap 4s       two taps then a long pause, twice a loop
+      dots 2s      one, two, three, blank
 
-    Only four of the eight frames differ, because the fastest sub-animation is
-    0.5s. That is deliberate for deliberation, and free on a dirty-rect wire.
+    Every period divides eight exactly, so the loop closes without a jump. And
+    every keyframe below lands on a whole frame — a multiple of 1.5625% on the
+    eight second tracks, 3.125% on the four second ones. That is not tidiness.
+    It is what lets a pose change happen between two adjacent frames with no
+    frame ever sampling the tween, which is the whole of how the tap works.
+
+    ── Why the lean is a translation and the legs are planted ─────────────
+
+    The version of this file that was reviewed leaned by rotating the whole
+    body three degrees about a floor pivot. That was measurably wrong, and the
+    numbers are worth keeping because the mistake is an attractive one.
+
+    The torso is a single 11x7 rect — 88x56 device pixels. The palette snap in
+    tools/svg2frames.ts removes intermediate *colours*; it does nothing about
+    sub-pixel *geometry*. A three degree diagonal across 88 pixels therefore
+    resolves to a staircase: three to five one-pixel steps, spread four to five
+    pixels across the top edge, on 49 of the 64 frames. At true size that reads
+    as a corrupted sprite rather than a leaning one, and it is the same defect
+    docs/ANIMATION.md §Scale by size records from `idle`.
+
+    Rotating the legs along with it tilted the foot line as well. The pivot sat
+    on the feet rather than under them, so a lean raised two feet and buried
+    the other two — four pixels of stagger across a floor that has to be flat.
+
+    So the body translates: three quarters of a unit each way, six device
+    pixels, held at each extreme. The legs sit outside the lean entirely and
+    stay planted, which is also what `idle` does. Every edge stays axis
+    aligned. Measured across all 64 frames, the torso's top edge is one flat
+    row and all four feet share one row — both were true on 15 of 64 before.
+
+    A quarter of a unit, passed through rather than held. Both halves of that
+    matter and the first version got both wrong.
+
+    The amount was three quarters of a unit — six device pixels — chosen
+    because the outer leg still had a quarter unit of body over it at that
+    offset, so nothing was standing off the edge. That reasoning is sound and
+    the conclusion was still wrong: what reads is not whether a leg has left
+    the body, it is how far the body's centre has left the feet. Six pixels is
+    most of the gap between the inner legs, and at that offset the legs look
+    bolted on askew rather than the body looking leant.
+
+    The holds made it worse than the amount did. The lean sat at each extreme
+    for six frames, and the eased approach parked several more nearby, so the
+    off-centre pose was on screen for 34 of the 64 frames. `idle` uses a
+    similar amplitude and does not read as broken, because it passes through
+    the extreme instead of sitting in it — 29 of 128 frames against more than
+    half. A lean is a moment, not a pose.
+
+    ── Why the breath compresses rather than lifts ────────────────────────
+
+    Breathing pivots on the torso base at (7.5,13) — the pivot the table in
+    docs/ANIMATION.md assigns to it — and compresses: two device pixels wider
+    for four shorter, then a pixel of sink. Volume roughly holds.
+
+    The direction matters more than the amount. A breath that *lifts* the
+    torso hauls it off the legs, and since the legs are planted they are left
+    as four free-floating stubs; the reviewed version opened up to eleven
+    device pixels of daylight under the hips on 50 of 64 frames. Compressing
+    onto a base pivot cannot do that: the bottom edge is the pivot, so it does
+    not move at all, and the extra sink pushes the hips a pixel further into
+    the legs. Measured across all 64 frames, no transparent row separates any
+    leg from the body.
+
+    ── Why neither claw rotates ───────────────────────────────────────────
+
+    Neither claw rotates. Both drift a pixel or two vertically, a beat apart
+    from each other and a beat behind the body.
+
+    The reviewed version swung the right claw 45 degrees to tap the chin, and
+    the mechanics of it were sound. It held exactly two poses — a square at
+    rest and a diamond at 45 degrees, the only two angles a 2x2 block can hold
+    without staircasing — and each pose change was placed between two adjacent
+    frames, so the rasteriser sampled one or the other and never anything in
+    between. A shoulder rect tucked under the torso kept the joint from opening
+    as the corner swung clear. All of that worked.
+
+    The pose was still wrong. A 2x2 block turned 45 degrees is an arrowhead,
+    and hung off the side of an 11x7 slab it reads as a spike rather than a
+    hand. Measured at the peak of the swing, the claw tip sat fourteen device
+    pixels outside the torso's right edge and about thirty to the right of the
+    eye — it never came near the face, so what the loop actually showed was a
+    fin flicking beside the body twice a cycle. Correct mechanics executing the
+    wrong idea.
+
+    The bubble is what says "thinking", and it says it on its own: a tail
+    floating clear of his head and three dots filling in sequence. That was the
+    whole reason for choosing a bubble over the cogs it replaced. The claws did
+    not need to add anything, and when they tried, they subtracted.
+
+    The shoulder rects stay. They cost nothing, they change no silhouette, and
+    they keep the body a single connected component — verified by a
+    connected-component pass over all 64 frames, which finds one piece with
+    exactly two interior holes, the eyes.
+
+    ── Blinks ────────────────────────────────────────────────────────────
+
+    Blinks squash the eye about its own centre rather than hiding it. A hidden
+    eye leaves a hole in the face and reads as a dropped frame. scaleY(0.15) on
+    a 16 pixel eye lands on two device rows reliably; scaleY(0.1) is 1.6 and
+    lands on one or two depending on where the eye happens to be, which is a
+    lid that flickers.
+
+    Linear, not eased: a lid that accelerates reads as a wince. And the two
+    blinks in the loop are now the same blink — two frames fully shut each,
+    with one frame of travel either side, placed on frame boundaries so no
+    frame samples a half-closed lid. The reviewed version held the first shut
+    for three frames and flicked the second through in two, which is a tic on
+    one eye-pass and a doze on the other.
+
+    ── The bubble, the dots and the shadow ────────────────────────────────
+
+    Why the bubble does not move. Everything else here is eased, and the
+    rasteriser snaps the antialiased edges that produces back to the palette
+    afterwards. That works because a half covered edge of the body sits nearer
+    black than anything else in the palette, so it resolves to one side or the
+    other. A half covered edge of the pale bubble does not: it sits nearer the
+    body orange than to either black or its own grey, so a bubble moved by a
+    fraction of a pixel grows an orange fringe. It stays on the grid, and the
+    dots carry its motion.
+
+    The dots are #40C4FF for the same reason and it is worth stating plainly,
+    because the obvious choice is wrong. They used to be #30363B, the dark grey
+    the laptop screen uses. A mid grey in the palette is a trap once anything
+    moves off the grid: every body edge between a fifth and three fifths
+    covered lands nearer that grey than to either colour it is actually
+    between, so the whole character picks up a dark outline that flickers as
+    the edges move. A colour far off the line between black and the body
+    cannot do that.
+
+    The bubble floats clear of his head and always did. It is a symbolic
+    overlay rather than a held prop, so docs/ANIMATION.md §Props need contact
+    does not apply to it; attached, it read as a lump growing out of his head.
+    The tail bottom sits on row 103 of every frame and the top of his head on
+    row 120, so the gap is a flat seventeen device pixels — two art pixels and
+    a device pixel — where it used to close to eight at the top of a breath
+    that lifted. It is a wider float than before because the body no longer
+    rises into it; the dots descending toward the crown are what connect them.
+
+    #ground-shadow animates and emits nothing. It is black at half opacity over
+    a black stage, so it composites to black and the snap turns it transparent:
+    a palette census over all 64 frames finds #DE886D, #C9D1D9 and #40C4FF and
+    no fourth colour. It is kept, and kept moving with the lean, so that a pack
+    which sets a lighter stage gets a shadow that tracks the body rather than a
+    static smudge — but that is an untested path, and worth knowing before
+    taking it: the rect spans y=15..16 against a viewBox that ends at 16, so on
+    any stage that makes it visible it sits flush against the bottom of the
+    frame.
   -->
   <defs>
     <style>
-      /* Deliberation, not effort: half a pixel of sway across the whole loop,
-         a quarter the cadence of typing's jitter. */
-      #master-group {
-        animation: sway 1s infinite steps(1);
+      /* One `animation` declaration per element, and one element per job.
+         The shorthand replaces rather than merges, so an element given two
+         declarations silently keeps only the last. Nesting groups avoids the
+         question entirely, which is why there are more group wrappers here
+         than there are moving parts.
+
+         Angle brackets are banned from this block, comments included. Inside
+         SVG the HTML parser does not treat `style` as raw text, so a literal
+         tag name in a CSS comment opens a real element and silently discards
+         every rule after it. It rasterises to 64 identical frames. */
+
+      /* Slow lean, left then right, with a hold at each extreme. The holds are
+         what make it deliberation rather than a metronome. A translation, not
+         a rotation, and it carries the body only — see the header. */
+      #sway {
+        animation: sway 8s infinite ease-in-out;
       }
 
-      /* Looking up and away at the problem, drifting between two positions. */
-      #left-eye,
-      #right-eye {
-        animation: look-away 0.5s infinite steps(1);
+      /* Two breaths a loop, on the torso base so the hips cannot leave the
+         legs. Wider as it shortens: the volume has to look conserved. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 4s infinite ease-in-out;
       }
 
-      /* The cogs turn by alternating two drawn poses. The small cog is half a
-         cycle out of phase with the large one, which is what reads as meshing
-         gears turning in opposite directions. */
-      #cog-large-axes,
-      #cog-small-diagonals {
-        animation: pose-a 0.5s infinite steps(1);
-      }
-      #cog-large-diagonals,
-      #cog-small-axes {
-        animation: pose-b 0.5s infinite steps(1);
+      /* The idle claw. It drifts vertically, a beat behind the body. No
+         rotation: 16 device pixels square has no shallow angle it can hold. */
+      #left-arm-joint {
+        animation: left-claw-drift 8s infinite ease-in-out;
       }
 
-      /* Half a unit, matching typing's jitter: exactly 4 device pixels at
-         scale 8, so the edge stays hard. A whole unit here lurched. */
+      /* The thinking claw: up beside the face, twice, then holding. */
+      #right-arm-joint {
+        transform-origin: 13px 10px;
+        animation: tap-face 4s infinite ease-in-out;
+      }
+
+      /* Up at the bubble, with one drift away and back. Never at the viewer. */
+      #eyes-look {
+        animation: look-up 8s infinite ease-in-out;
+      }
+
+      /* Squashed about the eye line, never hidden, and linear because a lid
+         that accelerates reads as a wince. */
+      #eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 8s infinite linear;
+      }
+
+      /* Tracks the lean. On the black stage it composites to black and the
+         panel shows nothing — see the header before relying on it. */
+      #ground-shadow {
+        animation: shadow-react 8s infinite ease-in-out;
+      }
+
+      /* steps(1) is right here and wrong everywhere else in this file. These
+         are discrete state changes, not motion: a dot is lit or it is not, and
+         a fractional opacity would blend the dot into the bubble and snap to
+         whichever it happened to be nearer. */
+      #dot-1 { animation: dot-1 2s infinite steps(1); }
+      #dot-2 { animation: dot-2 2s infinite steps(1); }
+      #dot-3 { animation: dot-3 2s infinite steps(1); }
+
+      /* 0.25px is two device pixels, 0.125px is one — both whole, so every
+         position in the sweep is as crisp as the upright. No holds: the lean
+         is passed through, never sat in. See the header. */
       @keyframes sway {
-        0%   { transform: translateX(0); }
-        50%  { transform: translateX(0.5px); }
-        100% { transform: translateX(0); }
+        0%         { transform: translate(0, 0); }
+        20.3125%   { transform: translate(-0.25px, 0.125px); }
+        50%        { transform: translate(0, 0); }
+        70.3125%   { transform: translate(0.25px, 0.125px); }
+        100%       { transform: translate(0, 0); }
       }
 
-      @keyframes look-away {
-        0%   { transform: translate(0, -1px); }
-        50%  { transform: translate(1px, -1px); }
-        100% { transform: translate(0, -1px); }
+      /* 1.0227 x 0.9643 about (7.5,13) puts the torso's edges on 39, 129 and
+         123 device pixels against 40, 128 and 120 at rest: a pixel wider each
+         side, three shorter, and the base pinned. The translate is outside the
+         scale, so the sink is exactly one device pixel. */
+      @keyframes breathe {
+        0%, 100% { transform: translate(0, 0) scale(1, 1); }
+        50%      { transform: translate(0, 0.125px) scale(1.0227, 0.9643); }
       }
 
-      /* Binary opacity only — an intermediate alpha becomes an intermediate
-         colour once the palette is quantised. */
-      @keyframes pose-a {
+      @keyframes left-claw-drift {
+        0%, 100% { transform: translateY(0); }
+        28.125%  { transform: translateY(-0.25px); }
+        68.75%   { transform: translateY(0.125px); }
+      }
+
+      /* Square, diamond, square. Each change spans exactly one frame of the
+         32 in this track, so no frame lands between the two poses. */
+      /* A drift, not a tap. See the header: the tap was a 45-degree swing and
+         it rendered as an arrowhead spiking out of his side, never within
+         14 device pixels of the face it was supposed to reach. Offset from
+         the left claw so the two are never quite in step. */
+      @keyframes tap-face {
+        0%, 100% { transform: translateY(0); }
+        34.375%  { transform: translateY(0.125px); }
+        71.875%  { transform: translateY(-0.25px); }
+      }
+
+      @keyframes look-up {
+        0%, 29.6875%       { transform: translate(0.5px, -1px); }
+        45.3125%, 60.9375% { transform: translate(-0.5px, -1.25px); }
+        79.6875%, 100%     { transform: translate(0.5px, -1px); }
+      }
+
+      /* Two frames fully shut per blink, one frame of travel either side, and
+         both blinks identical. Every value below is a whole frame of the 64. */
+      @keyframes blink {
+        0%, 20.3125%      { transform: scaleY(1); }
+        21.875%, 23.4375% { transform: scaleY(0.15); }
+        25%, 64.0625%     { transform: scaleY(1); }
+        65.625%, 67.1875% { transform: scaleY(0.15); }
+        68.75%, 100%      { transform: scaleY(1); }
+      }
+
+      /* Half the body's travel, in the same direction. A leaning body does not
+         narrow its shadow, so this only slides. */
+      @keyframes shadow-react {
+        0%           { transform: translateX(0); }
+        15.625%, 25% { transform: translateX(-0.375px); }
+        45.3125%     { transform: translateX(0); }
+        65.625%, 75% { transform: translateX(0.375px); }
+        100%         { transform: translateX(0); }
+      }
+
+      @keyframes dot-1 {
         0%   { opacity: 1; }
-        50%  { opacity: 0; }
-        100% { opacity: 1; }
+        75%  { opacity: 0; }
+        100% { opacity: 0; }
       }
-      @keyframes pose-b {
+      @keyframes dot-2 {
+        0%   { opacity: 0; }
+        25%  { opacity: 1; }
+        75%  { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes dot-3 {
         0%   { opacity: 0; }
         50%  { opacity: 1; }
+        75%  { opacity: 0; }
         100% { opacity: 0; }
       }
     </style>
   </defs>
 
-  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <!-- ── the thought bubble, above and right of his head ───────────────── -->
+  <!-- Nine wide by five tall with the corners cut, and a two step tail
+       descending toward the crown. The top edge sits at y=-3, a unit below the
+       landscape crop line at y=-4, so there is room to breathe above it. The
+       tail stops at y=4 and the torso tops out at y=6. -->
+  <g id="fx-bubble" fill="#C9D1D9">
+    <rect x="7" y="-3" width="7" height="1"/>
+    <rect x="6" y="-2" width="9" height="3"/>
+    <rect x="7" y="1" width="7" height="1"/>
+    <rect id="tail-large" x="7" y="2" width="2" height="1"/>
+    <rect id="tail-small" x="6" y="3" width="1" height="1"/>
+  </g>
+
+  <g id="fx-bubble-dots" fill="#40C4FF">
+    <rect id="dot-1" x="8" y="-1" width="1" height="1"/>
+    <rect id="dot-2" x="10" y="-1" width="1" height="1"/>
+    <rect id="dot-3" x="12" y="-1" width="1" height="1"/>
+  </g>
+
+  <!-- ── base geometry: assets/clawd/base.svg, regrouped not redrawn ───── -->
   <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
-    <g id="body-color-group" fill="#DE886D">
-      <rect id="torso" x="2" y="6" width="11" height="7"/>
-      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
-      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
-
+    <!-- Planted. Outside the lean and outside the breath on purpose — the
+         first keeps the foot line flat, the second is what makes the breath
+         read as a breath rather than as a sprite being nudged. -->
+    <g id="legs-group" fill="#DE886D">
       <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
       <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
       <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
       <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-
     </g>
 
-    <g id="eyes-color-group" fill="#000000">
-      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
-    </g>
-  </g>
+    <g id="sway">
+      <g id="breathe">
+        <g id="body-color-group" fill="#DE886D">
+          <rect id="torso" x="2" y="6" width="11" height="7"/>
 
-  <!-- ── additive effects: two meshing cogs, turned by pose swapping ───── -->
-  <g id="fx-cogs" fill="#8B949E">
-    <!-- large cog, 5x5 box at (5,-1). Shared hub, swapped teeth. -->
-    <rect x="6" y="0" width="3" height="3"/>
-    <g id="cog-large-axes">
-      <rect x="7" y="-1" width="1" height="1"/>
-      <rect x="7" y="3" width="1" height="1"/>
-      <rect x="5" y="1" width="1" height="1"/>
-      <rect x="9" y="1" width="1" height="1"/>
-    </g>
-    <g id="cog-large-diagonals">
-      <rect x="5" y="-1" width="1" height="1"/>
-      <rect x="9" y="-1" width="1" height="1"/>
-      <rect x="5" y="3" width="1" height="1"/>
-      <rect x="9" y="3" width="1" height="1"/>
-    </g>
+          <g id="left-arm-joint">
+            <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+            <rect id="left-shoulder" x="2" y="9" width="2" height="2"/>
+          </g>
 
-    <!-- small cog, 3x3 box at (10,2), meshing below and right. Lifted one
-         unit: its lower teeth previously sat flush on the torso top edge. -->
-    <rect x="11" y="3" width="1" height="1"/>
-    <g id="cog-small-axes">
-      <rect x="11" y="2" width="1" height="1"/>
-      <rect x="11" y="4" width="1" height="1"/>
-      <rect x="10" y="3" width="1" height="1"/>
-      <rect x="12" y="3" width="1" height="1"/>
-    </g>
-    <g id="cog-small-diagonals">
-      <rect x="10" y="2" width="1" height="1"/>
-      <rect x="12" y="2" width="1" height="1"/>
-      <rect x="10" y="4" width="1" height="1"/>
-      <rect x="12" y="4" width="1" height="1"/>
+          <!-- Drawn after the torso so the raised claw overlaps its edge and
+               stays attached to the shoulder through the whole swing. -->
+          <g id="right-arm-joint">
+            <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+            <rect id="right-shoulder" x="11" y="9" width="2" height="2"/>
+          </g>
+        </g>
+
+        <g id="eyes-color-group" fill="#000000">
+          <g id="eyes-look">
+            <g id="eyes-blink">
+              <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+              <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+            </g>
+          </g>
+        </g>
+      </g>
     </g>
   </g>
 </svg>
