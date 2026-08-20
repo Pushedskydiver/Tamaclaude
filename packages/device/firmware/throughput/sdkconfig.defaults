@@ -1,0 +1,11 @@
+# The console is switched off so that nothing but this firmware writes to the
+# USB peripheral. ESP-IDF will happily put its own log output on the same
+# USB-Serial/JTAG endpoint we are trying to measure, and a boot banner or a
+# stray ESP_LOGI in the middle of a measurement window is indistinguishable
+# from the host's own bytes coming back.
+CONFIG_ESP_CONSOLE_NONE=y
+
+# A millisecond tick, so a read timeout of 50ms is actually 50ms rather than
+# five 10ms ticks rounded however FreeRTOS feels. The measurement divides by
+# elapsed time; the tick should not be a term in it.
+CONFIG_FREERTOS_HZ=1000

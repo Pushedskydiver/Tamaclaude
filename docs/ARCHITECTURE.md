@@ -21,17 +21,39 @@ for a standalone product. It is the worse design here, for three reasons:
    There is nothing to keep in sync.
 3. Jamie's device would need reflashing to receive a fix.
 
-### Why it fits down the wire
+### Why it fits down the wire — measured
 
-USB 2.0 full-speed gives ~1.5 MB/s theoretical, ~700KB–1MB/s realistic for CDC
-bulk transfer.
+**The link carries 562.5 KB/s.** Measured on the board with
+`tools/usb-throughput.ts` against the firmware in
+`packages/device/firmware/throughput`, which reads USB-CDC and discards:
 
-| Payload                         | Bytes/frame | At 10fps |
-| ------------------------------- | ----------: | -------: |
-| Full screen 172×320 RGB565      |     110,080 | 1.1 MB/s |
-| Dirty-rect, 96×96 sprite region |      18,432 | 184 KB/s |
+```
+per-second: 562.5, 562.6, 562.6, 562.6, 562.7, 561.2, 562.6, 562.6, 562.6, 562.6, 562.6 KB/s
+host and device agree to within 196 B/s
+```
 
-Full-screen uncompressed does **not** fit.
+Two properties make that a floor rather than a sample. The host's own write
+rate and the device's received count agree to 0.03%, so nothing is queueing —
+this is the wire, not a buffer draining. And it holds flat from 256-byte writes
+to 64 KB ones, a 256x range, so there is no write size the daemon could choose
+that would do better.
+
+This section previously assumed 700 KB/s, described as a conservative reading
+of what USB 2.0 full-speed gives CDC after overhead. It was 24% optimistic, and
+every ratio published here was that much too flattering. Reproduce with
+`pnpm throughput`.
+
+| Payload                         | Bytes/frame | At 8fps  |  vs link |
+| ------------------------------- | ----------: | -------- | -------: |
+| Full screen 172x320 RGB565      |     110,080 | 860 KB/s | **153%** |
+| Stage band only 168x200 RGB565  |      67,200 | 525 KB/s |      93% |
+| Dirty-rect, 96x96 sprite region |      18,432 | 144 KB/s |      26% |
+
+**Uncompressed does not fit, and the margin is thinner than it looks.** A full
+screen needs half as much again as the link has. Even the stage band alone —
+just the sprite, not the status or message bands — would eat 93% of it, which
+is not a budget so much as a coincidence. Dirty rectangles and RLE are load
+bearing here, not an optimisation.
 
 ### What it actually costs — measured
 
@@ -42,19 +64,25 @@ frames are regenerated each time, since `out/` is gitignored.
 
 **The ratio column is against a 67,200-byte stage frame**, not the
 110,080-byte full screen above. Animations are authored and rendered at
-168×200, which is the stage band, and that is what a sprite update covers.
+168x200, which is the stage band, and that is what a sprite update covers.
 
-| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio vs 67,200 B |
-| ------------ | ---------------: | ----------: | --------: | ----------------: |
-| `gym`        |            562 B |     1,508 B |  4.5 KB/s |             120:1 |
-| `thinking`   |            691 B |     1,876 B |  5.5 KB/s |              97:1 |
-| `typing`     |          1,428 B |     1,516 B | 11.4 KB/s |              47:1 |
-| `bouldering` |          1,610 B |     1,680 B | 12.9 KB/s |              42:1 |
+| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio | % of link |
+| ------------ | ---------------: | ----------: | --------: | ----: | --------: |
+| `idle`       |            453 B |       956 B |  3.5 KB/s | 148:1 |     0.63% |
+| `thinking`   |            488 B |     1,228 B |  3.8 KB/s | 138:1 |     0.68% |
+| `asleep`     |            792 B |     1,208 B |  6.2 KB/s |  85:1 |     1.10% |
+| `typing`     |          1,246 B |     1,324 B |  9.7 KB/s |  54:1 |     1.73% |
+| `gym`        |          1,818 B |     2,052 B | 14.2 KB/s |  37:1 |     2.53% |
+| `bouldering` |          2,499 B |     2,696 B | 19.5 KB/s |  27:1 |     3.47% |
 
-The busiest uses **1.8% of a 700 KB/s floor**. `bouldering` scrolls its entire
-background every frame, the same shape as the road bike, and costs the most on
-average — 13% more than `typing`. By worst single frame it is second, behind
-`thinking`'s 1,876 B, and peak is the number a real-time link has to survive.
+**The busiest uses 3.47% of the measured link — 29x headroom.** `bouldering`
+scrolls its entire background every frame, the same shape as the road bike, and
+costs the most both on average and by worst single frame, which is the number a
+real-time link has to survive.
+
+That margin is the answer to the obvious worry about host-rendering: it is not
+close. Even if every animation were four times more expensive than the worst
+one here, and the panel ran at twice the frame rate, it would still fit.
 
 An earlier version of this section quoted ~14:1, which is upstream's figure for
 their whole on-flash sprite corpus and was never a measurement of anything

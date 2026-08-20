@@ -33,6 +33,21 @@ import {
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
 
+/**
+ * What the USB-CDC link actually carries, measured on the board.
+ *
+ * This was a 700 KB/s guess — a conservative reading of what USB 2.0
+ * full-speed gives CDC after overhead — until `tools/usb-throughput.ts` put a
+ * number on it: 562.5 KB/s, held flat across write sizes from 256 B to 64 KB,
+ * with the host and the device agreeing to within 200 B/s. Flat across a 256x
+ * range means this is the wire and not a tuning problem, so there is no write
+ * size the daemon could pick that would do better.
+ *
+ * The guess was 24% optimistic. Every percentage this tool has ever printed
+ * was that much too flattering.
+ */
+const LINK_BYTES_PER_SECOND = 562.5 * 1024;
+
 /** Decode a PNG to RGB565 in the page, where a canvas already exists. */
 function toRgb565(
   dataUri: string,
@@ -121,5 +136,5 @@ await browser.close();
 const busiest = Math.max(...rates);
 console.log(
   `\n  busiest animation: ${Math.round(busiest)} B/s ` +
-    `(${((busiest / 700_000) * 100).toFixed(2)}% of a 700 KB/s floor)`,
+    `(${((busiest / LINK_BYTES_PER_SECOND) * 100).toFixed(2)}% of the measured ${(LINK_BYTES_PER_SECOND / 1024).toFixed(0)} KB/s link)`,
 );

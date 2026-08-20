@@ -1,0 +1,180 @@
+/**
+ * Drive the host side of the USB-CDC throughput spike.
+ *
+ * `docs/ARCHITECTURE.md` states every compression figure in this repo as a
+ * percentage of a 700 KB/s floor. That floor was a conservative guess at what
+ * a 12 Mbps full-speed link yields after protocol overhead, and nothing had
+ * ever observed it. This measures it.
+ *
+ *   node tools/usb-throughput.ts [port] [seconds]
+ *
+ * Pair it with `packages/device/firmware/throughput`, which must be flashed
+ * first. That firmware reads and discards, reporting `RX <bytes> <us> <total>`
+ * once a second; this writes as fast as the port accepts and reconciles the
+ * two sides at the end.
+ *
+ * Both numbers are reported on purpose. The host's own write rate is the
+ * optimistic one — a write that lands in a kernel buffer counts as sent — and
+ * on a link that cannot keep up it measures the buffer rather than the wire.
+ * The device's count is the honest one. When they agree, the figure is real;
+ * when they diverge, the gap is exactly the backlog the daemon would have to
+ * absorb, which is worth knowing before it is discovered at 8fps.
+ */
+import { execFileSync } from 'node:child_process';
+import { open } from 'node:fs/promises';
+import process from 'node:process';
+
+/** Bytes per write. Sized to a frame's worth of dirty rects, not to a round
+ *  number: the question is whether this link carries our traffic, and our
+ *  traffic arrives in bursts of roughly this size. */
+const DEFAULT_CHUNK_BYTES = 4096;
+
+/** Default measurement window. Long enough for the rate to settle past USB
+ *  enumeration and any initial buffering, short enough to iterate on. */
+const DEFAULT_SECONDS = 10;
+
+type Report = { bytes: number; micros: number; total: number };
+
+/** Parse one `RX <bytes> <us> <total>` line from the device. */
+function parseReport(line: string): Report | undefined {
+  const match = /^RX (\d+) (\d+) (\d+)$/.exec(line.trim());
+  if (!match) return undefined;
+  return {
+    bytes: Number(match[1]),
+    micros: Number(match[2]),
+    total: Number(match[3]),
+  };
+}
+
+function human(bytesPerSecond: number): string {
+  return `${(bytesPerSecond / 1024).toFixed(1)} KB/s`;
+}
+
+type Measurement = {
+  written: number;
+  elapsed: number;
+  reports: Report[];
+  windowsWhileWriting: number;
+};
+
+/**
+ * Write to the port flat out for `seconds`, collecting the device's reports.
+ *
+ * Reading runs concurrently with writing on purpose. Draining only at the end
+ * would let the device's tx buffer fill and stall its read loop, which shows
+ * up as a throughput problem entirely of our own making.
+ */
+async function measure(
+  port: string,
+  seconds: number,
+  chunkBytes: number,
+): Promise<Measurement> {
+  // Raw mode, or the terminal line discipline gets a vote on our bytes. A
+  // /dev/cu.* device arrives in canonical mode: it buffers by line, expands
+  // and translates control characters, and honours flow control. Every one of
+  // those corrupts a binary stream, and the corruption looks exactly like a
+  // slow link from up here.
+  execFileSync('stty', ['-f', port, 'raw', '-echo', '-crtscts']);
+
+  const handle = await open(port, 'r+');
+  const payload = Buffer.alloc(chunkBytes, 0xa5);
+  const reports: Report[] = [];
+  let pending = '';
+  let stream: ReturnType<typeof handle.createReadStream> | undefined;
+
+  const reader = (async () => {
+    stream = handle.createReadStream({ autoClose: false });
+    for await (const block of stream) {
+      pending += String(block);
+      const lines = pending.split('\n');
+      pending = lines.pop() ?? '';
+      for (const line of lines) {
+        const report = parseReport(line);
+        if (report) reports.push(report);
+      }
+    }
+  })();
+
+  console.log(`writing ${chunkBytes}B chunks to ${port} for ${seconds}s…`);
+  let written = 0;
+  const start = process.hrtime.bigint();
+  const deadline = start + BigInt(seconds) * 1_000_000_000n;
+  while (process.hrtime.bigint() < deadline) {
+    const { bytesWritten } = await handle.write(payload);
+    written += bytesWritten;
+  }
+  const elapsed = Number(process.hrtime.bigint() - start) / 1e9;
+  // Everything reported from here on describes a link with nothing on it.
+  const windowsWhileWriting = reports.length;
+
+  // Let the last report arrive, then tear the read stream down before the
+  // handle. Closing the handle underneath a live stream surfaces as
+  // ERR_STREAM_PREMATURE_CLOSE, a teardown artefact that discards the results
+  // we came for.
+  await new Promise((done) => setTimeout(done, 1500));
+  stream?.destroy();
+  await reader.catch(() => undefined);
+  await handle.close().catch(() => undefined);
+
+  return { written, elapsed, reports, windowsWhileWriting };
+}
+
+/** Print both sides and reconcile them. */
+function report(result: Measurement, chunkBytes: number): void {
+  const hostRate = result.written / result.elapsed;
+  console.log(
+    `\nhost wrote   ${result.written} bytes in ${result.elapsed.toFixed(2)}s -> ${human(hostRate)}`,
+  );
+  if (result.reports.length === 0) {
+    console.log(
+      'device reported nothing — is the throughput firmware flashed?',
+    );
+    return;
+  }
+
+  // Drop the first window, which straddles startup, and everything after the
+  // last write. Both trims matter: the run that produced the first real number
+  // here averaged in a trailing 133 KB/s window and reported 527 KB/s for a
+  // link that had held 562 on every window that was actually loaded.
+  const steady = result.reports.slice(1, result.windowsWhileWriting);
+  if (steady.length === 0) {
+    console.log('no full window under load — try a longer run');
+    return;
+  }
+
+  const rateOf = (r: Report): number => (r.bytes / r.micros) * 1e6;
+  const deviceRate =
+    steady.reduce((sum, r) => sum + rateOf(r), 0) / steady.length;
+  // Sum this run's windows rather than reading the device's running total,
+  // which counts every byte since it booted — a second run on the same flash
+  // would otherwise report the sum of both. The first attempt here showed
+  // exactly twice what the host had sent, which looks like a discovery until
+  // you notice it is too round a number to be one.
+  const received = steady.reduce((sum, r) => sum + r.bytes, 0);
+  const loaded = steady.reduce((sum, r) => sum + r.micros / 1e6, 0);
+
+  console.log(
+    `device saw   ${received} bytes over ${loaded.toFixed(2)}s of load -> ${human(deviceRate)}`,
+  );
+  console.log(
+    `\nper-second: ${steady.map((r) => human(rateOf(r))).join(', ')}`,
+  );
+
+  const shortfall = hostRate * loaded - received;
+  console.log(
+    shortfall > chunkBytes * 4
+      ? `\n${Math.round(shortfall)} bytes (${((100 * shortfall) / (hostRate * loaded)).toFixed(1)}%) were ` +
+          `written but never arrived — that gap is buffering, and the device rate is the real one.`
+      : `\nhost and device agree to within ${Math.abs(hostRate - deviceRate).toFixed(0)} B/s — ` +
+          `nothing is queueing, so this is the wire and not a buffer.`,
+  );
+}
+
+async function main(): Promise<void> {
+  const port = process.argv[2] ?? '/dev/cu.usbmodem1101';
+  const seconds = Number(process.argv[3] ?? DEFAULT_SECONDS);
+  const chunkBytes = Number(process.argv[4] ?? DEFAULT_CHUNK_BYTES);
+  report(await measure(port, seconds, chunkBytes), chunkBytes);
+}
+
+await main();
