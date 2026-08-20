@@ -21,6 +21,13 @@
 /** Longest run a single `(count, value)` pair can express. */
 const MAX_RUN = 0xffff;
 
+/**
+ * The blitter has these numbers too, in
+ * `packages/device/firmware/blitter/main/main.c`, and validates against them
+ * while hunting for a header. Adding a mode here without adding it there
+ * produces packets the device rejects as noise: it resyncs, the host re-primes
+ * forever, and the panel holds a stale frame with no error on either side.
+ */
 export const RAW_MODE = 0;
 export const RLE_MODE = 1;
 

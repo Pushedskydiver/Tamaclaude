@@ -48,7 +48,6 @@ import {
   panelSize,
   safeAreaCropUnits,
   spriteSlots,
-  stageScale,
 } from '@tamaclaude/renderer';
 
 import { describe, reportWindow, summarise } from './blit-report.ts';
@@ -65,6 +64,12 @@ const DEFAULT_PORT = '/dev/cu.usbmodem1101';
  * default to landscape, which is how the device is meant to sit.
  */
 const DEFAULT_ORIENTATION = 'landscape';
+
+/** Authored stage height in units, from `docs/ANIMATION.md` §Canvas conventions. */
+const STAGE_UNITS_PORTRAIT_HEIGHT = 25;
+
+/** Lateness past which the loop resets its clock instead of catching up. */
+const CATCH_UP_LIMIT_MS = 250;
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -187,8 +192,17 @@ function spriteOrigin(first: Frame, orientation: Orientation): Rect {
  */
 function cropToSafeArea(frame: Frame, orientation: Orientation): Frame {
   if (orientation === 'portrait') return frame;
-  const drop = safeAreaCropUnits() * stageScale('hero');
+  // Derived from the frame's own height rather than multiplied by an assumed
+  // scale. `safeAreaCropUnits()` documents the trap in its own docstring:
+  // consumers must use the scale they are actually drawing at, and a frame
+  // rendered at scale 4 would lose ten units to a crop computed at scale 8.
+  // `svg2frames.ts` takes an arbitrary scale argument and `blit.ts` accepts a
+  // bare frame directory, so the two can genuinely disagree. Height over
+  // authored units is scale-free.
   const height = frame.pixels.length / frame.width;
+  const drop = Math.round(
+    (height * safeAreaCropUnits()) / STAGE_UNITS_PORTRAIT_HEIGHT,
+  );
   if (drop <= 0 || drop >= height) return frame;
   return {
     width: frame.width,
@@ -322,13 +336,42 @@ async function reprimeIfNeeded(
         `${link.health.aborts} abort(s)`,
     );
   }
+  const recovering = link.health.lost;
   link.health.lost = false;
-  // Clear as well as prime. The sprite covers 168x160 of a 320x172 panel, so
-  // priming alone cannot repair anything outside it — and the thing most
-  // likely to be wrong out there is the boot splash, which is exactly what
-  // survived when the first clear was lost to the reset-on-open race.
-  await writeAll(link.handle, clearPacket(plan.orientation).bytes);
+  // Clear only when recovering. The sprite covers 168x160 of a 320x172 panel,
+  // so priming alone cannot repair anything outside it — and the thing most
+  // likely to be wrong out there is the boot splash. But that argument is
+  // about recovery, not about the timer: on a routine tick nothing outside the
+  // sprite can have changed, because nothing but this tool has written to the
+  // panel since the last clear. Clearing anyway costs a full-screen blit —
+  // 110KB, 22ms of SPI during which the device is deaf — twelve times a
+  // minute, which is a black frame every five seconds on the one instrument
+  // whose job is judging whether the panel looks right.
+  if (recovering) {
+    await writeAll(link.handle, clearPacket(plan.orientation).bytes);
+  }
   await writeAll(link.handle, plan.full[at.frame % plan.full.length].bytes);
+  return true;
+}
+
+/**
+ * Has the firmware told us it was built for the other orientation?
+ *
+ * It puts that on its status line because it is the one thing this end cannot
+ * work out — a build-time constant there, an argument here, no handshake
+ * between them. On a mismatch every packet fails the device's bounds check,
+ * its rect count never leaves zero, and the sender would otherwise re-prime
+ * into the void indefinitely with nothing to say why.
+ */
+function mismatched(link: Link, plan: Plan): boolean {
+  const said = link.health.orientation;
+  if (!said || said === plan.orientation) return false;
+  console.error(
+    `\nfirmware is built for ${said}, this is sending ${plan.orientation} — ` +
+      'nothing will be drawn.\nRebuild with PANEL_LANDSCAPE in ' +
+      'packages/device/firmware/blitter/main/main.c, or pass the other ' +
+      'orientation here.',
+  );
   return true;
 }
 
@@ -336,16 +379,18 @@ async function stream(link: Link, plan: Plan): Promise<void> {
   const clear = clearPacket(plan.orientation);
   await writeAll(link.handle, clear.bytes);
   await writeAll(link.handle, plan.prime.bytes);
-  console.log(
-    `  primed with ${clear.bytes.byteLength + plan.prime.bytes.byteLength} B ` +
-      `(full-screen clear + frame 0)`,
-  );
+  const primed = clear.bytes.byteLength + plan.prime.bytes.byteLength;
+  console.log(`  primed with ${primed} B (full-screen clear + frame 0)`);
 
-  const start = process.hrtime.bigint();
-  const totals: Totals = { frames: 0, bytes: 0, still: 0 };
+  let start = process.hrtime.bigint();
+  // Counted, because reporting bytes accurately is what this tool is for and
+  // the priming pair is the largest single write of the run.
+  const totals: Totals = { frames: 0, bytes: primed, still: 0 };
   const window: Window = { frames: 0, bytes: 0, since: start, lag: 0 };
   let lastPrime = start;
   for (let tick = 0; running; tick += 1) {
+    if (mismatched(link, plan)) break;
+
     if (await reprimeIfNeeded(link, plan, { lastPrime, frame: tick })) {
       lastPrime = process.hrtime.bigint();
       const cost = plan.full[tick % plan.full.length].bytes.byteLength;
@@ -367,6 +412,16 @@ async function stream(link: Link, plan: Plan): Promise<void> {
     const deadline = start + BigInt(Math.round((tick + 1) * FRAME_MS * 1e6));
     const late = Number(process.hrtime.bigint() - deadline) / 1e6;
     window.lag = Math.max(window.lag, late);
+    if (late > CATCH_UP_LIMIT_MS) {
+      // Do not try to catch up. `sleepUntil` returns immediately on a missed
+      // deadline, so after a stall this loop would write flat out until it was
+      // level again — a burst into a receive ring sized for a steady 8fps
+      // drip, and overflow there is the one loss the device cannot report.
+      // Dropping the missed frames is strictly better than risking that.
+      start =
+        process.hrtime.bigint() -
+        BigInt(Math.round((tick + 1) * FRAME_MS * 1e6));
+    }
     await sleepUntil(deadline);
     if (process.hrtime.bigint() - window.since >= 1_000_000_000n) {
       reportWindow(window, totals);

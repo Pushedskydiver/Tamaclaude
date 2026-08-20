@@ -315,12 +315,29 @@ static void panel_start(void) {
   ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel, true));
 }
 
-/* Blit the framebuffer's first width*height pixels and wait for the wire. */
+/*
+ * Blit the framebuffer's first width*height pixels and wait for the wire.
+ *
+ * Bounded, unlike the obvious `portMAX_DELAY`. Every other wait in this file
+ * has a deadline and a reason; this one is the last transfer of a full screen,
+ * 110KB at 40MHz, so 22ms is the honest figure and a second is twenty-five
+ * times that. If the completion callback is ever missed the alternative is
+ * worse than a reboot: app_main blocks forever, the idle task keeps feeding
+ * the watchdog so nothing resets, the device stays enumerated but stops
+ * draining USB, and the host blocks inside its own write with no timeout.
+ * Both ends frozen, panel holding a stale frame, no output anywhere. A visible
+ * restart is a much better failure than an invisible hang on a device that is
+ * meant to sit on a desk unattended.
+ */
+#define BLIT_TIMEOUT_MS 1000
+
 static void blit(uint16_t x, uint16_t y, uint16_t width, uint16_t height) {
   /* draw_bitmap takes exclusive end coordinates. */
   ESP_ERROR_CHECK(esp_lcd_panel_draw_bitmap(panel, x, y, x + width, y + height,
                                             framebuffer));
-  xSemaphoreTake(blit_done, portMAX_DELAY);
+  if (xSemaphoreTake(blit_done, pdMS_TO_TICKS(BLIT_TIMEOUT_MS)) != pdTRUE) {
+    esp_restart();
+  }
 }
 
 /* ------------------------------------------------------------------ pixels */
@@ -430,10 +447,21 @@ static void report(void) {
   reported_dropped = stat_dropped;
   reported_aborted = stat_aborted;
 
-  char line[80];
-  int length = snprintf(line, sizeof line, "# rects %lu resync %lu/%lu abort %lu\n",
+  /*
+   * The orientation is on this line because it is the one thing the host has
+   * no way to work out. It is a build-time constant here and an argument
+   * there, with no handshake between them, so a mismatch used to be silent:
+   * every packet fails the bounds check, stat_rects stays at zero forever, and
+   * the sender re-primes into the void with nothing to say why. The host
+   * compares this against its own and refuses to start if they differ.
+   */
+  char line[96];
+  int length = snprintf(line, sizeof line,
+                        "# rects %lu resync %lu/%lu abort %lu panel %ux%u %s\n",
                         (unsigned long)stat_rects, (unsigned long)stat_resyncs,
-                        (unsigned long)stat_dropped, (unsigned long)stat_aborted);
+                        (unsigned long)stat_dropped, (unsigned long)stat_aborted,
+                        (unsigned)SCREEN_WIDTH, (unsigned)SCREEN_HEIGHT,
+                        PANEL_LANDSCAPE ? "landscape" : "portrait");
   usb_serial_jtag_write_bytes(line, (size_t)length, pdMS_TO_TICKS(10));
 }
 

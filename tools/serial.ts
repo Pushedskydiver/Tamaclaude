@@ -33,9 +33,48 @@ export type Link = {
  * received — the panel keeps a stale frame with fragments painted onto it and
  * never converges again. `lost` latches that so the sender can re-prime.
  */
-type Health = { resyncs: number; aborts: number; lost: boolean };
+type Health = {
+  resyncs: number;
+  aborts: number;
+  lost: boolean;
+  /** What the firmware says it was built for, once it has said anything. */
+  orientation?: string;
+};
 
 // ── The link ──────────────────────────────────────────────────────
+
+/**
+ * Read one status line and fold it into what we know about the device.
+ *
+ * Split out so the reader stays a reader. It also means the parsing has one
+ * place to live, which matters more than it looks: the firmware's line is a
+ * second wire format that `packages/protocol` does not define, so this is the
+ * whole of the contract on our side.
+ */
+function absorb(text: string, health: Health): void {
+  const counters = /resync (\d+)\/\d+ abort (\d+)/.exec(text);
+  if (!counters) {
+    // A status line we cannot read is worse than none: the recovery it drives
+    // would go quiet with nothing to say so, leaving only the periodic timer.
+    console.log('  device| (unparsed status line — has the format drifted?)');
+    return;
+  }
+  const resyncs = Number(counters[1]);
+  const aborts = Number(counters[2]);
+  // Not `>`. A counter that goes *backwards* means the device reset — a
+  // brownout, a watchdog, an accidental replug — and its panel is back to the
+  // splash with everything the host believes about it now stale. That is the
+  // most unambiguous loss signal available, and `>` reads it as nothing
+  // having happened.
+  if (resyncs !== health.resyncs || aborts !== health.aborts) {
+    health.lost = true;
+  }
+  health.resyncs = resyncs;
+  health.aborts = aborts;
+
+  const panel = /panel \d+x\d+ (\w+)/.exec(text);
+  if (panel) health.orientation = panel[1];
+}
 
 /** Print whatever the firmware says, and watch its counters for losses. */
 async function echoDeviceLines(
@@ -51,14 +90,7 @@ async function echoDeviceLines(
       const text = line.trim();
       if (!text) continue;
       console.log(`  device| ${text}`);
-      const counters = /resync (\d+)\/\d+ abort (\d+)/.exec(text);
-      if (!counters) continue;
-      const resyncs = Number(counters[1]);
-      const aborts = Number(counters[2]);
-      if (resyncs > health.resyncs || aborts > health.aborts)
-        health.lost = true;
-      health.resyncs = resyncs;
-      health.aborts = aborts;
+      if (text.startsWith('#')) absorb(text, health);
     }
   }
 }

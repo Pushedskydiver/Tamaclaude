@@ -4,8 +4,15 @@
 
 Tamaclaude exists because of
 **[marciogranzotto/clawd-tank](https://github.com/marciogranzotto/clawd-tank)**
-by Marcio Granzotto Rodrigues, MIT licensed. Three things are owed to it
+by Marcio Granzotto Rodrigues, MIT licensed. Four things are owed to it
 directly.
+
+**The board's pin map and its two panel quirks.** The SPI pin numbers, the
+requirement to run the ST7789 inverted, and — worth more than either — the
+observation that the controller's 34-pixel column offset lands on a different
+axis depending on `swap_xy`. All from `firmware/main/display.c`, all reused in
+`packages/device/firmware/blitter`. That last one is a comment in their source
+and it saved a day of chasing a display that looks almost right.
 
 **The concept.** A tiny desk display driven by Claude Code hooks, with an
 animated pixel character whose behaviour reflects which tool Claude is
@@ -84,15 +91,14 @@ SOFTWARE.
 
 ## Waveshare
 
-The only firmware written so far is the throughput spike in
-`packages/device/firmware/throughput`, which is ours: ESP-IDF headers and
-FreeRTOS, no Waveshare material. Nothing is owed for it.
+**Nothing, in the end.** This section long said the blitter would start from
+Waveshare's demo code so as not to re-derive the ST7789 initialisation sequence
+by hand. It did not need to: ESP-IDF's own `esp_lcd` component has an ST7789
+driver, so there was no sequence to derive. Neither firmware in
+`packages/device/firmware/` contains any Waveshare material.
 
-The debt is still ahead. The blitter starts from Waveshare's demo code for the
-ESP32-C6-LCD-1.47 rather than from scratch — that demo carries a working ST7789
-initialisation sequence and the correct pin mapping, and re-deriving those by
-hand is a day this project does not have. See `docs/HARDWARE.md`. Record the
-terms here when the blitter lands.
+The board itself is theirs, and the factory image that shipped on it is backed
+up outside this repo rather than vendored into it.
 
 ## Other
 
