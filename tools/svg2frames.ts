@@ -236,6 +236,12 @@ async function renderFrames(
   const svg = await readFile(svgPath, 'utf8');
   const { width, height } = stageDimensions(svg, options.scale);
   const frameCount = options.fps * loopSecondsOf(svg);
+  // Width the frame index needs, so filenames sort lexicographically. Every
+  // consumer — the contact sheet, the harness, the compression measurement —
+  // reads the directory and sorts by name. A fixed two-digit pad was fine
+  // while every loop was eight frames; at 128 it puts frame_100 immediately
+  // after frame_10 and silently shuffles the animation.
+  const pad = Math.max(2, String(frameCount - 1).length);
   const viewBoxTop = Number(
     /viewBox="([^"]+)"/
       .exec(svg)?.[1]
@@ -271,7 +277,7 @@ async function renderFrames(
   for (let frame = 0; frame < frameCount; frame += 1) {
     const elapsed = (frame / options.fps) * 1000;
     await page.evaluate(seekAnimations, elapsed);
-    const path = `${outDir}/frame_${String(frame).padStart(2, '0')}.png`;
+    const path = `${outDir}/frame_${String(frame).padStart(pad, '0')}.png`;
     const bytes = await page.screenshot({ path, omitBackground: true });
     written.push(path);
     distinct.add(createHash('md5').update(bytes).digest('hex'));

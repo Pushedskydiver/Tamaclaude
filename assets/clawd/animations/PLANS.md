@@ -145,6 +145,34 @@ in the scroll distance or the loop visibly jumps once a second.
 
 ---
 
+## Idle — connected, nothing running
+
+Clawd with nothing to do. The screen that is on most of the time.
+
+- **Action.** Sixteen seconds of doing very little: breathing throughout, two
+  blinks, a look right, a look left, and one yawn.
+- **Body mechanics.** A half-pixel breath, four cycles a loop. The yawn rises a
+  whole pixel onto tiptoes and holds.
+- **Eyes.** Open and centred by default. One art pixel left or right for the
+  looks; shut for a single frame per blink and for the length of the yawn.
+- **Props.** A mouth and a tear, both additive, both hidden except during the
+  yawn — the base geometry has neither.
+
+**Not wanted:** anything that draws attention. This is wallpaper, and the test
+is whether it is still tolerable on the fourth hour, not whether it is
+interesting on the first. No incident more often than once every few seconds.
+
+## Asleep — no session for five minutes
+
+- **Action.** Deep slow breathing, two Zs drifting up and away.
+- **Body mechanics.** Settled a whole pixel lower than idle, breathing deeper.
+- **Eyes.** Closed — wider, shorter lids swapped in for the open eyes.
+- **Props.** Two 4x4 Zs, half a loop apart and offset horizontally.
+
+**Not wanted:** Zs that overlap; a silhouette confusable with idle at a glance.
+
+---
+
 ## Template
 
 ```

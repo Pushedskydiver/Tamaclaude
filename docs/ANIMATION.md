@@ -270,6 +270,26 @@ frames out of thirty-two, so the dirty rect is empty on most of them: it
 measures 712 B/s against a 700 KB/s floor, the cheapest animation in the repo
 by a wide margin.
 
+## Variety comes from beats, not from files
+
+For a state that is on for hours, one long loop with occasional beats beats a
+pool of separate animations. `idle` runs sixteen seconds: it breathes
+throughout, blinks twice, looks right, looks left, and yawns once. Upstream
+clawd-tank solves the same problem the same way in
+`assets/svg-animations/clawd-idle-living.svg`.
+
+The advantage is structural rather than aesthetic. A pool needs the daemon to
+own a list, pick from it, and decide when to switch; beats need nothing at all
+outside the SVG. The variety lives in the animation.
+
+It is also nearly free. `idle` produces twelve distinct frames out of 128, so
+the dirty rect is empty on most of them — 839 B/s against a 700 KB/s floor.
+
+**Give the character parts he does not have.** Clawd's base geometry has no
+mouth, which is why he cannot yawn. Upstream's answer is a 3x2 rect at (6,10),
+hidden except during the yawn, and it transfers directly because we share the
+base. An additive element is how you extend the character without touching it.
+
 ## Timing
 
 Two rules, both learned the hard way and both easy to violate silently.

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
-     data-loop-seconds="4">
+     data-loop-seconds="16">
   <!--
     Clawd: idle (connected, no session working)
 
@@ -8,45 +8,106 @@
     coordinates and colours; all motion is CSS applied by ID.
 
     This is the screen that is on most of the time — Claude is idle far more
-    than it is running — so it is the one that has to survive being looked at
-    for hours, and the one where restraint matters more than incident. Nothing
-    here does anything. He breathes, and occasionally blinks.
+    than it is running — so it is seen more than every working animation
+    combined, and it is the one that has to survive being looked at for hours.
 
-    Loop: 4.0s at 8fps = 32 frames, declared by data-loop-seconds. The default
-    one-second loop is wrong for this animation and it is not a matter of
-    taste: at 1.0s a blink happens sixty times a minute and a breath is a pant.
-    Four seconds gives fifteen of each, which is a resting creature.
+    Structured after upstream clawd-tank's clawd-idle-living.svg, which solves
+    the same problem the same way: one long loop with occasional beats rather
+    than a pool of separate files. That needs no state machine at all — the
+    variety lives in the animation instead of in the daemon. Sixteen seconds,
+    128 frames: breathe throughout, blink twice, look right, look left, and
+    once per loop a yawn.
 
-    Periods of 4.0s and 2.0s both divide the loop. Nothing runs at 0.125s, the
-    frame interval. Every transform lands on a whole device pixel — the breath
-    is half an art pixel, exactly 4 device pixels at scale 8.
+    Three things are taken from theirs directly. The yawn mouth is an additive
+    3x2 rect at (6,10) that is hidden except during the yawn — Clawd's base
+    geometry has no mouth, and this is how you give him one without touching
+    it. The tear is a single pixel at the eye corner. And the legs are left
+    out of the moving groups so they stay planted while the body stretches.
+
+    One thing is not. Upstream rotates and scales freely — the arms swing on
+    shoulder pivots and the torso squashes. We ban both: a rotated or scaled
+    edge cannot land on the pixel grid, and this project has chosen hard edges
+    over expressive motion. See docs/ANIMATION.md §What pose swapping cannot
+    do. The consequence is visible here: their yawn is a full-body stretch with
+    the arms thrown out, ours is a rise onto tiptoes with the mouth and eyes
+    doing the work.
+
+    Loop: 16s at 8fps = 128 frames. Breathing is 4s, exactly four cycles per
+    loop. Every beat percentage is a multiple of 1/128 = 0.78125%, so every
+    keyframe lands on a frame boundary. Nothing runs at 0.125s.
   -->
   <defs>
     <style>
-      /* One slow breath per loop. Fifteen a minute. */
+      /* Breathing and the yawn rise share one track because they share an
+         element: two animations cannot both drive transform. Breathing runs
+         four cycles, then stops for the stretch — he is holding it. */
       #master-group {
-        animation: breathe 4s infinite steps(1);
+        animation: breathe-and-stretch 16s infinite steps(1);
       }
 
-      /* One blink per loop, held for a single frame — 1/32 of 4s is 3.125%,
-         which lands exactly on a frame boundary. Any longer reads as a wince
-         rather than a blink. */
+      /* Looking around. Nested inside #master-group, so this composes with the
+         rise rather than fighting it. */
+      #eyes-color-group {
+        animation: look-around 16s infinite steps(1);
+      }
+
+      /* Two blinks a loop, one frame each, plus the long shut during the yawn.
+         One frame is 0.78125% — anything longer reads as a wince. */
       #left-eye,
       #right-eye {
-        animation: blink 4s infinite steps(1);
+        animation: blink 16s infinite steps(1);
       }
 
-      @keyframes breathe {
-        0%   { transform: translateY(0); }
-        50%  { transform: translateY(0.5px); }
-        100% { transform: translateY(0); }
+      #fx-mouth { animation: mouth-open 16s infinite steps(1); }
+      #fx-tear  { animation: tear-fall 16s infinite steps(1); }
+
+      @keyframes breathe-and-stretch {
+        0%      { transform: translateY(0); }
+        12.5%   { transform: translateY(0.5px); }
+        25%     { transform: translateY(0); }
+        37.5%   { transform: translateY(0.5px); }
+        50%     { transform: translateY(0); }
+        62.5%   { transform: translateY(0.5px); }
+        75%     { transform: translateY(0); }
+        78.125% { transform: translateY(-1px); }
+        90.625% { transform: translateY(-1px); }
+        93.75%  { transform: translateY(0); }
+        100%    { transform: translateY(0); }
+      }
+
+      @keyframes look-around {
+        0%      { transform: translateX(0); }
+        25%     { transform: translateX(1px); }
+        37.5%   { transform: translateX(0); }
+        50%     { transform: translateX(-1px); }
+        62.5%   { transform: translateX(0); }
+        100%    { transform: translateX(0); }
       }
 
       @keyframes blink {
-        0%      { opacity: 1; }
-        75%     { opacity: 0; }
-        78.125% { opacity: 1; }
-        100%    { opacity: 1; }
+        0%       { opacity: 1; }
+        18.75%   { opacity: 0; }
+        19.53125%{ opacity: 1; }
+        43.75%   { opacity: 0; }
+        44.53125%{ opacity: 1; }
+        76.5625% { opacity: 0; }
+        92.1875% { opacity: 1; }
+        100%     { opacity: 1; }
+      }
+
+      @keyframes mouth-open {
+        0%       { opacity: 0; }
+        77.34375%{ opacity: 1; }
+        91.40625%{ opacity: 0; }
+        100%     { opacity: 0; }
+      }
+
+      @keyframes tear-fall {
+        0%       { opacity: 0; transform: translateY(0); }
+        80.46875%{ opacity: 1; transform: translateY(0); }
+        85.15625%{ opacity: 1; transform: translateY(1px); }
+        89.84375%{ opacity: 0; transform: translateY(2px); }
+        100%     { opacity: 0; transform: translateY(2px); }
       }
     </style>
   </defs>
@@ -66,9 +127,19 @@
       <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
     </g>
 
+    <!-- additive: a mouth, which the base geometry does not have -->
+    <g id="fx-mouth" fill="#000000">
+      <rect x="6" y="10" width="3" height="2"/>
+    </g>
+
     <g id="eyes-color-group" fill="#000000">
       <rect id="left-eye" x="4" y="8" width="1" height="2"/>
       <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+
+    <!-- additive: one pixel of tear at the corner of the eye -->
+    <g id="fx-tear" fill="#58A6FF">
+      <rect x="3" y="10" width="1" height="1"/>
     </g>
   </g>
 </svg>
