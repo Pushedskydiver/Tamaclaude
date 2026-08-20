@@ -8,19 +8,41 @@
 | Spec    | Value                                             |
 | ------- | ------------------------------------------------- |
 | Display | ST7789, 172×320, 262K colour, SPI                 |
-| Flash   | **4MB** (see warning)                             |
+| Flash   | **8MB** (measured — see below)                    |
 | RAM     | 512KB HP SRAM + 16KB LP SRAM, no PSRAM            |
 | USB     | USB-C, USB 2.0 full-speed (12 Mbps ceiling)       |
 | RGB LED | WS2812 on GPIO8                                   |
 | Storage | microSD (TF) slot — unused, we render on the host |
 | Radio   | Wi-Fi 6 + BLE 5 — unused                          |
 
-> ⚠️ **Upstream's README disagrees with Waveshare.** clawd-tank's README claims
-> ESP32-C6FH8 with 8MB flash; the Waveshare wiki for this SKU says 4MB. Verify
-> on arrival and record the result here. It matters very little for us — we
-> store only the splash image on-device — but assume 4MB until measured.
+> ⚠️ **Upstream's README disagreed with Waveshare, and upstream was right.**
+> clawd-tank's README claimed ESP32-C6FH8 with 8MB; the Waveshare wiki for this
+> SKU says 4MB. Measured on the actual board: 8MB. The wiki is wrong, at least
+> for the unit that arrived. It matters little either way — we store only the
+> splash on-device — but the doubled headroom removes any question about it.
 
-**Verified flash size:** _not yet measured — Stage 2, `BUILD_PLAN.md`_
+**Verified flash size: 8MB.** Measured 20 Aug 2026 on the board itself:
+
+```
+Chip is ESP32-C6FH8 (QFN32) (revision v0.2)
+Features: Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz,
+          Embedded Flash 8MB
+Crystal is 40MHz
+USB mode: USB-Serial/JTAG
+Manufacturer: 20  Device: 4017  Detected flash size: 8MB
+```
+
+Reproduce with the board plugged in and ESP-IDF sourced:
+
+```bash
+esptool.py --port /dev/cu.usbmodem1101 flash_id
+```
+
+**`USB mode: USB-Serial/JTAG` is the line that matters most.** It confirms the
+chip's native USB peripheral is what enumerates, rather than a separate
+USB-to-UART bridge. `docs/ARCHITECTURE.md` rests the whole host-renders design
+on USB-CDC at full speed; a bridge chip would have capped us at a UART baud
+rate instead, and that would have been found out at Stage 2 rather than now.
 
 ## Bring-up checklist
 
