@@ -24,15 +24,25 @@
  * away and renders as perfect lockstep: everything still moves, just together.
  * Verified by driving both formulas and reading back the computed transforms.
  */
+import type { Rgb } from './frame-palette.ts';
+import type { Browser, Page } from 'playwright';
 
 import { createHash } from 'node:crypto';
-import { mkdir, readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import process from 'node:process';
 
 import { chromium } from 'playwright';
 
 import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
+
+import {
+  BACKGROUND,
+  paletteOf,
+  reportSnapping,
+  shadowedAnimations,
+  snapToPalette,
+} from './frame-palette.ts';
 
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
@@ -224,6 +234,69 @@ function stageDimensions(svg: string, scale: number): Stage {
   return { width, height };
 }
 
+/**
+ * Load the SVG into a fresh page with every animation frozen at time zero.
+ *
+ * `animation-play-state: paused` in the page's own stylesheet means the
+ * animations never advance between load and capture — without it the first
+ * frame silently depends on how long Chromium took to start.
+ */
+async function openStage(
+  browser: Browser,
+  svg: string,
+  viewport: { width: number; height: number },
+): Promise<Page> {
+  const page = await browser.newPage({ viewport });
+  await page.setContent(
+    `<style>html,body{margin:0;padding:0;background:transparent}` +
+      `svg{display:block;width:${viewport.width}px;height:${viewport.height}px}` +
+      `*{animation-play-state:paused !important}</style>${svg}`,
+  );
+  const shadowed = await page.evaluate(shadowedAnimations);
+  if (shadowed.length > 0) {
+    console.warn(
+      `warning: ${shadowed.length} animation(s) lost to the \`animation\` ` +
+        `shorthand — a later rule replaced an earlier one, it did not merge ` +
+        `(docs/ANIMATION.md §Smoothness): ${shadowed.join('; ')}`,
+    );
+  }
+  const delays = await page.evaluate(freezeAnimations);
+  // Reports what the SVG declares, so a stylesheet that accidentally hands
+  // several elements the same offset — an nth-child stride is the easy way to
+  // do this — shows up as a suspiciously small count rather than as two
+  // streams that mysteriously mirror each other.
+  console.log(
+    `${delays.length} animations, ${new Set(delays).size} distinct delays`,
+  );
+  return page;
+}
+
+/**
+ * Seek to one frame, capture it, snap it to the palette, and write it.
+ *
+ * Capture and snap are two round trips into the page rather than one because
+ * the source is an SVG document, not a canvas: Playwright has to rasterise it
+ * before there are pixels to quantise.
+ */
+async function captureFrame(
+  page: Page,
+  frame: { elapsed: number; palette: Rgb[]; path: string },
+): Promise<{ bytes: Buffer; soft: number }> {
+  await page.evaluate(seekAnimations, frame.elapsed);
+  const raw = await page.screenshot({ omitBackground: true });
+  const snapped = await page.evaluate(snapToPalette, {
+    uri: `data:image/png;base64,${raw.toString('base64')}`,
+    palette: frame.palette,
+    bg: [...BACKGROUND] as unknown as Rgb,
+  });
+  const bytes = Buffer.from(
+    snapped.uri.slice(snapped.uri.indexOf(',') + 1),
+    'base64',
+  );
+  await writeFile(frame.path, bytes);
+  return { bytes, soft: snapped.soft };
+}
+
 async function renderFrames(
   svgPath: string,
   outDir: string,
@@ -251,36 +324,23 @@ async function renderFrames(
 
   await mkdir(outDir, { recursive: true });
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width, height } });
-
-  // `animation-play-state: paused` in the page's own stylesheet means the
-  // animations never advance between load and capture — without it the first
-  // frame silently depends on how long Chromium took to start.
-  await page.setContent(
-    `<style>html,body{margin:0;padding:0;background:transparent}` +
-      `svg{display:block;width:${width}px;height:${height}px}` +
-      `*{animation-play-state:paused !important}</style>${svg}`,
-  );
-
-  const delays = await page.evaluate(freezeAnimations);
-  // Reports what the SVG declares, so a stylesheet that accidentally hands
-  // several elements the same offset — an nth-child stride is the easy way to
-  // do this — shows up as a suspiciously small count rather than as two
-  // streams that mysteriously mirror each other.
-  console.log(
-    `${delays.length} animations, ${new Set(delays).size} distinct delays`,
-  );
+  const page = await openStage(browser, svg, { width, height });
   const written: string[] = [];
   const distinct = new Set<string>();
+  const palette = paletteOf(svg);
+  let soft = 0;
   let highest = Number.POSITIVE_INFINITY;
 
   for (let frame = 0; frame < frameCount; frame += 1) {
-    const elapsed = (frame / options.fps) * 1000;
-    await page.evaluate(seekAnimations, elapsed);
     const path = `${outDir}/frame_${String(frame).padStart(pad, '0')}.png`;
-    const bytes = await page.screenshot({ path, omitBackground: true });
+    const captured = await captureFrame(page, {
+      elapsed: (frame / options.fps) * 1000,
+      palette,
+      path,
+    });
+    soft += captured.soft;
     written.push(path);
-    distinct.add(createHash('md5').update(bytes).digest('hex'));
+    distinct.add(createHash('md5').update(captured.bytes).digest('hex'));
     highest = Math.min(
       highest,
       await page.evaluate(topmostVisibleUnit, options.scale),
@@ -289,6 +349,7 @@ async function renderFrames(
 
   reportSafeArea(highest, viewBoxTop);
   reportMotion(written.length, distinct.size);
+  reportSnapping(soft, written.length * width * height);
 
   await browser.close();
   return written;

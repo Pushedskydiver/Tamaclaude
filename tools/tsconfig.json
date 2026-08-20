@@ -5,6 +5,11 @@
     // page.evaluate() are serialised and executed inside Chromium — so they
     // need DOM types even though nothing here touches a DOM locally.
     "lib": ["ESNext", "DOM"],
+    // These run as `node tools/<script>.ts` under Node's native TypeScript
+    // support, which resolves imports at runtime and so requires the real
+    // `.ts` extension on the specifier. Safe to allow because nothing here is
+    // ever emitted.
+    "allowImportingTsExtensions": true,
     "noEmit": true
   },
   "include": ["*.ts"]
