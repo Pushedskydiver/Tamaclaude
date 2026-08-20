@@ -84,11 +84,15 @@ SOFTWARE.
 
 ## Waveshare
 
-The firmware is not yet written. When it is, it starts from Waveshare's demo
-code for the ESP32-C6-LCD-1.47 rather than from scratch — that demo carries a
-working ST7789 initialisation sequence and the correct pin mapping, and
-re-deriving those by hand is a day this project does not have. See
-`docs/HARDWARE.md`. Record the terms here once the firmware actually lands.
+The only firmware written so far is the throughput spike in
+`packages/device/firmware/throughput`, which is ours: ESP-IDF headers and
+FreeRTOS, no Waveshare material. Nothing is owed for it.
+
+The debt is still ahead. The blitter starts from Waveshare's demo code for the
+ESP32-C6-LCD-1.47 rather than from scratch — that demo carries a working ST7789
+initialisation sequence and the correct pin mapping, and re-deriving those by
+hand is a day this project does not have. See `docs/HARDWARE.md`. Record the
+terms here when the blitter lands.
 
 ## Other
 

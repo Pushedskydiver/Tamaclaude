@@ -1,11 +1,11 @@
 /*
  * Throughput spike — how fast can the host actually push bytes to this board?
  *
- * `docs/ARCHITECTURE.md` rests the whole host-renders design on one unmeasured
+ * `docs/ARCHITECTURE.md` rested the whole host-renders design on one unmeasured
  * assumption: that USB-CDC to an ESP32-C6 carries dirty rectangles comfortably.
- * Every compression figure in this repo is stated as a percentage of a 700 KB/s
- * floor, and that floor has never been observed — it is a conservative guess at
- * what a 12 Mbps full-speed link gives after protocol overhead.
+ * Its compression figures were stated as percentages of a 700 KB/s floor that
+ * had never been observed — a conservative guess at what a 12 Mbps full-speed
+ * link gives after protocol overhead.
  *
  * This firmware measures it. It does nothing else: no display, no SPI, no
  * decoding. It reads from USB-Serial/JTAG as fast as it can, throws the bytes

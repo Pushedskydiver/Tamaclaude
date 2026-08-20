@@ -1,11 +1,25 @@
-# The console is switched off so that nothing but this firmware writes to the
-# USB peripheral. ESP-IDF will happily put its own log output on the same
-# USB-Serial/JTAG endpoint we are trying to measure, and a boot banner or a
-# stray ESP_LOGI in the middle of a measurement window is indistinguishable
-# from the host's own bytes coming back.
+# Both console channels off, so nothing but this firmware writes to the USB
+# peripheral being measured.
+#
+# ESP_CONSOLE_NONE alone is not enough and looks like it is. It sets only the
+# primary channel; the *secondary* choice depends solely on
+# SOC_USB_SERIAL_JTAG_SUPPORTED and defaults to USB_SERIAL_JTAG, so a panic
+# handler would still write to the exact endpoint under test. Verified by
+# reading the generated sdkconfig, which had
+# CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG=y with only the primary
+# disabled.
+#
+# Neither option suppresses the ROM bootloader's own output at reset — ESP-IDF
+# says so in the help text for these symbols. That lands before app_main runs
+# and so before any measurement window opens, but it is why the host tool
+# discards its first report.
 CONFIG_ESP_CONSOLE_NONE=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
 
-# A millisecond tick, so a read timeout of 50ms is actually 50ms rather than
-# five 10ms ticks rounded however FreeRTOS feels. The measurement divides by
-# elapsed time; the tick should not be a term in it.
+# A millisecond tick. Not for the arithmetic — elapsed time comes from
+# esp_timer_get_time(), a microsecond hardware timer, and is sent to the host
+# as the <us> field, so FREERTOS_HZ is not a term in the rate at any value.
+# It is for cadence: at the 100Hz default a 5-tick read block can return up to
+# a full tick early depending on where it lands in the tick phase, which
+# smears the report interval by up to 10ms. At 1000Hz that jitter is 1ms.
 CONFIG_FREERTOS_HZ=1000

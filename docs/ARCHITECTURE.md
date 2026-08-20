@@ -25,23 +25,39 @@ for a standalone product. It is the worse design here, for three reasons:
 
 **The link carries 562.5 KB/s.** Measured on the board with
 `tools/usb-throughput.ts` against the firmware in
-`packages/device/firmware/throughput`, which reads USB-CDC and discards:
+`packages/device/firmware/throughput`, which reads USB-CDC and discards. A
+real run, wrapped to this file's width:
 
 ```
-per-second: 562.5, 562.6, 562.6, 562.6, 562.7, 561.2, 562.6, 562.6, 562.6, 562.6, 562.6 KB/s
-host and device agree to within 196 B/s
+per-second: 562.5 KB/s, 562.6 KB/s, 562.7 KB/s, 562.7 KB/s, 562.6 KB/s,
+            562.7 KB/s, 562.5 KB/s, 562.5 KB/s, 562.5 KB/s, 562.6 KB/s
+
+host and device agree to within 230 B/s — nothing is queueing between them, so
+this rate is real rather than a buffer draining. It is what this firmware
+sustains, not proof the link is saturated.
 ```
 
-Two properties make that a floor rather than a sample. The host's own write
-rate and the device's received count agree to 0.03%, so nothing is queueing —
-this is the wire, not a buffer draining. And it holds flat from 256-byte writes
-to 64 KB ones, a 256x range, so there is no write size the daemon could choose
+Two properties make that a dependable floor. The host's own write rate and the
+device's received count agree to 0.04%, so nothing is queueing between them and
+the figure is real rather than a buffer draining. And it holds flat from
+256-byte writes to 64 KB ones — a 256x range, reproducible with
+`pnpm throughput:sweep` — so there is no write size the daemon could choose
 that would do better.
 
+**It is not, however, the wire's limit.** USB full-speed bulk tops out at 19
+transactions of 64 bytes per 1 ms frame, or 1,216,000 B/s; 562.5 KB/s is 47% of
+that. A link running at half its ceiling is the signature of a device-side
+constraint — the `usb_serial_jtag` driver's copy path, the 4 KB rx ring, or the
+single-threaded read loop — rather than a saturated bus. So this is what _this
+firmware_ sustains. Treat it as a conservative floor to design against, and as
+a number the real blitter might beat rather than one it must fit under.
+
 This section previously assumed 700 KB/s, described as a conservative reading
-of what USB 2.0 full-speed gives CDC after overhead. It was 24% optimistic, and
-every ratio published here was that much too flattering. Reproduce with
-`pnpm throughput`.
+of what USB 2.0 full-speed gives CDC after overhead. The guess was about 22%
+above the measurement, so every percentage published against it was that much
+too flattering. (`tools/measure-compression.ts` actually divided by 700,000 —
+decimal — which is 683.6 KB/s, so its own figures were 21.5% too generous. Both
+units are binary now.) Reproduce with `pnpm throughput`.
 
 | Payload                         | Bytes/frame | At 8fps  |  vs link |
 | ------------------------------- | ----------: | -------- | -------: |
@@ -100,12 +116,27 @@ differ returns a single bounding box — so the moment a second region changes
 independently, the box spans both and drags every unchanged pixel between them
 onto the wire.
 
-A clock ticking in the message band is exactly that case. Measured with the
-sprite composited into a full 172×320 panel and one small cell changing in a
-detailed lower band, `bouldering`'s worst frame goes from 1,680 B to roughly
-24,000 B — about **8% of the floor** rather than 1.8%. Still comfortable, still
-two orders of magnitude from trouble, but an order of magnitude worse than the
-stage-only figure and worth knowing before the daemon starts compositing.
+A clock ticking in the message band is exactly that case, and it is the one
+place where the corrected link figure makes the picture worse rather than
+better.
+
+**This paragraph previously quoted a composite worst frame of roughly 24,000 B
+and called it 8% of the floor. Both numbers are now unsupportable.** It was
+anchored to a `bouldering` worst frame of 1,680 B, which is 2,696 B after the
+animation rebuild; the floor it was a percentage of has been retired; and
+nothing in the tree composites a sprite into a full panel with a ticking cell,
+so the 24,000 B itself has no reproducer. A review caught all three at once.
+
+What survives is the mechanism, which is real and unchanged: one bounding box
+spanning two bands drags every unchanged pixel between them onto the wire, and
+the cost of that is set by the distance between the changed regions rather than
+by the sprite. It does not scale with the per-animation figures above and
+cannot be derived from them.
+
+**Measure it when the daemon first composites two bands**, and put the
+reproducer in the tree at the same time. Until then this is a known unknown
+rather than a budgeted cost — the stage-only figures above are sound, and they
+are not the whole panel.
 
 If it ever bites, the fix is per-band diffing or a list of rects rather than
 one box. Not now: one box keeps the firmware blitter trivial and the budget is

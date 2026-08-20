@@ -1,12 +1,22 @@
 /**
  * Drive the host side of the USB-CDC throughput spike.
  *
- * `docs/ARCHITECTURE.md` states every compression figure in this repo as a
- * percentage of a 700 KB/s floor. That floor was a conservative guess at what
- * a 12 Mbps full-speed link yields after protocol overhead, and nothing had
- * ever observed it. This measures it.
+ * `docs/ARCHITECTURE.md` used to state its compression figures as a percentage
+ * of a 700 KB/s floor — a conservative guess at what a 12 Mbps full-speed link
+ * yields after protocol overhead, which nothing had ever observed. This
+ * measures it.
  *
- *   node tools/usb-throughput.ts [port] [seconds]
+ * What it measures is what *this firmware* sustains, which is not the same as
+ * what the link can carry. The result sits at roughly 47% of the theoretical
+ * full-speed bulk ceiling (19 transactions x 64 B per 1 ms frame), so the
+ * binding constraint is more likely the device's read path than the wire.
+ * That makes the number a sound conservative floor to plan against and a poor
+ * basis for claiming the link is saturated.
+ *
+ *   node tools/usb-throughput.ts [port] [seconds] [chunkBytes]
+ *
+ * The third argument is what makes the write-size sweep in
+ * `docs/ARCHITECTURE.md` reproducible; `pnpm throughput:sweep` runs it.
  *
  * Pair it with `packages/device/firmware/throughput`, which must be flashed
  * first. That firmware reads and discards, reporting `RX <bytes> <us> <total>`
@@ -24,9 +34,9 @@ import { execFileSync } from 'node:child_process';
 import { open } from 'node:fs/promises';
 import process from 'node:process';
 
-/** Bytes per write. Sized to a frame's worth of dirty rects, not to a round
- *  number: the question is whether this link carries our traffic, and our
- *  traffic arrives in bursts of roughly this size. */
+/** Bytes per write. A round 4 KB, and the sweep below shows the choice does
+ *  not matter: throughput is flat from 256 B to 64 KB, so this is a default
+ *  rather than a tuning decision. */
 const DEFAULT_CHUNK_BYTES = 4096;
 
 /** Default measurement window. Long enough for the rate to settle past USB
@@ -166,7 +176,8 @@ function report(result: Measurement, chunkBytes: number): void {
       ? `\n${Math.round(shortfall)} bytes (${((100 * shortfall) / (hostRate * loaded)).toFixed(1)}%) were ` +
           `written but never arrived — that gap is buffering, and the device rate is the real one.`
       : `\nhost and device agree to within ${Math.abs(hostRate - deviceRate).toFixed(0)} B/s — ` +
-          `nothing is queueing, so this is the wire and not a buffer.`,
+          `nothing is queueing between them, so this rate is real rather than a buffer draining. ` +
+          `It is what this firmware sustains, not proof the link is saturated.`,
   );
 }
 

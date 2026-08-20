@@ -54,8 +54,11 @@ rate instead, and that would have been found out at Stage 2 rather than now.
 
 ## Firmware
 
-Will live in `packages/device/firmware/`. ESP-IDF, C, targeting ~300 lines.
-Not written yet — Stage 2.
+Lives in `packages/device/firmware/`. ESP-IDF, C.
+
+`throughput/` is there now — 83 lines that read USB-CDC and discard, written to
+measure the link and nothing else (`docs/ARCHITECTURE.md` §Why it fits down the
+wire). The blitter is still to come, targeting ~300 lines.
 
 **Start from Waveshare's demo, not from scratch.** It contains a working
 ST7789 init sequence and the correct pin mapping. Re-deriving those by hand is
