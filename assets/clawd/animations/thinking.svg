@@ -15,7 +15,7 @@
     Eight seconds, 64 frames. Four tracks at three periods, nested so their
     transforms compose rather than fight:
 
-      sway 8s      leans left, holds, returns through centre, leans right
+      sway 8s      leans left, through centre, leans right — never held
       breathe 4s   two breaths a loop, on the torso base
       tap 4s       two taps then a long pause, twice a loop
       dots 2s      one, two, three, blank
@@ -50,10 +50,23 @@
     aligned. Measured across all 64 frames, the torso's top edge is one flat
     row and all four feet share one row — both were true on 15 of 64 before.
 
-    Three quarters of a unit is the most the lean can take. The outer legs
-    stand at x=3..4 and x=11..12 and the torso spans x=2..13, so at 0.75 the
-    far leg still has a quarter unit of body over it; at one full unit it would
-    stand at the edge and read as the body sliding off its feet.
+    A quarter of a unit, passed through rather than held. Both halves of that
+    matter and the first version got both wrong.
+
+    The amount was three quarters of a unit — six device pixels — chosen
+    because the outer leg still had a quarter unit of body over it at that
+    offset, so nothing was standing off the edge. That reasoning is sound and
+    the conclusion was still wrong: what reads is not whether a leg has left
+    the body, it is how far the body's centre has left the feet. Six pixels is
+    most of the gap between the inner legs, and at that offset the legs look
+    bolted on askew rather than the body looking leant.
+
+    The holds made it worse than the amount did. The lean sat at each extreme
+    for six frames, and the eased approach parked several more nearby, so the
+    off-centre pose was on screen for 34 of the 64 frames. `idle` uses a
+    similar amplitude and does not read as broken, because it passes through
+    the extreme instead of sitting in it — 29 of 128 frames against more than
+    half. A lean is a moment, not a pose.
 
     ── Why the breath compresses rather than lifts ────────────────────────
 
@@ -220,14 +233,15 @@
       #dot-2 { animation: dot-2 2s infinite steps(1); }
       #dot-3 { animation: dot-3 2s infinite steps(1); }
 
-      /* 0.75px is six device pixels; 0.125px is one. Both are whole pixels at
-         the holds, so the extremes are as crisp as the upright. */
+      /* 0.25px is two device pixels, 0.125px is one — both whole, so every
+         position in the sweep is as crisp as the upright. No holds: the lean
+         is passed through, never sat in. See the header. */
       @keyframes sway {
-        0%              { transform: translate(0, 0); }
-        15.625%, 25%    { transform: translate(-0.75px, 0.125px); }
-        45.3125%        { transform: translate(0, 0); }
-        65.625%, 75%    { transform: translate(0.75px, 0.125px); }
-        100%            { transform: translate(0, 0); }
+        0%         { transform: translate(0, 0); }
+        20.3125%   { transform: translate(-0.25px, 0.125px); }
+        50%        { transform: translate(0, 0); }
+        70.3125%   { transform: translate(0.25px, 0.125px); }
+        100%       { transform: translate(0, 0); }
       }
 
       /* 1.0227 x 0.9643 about (7.5,13) puts the torso's edges on 39, 129 and

@@ -60,7 +60,8 @@
     Three nested groups, slowest outermost, so the tracks multiply instead of
     fighting over one `transform`:
 
-      #fx-lean     16s   weight shift for the looking-about beats; the body
+      #fx-lean     16s   weight shift for the looking-about beats, passed
+                         through rather than held; the body
                          carries over while the legs stay where they are
       #fx-action   16s   the yawn: stretch up, then the heavy drop, pivoted at
                          the torso base (7.5,13)
@@ -204,13 +205,17 @@
          reads as a corrupted sprite rather than as a lean. Rotation earns its
          place on the claws, which are small enough and turned far enough for
          the result to be a shape — see arm-l-yawn. */
+      /* Two device pixels across, one down, both whole. The lean is passed
+         through rather than parked in: the previous version ramped to 0.95
+         units — 7.6 device pixels, not a whole one — and then sat within a
+         pixel of that extreme for fifteen frames, nearly two seconds. What
+         reads at that offset is not a lean, it is legs bolted on askew, and
+         `thinking` shipped the same mistake more visibly. A lean is a moment. */
       @keyframes lean-look {
         0%, 12.5%       { transform: translate(0, 0); }
-        18.75%          { transform: translate(0.75px, 0.1px); }
-        31.25%          { transform: translate(0.95px, 0.15px); }
+        21.875%         { transform: translate(0.25px, 0.125px); }
         37.5%           { transform: translate(0, 0); }
-        43.75%          { transform: translate(-0.75px, 0.1px); }
-        53.125%         { transform: translate(-0.95px, 0.15px); }
+        46.875%         { transform: translate(-0.25px, 0.125px); }
         59.375%, 100%   { transform: translate(0, 0); }
       }
 
