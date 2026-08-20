@@ -138,6 +138,37 @@ repeats.
 Check it by asking what the topmost _visible_ element reaches — an element at
 zero opacity does not count, which is what gives `typing` its headroom.
 
+## Props need contact
+
+Seeing the animations side by side made one thing obvious that none of them
+showed alone: **the ones that read have a prop touching Clawd, and the ones
+that do not have a prop floating near him.**
+
+`typing` was always the strongest, and it is the only one where the prop
+overlaps him — the laptop sits in front and the claws tap at it. `gym` racked
+its barbell three units clear of the claws and read as a bar hovering above a
+crab; bringing it down to chest height, where the plates overlap the claw line,
+changed the reading completely without touching the motion. `bouldering`
+scrolled holds past a character standing in empty space; a horizontal panel
+seam every 8 units gave him a wall to be on and the holds something to be
+fixed to.
+
+**The exception is a symbolic overlay.** A thought bubble is not held, and
+attaching it read as a lump growing out of his head — comics float them, with
+the descending dots doing the connecting. So the rule is about props a
+character physically manipulates, not about everything additive.
+
+Two smaller lessons from the same pass:
+
+- **Contact creates collisions.** Bringing the barbell to chest height put it
+  across the eyes on the two frames it passes the face. Fixed with a strain
+  squint, which is what a lifter's face does anyway — but a prop moved into
+  the character needs checking against every part it now crosses.
+- **Do not track a moving prop with a body part.** The eyes originally
+  translated up to follow the bar, which walked them into its path on a frame
+  the squint did not cover. A tracking motion that moves a part into a prop is
+  worse than no tracking.
+
 ## Scrolling backgrounds
 
 A background that scrolls must **tile**, and tiling is arithmetic rather than

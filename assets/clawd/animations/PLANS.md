@@ -56,20 +56,28 @@ setup and never again.
 
 Clawd working a problem out, cogs turning above his head.
 
-- **Action.** Two meshing cogs above his head, turning steadily and in opposite
-  directions. Claws stay where the base puts them — see the note below.
+- **Action.** A thought bubble above his head, three dots filling in one at a
+  time then clearing for a beat. Claws stay where the base puts them.
 - **Body mechanics.** A slow sway, half an art pixel side to side, at a quarter
   the cadence of typing's jitter. Deliberation, not effort. A whole pixel was
   tried during authoring and lurched.
 - **Eyes.** Raised and drifting between two positions — looking up and away at
   the problem, never at the viewer.
-- **Effects.** The cogs. They turn by **pose swapping**, not rotation: each cog
-  is two shapes, one with teeth on the axes and one with teeth on the diagonals,
-  alternating. See `docs/ANIMATION.md` §Articulation without rotation.
+- **Props.** The bubble, floating a pixel clear of his head with a two-dot
+  tail descending toward it. It is a symbolic overlay rather than a held prop,
+  so it does not touch him — see `docs/ANIMATION.md` §Props need contact.
 
-**Not wanted:** any CSS rotation; cogs fast enough to read as effort rather than
-thought; eyes meeting the viewer; a blink (at a 1.0s loop any blink is once per
-second, which is four times too fast).
+**Not wanted:** any CSS rotation; a bubble attached to his head; dots fast
+enough to read as effort rather than thought; a blink (at a 1.0s loop any blink
+is once per second, four times too fast).
+
+**Cogs were tried first and replaced.** Pose swapping turned them correctly —
+the technique worked — but the shape did not: at 5x5 with a 3x3 hub the
+diagonal-teeth pose reads as a blob with corner dots rather than a turned cog,
+and the two poses look like different objects instead of one object rotating.
+Alex called it, and a bubble is better on every axis this project cares about:
+no rotation, instantly legible, and the dot tail does the connecting work that
+the cogs never did.
 
 **Cut during review: the raised claw.** The plan called for one claw raised to
 the chin. Three positions were rendered and judged at true size and all three

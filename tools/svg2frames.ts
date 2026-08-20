@@ -25,6 +25,7 @@
  * Verified by driving both formulas and reading back the computed transforms.
  */
 
+import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import process from 'node:process';
@@ -108,6 +109,29 @@ function topmostVisibleUnit(scale: number): number {
     .map((element) => element.getBoundingClientRect().top / scale + viewBoxY)
     .filter((top) => top >= viewBoxY);
   return tops.length > 0 ? Math.min(...tops) : Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Warn when an animation does not animate.
+ *
+ * A stylesheet can lose a keyframe block — to a bad edit, a stray brace, a
+ * renamed selector — and still render perfectly valid, perfectly identical
+ * frames. Nothing else notices: the six-command suite passes, the safe-area
+ * check passes, the frames are the right size and the right colours. `gym` had
+ * every keyframe but two silently deleted by an over-greedy regex and rendered
+ * eight copies of one static image; the only thing that caught it was
+ * `tools/measure-compression.ts` reporting a dirty rect of nothing at all.
+ */
+function reportMotion(frames: number, distinct: number): void {
+  if (frames > 1 && distinct === 1) {
+    console.warn(
+      'warning: all frames are identical — this animation does not animate',
+    );
+    return;
+  }
+  if (frames > 2 && distinct === 2) {
+    console.warn(`warning: only 2 distinct frames of ${frames}`);
+  }
 }
 
 /** Warn if anything a frame shows sits in the strip landscape crops away. */
@@ -213,14 +237,16 @@ async function renderFrames(
     `${delays.length} animations, ${new Set(delays).size} distinct delays`,
   );
   const written: string[] = [];
+  const distinct = new Set<string>();
   let highest = Number.POSITIVE_INFINITY;
 
   for (let frame = 0; frame < options.frameCount; frame += 1) {
     const elapsed = (frame / options.fps) * 1000;
     await page.evaluate(seekAnimations, elapsed);
     const path = `${outDir}/frame_${String(frame).padStart(2, '0')}.png`;
-    await page.screenshot({ path, omitBackground: true });
+    const bytes = await page.screenshot({ path, omitBackground: true });
     written.push(path);
+    distinct.add(createHash('md5').update(bytes).digest('hex'));
     highest = Math.min(
       highest,
       await page.evaluate(topmostVisibleUnit, options.scale),
@@ -228,6 +254,7 @@ async function renderFrames(
   }
 
   reportSafeArea(highest, viewBoxTop);
+  reportMotion(written.length, distinct.size);
 
   await browser.close();
   return written;

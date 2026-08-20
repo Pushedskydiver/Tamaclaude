@@ -76,12 +76,23 @@
   <!-- ── the wall, behind Clawd so holds pass out of sight rather than
        across him.
 
+       The panel seams are what makes this read as a wall rather than as
+       confetti. Sparse holds alone gave Clawd nothing to be on: the blocks
+       scrolled past a character floating in empty space. A horizontal seam
+       every 8 units — the same period as the holds, so it tiles with them —
+       supplies the surface, and the holds then read as fixed to something.
+
        data-safe-area="ignore" exempts it from the landscape safe-area check in
        tools/svg2frames.ts. The tiles deliberately extend past the crop and
        lose nothing when it applies, because the pattern repeats every 8 units
        — a scrolling background is the one case where content above the crop
        line is correct rather than a bug. ─────────────────────────────── -->
   <g id="fx-wall" fill="#A371F7" data-safe-area="ignore">
+    <rect x="-3" y="-16" width="21" height="1" fill="#1B2028"/>
+    <rect x="-3" y="-8" width="21" height="1" fill="#1B2028"/>
+    <rect x="-3" y="0" width="21" height="1" fill="#1B2028"/>
+    <rect x="-3" y="8" width="21" height="1" fill="#1B2028"/>
+    <rect x="-3" y="16" width="21" height="1" fill="#1B2028"/>
     <rect x="-2" y="-14" width="2" height="1"/>
     <rect x="14" y="-10" width="2" height="1"/>
     <rect x="-2" y="-6" width="2" height="1"/>

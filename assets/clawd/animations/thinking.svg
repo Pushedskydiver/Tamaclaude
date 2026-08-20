@@ -6,25 +6,22 @@
     docs/ANIMATION.md. Every base element appears below at its original
     coordinates and colours; all motion is CSS applied by ID.
 
-    This is the first animation to use POSE SWAPPING (docs/ANIMATION.md
-    §Articulation without rotation). Rotation is banned and the base geometry
-    has no joints, so a turning cog is drawn rather than transformed: each cog
-    is two shapes — teeth on the axes, teeth on the diagonals — alternating by
-    opacity. Six of the ten remaining animations need this technique, which is
-    why thinking was built before any of them. It works.
+    A thought bubble, not cogs. The first version rotated two cogs by pose
+    swapping, and the technique worked while the shape did not: at 5x5 with a
+    3x3 hub, the diagonal-teeth pose reads as a blob with corner dots rather
+    than a turned cog, and the two poses look like different objects instead of
+    one object rotating.
 
-    A raised claw was tried and abandoned. Three positions were rendered and
-    judged at true size — (0,6) beside the head, (0,4) detached above it, and
-    (2,4) on the shoulder — and all three read as a lump on the torso rather
-    than a limb. See docs/ANIMATION.md §What pose swapping cannot do.
+    A bubble is better on every axis this project cares about. It needs no
+    rotation, which is the constraint that made the cogs hard. Its tail dots
+    touch the torso, so it is attached to Clawd rather than floating above him
+    — the difference between the animations that read and the ones that do not.
+    And three dots filling in sequence is the most legible "thinking" signal
+    there is.
 
-    Loop: 1.0s at 8fps. Periods of 0.5s and 1.0s both divide it. Nothing runs
-    at 0.125s. Every transform lands on a whole DEVICE pixel — the sway is half
-    an art pixel, which is exactly 4 device pixels at scale 8, so edges stay
-    hard. A whole art pixel was tried first and lurched.
-
-    Only four of the eight frames differ, because the fastest sub-animation is
-    0.5s. That is deliberate for deliberation, and free on a dirty-rect wire.
+    Loop: 1.0s at 8fps. Every keyframe percentage lands on a quarter, which is
+    two frames. Nothing runs at 0.125s. Every transform lands on a whole device
+    pixel: the sway is half an art pixel, exactly 4 device pixels at scale 8.
   -->
   <defs>
     <style>
@@ -34,52 +31,71 @@
         animation: sway 1s infinite steps(1);
       }
 
-      /* Looking up and away at the problem, drifting between two positions. */
+      /* Looking up at the bubble rather than at the viewer. */
       #left-eye,
       #right-eye {
-        animation: look-away 0.5s infinite steps(1);
+        animation: look-up 0.5s infinite steps(1);
       }
 
-      /* The cogs turn by alternating two drawn poses. The small cog is half a
-         cycle out of phase with the large one, which is what reads as meshing
-         gears turning in opposite directions. */
-      #cog-large-axes,
-      #cog-small-diagonals {
-        animation: pose-a 0.5s infinite steps(1);
-      }
-      #cog-large-diagonals,
-      #cog-small-axes {
-        animation: pose-b 0.5s infinite steps(1);
-      }
+      /* Three dots filling in, then a beat of nothing before the next pass.
+         Binary opacity only — an intermediate alpha becomes an intermediate
+         colour once the palette is quantised. */
+      #dot-1 { animation: dot-1 1s infinite steps(1); }
+      #dot-2 { animation: dot-2 1s infinite steps(1); }
+      #dot-3 { animation: dot-3 1s infinite steps(1); }
 
-      /* Half a unit, matching typing's jitter: exactly 4 device pixels at
-         scale 8, so the edge stays hard. A whole unit here lurched. */
       @keyframes sway {
         0%   { transform: translateX(0); }
         50%  { transform: translateX(0.5px); }
         100% { transform: translateX(0); }
       }
 
-      @keyframes look-away {
+      @keyframes look-up {
         0%   { transform: translate(0, -1px); }
         50%  { transform: translate(1px, -1px); }
         100% { transform: translate(0, -1px); }
       }
 
-      /* Binary opacity only — an intermediate alpha becomes an intermediate
-         colour once the palette is quantised. */
-      @keyframes pose-a {
+      @keyframes dot-1 {
         0%   { opacity: 1; }
-        50%  { opacity: 0; }
-        100% { opacity: 1; }
+        75%  { opacity: 0; }
+        100% { opacity: 0; }
       }
-      @keyframes pose-b {
+      @keyframes dot-2 {
+        0%   { opacity: 0; }
+        25%  { opacity: 1; }
+        75%  { opacity: 0; }
+        100% { opacity: 0; }
+      }
+      @keyframes dot-3 {
         0%   { opacity: 0; }
         50%  { opacity: 1; }
+        75%  { opacity: 0; }
         100% { opacity: 0; }
       }
     </style>
   </defs>
+
+  <!-- ── the thought bubble, behind Clawd so the tail tucks under him ──── -->
+  <!-- The tail stops a unit short of the torso rather than touching it. The
+       "props need contact" rule came from the barbell and the laptop, and it
+       applies to props a character physically holds. A thought bubble is not
+       held — it is a symbolic overlay, and comics convention floats it, with
+       the descending dots doing the connecting. Attached, it read as a lump
+       growing out of his head. -->
+  <g id="fx-bubble" fill="#C9D1D9">
+    <rect x="6" y="-3" width="9" height="5"/>
+    <rect x="7" y="-4" width="7" height="1"/>
+    <rect x="7" y="2" width="7" height="1"/>
+    <rect id="tail-large" x="5" y="3" width="2" height="1"/>
+    <rect id="tail-small" x="4" y="4" width="1" height="1"/>
+  </g>
+
+  <g id="fx-bubble-dots" fill="#30363B">
+    <rect id="dot-1" x="8" y="-1" width="1" height="1"/>
+    <rect id="dot-2" x="10" y="-1" width="1" height="1"/>
+    <rect id="dot-3" x="12" y="-1" width="1" height="1"/>
+  </g>
 
   <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
   <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
@@ -94,46 +110,11 @@
       <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
       <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
       <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
-
     </g>
 
     <g id="eyes-color-group" fill="#000000">
       <rect id="left-eye" x="4" y="8" width="1" height="2"/>
       <rect id="right-eye" x="10" y="8" width="1" height="2"/>
-    </g>
-  </g>
-
-  <!-- ── additive effects: two meshing cogs, turned by pose swapping ───── -->
-  <g id="fx-cogs" fill="#8B949E">
-    <!-- large cog, 5x5 box at (5,-1). Shared hub, swapped teeth. -->
-    <rect x="6" y="0" width="3" height="3"/>
-    <g id="cog-large-axes">
-      <rect x="7" y="-1" width="1" height="1"/>
-      <rect x="7" y="3" width="1" height="1"/>
-      <rect x="5" y="1" width="1" height="1"/>
-      <rect x="9" y="1" width="1" height="1"/>
-    </g>
-    <g id="cog-large-diagonals">
-      <rect x="5" y="-1" width="1" height="1"/>
-      <rect x="9" y="-1" width="1" height="1"/>
-      <rect x="5" y="3" width="1" height="1"/>
-      <rect x="9" y="3" width="1" height="1"/>
-    </g>
-
-    <!-- small cog, 3x3 box at (10,2), meshing below and right. Lifted one
-         unit: its lower teeth previously sat flush on the torso top edge. -->
-    <rect x="11" y="3" width="1" height="1"/>
-    <g id="cog-small-axes">
-      <rect x="11" y="2" width="1" height="1"/>
-      <rect x="11" y="4" width="1" height="1"/>
-      <rect x="10" y="3" width="1" height="1"/>
-      <rect x="12" y="3" width="1" height="1"/>
-    </g>
-    <g id="cog-small-diagonals">
-      <rect x="10" y="2" width="1" height="1"/>
-      <rect x="12" y="2" width="1" height="1"/>
-      <rect x="10" y="4" width="1" height="1"/>
-      <rect x="12" y="4" width="1" height="1"/>
     </g>
   </g>
 </svg>

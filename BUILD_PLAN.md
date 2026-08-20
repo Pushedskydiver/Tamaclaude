@@ -139,6 +139,14 @@ grill killed the per-animation box: generation is embarrassingly parallel — on
 sessions — so the serial bottleneck is review at true size, not authoring.
 Generate in batches, review in batches against each plan's "Not wanted" line.
 
+**Ordered by measured frequency, not by guess.** Across 1,046 real Claude
+Code transcripts and 44,954 tool calls: `Bash` is 63.9%, `Read` 17.6%,
+`Edit`/`Write` 7.9%, `WebSearch`/`WebFetch` 5.5%, `Agent` 0.7%, `mcp__*` 0.3%.
+So `gym` is the single most-watched working screen on the device by a factor
+of three over the next one, and `typing` — the animation built first and
+polished most — is seen about an eighth as often. `Grep` and `Glob` do not
+appear at all in 44,954 calls, so `bouldering`'s trigger is `Read` alone.
+
 **If Tier A is not complete by Sun 6 Sep, Tier B is abandoned in full** rather
 than partially. Eight good screens beat nine plus four rough ones.
 
@@ -163,8 +171,9 @@ than partially. Eight good screens beat nine plus four rough ones.
      the whole design principle exists to serve
   8. sweeping (PreCompact)
   9. dizzy (StopFailure)
-  10. wizard (WebSearch/WebFetch)
-  11. board game (Agent/subagents)
+  10. wizard (WebSearch/WebFetch) — 5.5% of real tool calls
+  11. board game (Agent/subagents) — 0.7%, the least-seen screen in the
+      catalogue by a wide margin
   12. road bike (long runs)
 
 ## Stage 5 — Personalisation (Sun 6 – Sun 13 Sep)

@@ -9,20 +9,26 @@
     First animation built to the rule that came out of `thinking`: on this
     geometry PROPS CARRY THE MOTION and limbs stay exactly where the base puts
     them (docs/ANIMATION.md §What pose swapping cannot do). No claw is
-    repositioned to hold the bar — the bar simply travels, and the body dips
-    under it. The lift reads from the prop, not the limb.
+    repositioned to hold the bar — the bar travels, the body dips under it, and
+    the lift reads from the prop rather than the limb.
+
+    The bar must make CONTACT at the bottom of the rep. An earlier version
+    racked it three units clear of the claws and it read as a barbell floating
+    above a crab, because a prop that never touches the character is not being
+    held by it. At chest height the plates overlap the claw line and the
+    reading changes completely.
 
     No scale transform anywhere. A squash would be the obvious way to show
     load, but docs/ANIMATION.md's pixel arithmetic covers translation only, and
     a scaled edge lands between pixels. The body dips a whole unit instead.
 
-    Loop: 1.0s at 8fps. The bar travels 4 units over 4 frames — exactly 1 unit,
-    8 device pixels, per frame — then back. Periods of 1.0s only. Nothing runs
+    Loop: 1.0s at 8fps. The bar travels 8 units over 4 frames — exactly 2
+    units, 16 device pixels, per frame — then back. Periods of 1.0s only. Nothing runs
     at 0.125s.
   -->
   <defs>
     <style>
-      /* One press per loop: down at frame 0, full extension at frame 4. */
+      /* One press per loop: racked at frame 0, full extension at frame 4. */
       #fx-barbell {
         animation: press 1s infinite linear;
       }
@@ -35,7 +41,16 @@
         animation: take-the-load 1s infinite steps(1);
       }
 
-      /* Eyes track the bar. */
+      /* Eyes squeeze shut on the two frames the bar crosses them. Contact at
+         chest height means the bar must pass the face on its way overhead —
+         frames 1 and 7, where it lands on row 9 and the eyes occupy rows 8
+         and 9. Left alone it sliced both eyes in half for a frame each way,
+         the same intermittent-occlusion fault the laptop lid had.
+
+         An earlier version also translated the eyes up to track the bar. That
+         looked good and moved them into the bar's path on frame 2, creating a
+         third collision the squint did not cover — a tracking motion that
+         walks a part into a moving prop is worse than no tracking. */
       #left-eye,
       #right-eye {
         animation: watch-the-bar 1s infinite steps(1);
@@ -43,14 +58,17 @@
 
       /* Exertion marks, binary opacity. Visible frames 2-5, which is the
          drive plus the first frame of the descent — effort outlasting the
-         movement by a frame reads better than effort stopping dead at lockout. */
+         movement by a frame reads better than effort stopping at lockout. */
       #fx-effort {
         animation: effort 1s infinite steps(1);
       }
 
+      /* Eight units over four frames is two units — sixteen whole device
+         pixels — per frame. Racked at chest height where the plates overlap
+         the claws, pressed overhead where they clear the head. */
       @keyframes press {
         0%   { transform: translateY(0); }
-        50%  { transform: translateY(-4px); }
+        50%  { transform: translateY(-8px); }
         100% { transform: translateY(0); }
       }
 
@@ -61,10 +79,11 @@
       }
 
       @keyframes watch-the-bar {
-        0%   { transform: translateY(0); }
-        25%  { transform: translateY(-1px); }
-        75%  { transform: translateY(0); }
-        100% { transform: translateY(0); }
+        0%    { opacity: 1; }
+        12.5% { opacity: 0; }
+        25%   { opacity: 1; }
+        87.5% { opacity: 0; }
+        100%  { opacity: 1; }
       }
 
       @keyframes effort {
@@ -101,13 +120,13 @@
   <!-- Barbell at its lowest position; the whole group translates. Plates sit
        clear of the torso top edge at y=6 when the bar is down. -->
   <g id="fx-barbell" fill="#8B949E">
-    <rect x="3" y="4" width="9" height="1"/>
-    <rect x="2" y="3" width="1" height="3"/>
-    <rect x="12" y="3" width="1" height="3"/>
+    <rect x="3" y="11" width="9" height="1"/>
+    <rect x="2" y="10" width="1" height="3"/>
+    <rect x="12" y="10" width="1" height="3"/>
   </g>
 
   <g id="fx-effort" fill="#F0883E">
-    <rect x="0" y="6" width="1" height="1"/>
-    <rect x="14" y="6" width="1" height="1"/>
+    <rect x="0" y="7" width="1" height="1"/>
+    <rect x="14" y="7" width="1" height="1"/>
   </g>
 </svg>
