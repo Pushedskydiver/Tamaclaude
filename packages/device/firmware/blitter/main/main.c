@@ -53,6 +53,8 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
+#include "splash-data.h"
+
 /*
  * Pin map and panel quirks are upstream clawd-tank's `firmware/main/display.c`
  * (MIT, credited in CREDITS.md), which targets this exact board.
@@ -359,28 +361,36 @@ static void fill(size_t from, size_t count, uint16_t word) {
 
 /*
  * A dark screen has to mean a fault, so the panel is never left showing
- * nothing. This is placeholder art — the real splash comes later — but it is
- * not a flat fill, because a flat fill answers no questions. A two-pixel
- * border proves the gap is on the right axis (wrong axis and one edge is
- * clipped while the opposite gains a stripe) and a marker in one corner only
- * proves the mirror settings, which nobody has been able to test yet.
+ * nothing. This is the one picture the device draws by itself: everything else
+ * on this panel is rendered on the Mac and blitted, so the splash is the only
+ * art that has to survive with no host attached.
+ *
+ * It is `assets/clawd/splash.svg`, baked by `node tools/bake-splash.ts` into
+ * the table beside this file. The encoding is the wire's own — (count, value)
+ * pairs with `value` in host RGB565 order — so this decodes with the same two
+ * calls `decode_rle()` makes, and a byte-order mistake here would be the same
+ * mistake there rather than a new one.
+ *
+ * What replaced the placeholder, and what was lost with it: the old fill drew
+ * a two-pixel border and a corner marker to prove the gap was on the right
+ * axis and the mirror settings were right. Both are now proven better by the
+ * artwork itself — a wordmark that is mirrored or rotated is unmistakable at a
+ * glance, where a corner square only ever said "one of these four corners".
+ *
+ * `SPLASH_RUNS` is trusted to sum to exactly `SPLASH_PIXELS`, because `fill()`
+ * has no bounds check and a table that overran would corrupt whatever follows
+ * the framebuffer. Nothing here can check that, so `tools/bake-splash.test.ts`
+ * does — the firmware is in none of the six gates, and that test is the only
+ * automated thing standing behind this file.
  */
-static void draw_splash(void) {
-  const uint16_t ground = panel_word(RGB565(8, 14, 28));
-  const uint16_t mark = panel_word(RGB565(232, 108, 60));
-  const int border = 2;
-  const int marker = 12;
+_Static_assert(SPLASH_WIDTH == SCREEN_WIDTH && SPLASH_HEIGHT == SCREEN_HEIGHT,
+               "the baked splash is not the size of the panel");
 
-  fill(0, SCREEN_PIXELS, ground);
-  for (int y = 0; y < SCREEN_HEIGHT; y++) {
-    bool edge_row = y < border || y >= SCREEN_HEIGHT - border;
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-      bool edge = edge_row || x < border || x >= SCREEN_WIDTH - border;
-      /* The marker sits inside the border, in what should be the top left. */
-      bool corner = x >= border + 2 && x < border + 2 + marker &&
-                    y >= border + 2 && y < border + 2 + marker;
-      if (edge || corner) framebuffer[y * SCREEN_WIDTH + x] = mark;
-    }
+static void draw_splash(void) {
+  size_t written = 0;
+  for (size_t run = 0; run < SPLASH_RUNS; run++) {
+    fill(written, splash_rle[run * 2], panel_word(splash_rle[run * 2 + 1]));
+    written += splash_rle[run * 2];
   }
   blit(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
