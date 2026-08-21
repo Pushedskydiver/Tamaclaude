@@ -51,6 +51,24 @@ When a limit fights you, the usual answer is that the function is doing two
 things. Split it before reaching for a disable comment. If a disable is
 genuinely right, it carries a comment saying why.
 
+### Holding mutable state
+
+In the packages where `functional/no-let` is on, something occasionally still
+has to point at a new value. Two shapes are in the tree and both are allowed:
+
+- a **class with `readonly` fields and one mutable private field**
+  (`packages/daemon/src/socket-server.ts` — `#registry`)
+- a **`cell` closure** (`packages/device/src/cell.ts`)
+
+The rule is not which shape you pick, it is the **budget: one disable comment,
+naming the single binding that moves.** Both of these spend exactly one. A
+change that needs two is a change that should have been split.
+
+Do not add a third shape. A review flagged these two landing in one PR and
+asked for arbitration; the answer was to write the budget down rather than
+rewrite working, already-reviewed code for cosmetic uniformity — but a third
+idiom would mean the budget is not being read.
+
 ## Naming
 
 - Files: `kebab-case.ts`

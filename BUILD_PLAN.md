@@ -142,8 +142,18 @@ that is not waiting on the design freeze.
 
 ## Stage 3 — Session pipeline (Mon 24 – Mon 31 Aug)
 
-- [ ] Hook handler binary; installer patches `~/.claude/settings.json`
-- [ ] Daemon: Unix socket, session registry, staleness eviction, persistence across restart
+- [x] Hook handler binary; installer patches `~/.claude/settings.json` —
+      dry-run by default, preserves foreign hooks and file mode, idempotent
+- [x] Daemon: session registry, staleness eviction and multi-session
+      resolution are done and pure, and something listens on the socket at last —
+      the hook writes and the daemon reads. Newline-delimited JSON over many
+      short-lived connections, folded into the registry and persisted beside the
+      socket, so a restart mid-session does not show an empty desk. A leftover
+      socket file is told from a running daemon by connecting to it rather than by
+      unlinking it blind (`packages/daemon/src/socket-path.ts`).
+- [ ] Daemon wired to a transport. The listener holds the registry and offers a
+      snapshot; nothing yet renders it or pushes a frame down the wire, so this
+      stage's exit is still open.
 - [x] **Hook names confirmed against live documentation** — all three exist:
       `PermissionRequest`, `StopFailure`, `SubagentStart`. Checked against
       code.claude.com/docs/en/hooks.md rather than upstream's README, because a
@@ -164,11 +174,14 @@ that is not waiting on the design freeze.
       entirely, so "the turn finished" is not observable the way Stage 4's
       Model 3 payoff assumes.
 
-- [ ] Tool → state mapping (`PreToolUse.tool_name`)
-- [ ] Multi-session compositing — both Alex and Jamie run several at once, so this is required
-- [ ] Subagent lifecycle + counter badge
-- [ ] `PermissionRequest` → its mapped quip screen
-- [ ] `StopFailure` → its mapped quip screen
+- [x] Tool → state mapping (`PreToolUse.tool_name`)
+- [x] Multi-session compositing — resolution ranks by state, hero plus chips
+- [~] Subagent lifecycle counted in the registry; the badge is drawn from
+  placeholder text until the daemon feeds the scene
+- [~] `PermissionRequest` → the state and the quip exist; **the animation does
+  not** — `permission sign` is unbuilt (Stage 4, item 7)
+- [~] `StopFailure` → the state, `error_type` and the quip exist; **the
+  animation does not** — `dizzy` is unbuilt (Stage 4, item 9)
 - [ ] **Remote transport** — TCP + shared secret, so Jamie's Raspberry Pi agent appears on the
       display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
       from day one (cheap), but ship it only if Stage 4 is on schedule.

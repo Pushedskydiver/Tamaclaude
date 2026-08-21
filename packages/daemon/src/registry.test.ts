@@ -98,3 +98,32 @@ describe('liveSessions', () => {
     expect(liveSessions(registry, T0 + EVICT_AFTER_MS)).toHaveLength(0);
   });
 });
+
+describe('cardinality', () => {
+  it('holds a bounded number of sessions', () => {
+    // Nothing bounded how many keys the registry would take, while each field's
+    // length was bounded precisely because a sessionId is held for ten minutes.
+    // Anything that can write to the socket could mint them without limit, and
+    // the daemon persists synchronously after every accepted event.
+    const many = Array.from({ length: 500 }, (_, index) => `s${index}`);
+    const filled = many.reduce(
+      (registry, id) =>
+        observe(registry, { sessionId: id, kind: 'SessionStart' }, 1_000),
+      createRegistry(0),
+    );
+    expect(filled.sessions.size).toBeLessThanOrEqual(64);
+  });
+
+  it('keeps the newest sessions when the cap bites', () => {
+    const filled = Array.from(
+      { length: 100 },
+      (_, index) => `s${index}`,
+    ).reduce(
+      (registry, id) =>
+        observe(registry, { sessionId: id, kind: 'SessionStart' }, 1_000),
+      createRegistry(0),
+    );
+    expect(filled.sessions.has('s99')).toBe(true);
+    expect(filled.sessions.has('s0')).toBe(false);
+  });
+});

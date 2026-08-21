@@ -49,6 +49,23 @@ export function createRegistry(now: number): SessionRegistry {
  * `newSession` for why the first event of a session is not necessarily a
  * `SessionStart`.
  */
+/**
+ * The most sessions the registry will hold.
+ *
+ * `hook-line.ts` bounds each field's *length* because a `sessionId` becomes a
+ * key held for ten minutes — and nothing bounded how many keys. Anything that
+ * can write to the socket could mint sessions without limit, and since the
+ * daemon persists after every accepted event, N distinct ids cost O(N^2)
+ * synchronous disk work in the event loop. A daemon slowed that way drops real
+ * hook events, because the hook gives up after 150ms — so the panel goes wrong
+ * with nothing saying why.
+ *
+ * Sixty-four is far past any real use. The strip shows five chips; Alex and
+ * Jamie run a handful of sessions each. Losing the oldest of sixty-four is a
+ * chip that was already invisible.
+ */
+const MAX_SESSIONS = 64;
+
 export function observe(
   registry: SessionRegistry,
   event: HookEvent,
@@ -64,8 +81,9 @@ export function observe(
   return {
     // Later entries win, so this replaces the session rather than duplicating
     // it — and the order of the rest is preserved, which keeps a registry's
-    // iteration order the order sessions were first seen.
-    sessions: new Map(entries),
+    // iteration order the order sessions were first seen. Trimmed from the
+    // front, so the oldest goes when the cap bites.
+    sessions: new Map(entries.slice(-MAX_SESSIONS)),
     lastEventAt: Math.max(registry.lastEventAt, now),
   };
 }
