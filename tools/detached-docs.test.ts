@@ -35,18 +35,22 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  *   described and coming to rest on `STAGE_HEIGHT`, from `8d72d08`. Older than
  *   any of the others, and certified as deliberate by the audit built to catch
  *   exactly this — twice, before a review took it off the list.
- * - `withoutQuietest`'s doc bound to a one-line `type` alias inserted between
- *   it and its function, in `630d15d` — the commit that fixed the first two,
- *   in the same hunk as its `observe` fix. This gate cannot see that one; see
+ * - `withoutQuietest`'s doc bound to a one-line `type` alias sitting between it
+ *   and its function, in `630d15d` — the commit that fixed the first two, in
+ *   the same hunk as its `observe` fix. This gate cannot see that one; see
  *   below.
  *
  * There are two ways in, and it is worth knowing which is which rather than
  * counting. Most arrived as a side effect of editing something *else* nearby —
- * a constant deleted (`svg2frames.ts`, `registry.ts`), an alias inserted
- * (`withoutQuietest`), a function inserted (`scene.ts`) — which is why nobody
- * noticed. But `hook-settings.ts` was a new file written whole in `cc6bd38`,
- * two blocks authored together where one was meant, and `transport.ts`'s
- * priming rule was written fresh in `d7ad4b9`. Nothing had to move at all.
+ * a constant deleted (`svg2frames.ts`), a constant inserted (`registry.ts`), a
+ * function inserted (`scene.ts`) — which is why nobody noticed. The other three
+ * were authored that way from the start: `hook-settings.ts` was a new file
+ * written whole in `cc6bd38`, two blocks where one was meant; `transport.ts`'s
+ * priming rule was written fresh in `d7ad4b9`; and `withoutQuietest`'s doc,
+ * alias and function went in as one contiguous block in `630d15d`. Nothing had
+ * to move for those. It is three and three, so neither route is "most" — an
+ * earlier version of this paragraph said side effects were, having filed
+ * `registry.ts` under a deletion that the bullet above calls an insertion.
  *
  * The sharpest case is the last in the list: `630d15d` was the commit fixing
  * the first two, and the same hunk that re-attached `observe`'s doc inserted
@@ -61,10 +65,11 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  * tally that the paragraph above no longer keeps. An ordinal outliving its list
  * is the same defect as a doc outliving its symbol.)
  *
- * A review caught that one, and a review is what will catch the next — a review
- * measured the surface at seventeen shapes this walk cannot see, of which
- * eleven strand the intended symbol. That is a much larger ask of a reader than
- * this paragraph used to imply.
+ * A review caught that one, and a review is what will catch the next. The
+ * surface is wider than one shape — anything that puts a declaration between a
+ * doc and its subject does it — and no count of it belongs here: the last two
+ * numbers this file carried came from a review's scratch work with no artefact
+ * behind them, which is the same thing as not having measured it.
  */
 function multiDocNodes(files: readonly string[]): readonly string[] {
   const program = ts.createProgram([...files], {
@@ -116,12 +121,14 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
  * the moment that was missing every time.
  *
  * Recording a count instead of deciding is the failure this list invites, and
- * every revision that touched the entries did it. Measured from `git log -p`:
+ * the two revisions that wrote entries both did it. Measured from `git log -p`:
  *
  * - `630d15d` wrote the list with fifteen entries. Three of them were the bug
  *   and not a header — `scene.ts` and `hook-settings.ts`, each recorded as `2`
- *   when the second block was `render`'s stranded doc and, in `hook-settings`,
- *   a second block of distinct prose that belonged in the first; and
+ *   when the surplus block was the bug: in `scene.ts` `render`'s stranded doc,
+ *   which was the *first* of the two bound to `withEnvironment`, and in
+ *   `hook-settings` a second block of distinct prose that belonged in the
+ *   first; and
  *   `svg2frames.ts`. A fourth, `make-font-atlas.ts`, was a regex false
  *   positive that no longer exists once the walk went through the AST.
  * - `f3cc11f` decremented `scene.ts` and `hook-settings.ts` to `1` by fixing
@@ -130,9 +137,10 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
  * - `4bea4d7` deleted `svg2frames.ts` after a fourth review read it. Two
  *   entries have therefore ever been deleted outright; the other two were
  *   decremented and are still here.
- * - `f941169` changed no entry at all — only this paragraph, which had said
- *   `4bea4d7`'s deletion was its own. Getting the provenance of the list wrong
- *   is the same failure as getting an entry wrong, one level up.
+ * - `f941169` changed no entry at all — only the prose, in this block and in
+ *   the one above `multiDocNodes`. It said `4bea4d7`'s deletion was its own.
+ *   Getting the provenance of the list wrong is the same failure as getting an
+ *   entry wrong, one level up.
  *
  * Every entry left has since been read against its file, twice and
  * independently, and every one is a header. That is a statement about an audit
@@ -165,16 +173,33 @@ function sourceFiles(): readonly string[] {
 describe('TSDoc blocks are where their author put them', () => {
   it('finds source files to check at all', () => {
     // Without this, a bad glob turns the gate below into a green no-op — and a
-    // lone lower bound does not give it. Measured: against 88 real files a
-    // `> 30` threshold let 56 of them vanish with both tests green, because the
-    // half that remained cleared the bar on its own. So assert the halves.
-    const files = sourceFiles();
+    // lone lower bound does not give it. Measured: a `> 30` threshold let 57 of
+    // the 88 real files vanish with both tests green, because the half that
+    // remained cleared the bar on its own. Asserting the two halves
+    // was still not enough — `cli` and `packs` carry no `DELIBERATE` entry, so
+    // both could leave the glob for free and the ratchet would not notice
+    // either. Every package by name, then, the way the budget gate does it.
+    //
+    // Relative, not absolute. `sourceFiles()` returns `ROOT + name`, so a
+    // checkout whose own path contained `/tools/` would have made the old
+    // `includes` filters match everything: the canary becoming precisely the
+    // no-op it exists to prevent.
+    const files = sourceFiles().map((file) => file.slice(ROOT.length));
+    const packages = files
+      .filter((file) => file.startsWith('packages/'))
+      .map((file) => file.split('/')[1]);
+    expect([...new Set(packages)].sort()).toEqual([
+      'cli',
+      'daemon',
+      'device',
+      'hooks',
+      'packs',
+      'protocol',
+      'renderer',
+    ]);
     expect(
-      files.filter((file) => file.includes('/packages/')).length,
-    ).toBeGreaterThan(40);
-    expect(
-      files.filter((file) => file.includes('/tools/')).length,
-    ).toBeGreaterThan(12);
+      files.filter((file) => file.startsWith('tools/')).length,
+    ).toBeGreaterThan(18);
   });
 
   it('has no stacked doc blocks beyond the recorded ones', () => {

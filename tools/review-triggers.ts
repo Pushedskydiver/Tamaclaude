@@ -196,10 +196,11 @@ function main(): void {
  *
  * Both sides are resolved through `realpath` because `import.meta.url` already
  * is and `process.argv[1]` is not, so reaching the script through a symlink
- * made a bare `===` false — and `.husky/pre-push` ends the line with
- * `|| true`, which turned that into a silent "no reviews owed". The one
- * direction this tool must never fail in, reached by a path nobody would
- * think to test.
+ * made a bare `===` false — and `.husky/pre-push` discarded the exit code, so
+ * nothing downstream noticed either. The one direction this tool must never
+ * fail in, reached by a path nobody would think to test. (The hook now prints a
+ * line of its own when this exits non-zero; it used to end in `|| true`, and
+ * this sentence went on describing that for a commit after it changed.)
  *
  * When there is an entry to compare and the comparison fails, run — whatever
  * the reason, not just the symlink case above: a `process.argv[1]` that does
@@ -207,13 +208,13 @@ function main(): void {
  * error here; staying quiet is the unsafe one, and this file exists because
  * that is the direction things actually go wrong.
  *
- * Not running is the ordinary outcome, not an edge case: every import reaches
- * the comparison and returns false there, which is what `review-triggers.test.ts`
- * does on every `pnpm test`. The `undefined` branch is narrower than it looks —
- * measured, `node -e` and the REPL leave `process.argv[1]` unset, but an import
- * does not: it inherits the *importer's* entry, so it is a mismatch rather than
- * an absence. An earlier version of this paragraph claimed all three arrive the
- * same way, and the counter-example was the file's own test.
+ * Not running is the ordinary outcome, not an edge case, and it is reached both
+ * ways. An import from a file inherits the *importer's* entry and so returns
+ * false at the comparison — which is what `review-triggers.test.ts` does on
+ * every `pnpm test`. An import from `node -e`, or from the REPL, has no entry to
+ * inherit and returns false at the `undefined` branch instead. Measured, both.
+ * Two earlier versions of this paragraph each picked one of those and claimed it
+ * was the only one.
  */
 function invokedDirectly(): boolean {
   const entry = process.argv[1];

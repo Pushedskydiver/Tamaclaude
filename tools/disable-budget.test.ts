@@ -45,8 +45,13 @@ const BUDGET: Readonly<Record<string, readonly string[]>> = {
  * Every comment in a file, as the parser sees them.
  *
  * A comment is trivia, so each one is leading trivia of some token or trailing
- * trivia of one; walking to the leaves and asking for both is a complete
- * enumeration, and the end-of-file token carries the tail. Keyed by position
+ * trivia of one; walking to the leaves and asking for both enumerates them, and
+ * the end-of-file token carries the tail. One exception, measured against
+ * ESLint's own `getAllComments` over every comment in the tree: a `#!` line is
+ * shebang trivia to TypeScript rather than comment trivia, so
+ * `packages/hooks/src/index.ts`'s first line is not here. ESLint reads no
+ * directive out of a hashbang either, so nothing hides there — but "complete"
+ * was the wrong word, and this is the one gap. Keyed by position
  * because an empty `SyntaxList` shares a start with the token after it, so the
  * same comment is reached twice.
  *
@@ -116,7 +121,11 @@ function commentsIn(text: string): readonly string[] {
  *   `BUDGET` holds exactly one rule, which is the shape that hides it.
  * - The inline config form above.
  *
- * And one over-count, which failed loud and cost nothing: matching inside
+ * Two over-counts, both of which fail loud and cost nothing. A suppression that
+ * was explicitly re-enabled is still charged: there is no `eslint-enable`
+ * branch, so the gate reports a purchase that was refunded. Measured, no
+ * under-count path runs through it — an enable alone suppresses nothing and is
+ * counted as nothing — and the tree contains none. And matching inside
  * string and template literals. It is why the comments come from the parser
  * now rather than from a search — that, and only that. What keeps prose out is
  * the `^` anchor, not the parser.
@@ -135,13 +144,13 @@ const INLINE_CONFIG = /^\/\*\s*eslint\s+([\s\S]*?)(?:\*\/)?$/;
 /**
  * Rule names inside an inline config block: every identifier before a `:`.
  *
- * The quotes are not optional decoration. ESLint parses an inline config as
- * JSON-ish, so `"functional/no-let": "off"` is the *most* canonical way to
- * write one — and it is what `eslint.config.ts` itself writes, so copying a
- * line out of the config produces exactly this form. Omitting `["']` here left
- * the capture unable to cross the closing quote, which returned no rules at
- * all: a whole-file suppression, counted as nothing. A review's differential
- * put it at 640 of 1200 generated inline-config shapes, every one under-counted.
+ * The quotes are not optional decoration. ESLint parses an inline config with
+ * `levn` first and `JSON.parse` as a fallback, so both spellings work — but the
+ * quoted one is what `eslint.config.ts` writes for every rule name containing a
+ * `/` or a `-`, which is all of them bar `complexity`. Copying a line out of
+ * the config therefore produces the quoted form. Omitting `["']` here left the
+ * capture unable to cross the closing quote, which returned no rules at all: a
+ * whole-file suppression, counted as nothing.
  */
 const CONFIGURED_RULE = /["']?([\w$@-]+(?:\/[\w$@-]+)*)["']?\s*:/g;
 
@@ -200,8 +209,15 @@ function disabledIn(file: string): readonly string[] {
  *
  * `no-var` rather than one of the functional rules, and `.js` rather than
  * `.ts`, so this needs no plugin and no parser beyond the ones ESLint ships.
- * Nothing is lost by that: whether a comment is a suppression is decided by the
- * linter core before any rule runs, so the answer is the same for every rule.
+ *
+ * What that does and does not buy. The matcher is textual and rule-agnostic, so
+ * a core rule exercises it exactly as a plugin rule would — which is the part
+ * this differential is for. What it cannot reach: a plugin rule does not
+ * resolve in a `.js` probe at all, and inline-config *schema* validation is
+ * per-rule, so an invalid option is rejected for one rule and honoured for
+ * another. An earlier version of this paragraph claimed the answer "is the same
+ * for every rule". That is the sentence a future reader would trust while
+ * adding a shape, and it is false.
  */
 const OFFENCE = 'var a = 1;';
 const SHAPES: readonly string[] = [
@@ -227,14 +243,48 @@ const SHAPES: readonly string[] = [
   `// mentions eslint-disable in prose\n${OFFENCE}`,
 ];
 
-/** Does ESLint let the offence through, given this shape? */
-function suppressedByEslint(source: string): boolean {
-  const messages = new Linter().verify(
-    source,
-    [{ rules: { 'no-var': 'error' } }],
-    'probe.js',
-  );
-  return messages.every((message) => message.ruleId !== 'no-var');
+/**
+ * What ESLint does with one shape: did it parse, did it report, was it silenced.
+ *
+ * Two-sided, because the obvious one-sided form is unsound. Asking only "are
+ * there no `no-var` messages" cannot tell three different things apart: the
+ * rule was suppressed, the rule never had anything to report, and the file
+ * never parsed. A fatal parse error carries `ruleId: null`, so a shape that is
+ * not valid JavaScript reads as *suppressed* while no rule has run at all — and
+ * `SHAPES` sits in a TypeScript repo, so one type annotation in a future entry
+ * would silence it. The entry would then assert nothing, greenly, forever.
+ *
+ * So: lint twice, once with inline config and directives switched off. `reported`
+ * is what the rule finds with nothing allowed to silence it, and a shape with
+ * `reported === 0` is a broken shape rather than a suppressed one.
+ */
+type Verdict = {
+  readonly fatal: boolean;
+  readonly reported: number;
+  readonly silenced: boolean;
+};
+
+function eslintVerdict(source: string): Verdict {
+  const run = (allowInlineConfig: boolean): readonly Linter.LintMessage[] =>
+    new Linter().verify(
+      source,
+      [
+        {
+          rules: { 'no-var': 'error' },
+          linterOptions: { noInlineConfig: !allowInlineConfig },
+        },
+      ],
+      'probe.js',
+    );
+  const control = run(false);
+  const live = run(true);
+  const count = (messages: readonly Linter.LintMessage[]): number =>
+    messages.filter((message) => message.ruleId === 'no-var').length;
+  return {
+    fatal: [...control, ...live].some((message) => message.fatal === true),
+    reported: count(control),
+    silenced: count(live) < count(control),
+  };
 }
 
 describe('the eslint-disable budget', () => {
@@ -262,10 +312,12 @@ describe('the eslint-disable budget', () => {
   /**
    * The assertion that closes the class rather than the instance.
    *
-   * The matcher above has now been wrong in five consecutive commits, and every
-   * time it was fixed by a throwaway probe that was then deleted — so the next
-   * divergence had nothing to catch it but another review round. This is that
-   * probe, kept.
+   * The matcher above has had five versions across five commits and four of
+   * them were wrong, each fixed by a throwaway probe that was then deleted — so
+   * the next divergence had nothing to catch it but another review round. This
+   * is that probe, kept. (Five *versions*, four wrong: an earlier draft of this
+   * sentence said five wrong commits, which is a miscount in the paragraph
+   * about the recurring miscount.)
    *
    * One-directional on purpose. Over-counting is safe: it fails loud and costs
    * someone a `BUDGET` line they can argue with. Under-counting is the failure
@@ -274,9 +326,29 @@ describe('the eslint-disable budget', () => {
    * here and still reported by ESLint, which is deliberate.
    */
   it('never misses a suppression ESLint honours', () => {
-    const missed = SHAPES.filter(
-      (source) =>
-        suppressedByEslint(source) && disabledInText(source).length === 0,
+    const verdicts = SHAPES.map((source) => ({
+      source,
+      ...eslintVerdict(source),
+    }));
+
+    // The positive controls, and they are the point. Without them this test
+    // cannot tell "the matcher covers every shape" from "the oracle never
+    // fired": a review replaced the whole of `eslintVerdict` with a constant
+    // and the suite stayed green. Every shape must parse, must carry a live
+    // offence for the rule to find, and between them the shapes must exercise
+    // both answers — otherwise the differential is measuring nothing.
+    expect(verdicts.filter((verdict) => verdict.fatal)).toEqual([]);
+    expect(verdicts.filter((verdict) => verdict.reported === 0)).toEqual([]);
+    expect(
+      verdicts.filter((verdict) => verdict.silenced).length,
+    ).toBeGreaterThan(10);
+    expect(
+      verdicts.filter((verdict) => !verdict.silenced).length,
+    ).toBeGreaterThan(3);
+
+    const missed = verdicts.filter(
+      (verdict) =>
+        verdict.silenced && disabledInText(verdict.source).length === 0,
     );
     expect(missed).toEqual([]);
   });

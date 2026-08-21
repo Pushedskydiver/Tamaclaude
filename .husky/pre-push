@@ -8,11 +8,15 @@
 # something a person had to remember.
 #
 # `|| ...` rather than a bare call because this must not block a push. But a
-# bare `|| true` swallowed a throw as well as a non-zero exit: `blastRadius()`
-# throws when it cannot find the list in docs/GIT.md, and because the headline
-# prints before that, the output read as an ordinary short run with no triggers
-# owed. Measured — reword the heading and all four rows and the summary vanish,
-# exit 0. Silent under-reporting is the one direction this tool must never fail
-# in, so the failure gets a line of its own.
+# bare `|| true` swallowed the exit code: `blastRadius()` throws when it cannot
+# find the list in docs/GIT.md, and because the headline prints first, stdout
+# read as an ordinary short run with no triggers owed. Measured — reword the
+# heading and all four rows and the summary vanish, exit 0.
+#
+# Not silent, to be exact: node's stack trace goes to stderr and git relays it,
+# and an earlier version of this comment claimed otherwise. What `|| true` cost
+# was the exit code and the report, next to which a trace scrolling past during
+# a push is easy to miss. Under-reporting is the one direction this tool must
+# never fail in, so the failure now says so on stdout, where the report is.
 node tools/review-triggers.ts ||
-  echo "  !!  review-triggers FAILED — which reviews are owed is UNKNOWN. Run 'pnpm review-triggers'." 
+  echo "  !!  review-triggers FAILED — which reviews are owed is UNKNOWN. Run 'pnpm review-triggers'."
