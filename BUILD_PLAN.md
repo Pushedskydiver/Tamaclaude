@@ -138,27 +138,19 @@ that is not waiting on the design freeze.
 
 - [ ] Hook handler binary; installer patches `~/.claude/settings.json`
 - [ ] Daemon: Unix socket, session registry, staleness eviction, persistence across restart
-- [x] **Hook names confirmed against live documentation.** All three exist:
-      `PermissionRequest`, `StopFailure` and `SubagentStart`. Checked against
+- [x] **Hook names confirmed against live documentation** — all three exist:
+      `PermissionRequest`, `StopFailure`, `SubagentStart`. Checked against
       code.claude.com/docs/en/hooks.md rather than upstream's README, because a
       state machine keyed on a hook that does not fire is silent, not loud.
-
-      Four things from that check change how this stage is built:
-
-              - **The session key is `session_id`**, and every event carries it along
-                with `hook_event_name`, `cwd` and `transcript_path`.
-              - **Subagents are identified by `agent_id` and `agent_type` on the same
-                events**, not by a separate stream. The counter badge counts
-                `SubagentStart` against `SubagentStop` per session.
-              - **Hooks block.** The default command timeout is 600s and Claude Code
-                waits, which makes the near-leaf rule in `CLAUDE.md` a correctness
-                constraint rather than a style one: a slow `tamaclaude-notify` stalls
-                the user's session. It must write and exit.
-              - **`StopFailure` ignores exit code and output entirely**, and `Stop`
-                fires on every response rather than at task completion — so "the turn
-                finished" is not a state this can observe the way the table assumes.
-                `StopFailure` also carries `error_type`, which is more specific than
-                the plan's single failure state.
+      Four findings from that check shape this stage, recorded in
+      `packages/protocol/src/events.ts`: the session key is `session_id`;
+      subagents ride the ordinary events carrying `agent_id` and `agent_type`
+      rather than forming a separate stream; **hooks block, with a 600s default
+      timeout**, which makes the near-leaf rule for `packages/hooks` a
+      correctness constraint rather than a style one; and `Stop` fires on every
+      response rather than at task completion while `StopFailure` ignores exit
+      code and output entirely, so "the turn finished" is not observable the
+      way the state table assumes.
 
 - [ ] Tool → state mapping (`PreToolUse.tool_name`)
 - [ ] Multi-session compositing — both Alex and Jamie run several at once, so this is required
