@@ -1,14 +1,17 @@
 /**
- * The `daemon` command: the one place the four packages become a panel.
+ * The `daemon` command: the one place the packages become a panel.
  *
  * `BUILD_PLAN.md` §Stage 3 carried this as its open exit for the whole stage —
  * "the listener holds the registry and offers a snapshot; nothing yet renders
  * it or pushes a frame down the wire". Every piece existed and was tested in
- * isolation. This is the composition, and it is deliberately the only place in
- * the repo that knows about all four:
+ * isolation. This is the composition, and it is deliberately the only file in
+ * the repo that imports all five:
  *
- *   socket  ->  registry  ->  resolution  ->  scene  ->  framebuffer  ->  wire
- *   daemon      daemon        daemon          cli       renderer         device
+ *   socket  ->  registry  ->  resolution  ->  scene  ->  pixels  ->  rect  ->  wire
+ *   daemon      daemon        daemon          cli       renderer   protocol   device
+ *
+ * (`packs` is the sixth import and sits under `scene` — the pack is what the
+ * renderer draws with.)
  *
  * Nothing here is clever, and that is the intent — every decision worth making
  * was made in the package that owns it. What lives here is the glue that has no
@@ -20,6 +23,8 @@ import type { SerialSystem } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
 import type { Scene, SessionChip } from '@tamaclaude/renderer';
+
+import process from 'node:process';
 
 import {
   effectiveState,
@@ -47,7 +52,21 @@ import { panelSize, render } from '@tamaclaude/renderer';
  */
 const FRAME_MS = 125;
 
-/** Landscape. The device is used on its side; see `CLAUDE.md`. */
+/**
+ * Which way up the panel is, and **the one line to change when that is
+ * decided**.
+ *
+ * `docs/HARDWARE.md` §Orientation is the authority and says both the mock and
+ * the harness "default to landscape", which is what this follows. It is a
+ * default rather than a decision: `.claude/research/screens/spec.md` §10a still
+ * opens "**Undecided, and it is a freeze item**", and the freeze is 25 Aug.
+ * Landscape is not a rotated portrait layout — the stage as authored is 200px
+ * tall against a 172px landscape panel — so this is not a runtime toggle and
+ * pretending otherwise would be worse than a constant.
+ *
+ * An earlier version of this comment cited `CLAUDE.md`, which says the panel is
+ * 172x320 and nothing at all about how it is mounted.
+ */
 const ORIENTATION = 'landscape';
 
 export type DaemonOptions = {
@@ -59,6 +78,20 @@ export type DaemonOptions = {
   readonly serial?: SerialSystem;
   readonly now?: () => number;
   readonly frameMs?: number;
+  /** Forwarded to `openPanel`, so a test can reach the refresh prime. */
+  readonly refreshMs?: number;
+  readonly retryMs?: number;
+  /**
+   * Told what the link is doing, in words.
+   *
+   * Defaults to stderr rather than to nothing. `link.ts` composes a specific,
+   * actionable sentence for a firmware/panel mismatch — the single most likely
+   * bring-up failure — and before this was wired the daemon computed it and
+   * dropped it: writes stopped after the first frame, permanently, and nothing
+   * anywhere said why. `panel.ts` never retries a refused link, by design, so
+   * silence there is forever.
+   */
+  readonly report?: (line: string) => void;
 };
 
 export type RunningDaemon = {
@@ -73,28 +106,45 @@ function clockText(now: number): string {
 }
 
 /**
+ * Which of the strip's three tones a state reads as.
+ *
+ * A total `Record` rather than a chain of ternaries, because the chain ended in
+ * a default: any state added to `SESSION_STATES` compiled clean and silently
+ * became an ordinary working chip. `state.ts` says `DONE` and `COMPACTING` are
+ * expected back, and a future `FAILED`-class state arriving as "nothing to see"
+ * would lose exactly the signal the strip exists for. Now it will not build.
+ *
+ * The *decision* to collapse lives in `packages/renderer/src/strip.ts`: a pack
+ * carries a handful of colours, so spec §5's ten states cannot each have a
+ * tint, and the renderer collapsed them to three tones — fewer even than §4's
+ * five tiers, which the three map onto cleanly: attention is tier 2, active is
+ * tiers 3 and 4, resting is tier 5. The collapse itself is this table, and it
+ * had to land somewhere the moment something fed the strip — `strip.ts` says as
+ * much, that "the day the daemon wants to name one in a state-to-tone table,
+ * `export` is the whole change".
+ */
+const TONE: Readonly<Record<SessionState, SessionChip['tone']>> = {
+  NEEDS_PERMISSION: 'attention',
+  FAILED: 'attention',
+  WAITING: 'attention',
+  WORKING: 'active',
+  THINKING: 'active',
+  IDLE: 'resting',
+  ASLEEP: 'resting',
+};
+
+/**
  * A session as the strip draws it.
  *
- * The tone collapse lives in `packages/renderer/src/strip.ts` and is spec §4's
- * three tiers rather than the ten states — a pack carries a handful of colours,
- * so the states have to collapse somewhere and the renderer is where that was
- * decided. This only has to pick which tier.
+ * Its own effective state, not the hero's. A chip that showed the hero's tone
+ * would say every session is doing whatever the loudest one is doing, which is
+ * the opposite of what a strip is for.
  */
 function chipFor(session: Session, now: number): SessionChip {
-  // Its own effective state, not the hero's. A chip that showed the hero's
-  // tone would say every session is doing whatever the loudest one is doing,
-  // which is the opposite of what a strip is for.
-  const state: SessionState = effectiveState(session, now);
-  const tone =
-    state === 'NEEDS_PERMISSION' || state === 'FAILED' || state === 'WAITING'
-      ? 'attention'
-      : state === 'IDLE' || state === 'ASLEEP'
-        ? 'resting'
-        : 'active';
   // Everything is local. `origin` exists for the remote transport in
-  // `BUILD_PLAN.md` §Stage 3, which is the stage's last item and explicitly
-  // cuttable; a session record carries no origin until it ships.
-  return { tone, origin: 'local' };
+  // `BUILD_PLAN.md` §Stage 3, which calls it "explicitly cuttable"; a session
+  // record carries no origin until it ships.
+  return { tone: TONE[effectiveState(session, now)], origin: 'local' };
 }
 
 /**
@@ -142,11 +192,21 @@ function sceneFor(
 /**
  * The rectangle that changed, or nothing.
  *
- * A whole frame is only sent when the device asks for one. `link.ts` sets
- * `needsPrime` after a connect or a resync, and priming with anything less than
- * the whole screen leaves the blitter compositing onto a base it does not have
- * — which `transport.ts` records as 120 of 300 frames wrong, visible as a
- * stripe of one animation hanging over another.
+ * A whole frame goes whenever the link owes one. `link.ts` sets `needsPrime`
+ * from four places, and only two of them are the device saying something:
+ * `afterOpen` (connect) and `afterReport` (a resync, an abort, or a counter
+ * that went backwards). The other two are the host deciding for itself —
+ * `newLink` before the first frame, and `afterRefresh` on a five-second timer,
+ * which `panel.ts` runs precisely because the loss it covers is the one the
+ * firmware cannot see. So a full 320x172 frame leaves here every five seconds
+ * whether or not anything asked, and that is the design rather than a leak.
+ *
+ * Sending less than the whole screen for a prime does not satisfy it:
+ * `afterWrite` refuses to clear `needsPrime` for anything smaller, so the debt
+ * stays owed and the next frame primes again. (The 120-of-300-ticks figure
+ * recorded in `transport.ts` and `link.ts` is a *different* mistake — priming
+ * with frame 0 while the diff sequence had moved on. An earlier version of this
+ * comment borrowed that number for this cause, which is not what it measured.)
  *
  * The whole rectangle is passed in rather than taken from
  * `protocol.fullScreenRect()`, which is 172x320 — the portrait panel. This
@@ -165,6 +225,40 @@ function changed(
   return dirtyRect(previous, next);
 }
 
+/**
+ * The panel, with its link status wired to somewhere a person will see it.
+ *
+ * Separated from `runDaemon` only because that function hit the 50-line limit;
+ * the reason it is worth its own name is the `onChange`. `link.ts` composes a
+ * specific, actionable sentence for a firmware/panel mismatch, and before this
+ * was passed the daemon computed it and dropped it — writes stopped after the
+ * first frame, permanently, and nothing anywhere said why. `panel.ts` never
+ * retries a refused link, by design, so that silence is forever.
+ */
+function openReporting(
+  options: DaemonOptions,
+  size: { readonly width: number; readonly height: number },
+): ReturnType<typeof openPanel> {
+  const report =
+    options.report ??
+    ((line: string): void => {
+      process.stderr.write(`${line}\n`);
+    });
+  return openPanel({
+    path: options.devicePath,
+    panel: size,
+    serial: options.serial,
+    refreshMs: options.refreshMs,
+    retryMs: options.retryMs,
+    onChange: (status) => {
+      // The refusal first, because it is the one that needs a person. The
+      // phase is worth saying either way: "offline" with no explanation is what
+      // an unplugged cable looks like, and so is a wrong firmware build.
+      report(status.refusal ?? `panel ${status.phase}`);
+    },
+  });
+}
+
 export async function runDaemon(
   options: DaemonOptions,
 ): Promise<RunningDaemon> {
@@ -177,11 +271,7 @@ export async function runDaemon(
     path: options.socketPath,
     now,
   });
-  const transport = openPanel({
-    path: options.devicePath,
-    panel: size,
-    serial: options.serial,
-  });
+  const transport = openReporting(options, size);
 
   /**
    * One frame, given what the panel is already showing. Returns what it shows
@@ -208,6 +298,24 @@ export async function runDaemon(
   const stopping = new AbortController();
   const frameMs = options.frameMs ?? FRAME_MS;
 
+  /**
+   * Paint, then schedule the next one from the timer rather than awaiting it.
+   *
+   * **The difference is a memory leak.** Written as `return loop(shown)` inside
+   * an `async` function, every iteration awaits the next, so the promise chain
+   * never unwinds while the daemon runs and each frame permanently adds a
+   * suspended context. Measured on the real loop: 8.06 -> 9.45 MB over
+   * eighteen seconds, linear, no plateau — about 63 MB a day at 8fps, in a
+   * process `BUILD_PLAN.md` intends to run under launchd. Handing the
+   * continuation to `setTimeout` lets each iteration settle and start the next
+   * from a fresh context.
+   *
+   * The frame is still passed forward rather than held, which is what keeps
+   * this file out of the disable budget — but note that avoiding a `let` was
+   * never the point. `docs/CONVENTIONS.md` §"Holding mutable state" specifies a
+   * budget of one disable, not a clean sheet, and reading it as a purity score
+   * is what produced the leak.
+   */
   const loop = async (previous: Frame | undefined): Promise<void> => {
     if (stopping.signal.aborted) return;
     // A frame that fails is one frame, and the panel is repainted eight times a
@@ -215,10 +323,9 @@ export async function runDaemon(
     // nothing here worth stopping the daemon over — but the loop must carry on
     // from the frame it last *sent*, which on a failure is the one before.
     const shown = await paint(previous).catch(() => previous);
-    await new Promise((done) => {
-      setTimeout(done, frameMs).unref();
-    });
-    return loop(shown);
+    setTimeout(() => {
+      void loop(shown);
+    }, frameMs).unref();
   };
   void loop(undefined);
 

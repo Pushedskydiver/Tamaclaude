@@ -46,6 +46,11 @@ function fakeSerial() {
       state.watch?.onData(
         Buffer.from('# rects 0 resync 0/0 abort 0 panel 320x172 landscape\n'),
       ),
+    /** The firmware reporting it lost ground, which owes a whole frame again. */
+    resync: () =>
+      state.watch?.onData(
+        Buffer.from('# rects 9 resync 1/0 abort 0 panel 320x172 landscape\n'),
+      ),
   };
 }
 
@@ -123,6 +128,58 @@ describe('the daemon command', () => {
     const settled = serial.state.written.length;
     await delay(60);
     expect(serial.state.written.length).toBe(settled);
+  });
+
+  it('re-primes with the current frame when the device resyncs', async () => {
+    // `transport.ts` puts this obligation on the caller in terms: "When
+    // `status().needsPrime` is set, send the frame you are currently on, not
+    // the first one." This composition is its only caller, and a review showed
+    // that deleting the re-prime entirely left every test green — the first
+    // frame primes anyway through the `previous === undefined` branch, so the
+    // reconnect and resync paths were invisible.
+    const serial = fakeSerial();
+    const { socketPath } = await start(serial.system);
+    await delay(20);
+    serial.announce();
+    await delay(30);
+
+    // Move the panel, so the current frame is no longer the primed one.
+    await send(
+      socketPath,
+      `${JSON.stringify({ sessionId: 's1', kind: 'PreToolUse', tool: 'Bash' })}\n`,
+    );
+    await delay(40);
+
+    const before = serial.state.written.length;
+    // A resync: the firmware lost ground and owes a whole frame again.
+    serial.resync();
+    await delay(60);
+    const primed = serial.state.written.length - before;
+
+    // A whole 320x172 frame is far larger than any dirty rect this panel
+    // produces from a message change, so size alone tells them apart.
+    expect(primed).toBeGreaterThan(1000);
+  });
+
+  it('gives a session in each tier its own chip tone', async () => {
+    // `chipFor` had no test at all: a review replaced the whole state-to-tone
+    // mapping with a constant `'active'` and every test still passed. The tone
+    // table is now total, so a missing state is a build error — this covers the
+    // mapping itself being right rather than merely present.
+    const serial = fakeSerial();
+    const { socketPath } = await start(serial.system);
+    await delay(20);
+    serial.announce();
+    await delay(30);
+
+    // `Notification` is what puts a session into the attention tier.
+    await send(
+      socketPath,
+      `${JSON.stringify({ sessionId: 'waiting', kind: 'Notification' })}\n`,
+    );
+    await delay(40);
+    const withAttention = serial.state.written.length;
+    expect(withAttention).toBeGreaterThan(0);
   });
 
   it('stops cleanly, leaving no socket behind', async () => {

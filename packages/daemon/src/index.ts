@@ -40,9 +40,9 @@ export function createDaemon(
 // argument — there is no clock in this package, which is what lets a
 // ten-minute eviction be proved in microseconds.
 //
-// Only the four functions a consumer actually calls are here. `evictStale`,
-// `liveSessions`, `applyEvent`, `effectiveState` and the record types are
-// exported from their own modules and import cleanly from there; each joins
+// Only what a consumer actually calls is here. `evictStale`, `liveSessions`
+// and `applyEvent` are exported from their own modules and import cleanly from
+// there; each joins
 // this barrel the day something outside the package needs it, which is the
 // same rule `packages/renderer/src/index.ts` applies to `band.js`. Adding one
 // early is what `knip` is configured to catch.

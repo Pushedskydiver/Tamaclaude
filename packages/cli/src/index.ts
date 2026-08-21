@@ -114,7 +114,24 @@ function smoke(): void {
 
 const [, , command, ...rest] = process.argv;
 if (command === 'daemon') {
-  await daemon(rest);
-} else {
+  // Caught, because the likeliest failure here is a second daemon on a live
+  // socket, and `prepareSocketPath` already composes the right sentence for it.
+  // Uncaught, that sentence arrived under six lines of Node stack trace from
+  // inside `dist/`, which buries the one line worth reading.
+  try {
+    await daemon(rest);
+  } catch (cause) {
+    process.stderr.write(
+      `${cause instanceof Error ? cause.message : String(cause)}\n`,
+    );
+    process.exit(1);
+  }
+} else if (command === undefined) {
   smoke();
+} else {
+  // Not the smoke test. `tamaclaude frobnicate` used to print a cheerful
+  // `pack=example state=WORKING` and exit 0, so a typo of `daemon` looked like
+  // a successful run of something.
+  process.stderr.write(`unknown command: ${command}\n`);
+  process.exit(2);
 }
