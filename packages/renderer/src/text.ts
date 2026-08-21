@@ -20,6 +20,21 @@ export type TextPen = {
   readonly x: number;
   readonly y: number;
   readonly colour: number;
+  /**
+   * Whole-number nearest-neighbour magnification, default 1.
+   *
+   * A scale rather than a second font, because Departure Mono only rasterises
+   * cleanly at 11px — see `font-data.ts`. Baking a 22px atlas would mean
+   * accepting the antialiasing the whole atlas exists to avoid, whereas
+   * doubling a 1-bit mask is exact by construction.
+   *
+   * It is per-call because the bands want different answers. The status bar
+   * carries a clock and a counter: short, glanceable, read from across a desk,
+   * and there is room. The message band carries quips and tool names, where
+   * doubling would cost about eighty per cent of the capacity — 21 columns
+   * become 10 — and capacity is the whole point of that band.
+   */
+  readonly scale?: number;
 };
 
 /** Glyphs in the atlas, derived so the two cannot drift apart. */
@@ -40,17 +55,36 @@ function glyphOffset(codePoint: number): number {
 }
 
 /** Blit one glyph, clipped to the framebuffer. */
+/** Paint one source pixel as a scale x scale block, clipped per device pixel. */
+function paintBlock(
+  target: Framebuffer,
+  at: { readonly x: number; readonly y: number; readonly scale: number },
+  colour: number,
+): void {
+  for (let dy = 0; dy < at.scale; dy += 1) {
+    const y = at.y + dy;
+    if (y < 0 || y >= target.height) continue;
+    for (let dx = 0; dx < at.scale; dx += 1) {
+      const x = at.x + dx;
+      if (x < 0 || x >= target.width) continue;
+      target.pixels[y * target.width + x] = colour;
+    }
+  }
+}
+
 function drawGlyph(target: Framebuffer, codePoint: number, pen: TextPen): void {
   const offset = glyphOffset(codePoint);
+  const scale = pen.scale ?? 1;
   for (let row = 0; row < GLYPH_HEIGHT; row += 1) {
     const mask = GLYPH_ROWS[offset + row] ?? 0;
-    const y = pen.y + row;
-    if (mask === 0 || y < 0 || y >= target.height) continue;
+    if (mask === 0) continue;
     for (let column = 0; column < GLYPH_WIDTH; column += 1) {
-      const x = pen.x + column;
-      const lit = (mask & (1 << (GLYPH_WIDTH - 1 - column))) !== 0;
-      if (!lit || x < 0 || x >= target.width) continue;
-      target.pixels[y * target.width + x] = pen.colour;
+      if ((mask & (1 << (GLYPH_WIDTH - 1 - column))) === 0) continue;
+      paintBlock(
+        target,
+        { x: pen.x + column * scale, y: pen.y + row * scale, scale },
+        pen.colour,
+      );
     }
   }
 }
@@ -65,19 +99,20 @@ export function drawText(
   text: string,
   pen: TextPen,
 ): void {
+  const scale = pen.scale ?? 1;
   let x = pen.x;
   for (const character of text) {
     drawGlyph(target, character.codePointAt(0) ?? 0, { ...pen, x });
-    x += GLYPH_WIDTH;
+    x += GLYPH_WIDTH * scale;
   }
 }
 
-/** Width in device pixels of one line of text. */
-export function measureText(text: string): number {
+/** Width in device pixels of one line of text, at a given scale. */
+export function measureText(text: string, scale = 1): number {
   // Spread rather than `.length`: an astral code point is two UTF-16 units
   // and one glyph cell, and a measure that disagrees with the draw puts
   // everything laid out after it in the wrong place.
-  return [...text].length * GLYPH_WIDTH;
+  return [...text].length * GLYPH_WIDTH * scale;
 }
 
 /**

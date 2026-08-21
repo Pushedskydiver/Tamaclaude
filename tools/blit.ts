@@ -26,6 +26,7 @@
  * glass, correctly, at 8fps" and nothing else.
  */
 import type { Plan, Totals, Update, Window } from './blit-types.ts';
+import type { Sprite } from './png-rgb565.ts';
 import type { Link } from './serial.ts';
 import type { Frame, Rect } from '@tamaclaude/protocol';
 import type { Orientation } from '@tamaclaude/renderer';
@@ -43,14 +44,10 @@ import {
   extractRect,
   writeRectHeader,
 } from '@tamaclaude/protocol';
-import {
-  ORIENTATIONS,
-  panelSize,
-  safeAreaCropUnits,
-  spriteSlots,
-} from '@tamaclaude/renderer';
+import { ORIENTATIONS, panelSize } from '@tamaclaude/renderer';
 
 import { describe, reportWindow, summarise } from './blit-report.ts';
+import { composePanels, loadPack } from './blit-scene.ts';
 import { FPS, FRAME_MS } from './blit-types.ts';
 import { frameNames, loadFrames } from './png-rgb565.ts';
 import { connect, writeAll } from './serial.ts';
@@ -64,9 +61,6 @@ const DEFAULT_PORT = '/dev/cu.usbmodem1101';
  * default to landscape, which is how the device is meant to sit.
  */
 const DEFAULT_ORIENTATION = 'landscape';
-
-/** Authored stage height in units, from `docs/ANIMATION.md` §Canvas conventions. */
-const STAGE_UNITS_PORTRAIT_HEIGHT = 25;
 
 /** Lateness past which the loop resets its clock instead of catching up. */
 const CATCH_UP_LIMIT_MS = 250;
@@ -125,8 +119,8 @@ async function resolveFrameDir(target: string): Promise<string> {
   return outDir;
 }
 
-/** Decode a directory of PNGs to RGB565, in a throwaway browser. */
-async function decode(frameDir: string): Promise<Frame[]> {
+/** Decode a directory of PNGs to RGB565 plus alpha, in a throwaway browser. */
+async function decode(frameDir: string): Promise<Sprite[]> {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
@@ -138,87 +132,6 @@ async function decode(frameDir: string): Promise<Frame[]> {
 }
 
 // ── Geometry ──────────────────────────────────────────────────────
-
-/**
- * Where a sprite frame sits on the panel, as a whole-frame panel rect.
- *
- * This is the trap in this file. `dirtyRect` and `extractRect` work in the
- * frame's own coordinate space — 168x200 for every animation in the repo —
- * while the packet header carries panel coordinates. Send a frame-space rect
- * unchanged and the sprite lands at 0,0: two pixels left and a whole status
- * band high. That looks like a firmware bug and is arithmetic.
- *
- * The origin comes from the renderer's hero slot rather than a constant here,
- * for the same reason `tools/panel-mock.ts` takes its geometry there — what the
- * panel is driven from must not drift from what the renderer draws.
- */
-function spriteOrigin(first: Frame, orientation: Orientation): Rect {
-  const height = first.pixels.length / first.width;
-  const panel = panelSize(orientation);
-  const slot = spriteSlots('hero', orientation)[0];
-  const origin = {
-    x: slot.x + Math.round((slot.width - first.width) / 2),
-    y: slot.y + Math.round((slot.height - height) / 2),
-    width: first.width,
-    height,
-  };
-  if (
-    origin.x < 0 ||
-    origin.y < 0 ||
-    origin.x + origin.width > panel.width ||
-    origin.y + origin.height > panel.height
-  ) {
-    throw new Error(
-      `a ${first.width}x${height} frame centred on the hero slot does not fit ` +
-        `the ${panel.width}x${panel.height} ${orientation} panel`,
-    );
-  }
-  return origin;
-}
-
-/**
- * Crop a frame to the landscape safe area.
- *
- * Landscape is not a rotated portrait layout. The stage band is 160px tall
- * against portrait's 200, because a 320px-wide panel only has 172px of height
- * and the text bands need the rest. Animations are authored at 21x25 units and
- * `docs/ANIMATION.md` reserves the top 5 of those as prop headroom — the space
- * a barbell or a thought bubble occupies — precisely so that landscape can drop
- * it and still have the character whole.
- *
- * So this takes the bottom 20 units and discards the top 5. Anything an
- * animation puts up there is gone in landscape, which is what the safe-area
- * warning in `tools/svg2frames.ts` exists to catch at authoring time.
- */
-function cropToSafeArea(frame: Frame, orientation: Orientation): Frame {
-  if (orientation === 'portrait') return frame;
-  // Derived from the frame's own height rather than multiplied by an assumed
-  // scale. `safeAreaCropUnits()` documents the trap in its own docstring:
-  // consumers must use the scale they are actually drawing at, and a frame
-  // rendered at scale 4 would lose ten units to a crop computed at scale 8.
-  // `svg2frames.ts` takes an arbitrary scale argument and `blit.ts` accepts a
-  // bare frame directory, so the two can genuinely disagree. Height over
-  // authored units is scale-free.
-  const height = frame.pixels.length / frame.width;
-  const drop = Math.round(
-    (height * safeAreaCropUnits()) / STAGE_UNITS_PORTRAIT_HEIGHT,
-  );
-  if (drop <= 0 || drop >= height) return frame;
-  return {
-    width: frame.width,
-    pixels: frame.pixels.slice(drop * frame.width),
-  };
-}
-
-/** Translate a frame-space rect into panel space. */
-function onPanel(rect: Rect, origin: Rect): Rect {
-  return {
-    x: origin.x + rect.x,
-    y: origin.y + rect.y,
-    width: rect.width,
-    height: rect.height,
-  };
-}
 
 // ── Packets ───────────────────────────────────────────────────────
 
@@ -267,12 +180,9 @@ function clearPacket(orientation: Orientation): Update {
  * the send loop would be charged to the frame budget and surface as jitter in
  * the achieved-fps figure this tool exists to report.
  */
-function planFrames(
-  frames: readonly Frame[],
-  origin: Rect,
-  orientation: Orientation,
-): Plan {
-  const whole = { x: 0, y: 0, width: origin.width, height: origin.height };
+function planFrames(panels: readonly Frame[], orientation: Orientation): Plan {
+  const { width, height } = panelSize(orientation);
+  const whole = { x: 0, y: 0, width, height };
   // A full-frame packet for every frame, not just the first.
   //
   // Re-priming has to restore the frame the loop is actually on. Sending
@@ -282,11 +192,13 @@ function planFrames(
   // the mistake. It leaves fragments of whatever was on screen when the
   // re-prime landed, which on `idle` means a stripe of the yawn hanging above
   // a resting Clawd until the next loop happens to paint over it.
-  const full = frames.map((f) => packet(origin, extractRect(f, whole)));
-  const loop = frames.map((next, index) => {
-    const previous = frames[(index + frames.length - 1) % frames.length];
+  const full = panels.map((p) => packet(whole, extractRect(p, whole)));
+  // Rects are already in panel space — `render()` placed the sprite, so there
+  // is nothing left to translate.
+  const loop = panels.map((next, index) => {
+    const previous = panels[(index + panels.length - 1) % panels.length];
     const rect = dirtyRect(previous, next);
-    return rect ? packet(onPanel(rect, origin), extractRect(next, rect)) : null;
+    return rect ? packet(rect, extractRect(next, rect)) : null;
   });
   return { orientation, prime: full[0], full, loop };
 }
@@ -452,11 +364,13 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const frameDir = await resolveFrameDir(args[0]);
-  const decoded = await decode(frameDir);
-  const frames = decoded.map((f) => cropToSafeArea(f, orientation));
-  const origin = spriteOrigin(frames[0], orientation);
-  const plan = planFrames(frames, origin, orientation);
-  describe(basename(frameDir), origin, plan);
+  const rasters = await decode(frameDir);
+  const name = basename(frameDir);
+  const pack = await loadPack(resolve(ROOT, 'packs/example'));
+  const panels = composePanels(rasters, { orientation, pack, name });
+  const plan = planFrames(panels, orientation);
+  const { width, height } = panelSize(orientation);
+  describe(name, { x: 0, y: 0, width, height }, plan);
 
   const port = args[1] ?? DEFAULT_PORT;
   const link = await connect(port);

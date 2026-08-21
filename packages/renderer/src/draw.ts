@@ -85,7 +85,23 @@ export function fillRect(
 export function drawFrame(
   target: Framebuffer,
   source: Frame,
-  at: { readonly x: number; readonly y: number; readonly within?: Rect },
+  at: {
+    readonly x: number;
+    readonly y: number;
+    readonly within?: Rect;
+    /**
+     * 1 where the pixel is drawn, 0 where whatever is already there shows
+     * through. Parallel to `source.pixels`.
+     *
+     * Without this a raster is an opaque rectangle, which is fine on a black
+     * panel and wrong on any other: the sprite paints its own background over
+     * the pack's, and it will paint over the environment behind Clawd the
+     * moment there is one. A reserved "transparent" colour cannot stand in for
+     * it, because the art's palette contains black and the key would punch
+     * holes through his eyes.
+     */
+    readonly mask?: Uint8Array;
+  },
 ): void {
   const height = source.pixels.length / source.width;
   const placed = { x: at.x, y: at.y, width: source.width, height };
@@ -94,12 +110,20 @@ export function drawFrame(
   if (clipped === null) return;
   const skipX = clipped.x - at.x;
   const skipY = clipped.y - at.y;
+  const mask = at.mask;
   for (let row = 0; row < clipped.height; row += 1) {
     const from = (skipY + row) * source.width + skipX;
-    target.pixels.set(
-      source.pixels.subarray(from, from + clipped.width),
-      (clipped.y + row) * target.width + clipped.x,
-    );
+    const to = (clipped.y + row) * target.width + clipped.x;
+    if (mask === undefined) {
+      // A whole-row copy where there is nothing to skip, which is the case
+      // every caller but the sprite takes.
+      target.pixels.set(source.pixels.subarray(from, from + clipped.width), to);
+      continue;
+    }
+    for (let column = 0; column < clipped.width; column += 1) {
+      if (mask[from + column] === 0) continue;
+      target.pixels[to + column] = source.pixels[from + column];
+    }
   }
 }
 

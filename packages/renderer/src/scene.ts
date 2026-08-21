@@ -38,6 +38,19 @@ import { drawText, drawTextBlock, measureText } from './text.js';
  */
 
 /** Everything the panel shows at one instant. */
+/**
+ * A raster for one stage slot, and which of its pixels are drawn.
+ *
+ * The mask is optional so a test can pass a bare frame, but production art
+ * always carries one: `svg2frames.ts` captures with `omitBackground`, so a
+ * raster's background is transparent, and treating it as opaque black paints
+ * over whatever the pack — or later the environment — put behind Clawd.
+ */
+export type StageSprite = {
+  readonly frame: Frame;
+  readonly mask?: Uint8Array;
+};
+
 export type Scene = {
   readonly orientation: Orientation;
   readonly layout: StageLayout;
@@ -48,7 +61,7 @@ export type Scene = {
    * repeating one sprite across both would claim they were the same session.
    * Slots past the end of the array stay empty.
    */
-  readonly sprites: readonly Frame[];
+  readonly sprites: readonly StageSprite[];
   /**
    * The status band's two ends: clock on the left, subagent count on the
    * right (spec §2). Both are opaque strings — formatting a clock is a
@@ -72,6 +85,12 @@ export type Scene = {
  * See `rightAlignedX` for why that edge is clamped.
  */
 /**
+ * Magnification for the status bar. See `TextPen.scale` for why this is a
+ * scale rather than a second font, and why it is not applied everywhere.
+ */
+const STATUS_TEXT_SCALE = 2;
+
+/**
  * Cut a string to a pixel budget, marking that it was cut.
  *
  * The status band is the one place two strings share a row, so an over-long
@@ -81,22 +100,33 @@ export type Scene = {
  * never allowed, and "the daemon owns the contract" is exactly the
  * rationalisation `docs/DA-REVIEW.md` says not to accept.
  */
-function fitted(text: string, budget: number): string {
-  if (measureText(text) <= budget) return text;
-  const columns = Math.max(0, Math.floor(budget / GLYPH_WIDTH) - 1);
+function fitted(text: string, budget: number, scale: number): string {
+  if (measureText(text, scale) <= budget) return text;
+  const columns = Math.max(0, Math.floor(budget / (GLYPH_WIDTH * scale)) - 1);
   return `${text.slice(0, columns)}\u2026`;
 }
 
 function paintStatus(painter: Painter, scene: Scene): void {
   const band = painter.bands.status;
-  const y = centredTextY(band);
+  // Doubled here and nowhere else. This band holds a clock and a subagent
+  // count — short, glanceable, and the things read from across a desk — and
+  // the 24px band has room for a 22px glyph. The message band keeps 1x
+  // because doubling would take it from 21 columns to 10, and capacity is
+  // what that band is for.
+  const scale = STATUS_TEXT_SCALE;
+  const y = centredTextY(band, scale);
   const colour = painter.colours.ink;
   // Half the band each, so neither string can reach the other's territory.
   const budget = Math.floor((band.width - TEXT_INSET * 3) / 2);
-  const left = fitted(scene.status.left, budget);
-  const right = fitted(scene.status.right, budget);
-  drawText(painter.target, left, { x: band.x + TEXT_INSET, y, colour });
-  drawText(painter.target, right, { x: rightAlignedX(band, right), y, colour });
+  const left = fitted(scene.status.left, budget, scale);
+  const right = fitted(scene.status.right, budget, scale);
+  drawText(painter.target, left, { x: band.x + TEXT_INSET, y, colour, scale });
+  drawText(painter.target, right, {
+    x: rightAlignedX(band, right, scale),
+    y,
+    colour,
+    scale,
+  });
 }
 
 /**
@@ -129,10 +159,11 @@ function paintStage(painter: Painter, scene: Scene): void {
   for (const [index, slot] of slots.entries()) {
     const sprite = scene.sprites[index];
     if (sprite === undefined) continue;
-    drawFrame(painter.target, sprite, {
+    drawFrame(painter.target, sprite.frame, {
       x: slot.x,
       y: slot.y - crop,
       within: slot,
+      mask: sprite.mask,
     });
   }
 }

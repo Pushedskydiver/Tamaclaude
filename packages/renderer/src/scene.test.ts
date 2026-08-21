@@ -1,6 +1,6 @@
 import type { Framebuffer } from './framebuffer.js';
 import type { BandName } from './layout.js';
-import type { Scene } from './scene.js';
+import type { Scene, StageSprite } from './scene.js';
 import type { SessionChip } from './strip.js';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
@@ -81,17 +81,30 @@ function pixelAt(target: Framebuffer, x: number, y: number): number {
 }
 
 /** A fully-lit raster, so any stray pixel is attributable and visible. */
-function solidSprite(width: number, height: number, value = 0x1234): Frame {
+function solidFrame(width: number, height: number, value = 0x1234): Frame {
   return frame(new Uint16Array(width * height).fill(value), width);
 }
 
 /** A raster whose every row carries its own value, so a crop is measurable. */
-function stripedSprite(width: number, height: number): Frame {
+function stripedFrame(width: number, height: number): Frame {
   const pixels = new Uint16Array(width * height);
   for (let row = 0; row < height; row += 1) {
     pixels.fill(row + 1, row * width, (row + 1) * width);
   }
   return frame(pixels, width);
+}
+
+/** A stage sprite with no mask: every pixel of the raster is drawn. */
+function solidSprite(
+  width: number,
+  height: number,
+  value = 0x1234,
+): StageSprite {
+  return { frame: solidFrame(width, height, value) };
+}
+
+function stripedSprite(width: number, height: number): StageSprite {
+  return { frame: stripedFrame(width, height) };
 }
 
 const BAND_NAMES = [
@@ -239,6 +252,29 @@ describe('the stage', () => {
     expect(pixelAt(target, slot.x, slot.y + slot.height - 1)).toBe(
       slot.height + crop,
     );
+  });
+
+  it('lets the background through where the sprite is masked out', () => {
+    // A raster's background arrives as transparent-over-black, so treating it
+    // as opaque paints a black rectangle over whatever is behind Clawd. That
+    // is invisible while the pack background is also black and wrong the
+    // moment it is not — and it would hide the environment entirely.
+    //
+    // A colour key cannot substitute: the art's palette contains black, so
+    // keying on it would punch holes through his eyes. Hence a mask.
+    const slot = spriteSlots('hero', 'portrait')[0];
+    const size = 8;
+    const frame = solidFrame(size, size, 0x1234);
+    // Only the left half is drawn.
+    const mask = new Uint8Array(size * size);
+    for (let row = 0; row < size; row += 1) {
+      mask.fill(1, row * size, row * size + size / 2);
+    }
+    const target = render({ ...EMPTY, sprites: [{ frame, mask }] });
+    expect(litPixels(target)).toHaveLength(size * (size / 2));
+    // The masked-out half is the pack background, not the raster's black.
+    expect(pixelAt(target, slot.x + size - 1, slot.y)).toBe(BACKGROUND);
+    expect(pixelAt(target, slot.x, slot.y)).toBe(0x1234);
   });
 
   it('clips a sprite larger than its slot rather than bleeding', () => {

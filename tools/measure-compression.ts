@@ -93,7 +93,9 @@ console.log(
 );
 const rates: number[] = [];
 for (const dir of dirs) {
-  const frames = await loadFrames(page, resolve(dir));
+  // Compression is measured on the rasters themselves, so the mask is not
+  // wanted here — what goes on the wire is whatever the renderer composed.
+  const frames = (await loadFrames(page, resolve(dir))).map((s) => s.frame);
   rates.push(summarise(dir.split('/').pop() ?? dir, frames));
 }
 await browser.close();

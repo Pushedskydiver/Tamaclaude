@@ -37,6 +37,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@tamaclaude/packs": "workspace:*",
     "@tamaclaude/protocol": "workspace:*",
     "@tamaclaude/renderer": "workspace:*",
     "@types/node": "^24.10.0",
