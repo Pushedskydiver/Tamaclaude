@@ -232,6 +232,26 @@ export function probeSocket(path: string): Promise<SocketProbe> {
 }
 
 /**
+ * The private name a listener binds before renaming onto the public path.
+ *
+ * `net.Server.close()` unlinks the name it bound, inside libuv, by name, and
+ * nothing in JavaScript can stop it. Binding this name instead means that
+ * unlink lands on a path the rename already took away — so the listener, not
+ * libuv, decides whether the public path should go.
+ *
+ * Same directory, because a rename has to stay on one filesystem. Shorter than
+ * any realistic basename — `.b` plus a pid against `daemon.sock` — so the
+ * 104-byte budget the public path is checked against still holds for it. It is
+ * checked anyway: a one-character basename would invert that, and a limit that
+ * holds "for realistic inputs" is not a limit.
+ */
+export function temporaryBindPath(path: string): string {
+  const candidate = join(dirname(path), `.b${String(process.pid)}`);
+  assertPathFitsSunPath(candidate);
+  return candidate;
+}
+
+/**
  * Make the path bindable, or explain why it is not.
  *
  * Throws rather than returning a result: there is exactly one correct

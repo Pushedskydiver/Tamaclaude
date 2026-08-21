@@ -50,6 +50,27 @@ const RETRY_MS = 1000;
 /** How often to owe a whole frame anyway. See `afterRefresh`. */
 const REFRESH_MS = 5000;
 
+/**
+ * How long shutdown waits for a write in flight before letting the port go.
+ *
+ * Draining first is right: tearing the port out from under a half-written
+ * packet is the corruption this file is arranged to avoid. Draining *without a
+ * bound* was not. `serial.ts` §openPort records the device state that makes it
+ * matter — "a device whose tx buffer fills stops servicing its rx path" — and a
+ * write to a panel in that state neither returns nor throws, so `close()` never
+ * returned either and a restart hung on the failure the panel is most likely to
+ * be in.
+ *
+ * `packages/daemon`'s listener made this call explicitly and the other way, for
+ * the same reason: "a peer holding one open is not a reason for a restart to
+ * hang". This is that, for the wire.
+ *
+ * A quarter second is far longer than a healthy write of a few hundred bytes
+ * and far shorter than a person waiting for a daemon to come back. A frame lost
+ * to it is repainted by the next refresh; a shutdown lost to it is forever.
+ */
+const SHUTDOWN_DRAIN_MS = 250;
+
 export type PanelOptions = {
   /** The serial device, e.g. `/dev/cu.usbmodem1101`. */
   readonly path: string;
@@ -287,8 +308,16 @@ async function shutdown(ctx: Ctx): Promise<void> {
   ctx.state.write({ ...now, stopped: true, retry: undefined });
   // Let anything mid-write finish first. Tearing the port out from under a
   // half-written packet is the corruption this file is arranged to avoid, and
-  // doing it on the way out would be no less real.
-  await now.queue.catch(() => undefined);
+  // doing it on the way out would be no less real — but a wedged panel never
+  // finishes, so the wait is bounded. See `SHUTDOWN_DRAIN_MS`.
+  await Promise.race([
+    now.queue.catch(() => undefined),
+    new Promise<void>((done) => {
+      // Unref'd: a shutdown already under way must not be the thing keeping
+      // the process alive.
+      setTimeout(done, SHUTDOWN_DRAIN_MS).unref();
+    }),
+  ]);
   shutPort(ctx);
 }
 

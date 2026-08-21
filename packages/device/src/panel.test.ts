@@ -53,9 +53,14 @@ function fakeSerial(chunk = Number.MAX_SAFE_INTEGER) {
     closes: 0,
     written: [] as number[],
     watch: undefined as SerialWatch | undefined,
+    wedged: false,
   };
   const port: SerialPort = {
     write: async (bytes) => {
+      // Never settles. A device whose tx buffer has filled stops servicing its
+      // rx path, and a write to it neither returns nor throws — see the note in
+      // `serial.ts` §openPort.
+      if (state.wedged) return new Promise<number>(() => undefined);
       await delay(0);
       if (!state.present) throw new Error('ENXIO: device not configured');
       const take = Math.min(chunk, bytes.byteLength);
@@ -84,6 +89,10 @@ function fakeSerial(chunk = Number.MAX_SAFE_INTEGER) {
     unplug: () => {
       state.present = false;
       state.watch?.onClosed();
+    },
+    /** Fill its tx buffer: writes stop settling, and never fail either. */
+    wedge: () => {
+      state.wedged = true;
     },
     /** Yank it without the read stream noticing, so only a write finds out. */
     stall: () => {
@@ -432,5 +441,34 @@ describe('closing', () => {
     const seen = packets(fake.state.written);
     expect(seen.trailing).toBe(0);
     expect(seen.packets[0].payload).toHaveLength(24);
+  });
+});
+
+describe('shutting down a wedged panel', () => {
+  it('closes within a bound when a write never settles', async () => {
+    // The device state `serial.ts` §openPort documents: "a device whose tx
+    // buffer fills stops servicing its rx path". A `write` that then never
+    // settles makes `await now.queue` in `shutdown` wait for ever, so `close()`
+    // never returns and a daemon restart hangs on the failure the panel is most
+    // likely to be in. The daemon made the opposite call explicitly for its own
+    // sockets — "a peer holding one open is not a reason for a restart to
+    // hang" — and this path had not.
+    const serial = fakeSerial();
+    const panel = open({ serial: serial.system });
+    await settle();
+    serial.say(HEALTHY);
+    await settle();
+
+    serial.wedge();
+    void panel.send(WHOLE, payload(1, 4));
+    await settle();
+
+    const raced = await Promise.race([
+      panel.close().then(() => 'closed' as const),
+      delay(2_000).then(() => 'hung' as const),
+    ]);
+    expect(raced).toBe('closed');
+    // And the port is let go, not merely abandoned.
+    expect(serial.state.closes).toBe(1);
   });
 });
