@@ -18,15 +18,16 @@
  * other home: turning a `Resolution` into a `Scene`, and turning consecutive
  * framebuffers into the smallest rectangle that changed.
  */
-import type { Session, SessionState } from '@tamaclaude/daemon';
+import type { AnimationName, Session, SessionState } from '@tamaclaude/daemon';
 import type { LinkStatus, SerialSystem } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
-import type { Scene, SessionChip } from '@tamaclaude/renderer';
+import type { Scene, SessionChip, Sprite } from '@tamaclaude/renderer';
 
 import process from 'node:process';
 
 import {
+  animationFor,
   effectiveState,
   resolvePanel,
   startSocketServer,
@@ -39,16 +40,21 @@ import {
   extractRect,
   frame,
 } from '@tamaclaude/protocol';
-import { panelSize, render } from '@tamaclaude/renderer';
+import {
+  loadSprite,
+  panelSize,
+  render,
+  SPRITE_NAMES,
+} from '@tamaclaude/renderer';
 
 /**
  * How often the panel is recomposed.
  *
  * Eight, because that is what `tools/svg2frames.ts` rasterises at and what the
- * animation timings in `docs/ANIMATION.md` divide into. Nothing is animated
- * yet — the stage is empty until the sprite data lands — but the cadence is
- * what the sprites will need, and a clock that ticks at some other rate would
- * have to be reconciled with it later.
+ * animation timings in `docs/ANIMATION.md` divide into. It is also now the rate
+ * Clawd is actually played at — `paintOnce` indexes the current animation by
+ * this same constant, so a clock that ticked at some other rate would show a
+ * loop at the wrong speed rather than merely disagree with the art.
  */
 const FRAME_MS = 125;
 
@@ -56,13 +62,15 @@ const FRAME_MS = 125;
  * Which way up the panel is, and **the one line to change when that is
  * decided**.
  *
- * `docs/HARDWARE.md` §Orientation is the authority and says both the mock and
- * the harness "default to landscape", which is what this follows. It is a
- * default rather than a decision: `.claude/research/screens/spec.md` §10a still
- * opens "**Undecided, and it is a freeze item**", and the freeze is 25 Aug.
- * Landscape is not a rotated portrait layout — the stage as authored is 200px
- * tall against a 172px landscape panel — so this is not a runtime toggle and
- * pretending otherwise would be worse than a constant.
+ * **Decided, not defaulted.** `.claude/research/screens/spec.md` §10a carried
+ * this as an open freeze item until Alex closed it on 21 Aug: the device is
+ * mounted on its side. `docs/HARDWARE.md` §Orientation already had both the
+ * mock and the harness defaulting to landscape, so nothing had to move.
+ *
+ * A constant rather than an option because landscape is not a rotated portrait
+ * layout — the stage as authored is 200px tall against a 172px landscape panel,
+ * and 172/25 is 6.88 device pixels per unit, so every motion in every animation
+ * would land between pixels. Changing it is an art decision, not a flag.
  *
  * An earlier version of this comment cited `CLAUDE.md`, which says the panel is
  * 172x320 and nothing at all about how it is mounted.
@@ -199,6 +207,55 @@ function messageFor(
 }
 
 /**
+ * The frames for an animation, or none if it has not been baked.
+ *
+ * `animationFor` maps the seven session states and every `PreToolUse.tool_name`
+ * onto the six names in `ANIMATIONS`, and all six are baked — so this guard
+ * cannot fire today, and saying otherwise would be inventing a hazard.
+ *
+ * Typed `AnimationName` rather than `string` on purpose: adding `dizzy` to
+ * `ANIMATIONS` without baking it should be a compile error at
+ * `SPRITE_NAMES.includes`, not a silently empty stage. A `string` here is how
+ * "nothing in 360 tests notices a referenced animation going missing" happens
+ * one layer up.
+ *
+ * It exists for the next animation rather than the current ones. `permission
+ * sign`, `dizzy` and `confused` are `BUILD_PLAN.md` Stage 4, and the moment one
+ * is added to `ANIMATIONS` it is reachable here before its art is baked. An
+ * empty stage is the right answer to that; taking the panel down is not.
+ */
+export async function framesFor(
+  name: AnimationName,
+): Promise<readonly Sprite[]> {
+  if (!SPRITE_NAMES.includes(name)) return [];
+  return loadSprite(name);
+}
+
+/**
+ * Which frame of the current animation is showing.
+ *
+ * Driven by the clock rather than by a counter, so it does not need to be
+ * carried through the paint loop and so two panels started a minute apart are
+ * on the same beat — the index is a pure function of absolute epoch time.
+ *
+ * Every loop is a whole number of seconds at 8fps (16, 12, 8, 4, 3 and 2), so a
+ * loop restarts on a wall-clock second. That is a nicety and not what makes
+ * this safe: the modulo lands in range for any frame count, and an earlier
+ * version of this comment offered the one as the reason for the other.
+ */
+export function frameAt(frames: number, now: number): number {
+  return Math.floor(now / FRAME_MS) % frames;
+}
+
+export type SceneInput = {
+  readonly registry: Parameters<typeof resolvePanel>[0];
+  readonly pack: PackManifest;
+  readonly now: number;
+  /** Empty is a complete scene: `scene.ts` leaves unfilled slots empty. */
+  readonly sprites?: readonly Sprite[];
+};
+
+/**
  * What the panel should look like right now.
  *
  * Exported for its tests. Everything a person reads on the glass is decided
@@ -206,22 +263,20 @@ function messageFor(
  * *byte count* that reached the wire — under which five of the six things this
  * puts on the panel could be destroyed outright with the whole suite green.
  *
- * `sprites: []` is not a placeholder for missing wiring — `scene.ts` documents
- * that slots past the end of the array stay empty, so this is a complete scene
- * with an empty stage. The stage fills when the sprite data lands; everything
- * else on the panel is live from this commit.
+ * The stage takes whatever frame the caller has to hand. An empty array is
+ * still a complete scene — `scene.ts` documents that slots past the end stay
+ * empty — which is what the tests want and what the panel shows for a state
+ * whose animation has not been drawn yet.
  */
-export function sceneFor(
-  registry: Parameters<typeof resolvePanel>[0],
-  pack: PackManifest,
-  now: number,
-): Scene {
+export function sceneFor(input: SceneInput): Scene {
+  const { registry, pack, now } = input;
+  const sprites = input.sprites ?? [];
   const panel = resolvePanel(registry, now);
   return {
     orientation: ORIENTATION,
     layout: 'hero',
     pack,
-    sprites: [],
+    sprites,
     status: {
       left: clockText(now),
       right: subagentText(panel.sessions),
@@ -319,6 +374,53 @@ function linkLine(status: LinkStatus): string {
   return status.refusal ?? `panel ${status.phase}`;
 }
 
+type Painter = {
+  readonly transport: ReturnType<typeof openPanel>;
+  readonly listener: Awaited<ReturnType<typeof startSocketServer>>;
+  readonly pack: PackManifest;
+  readonly now: () => number;
+  readonly size: { readonly width: number; readonly height: number };
+  readonly whole: Rect;
+};
+
+/**
+ * One frame: resolve, pick Clawd's pose, render, diff, send.
+ *
+ * Lifted out of `runDaemon` because that function has a fifty-line budget and
+ * this is the part of it worth reading on its own.
+ */
+async function paintOnce(
+  ctx: Painter,
+  previous: Frame | undefined,
+): Promise<Frame | undefined> {
+  const { transport, listener, pack, now, size, whole } = ctx;
+
+  const status = transport.status();
+  if (status.phase !== 'online') return previous;
+  const at = now();
+  const registry = listener.snapshot();
+  const panel = resolvePanel(registry, at);
+  // The animation for the state, and the frame of it the clock is on. An
+  // unbaked animation resolves to nothing rather than throwing: three states
+  // still fall back to `thinking` and `BUILD_PLAN.md` Stage 4 has the rest,
+  // so a name with no data is expected for now and shows an empty stage.
+  const wanted = animationFor(panel.state, panel.tool);
+  const frames = await framesFor(wanted);
+  const showing =
+    frames.length > 0
+      ? frames.slice(frameAt(frames.length, at)).slice(0, 1)
+      : [];
+  const next = frame(
+    render(sceneFor({ registry, pack, now: at, sprites: showing })).pixels,
+    size.width,
+  );
+  const rect = status.needsPrime ? whole : changed(previous, next, whole);
+  if (rect !== null) {
+    await transport.send(rect, encodeRect(extractRect(next, rect)));
+  }
+  return next;
+}
+
 type Painting = {
   readonly transport: ReturnType<typeof openPanel>;
   readonly report: (line: string) => void;
@@ -398,21 +500,8 @@ export async function runDaemon(
    * held, so nothing here needs a mutable binding and the package keeps its
    * clean sheet against `docs/CONVENTIONS.md` §"Holding mutable state".
    */
-  const paint = async (
-    previous: Frame | undefined,
-  ): Promise<Frame | undefined> => {
-    const status = transport.status();
-    if (status.phase !== 'online') return previous;
-    const next = frame(
-      render(sceneFor(listener.snapshot(), pack, now())).pixels,
-      size.width,
-    );
-    const rect = status.needsPrime ? whole : changed(previous, next, whole);
-    if (rect !== null) {
-      await transport.send(rect, encodeRect(extractRect(next, rect)));
-    }
-    return next;
-  };
+  const paint = (previous: Frame | undefined): Promise<Frame | undefined> =>
+    paintOnce({ transport, listener, pack, now, size, whole }, previous);
 
   const stopping = new AbortController();
   void painting({

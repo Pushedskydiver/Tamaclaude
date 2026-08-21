@@ -10,8 +10,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createRegistry, observe } from '@tamaclaude/daemon';
 import { parsePackManifest } from '@tamaclaude/packs';
+import { loadSprite, render } from '@tamaclaude/renderer';
 
-import { runDaemon, sceneFor } from './daemon.js';
+import { frameAt, framesFor, runDaemon, sceneFor } from './daemon.js';
 
 const NOW = 1_700_000_000_000;
 
@@ -221,24 +222,24 @@ describe('what the panel says', () => {
     // limit rendered the word `Bash`, pixel-for-pixel identical to one happily
     // running Bash. `NEEDS_PERMISSION` has no tool, so it put the raw enum on
     // the glass. All three measured; all three now say something different.
-    const working = sceneFor(
-      after({ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }),
+    const working = sceneFor({
+      registry: after({ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }),
       pack,
-      NOW,
-    );
-    const blocked = sceneFor(
-      after({ sessionId: 's', kind: 'PermissionRequest' }),
+      now: NOW,
+    });
+    const blocked = sceneFor({
+      registry: after({ sessionId: 's', kind: 'PermissionRequest' }),
       pack,
-      NOW,
-    );
-    const failed = sceneFor(
-      after(
+      now: NOW,
+    });
+    const failed = sceneFor({
+      registry: after(
         { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
         { sessionId: 's', kind: 'StopFailure' },
       ),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
 
     expect(working.message).toBe('Bash');
     expect(blocked.message).toBe(pack.quips.mapped.NEEDS_PERMISSION);
@@ -253,45 +254,119 @@ describe('what the panel says', () => {
     // quip key*. One reaching the panel means the pack was not consulted.
     const states = ['SessionStart', 'Stop', 'PermissionRequest', 'StopFailure'];
     states.forEach((kind) => {
-      const scene = sceneFor(after({ sessionId: 's', kind }), pack, NOW);
+      const scene = sceneFor({
+        registry: after({ sessionId: 's', kind }),
+        pack,
+        now: NOW,
+      });
       expect(scene.message).not.toMatch(/^[A-Z_]+$/);
     });
   });
 
   it('gives a session that needs a human the attention tone', () => {
-    const scene = sceneFor(
-      after({ sessionId: 's', kind: 'PermissionRequest' }),
+    const scene = sceneFor({
+      registry: after({ sessionId: 's', kind: 'PermissionRequest' }),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
     expect(scene.sessions).toEqual([{ tone: 'attention', origin: 'local' }]);
   });
 
   it('shows one chip per live session, hero first', () => {
-    const scene = sceneFor(
-      after(
+    const scene = sceneFor({
+      registry: after(
         { sessionId: 'quiet', kind: 'Stop' },
         { sessionId: 'loud', kind: 'PermissionRequest' },
       ),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
     expect(scene.sessions).toHaveLength(2);
     expect(scene.sessions[0]?.tone).toBe('attention');
   });
 
   it('puts a padded 24-hour clock on the status band', () => {
-    const scene = sceneFor(createRegistry(NOW), pack, NOW);
+    const scene = sceneFor({ registry: createRegistry(NOW), pack, now: NOW });
     expect(scene.status.left).toMatch(/^\d{2}:\d{2}$/);
   });
 
   it('counts subagents, and says nothing when there are none', () => {
-    expect(sceneFor(createRegistry(NOW), pack, NOW).status.right).toBe('');
-    const busy = sceneFor(
-      after({ sessionId: 's', kind: 'SubagentStart' }),
+    expect(
+      sceneFor({ registry: createRegistry(NOW), pack, now: NOW }).status.right,
+    ).toBe('');
+    const busy = sceneFor({
+      registry: after({ sessionId: 's', kind: 'SubagentStart' }),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
     expect(busy.status.right).toBe('+1');
+  });
+});
+
+describe('Clawd on the stage', () => {
+  const pack = parsePackManifest(examplePack());
+
+  it('paints a sprite into the stage band', async () => {
+    // Until the sprite pipeline landed the stage was empty on purpose, and the
+    // panel showed a clock and some chips against 52% blank glass. This is the
+    // test that Clawd actually arrives.
+    const frames = await loadSprite('typing');
+    const first = frames[0];
+    expect(first).toBeDefined();
+
+    const base = { registry: createRegistry(NOW), pack, now: NOW };
+    const empty = render(sceneFor(base));
+    const withClawd = render(
+      sceneFor({ ...base, sprites: first ? [first] : [] }),
+    );
+
+    const changed = empty.pixels.reduce<number>(
+      (total, pixel, at) => total + (pixel === withClawd.pixels[at] ? 0 : 1),
+      0,
+    );
+    // A real character, not a stray pixel and not the whole panel.
+    expect(changed).toBeGreaterThan(1_000);
+    expect(changed).toBeLessThan(empty.pixels.length);
+  });
+
+  it('advances through the loop as the clock moves', async () => {
+    const frames = await loadSprite('typing');
+    const scene = (at: number) =>
+      render(
+        sceneFor({
+          registry: createRegistry(NOW),
+          pack,
+          now: NOW,
+          sprites: frames
+            .slice(Math.floor(at / 125) % frames.length)
+            .slice(0, 1),
+        }),
+      ).pixels;
+    // 125ms is one frame at the 8fps `svg2frames.ts` rasterises at.
+    expect(scene(0)).not.toEqual(scene(125));
+  });
+
+  it('actually supplies frames to the paint loop', async () => {
+    // A review deleted `framesFor`'s body so it always returned `[]` — no Clawd
+    // on the panel at all — and the whole 389-test suite stayed green. The two
+    // tests above load a sprite themselves and hand it to `sceneFor`, which
+    // proves the renderer can draw one, not that the daemon ever supplies one.
+    const frames = await framesFor('gym');
+    expect(frames.length).toBeGreaterThan(0);
+    expect(frames[0]?.frame.width).toBe(168);
+  });
+
+  it('moves the frame index on as the clock advances', async () => {
+    // The other half. A review made `frameAt` return a constant — Clawd frozen
+    // on frame 0 for ever — and the suite stayed green, because the test that
+    // looked like it covered this re-implemented the formula instead of calling
+    // it. This calls it.
+    const frames = await framesFor('gym');
+    const at = (ms: number) => frameAt(frames.length, ms);
+    expect(at(0)).toBe(0);
+    expect(at(125)).toBe(1);
+    // And it wraps rather than running off the end.
+    expect(at(125 * frames.length)).toBe(0);
+    expect(new Set([at(0), at(125), at(250), at(375)]).size).toBe(4);
   });
 });
