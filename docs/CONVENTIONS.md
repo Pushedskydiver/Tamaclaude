@@ -42,10 +42,12 @@ Enforced, not discussed — Prettier for formatting, ESLint for the rest.
 - Functions ≤ 50 lines, files ≤ 300 lines, ≤ 3 params, ≤ 3 nesting levels,
   cyclomatic complexity ≤ 10 (all enforced)
 - Prefer pure functions. Four rules — `functional/no-let`,
-  `immutable-data`, `no-loop-statements` and `prefer-readonly-type` — are on
-  everywhere **except** `protocol` and `renderer`, where framebuffer work
-  requires mutation, and `tools/`, which drives a browser sequentially. See
-  `eslint.config.ts` for the reasoning in each case.
+  `immutable-data`, `no-loop-statements` and `prefer-readonly-type` — are on by
+  default, with three exemptions: all four are off in `protocol` and
+  `renderer`, where framebuffer work requires mutation, and in `tools/`, which
+  drives a browser sequentially; and `no-let` and `immutable-data` (only those
+  two) are off in **every package's test files**. See `eslint.config.ts` for
+  the reasoning in each case.
 
 When a limit fights you, the usual answer is that the function is doing two
 things. Split it before reaching for a disable comment. If a disable is
@@ -57,7 +59,12 @@ In the packages where `functional/no-let` is on, something occasionally still
 has to point at a new value. Two shapes are in the tree and both are allowed:
 
 - a **class with `readonly` fields and one mutable private field**
-  (`packages/daemon/src/socket-server.ts` — `#registry`)
+  (`packages/daemon/src/socket-server.ts` — `#registry`). That file's own
+  header counts _two_ things as mutating, and both counts are right about
+  different questions: one binding is reassigned, two pieces of state change.
+  The second is `#connections`, a readonly `Set` that is added to and deleted
+  from — marking a collection readonly stops the field moving, not the
+  contents, so a mutated one still needs accounting.
 - a **`cell` closure** (`packages/device/src/cell.ts`)
 
 The rule is not which shape you pick, it is the **budget: one disable comment,

@@ -35,9 +35,10 @@
  * and this file only holds the newest one.
  *
  * `packages/device` reached the same problem and answered it differently, with
- * a `cell` closure and a single `no-let` disable. Either is defensible; two
- * idioms for "hold state" in one repo is not, and whichever survives review
- * should be the one both use.
+ * a `cell` closure and a single `no-let` disable. That went to review, and the
+ * ruling was that the shape is not the rule — the budget is. See
+ * `docs/CONVENTIONS.md` §"Holding mutable state": one disable comment naming
+ * the single binding that moves, and no third shape. Both of these spend one.
  *
  * ## Failure
  *
@@ -59,6 +60,24 @@ import { parseHookEventLine } from './hook-line.js';
 import { loadRegistry, saveRegistry, statePathFor } from './persistence.js';
 import { evictStale, observe } from './registry.js';
 import { defaultSocketPath, prepareSocketPath } from './socket-path.js';
+
+/**
+ * How many peers may be connected at once.
+ *
+ * `MAX_CONNECTION_BYTES` bounds what one connection can write; nothing bounded
+ * how many connections there could be. A peer that opens sockets and never
+ * writes costs a `Set` entry and a file descriptor each, indefinitely — the
+ * header above promises that nothing is kept per peer that a peer's
+ * disappearance would leak, which is true of a peer that *disappears* and not
+ * of one that lingers. Same actor as `MAX_SESSIONS` in `registry.ts`, and the
+ * socket being 0600 is a layer rather than an answer.
+ *
+ * At the cap the *oldest* connection goes, not the newest. Refusing new ones
+ * would let whoever got there first hold every slot and lock the real hooks
+ * out; a hook connects, writes about 150 bytes and closes, so anything old
+ * enough to be evicted is the suspect and not the customer.
+ */
+const MAX_CONNECTIONS = 64;
 
 /**
  * How much one connection may write before it is cut off.
@@ -83,9 +102,10 @@ export type SocketServerOptions = {
   /**
    * The clock, injected.
    *
-   * Nothing else in this package can read the time — the thresholds are five
-   * and ten minutes, and a test that had to wait them out would be no test at
-   * all. This is the edge that supplies `Date.now` to all of it.
+   * Nothing else in this package can read the time — the thresholds are one,
+   * five and ten minutes (`WAITING_AFTER_MS`, `ASLEEP_AFTER_MS`,
+   * `EVICT_AFTER_MS`), and a test that had to wait any of them out would be no
+   * test at all. This is the edge that supplies `Date.now` to all of it.
    */
   readonly now?: () => number;
   /**
@@ -189,6 +209,12 @@ class Listener {
   }
 
   #accept(socket: Socket): void {
+    if (this.#connections.size >= MAX_CONNECTIONS) {
+      // Insertion order, so this is the longest-lived one.
+      const oldest = this.#connections.values().next().value;
+      oldest?.destroy();
+      this.#connections.delete(oldest as Socket);
+    }
     this.#connections.add(socket);
     // Strings, not buffers, from here on. The reader below would decode for
     // us either way; what matters is that nothing in this path cuts bytes by

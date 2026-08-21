@@ -346,3 +346,121 @@ describe('startSocketServer', () => {
     expect(second.snapshot().sessions.size).toBe(1);
   });
 });
+
+describe('a state file that cannot be written', () => {
+  // The header claims two failure invariants and says both are tested. Only
+  // the `onChange` one was: nothing in the suite ever made a write fail, so
+  // `#persist`'s catch was unreached by every passing test. A review counted
+  // it. Pointing the state path *inside a regular file* makes `saveRegistry`'s
+  // own `mkdirSync` throw ENOTDIR, which needs no mocking and no chmod.
+  let directory = '';
+  let server: SocketServer | undefined;
+
+  beforeEach(() => {
+    directory = mkdtempSync(join(tmpdir(), 'tc-nostate-'));
+  });
+  afterEach(async () => {
+    await server?.close();
+    server = undefined;
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  it('costs the restart shortcut, not the session state', async () => {
+    const blocker = join(directory, 'not-a-directory');
+    writeFileSync(blocker, 'a regular file');
+    const path = join(directory, 'daemon.sock');
+
+    const folds: number[] = [];
+    server = await startSocketServer({
+      path,
+      now: () => NOW,
+      statePath: join(blocker, 'state.json'),
+      onChange: () => folds.push(1),
+    });
+
+    await send(path, event('a', 'UserPromptSubmit'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Still serving, and the session is right in memory — which is what the
+    // panel draws from.
+    expect(folds.length).toBe(1);
+    expect(server.snapshot().sessions.has('a')).toBe(true);
+    expect(() => statSync(path)).not.toThrow();
+  });
+
+  it('keeps folding after the write has already failed once', async () => {
+    // Distinct from the test above, which pins one failure. This pins that a
+    // failure does not poison the next event — and it is written against
+    // `onChange` rather than the snapshot on purpose: `#registry` is assigned
+    // *before* `#persist` runs, so a snapshot assertion passes whether the
+    // catch is there or not. That first draft was a test that could not fail.
+    const blocker = join(directory, 'not-a-directory');
+    writeFileSync(blocker, 'a regular file');
+    const path = join(directory, 'daemon.sock');
+    const statePath = join(blocker, 'state.json');
+
+    const folds: string[] = [];
+    server = await startSocketServer({
+      path,
+      now: () => NOW,
+      statePath,
+      onChange: (registry) => folds.push(String(registry.sessions.size)),
+    });
+
+    await send(path, event('a', 'UserPromptSubmit'));
+    await send(path, event('b', 'UserPromptSubmit'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(folds).toEqual(['1', '2']);
+    // And the shortcut really is what was lost — nothing was written.
+    expect(() => statSync(statePath)).toThrow();
+  });
+});
+
+describe('many peers at once', () => {
+  // `MAX_CONNECTION_BYTES` bounds what one connection writes. Nothing bounded
+  // how many connections there could be, so a peer that connects and stays
+  // silent held a Set entry and a file descriptor for as long as it liked.
+  let directory = '';
+  let server: SocketServer | undefined;
+  let path = '';
+
+  beforeEach(async () => {
+    directory = mkdtempSync(join(tmpdir(), 'tc-many-'));
+    path = join(directory, 'daemon.sock');
+    server = await startSocketServer({ path, now: () => NOW });
+  });
+  afterEach(async () => {
+    await server?.close();
+    server = undefined;
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  /** Sequentially, so the daemon sees them in a known order. */
+  const openMany = (count: number): Promise<readonly Socket[]> =>
+    Array.from({ length: count }).reduce<Promise<readonly Socket[]>>(
+      async (soFar) => [...(await soFar), await open(path)],
+      Promise.resolve([]),
+    );
+
+  it('drops the longest-lived peer rather than growing without limit', async () => {
+    const first = await open(path);
+    const closed = new Promise<void>((resolve) => {
+      first.on('close', () => resolve());
+    });
+    // Fill the rest of the cap, then push one past it.
+    const rest = await openMany(64);
+    await closed; // The oldest is gone, and nothing had to time out for it.
+    rest.forEach((socket) => socket.destroy());
+  });
+
+  it('still serves a real hook once the cap has bitten', async () => {
+    // The point of evicting the oldest rather than refusing the newest: a
+    // flooder must not be able to lock the actual hooks out.
+    const held = await openMany(70);
+    await send(path, event('a', 'UserPromptSubmit'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(server?.snapshot().sessions.has('a')).toBe(true);
+    held.forEach((socket) => socket.destroy());
+  });
+});

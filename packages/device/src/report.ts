@@ -115,13 +115,36 @@ export type LineSplit = {
 };
 
 /**
+ * The most unterminated text we will hold before giving up on it.
+ *
+ * `packages/daemon` bounds a connection for the same reason and says it best:
+ * a line reader cannot bound a line that never ends. The daemon's peer is a
+ * hook we wrote; this one is whatever is plugged into a `/dev/cu.*` path from
+ * a config value, and a device that emits bytes without a newline would grow
+ * the remainder forever. At the measured 562.5 KB/s that is about two
+ * gigabytes an hour.
+ *
+ * A real status line is well under 200 characters, so this is generous by an
+ * order of magnitude and no honest report can trip it.
+ */
+const MAX_PENDING = 4096;
+
+/**
  * Cut complete lines out of a stream, keeping whatever is left over.
  *
  * The device's lines arrive in whatever chunks USB hands us, so a status line
  * routinely straddles two reads. Holding the remainder is the difference
  * between seeing every report and seeing the ones that happen to land whole.
+ *
+ * Past `MAX_PENDING` the remainder is dropped rather than carried. It is not a
+ * line by then, and the next newline resynchronises us — the same trade the
+ * firmware makes when it discards to find a header.
  */
 export function splitLines(pending: string, chunk: string): LineSplit {
   const parts = (pending + chunk).split('\n');
-  return { lines: parts.slice(0, -1), pending: parts.at(-1) ?? '' };
+  const remainder = parts.at(-1) ?? '';
+  return {
+    lines: parts.slice(0, -1),
+    pending: remainder.length > MAX_PENDING ? '' : remainder,
+  };
 }

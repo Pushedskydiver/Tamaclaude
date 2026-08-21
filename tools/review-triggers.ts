@@ -21,6 +21,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -99,7 +100,11 @@ function triggers(patterns: readonly string[]): readonly Trigger[] {
 }
 
 /** Changed files and changed lines against `base`, lockfiles excluded. */
-function diff(base: string): { files: string[]; lines: number } {
+function diff(base: string): {
+  files: string[];
+  lines: number;
+  binary: number;
+} {
   const range = `${base}...HEAD`;
   const names = execFileSync('git', ['diff', '--name-only', range], {
     encoding: 'utf8',
@@ -111,25 +116,64 @@ function diff(base: string): { files: string[]; lines: number } {
   })
     .split('\n')
     .filter(Boolean);
+  return { files: names, ...countChanged(numstat) };
+}
+
+/**
+ * Sum a `git diff --numstat` into changed lines, skipping lockfiles.
+ *
+ * Exported only so it can be tested. Git writes `-\t-` for a file it treats as
+ * binary, `Number('-')` is NaN, and one NaN turns the whole total into NaN —
+ * which printed as "NaN lines" and answered *no* to the over-200-lines
+ * trigger, on a diff of several hundred. It reported fewer reviews than were
+ * owed, which is the one direction this tool must never fail in.
+ *
+ * Found because a test file had literal NUL bytes in it and git called it
+ * binary. The next one will be a PNG under `assets/`, which is ordinary.
+ */
+export function countChanged(numstat: readonly string[]): {
+  lines: number;
+  binary: number;
+} {
   let lines = 0;
+  let binary = 0;
   for (const row of numstat) {
     const [added, removed, file] = row.split('\t');
-    if (LOCKFILES.has(file)) continue;
+    if (file !== undefined && LOCKFILES.has(file)) continue;
+    if (added === '-' || removed === '-') {
+      binary += 1;
+      continue;
+    }
     lines += Number(added ?? 0) + Number(removed ?? 0);
   }
-  return { files: names, lines };
+  return { lines, binary };
+}
+
+/** The one-line summary above the trigger list. */
+function headline(counts: {
+  base: string;
+  files: number;
+  lines: number;
+  binary: number;
+}): string {
+  const plural = counts.binary === 1 ? '' : 's';
+  const note =
+    counts.binary > 0
+      ? ` (${counts.binary} binary file${plural} not counted)`
+      : '';
+  return `${counts.files} files, ${counts.lines} lines against ${counts.base}${note}`;
 }
 
 function main(): void {
   const base = process.argv[2] ?? 'main';
-  const { files, lines } = diff(base);
+  const { files, lines, binary } = diff(base);
   if (files.length === 0) {
     console.log(`no changes against ${base}`);
     return;
   }
 
   const owed = new Set<string>();
-  console.log(`\n${files.length} files, ${lines} lines against ${base}\n`);
+  console.log(`\n${headline({ base, files: files.length, lines, binary })}\n`);
   for (const trigger of triggers(blastRadius())) {
     const fires = trigger.fires(files, lines);
     if (fires) for (const review of trigger.reviews) owed.add(review);
@@ -147,4 +191,6 @@ function main(): void {
   );
 }
 
-main();
+// Only when run as a command. Importing this module — which the test does, to
+// reach `countChanged` — must not shell out to git as a side effect.
+if (process.argv[1] === fileURLToPath(import.meta.url)) main();

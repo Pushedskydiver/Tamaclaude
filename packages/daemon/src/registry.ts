@@ -43,13 +43,6 @@ export function createRegistry(now: number): SessionRegistry {
 }
 
 /**
- * Fold one hook event in.
- *
- * Any event creates the session it names if the daemon has not seen it — see
- * `newSession` for why the first event of a session is not necessarily a
- * `SessionStart`.
- */
-/**
  * The most sessions the registry will hold.
  *
  * `hook-line.ts` bounds each field's *length* because a `sessionId` becomes a
@@ -61,11 +54,36 @@ export function createRegistry(now: number): SessionRegistry {
  * with nothing saying why.
  *
  * Sixty-four is far past any real use. The strip shows five chips; Alex and
- * Jamie run a handful of sessions each. Losing the oldest of sixty-four is a
- * chip that was already invisible.
+ * Jamie run a handful of sessions each.
  */
 const MAX_SESSIONS = 64;
 
+/**
+ * Drop the session that has been quiet longest, to make room for a new one.
+ *
+ * Evicting by silence rather than by first sight is the difference between the
+ * cap protecting the strip and the cap attacking it. The sessions that get
+ * minted in an attack are all new, so first-sight order puts the real,
+ * long-running session at the front of the queue to die — the cap would then
+ * hand the flooder exactly the display it wanted. Quietest-first means a
+ * session anyone is actually using is the last thing to go.
+ */
+type Entry = readonly [string, Session];
+
+function withoutQuietest(entries: readonly Entry[]): readonly Entry[] {
+  const quietest = entries.reduce((a, b) =>
+    b[1].lastEventAt < a[1].lastEventAt ? b : a,
+  );
+  return entries.filter(([id]) => id !== quietest[0]);
+}
+
+/**
+ * Fold one hook event in.
+ *
+ * Any event creates the session it names if the daemon has not seen it — see
+ * `newSession` for why the first event of a session is not necessarily a
+ * `SessionStart`.
+ */
 export function observe(
   registry: SessionRegistry,
   event: HookEvent,
@@ -74,16 +92,25 @@ export function observe(
   const previous =
     registry.sessions.get(event.sessionId) ?? newSession(event.sessionId, now);
   const session = applyEvent(previous, event, now);
-  const entries: readonly (readonly [string, Session])[] = [
-    ...registry.sessions,
-    [session.id, session],
-  ];
+  // Replace in place when the session is already known, append when it is not,
+  // so iteration order stays the order sessions were first seen. Deduplicating
+  // has to happen *before* the cap is applied: the previous version appended to
+  // the entries and trimmed that array, which spent a slot on the duplicate
+  // key. The cap was therefore 63, and an ordinary event about an existing
+  // session evicted an unrelated live one.
+  //
+  // Rebuilt rather than mutated because `functional/immutable-data` is on in
+  // this package, and a registry is a value — every fold here returns a new
+  // one.
+  const entries: readonly Entry[] = registry.sessions.has(session.id)
+    ? [...registry.sessions].map(([id, held]) =>
+        id === session.id ? ([id, session] as const) : ([id, held] as const),
+      )
+    : [...registry.sessions, [session.id, session] as const];
   return {
-    // Later entries win, so this replaces the session rather than duplicating
-    // it — and the order of the rest is preserved, which keeps a registry's
-    // iteration order the order sessions were first seen. Trimmed from the
-    // front, so the oldest goes when the cap bites.
-    sessions: new Map(entries.slice(-MAX_SESSIONS)),
+    sessions: new Map(
+      entries.length > MAX_SESSIONS ? withoutQuietest(entries) : entries,
+    ),
     lastEventAt: Math.max(registry.lastEventAt, now),
   };
 }

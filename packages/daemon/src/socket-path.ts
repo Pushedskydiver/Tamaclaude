@@ -76,20 +76,31 @@ const PROBE_TIMEOUT_MS = 250;
  * The directory the socket lives in, when we are the ones creating it.
  *
  * The socket's own mode is what governs who may connect, and the server sets
- * that. This is the layer underneath: for the moment between `listen` and that
- * `chmod`, the socket carries whatever the process umask gave it, and a
- * private directory covers the gap.
+ * that with a `chmod` after `listen`. This is the layer underneath, covering
+ * the moment in between.
  *
- * **Only when we created the directory.** `recursive: true` leaves an existing
- * one's mode alone — deliberately, since `TAMACLAUDE_SOCKET` may point
- * somewhere shared and tightening a directory out from under its owner is a
- * worse surprise. So with a pre-existing `~/.tamaclaude` at 0755 the window is
- * genuinely uncovered: measured, the socket is mode 0755 between `listen` and
- * `chmod`. It is microseconds wide and needs a second local user to matter, so
- * it is documented rather than closed — closing it properly needs a
- * process-global umask change, whose blast radius is worse than the hole.
+ * **The directory does not change the socket's mode, and never did.** The
+ * socket's mode in that window is a pure function of the process umask —
+ * measured at umask 022, 077 and 000, a socket bound inside a 0700 directory
+ * and one bound inside a 0755 directory both come out 0755, 0700 and 0777
+ * respectively. What a private directory buys is *traversal*: the socket is
+ * still group-and-world-writable for those microseconds, and nobody else can
+ * reach it to care. Getting this backwards is why an earlier version of this
+ * comment claimed a guarantee the code does not make.
  *
- * A review caught this comment asserting a guarantee the code does not make.
+ * **And only when we created the directory.** `recursive: true` leaves an
+ * existing one's mode alone — deliberately, since `TAMACLAUDE_SOCKET` may
+ * point somewhere shared and tightening a directory out from under its owner
+ * is a worse surprise. So with a pre-existing `~/.tamaclaude` at 0755 the
+ * window is genuinely uncovered.
+ *
+ * It is left uncovered on purpose. It is microseconds wide and needs a second
+ * local user on the machine to matter. A local fix does exist — bind inside a
+ * 0700 directory of our own, `chmod` to 0600, then rename onto the shared path,
+ * which arrives already private — so this is a judgement about cost, not an
+ * impossibility. It is not taken because the rename has to be ordered against
+ * the stale/live takeover probe below, and clobbering another daemon's live
+ * socket is a worse failure than the hole being closed is a win.
  */
 const SOCKET_DIRECTORY_MODE = 0o700;
 
@@ -110,21 +121,30 @@ export function defaultSocketPath(): string {
 }
 
 /**
- * The `sockaddr_un.sun_path` limit: 104 bytes on macOS, 108 on Linux. We check
- * against the smaller so a path never binds on one platform and not the other.
+ * The longest path that will bind: `sizeof(sockaddr_un.sun_path)`, which is 104
+ * on macOS (`sys/un.h`) and 108 on Linux. We check the smaller so a path never
+ * binds on one platform and not the other.
  *
- * Worth a named error because the kernel's is `EINVAL: invalid argument`, which
- * says nothing about length and sends you looking at permissions. The case that
- * actually hits it is a test pointing `TAMACLAUDE_SOCKET` at a temporary
- * directory — macOS `mkdtemp` paths are long enough to blow the limit on their
- * own, before any filename is joined on. Found by tripping it.
+ * This is the *inclusive* maximum, not the first failing length. Measured on
+ * darwin 25.5.0 / Node 24: 104 bytes binds and accepts a connection, 105 is
+ * `EINVAL`. The first version of this guard rejected at `>= 104` and threw
+ * "104 bytes, over the 104-byte limit", which was both an off-by-one and a
+ * sentence that contradicted itself.
+ *
+ * Worth a named error at all because the kernel's is `EINVAL: invalid
+ * argument`, which says nothing about length and sends you looking at
+ * permissions. What actually hits it is `TAMACLAUDE_SOCKET` pointed at a deep
+ * directory. The suite's own temp paths are not close on their own — macOS
+ * `tmpdir()` is a fixed 48 bytes and `mkdtemp` takes it to 62-66 — but the
+ * nested case in `socket-path.test.ts` reaches 85, so the tightest margin in
+ * the tree is 19 bytes rather than the comfortable 26 a first read suggested.
  */
 const SUN_PATH_MAX = 104;
 
 function assertPathFitsSunPath(path: string): void {
   // Bytes, not characters — the limit is on what goes into the struct.
   const bytes = Buffer.byteLength(path, 'utf8');
-  if (bytes < SUN_PATH_MAX) return;
+  if (bytes <= SUN_PATH_MAX) return;
   throw new Error(
     `socket path is ${String(bytes)} bytes, over the ${String(SUN_PATH_MAX)}-byte limit: ${path}`,
   );

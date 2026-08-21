@@ -1,8 +1,11 @@
 /**
  * Anything that can receive dirty rectangles.
  *
- * Implemented by the USB-CDC transport in `panel.ts`, and — if BUILD_PLAN
- * Stage 3 allows — by a TCP transport so a remote host can drive the display.
+ * Implemented by the USB-CDC transport in `panel.ts`. Nothing else implements
+ * it yet, and Stage 3's cuttable TCP item is *not* a second implementation —
+ * that one carries session events from a remote agent towards the daemon,
+ * which is the opposite direction to this type. A TCP `Transport` would mean a
+ * remote panel, which nobody has asked for.
  */
 
 import type { LinkStatus } from './link.js';
@@ -22,22 +25,23 @@ export type Transport = {
    * expected condition on a desk toy: the bytes are dropped, `status()` says
    * so, and the caller carries on. It resolves when the bytes have left the
    * host, so awaiting it is the backpressure.
-   */
-  send(region: Rect, encoded: Encoded): Promise<void>;
-  /**
+   *
    * **When `status().needsPrime` is set, send the frame you are currently on,
-   * not the first one.** The transport cannot check this: it sees rectangles,
+   * not the first one.** This transport cannot check it: it sees rectangles,
    * and which frame they belong to is yours to know.
    *
    * `tools/blit.ts` got it wrong on hardware. Re-priming with frame 0 while
    * the diff sequence continued from wherever it had reached left every
-   * subsequent update painting onto the wrong base — 120 of 300 frames wrong,
+   * subsequent update painting onto the wrong base — 120 of 300 ticks wrong,
    * and visible only as a stripe of a yawn hanging above a resting Clawd.
    *
    * The durable fix is to give this type the frames rather than the rects, so
    * the current frame is the only one it could prime with. That waits for a
-   * caller; until then the rule lives here, where a caller will read it.
+   * caller; until then the rule lives on the method it constrains. An earlier
+   * attempt put it in its own block above `status()`, where TypeScript bound
+   * it to nothing at all and no hover ever showed it.
    */
+  send(region: Rect, encoded: Encoded): Promise<void>;
   /** What the sender needs to know before the next frame. */
   status(): LinkStatus;
   close(): Promise<void>;

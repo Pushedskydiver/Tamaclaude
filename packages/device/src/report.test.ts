@@ -1,3 +1,5 @@
+import type { LineSplit } from './report.js';
+
 import { describe, expect, it } from 'vitest';
 
 import { lostGround, NO_COUNTERS, parseReport, splitLines } from './report.js';
@@ -72,5 +74,31 @@ describe('splitLines', () => {
   it('yields several lines from one chunk', () => {
     expect(splitLines('', 'a\nb\nc').lines).toEqual(['a', 'b']);
     expect(splitLines('', 'a\nb\nc').pending).toBe('c');
+  });
+});
+
+describe('an endless line', () => {
+  it('stops accumulating instead of growing without limit', () => {
+    // The device is whatever is at a configured `/dev/cu.*` path. One that
+    // emits bytes and never a newline would otherwise be held forever.
+    const grown = Array.from({ length: 40 }, () => 'x'.repeat(200)).reduce(
+      (split, chunk) => splitLines(split.pending, chunk),
+      { lines: [], pending: '' } as LineSplit,
+    );
+    expect(grown.lines).toEqual([]);
+    expect(grown.pending.length).toBeLessThanOrEqual(4096);
+  });
+
+  it('resynchronises on the next newline', () => {
+    const flooded = splitLines('', 'x'.repeat(9000));
+    const recovered = splitLines(flooded.pending, '\n# rects 1 resync 0/0\n');
+    expect(recovered.lines.at(-1)).toBe('# rects 1 resync 0/0');
+  });
+
+  it('still carries an ordinary partial line across reads', () => {
+    // The bound must not cost the behaviour the function exists for.
+    const first = splitLines('', '# rects 1 res');
+    const second = splitLines(first.pending, 'ync 0/0\n');
+    expect(second.lines).toEqual(['# rects 1 resync 0/0']);
   });
 });

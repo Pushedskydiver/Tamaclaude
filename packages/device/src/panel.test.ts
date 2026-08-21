@@ -177,6 +177,21 @@ describe('with a panel attached', () => {
     expect(panel.status()).toEqual({ phase: 'online', needsPrime: true });
   });
 
+  it('gives up rather than spinning when the port accepts nothing', async () => {
+    // `writeWhole` recurses on a short write. A port that accepts zero bytes
+    // would recurse forever on the same offset, so it throws instead — and
+    // that guard had no test, which made it indistinguishable from one that
+    // could not fire. A real blocking `FileHandle` does not return 0 for a
+    // non-empty buffer; `fakeSerial(0)` is the only way to reach it.
+    const fake = fakeSerial(0);
+    const panel = open({ serial: fake.system });
+    await settle();
+    // Still swallowed, per decision one — a dead port must not reach the
+    // daemon — but nothing is written and the link stops claiming it is fine.
+    await expect(panel.send(WHOLE, payload(1, 4))).resolves.toBeUndefined();
+    expect(fake.state.written).toEqual([]);
+  });
+
   it('writes a header and its payload as one packet', async () => {
     const fake = fakeSerial();
     const panel = open({ serial: fake.system });

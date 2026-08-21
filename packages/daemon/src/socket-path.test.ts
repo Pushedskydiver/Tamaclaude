@@ -157,31 +157,57 @@ describe('prepareSocketPath', () => {
 });
 
 describe('prepareSocketPath and the sun_path limit', () => {
-  // The kernel's own error for this is `EINVAL: invalid argument`, which sends
-  // you looking at permissions. These pin the length explanation in its place.
-  it('rejects a path at or over the 104-byte limit', async () => {
-    const path = `/tmp/${'x'.repeat(110)}.sock`;
+  // The kernel's own error here is `EINVAL: invalid argument`, which says
+  // nothing about length. These pin the length explanation in its place, and
+  // the two boundary cases pin the threshold — without them any cutoff from
+  // 105 to 120 passed, including the off-by-one this block was added to catch.
+  const pathOfBytes = (directory: string, bytes: number): string => {
+    const prefix = `${directory}/`;
+    const name = 'x'.repeat(bytes - Buffer.byteLength(prefix));
+    const path = `${prefix}${name}`;
+    expect(Buffer.byteLength(path)).toBe(bytes);
+    return path;
+  };
+
+  let directory = '';
+  beforeEach(() => {
+    directory = mkdtempSync(join(tmpdir(), 'tc-sun-'));
+  });
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  it('accepts a path of exactly the limit, because the kernel does', async () => {
+    // Measured: 104 bytes binds and accepts a connection on darwin.
+    const path = pathOfBytes(directory, 104);
+    await expect(prepareSocketPath(path)).resolves.toBeUndefined();
+  });
+
+  it('rejects the first length that actually fails', async () => {
+    const path = pathOfBytes(directory, 105);
     await expect(prepareSocketPath(path)).rejects.toThrow(/over the 104-byte/);
   });
 
   it('names the actual size, so the fix is obvious', async () => {
-    const path = `/tmp/${'x'.repeat(110)}.sock`;
-    await expect(prepareSocketPath(path)).rejects.toThrow(/is 120 bytes/);
+    const path = pathOfBytes(directory, 130);
+    await expect(prepareSocketPath(path)).rejects.toThrow(/is 130 bytes/);
   });
 
   it('counts bytes rather than characters', async () => {
     // 60 two-byte characters is 120 bytes but only 60 `.length`. Counting
     // characters would let this through to a confusing EINVAL.
+    // A short base on purpose: the assertion below is about characters vs
+    // bytes, and a 60-odd character temp prefix would swamp both counts. The
+    // guard runs before the directory is touched, so it need not exist.
     const path = `/tmp/${'é'.repeat(60)}`;
     expect(path.length).toBeLessThan(104);
+    expect(Buffer.byteLength(path)).toBeGreaterThan(104);
     await expect(prepareSocketPath(path)).rejects.toThrow(/over the 104-byte/);
   });
 
-  it('allows a path just under the limit', async () => {
-    const directory = mkdtempSync(join(tmpdir(), 'tc-len-'));
+  it('allows a path comfortably under the limit', async () => {
     const path = join(directory, 'daemon.sock');
     expect(Buffer.byteLength(path)).toBeLessThan(104);
     await expect(prepareSocketPath(path)).resolves.toBeUndefined();
-    rmSync(directory, { recursive: true, force: true });
   });
 });

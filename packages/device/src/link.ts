@@ -168,7 +168,7 @@ export function afterReport(state: LinkState, report: DeviceReport): LinkState {
  * fragments on it until somebody unplugs the board.
  *
  * A whole frame every few seconds costs about 1.5 KB — 0.05% of a link
- * measured at 562 KB/s — and turns that silent divergence into something that
+ * measured at 562.5 KB/s — and turns that silent divergence into something
  * heals itself. It is the same debt as a reported loss and gets the same
  * answer, which is why it is the same flag rather than a second one.
  */
@@ -188,7 +188,7 @@ export function afterRefresh(state: LinkState): LinkState {
  * The frame a sender is on is the sender's knowledge; the transport sees
  * rectangles. `tools/blit.ts` learned this on hardware: re-priming with frame
  * 0 while the diff sequence carried on from wherever it had reached left every
- * later update painting onto the wrong base, measured at 120 of 300 frames
+ * later update painting onto the wrong base, measured at 120 of 300 ticks
  * wrong, and it reached the panel before anyone saw it. A review caught this
  * doc comment claiming the mechanism ruled that out.
  *

@@ -100,30 +100,63 @@ describe('liveSessions', () => {
 });
 
 describe('cardinality', () => {
-  it('holds a bounded number of sessions', () => {
-    // Nothing bounded how many keys the registry would take, while each field's
-    // length was bounded precisely because a sessionId is held for ten minutes.
-    // Anything that can write to the socket could mint them without limit, and
-    // the daemon persists synchronously after every accepted event.
-    const many = Array.from({ length: 500 }, (_, index) => `s${index}`);
-    const filled = many.reduce(
+  const fill = (count: number, at = 1_000) =>
+    Array.from({ length: count }, (_, index) => `s${String(index)}`).reduce(
       (registry, id) =>
-        observe(registry, { sessionId: id, kind: 'SessionStart' }, 1_000),
+        observe(registry, { sessionId: id, kind: 'SessionStart' }, at),
       createRegistry(0),
     );
-    expect(filled.sessions.size).toBeLessThanOrEqual(64);
+
+  it('holds exactly the cap, not merely at most it', () => {
+    // `toBeLessThanOrEqual(64)` was the original assertion and it passed for a
+    // cap of one — which would have destroyed multi-session compositing while
+    // staying green. The number is the point, so the number is asserted.
+    expect(fill(500).sessions.size).toBe(64);
+  });
+
+  it('keeps every session when there is room', () => {
+    // The other half of pinning the cap: it must not bite early.
+    expect(fill(64).sessions.size).toBe(64);
+    expect(fill(63).sessions.size).toBe(63);
   });
 
   it('keeps the newest sessions when the cap bites', () => {
-    const filled = Array.from(
-      { length: 100 },
-      (_, index) => `s${index}`,
-    ).reduce(
-      (registry, id) =>
-        observe(registry, { sessionId: id, kind: 'SessionStart' }, 1_000),
-      createRegistry(0),
-    );
+    const filled = fill(100);
     expect(filled.sessions.has('s99')).toBe(true);
     expect(filled.sessions.has('s0')).toBe(false);
+  });
+
+  it('does not evict anyone when an existing session is updated at the cap', () => {
+    // The bug this catches: entries were appended to an array and *then*
+    // trimmed, so an update spent a slot on its own duplicate key. The cap was
+    // really 63, and an ordinary PostToolUse about one session silently
+    // dropped an unrelated live one.
+    const filled = fill(64);
+    const updated = observe(
+      filled,
+      { sessionId: 's63', kind: 'PostToolUse', tool: 'Read' },
+      2_000,
+    );
+    expect(updated.sessions.size).toBe(64);
+    expect(updated.sessions.has('s0')).toBe(true);
+  });
+
+  it('evicts the quietest session, not the first one seen', () => {
+    // Eviction by first sight would hand a flooder the strip: every minted
+    // session is new, so the real long-running one is first in line to die.
+    const filled = fill(64);
+    const busy = observe(
+      filled,
+      { sessionId: 's0', kind: 'PostToolUse', tool: 'Read' },
+      9_000,
+    );
+    const overflowed = observe(
+      busy,
+      { sessionId: 'new', kind: 'SessionStart' },
+      9_100,
+    );
+    expect(overflowed.sessions.size).toBe(64);
+    expect(overflowed.sessions.has('s0')).toBe(true);
+    expect(overflowed.sessions.has('s1')).toBe(false);
   });
 });

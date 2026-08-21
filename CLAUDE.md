@@ -53,8 +53,10 @@ table and rationale: `docs/ARCHITECTURE.md`.
   executes on _every_ hook event. Its import graph is a latency budget, not a
   style preference.
 - **`functional/no-let` and `immutable-data` are off in `protocol` and
-  `renderer`.** You cannot write a framebuffer without mutation. Scoped off
-  there, still enforced everywhere else.
+  `renderer`.** You cannot write a framebuffer without mutation. Also off in
+  `tools/` (all four functional rules) and in every package's test files — so
+  "enforced everywhere else" means production code in `hooks`, `daemon`,
+  `device`, `cli` and `packs`, which is where it matters.
 - **Animations are code, not drawings.** They are CSS-animated SVG generated
   against one canonical base geometry, and a generated animation may only add
   transforms and keyframes to existing elements with existing IDs — never

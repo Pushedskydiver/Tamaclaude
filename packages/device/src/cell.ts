@@ -1,17 +1,20 @@
 /**
  * One mutable cell, and the only mutation in this package.
  *
- * `functional/no-let` and `immutable-data` are on here — they are switched off
- * only in `protocol` and `renderer`, where framebuffer work requires mutation.
+ * `functional/no-let` and `immutable-data` are on here. They are switched off
+ * in `protocol` and `renderer`, where framebuffer work requires mutation, in
+ * `tools/`, which drives a browser sequentially, and in every package's test
+ * files. None of those exemptions reach this file.
  * A transport genuinely has to hold "now": which port is open, what the device
  * last said, whether a write is in flight. The alternatives were a class,
  * which the `ignoreClasses` escape hatch would have hidden the mutation
  * behind, or scattering `let` through the supervisor.
  *
  * This is the third option: every decision stays a pure fold in `link.ts`, and
- * the state those folds produce is held in one place, in six lines, behind a
- * disable that says so. `grep -rn 'eslint-disable' packages/device` is the
- * audit.
+ * the state those folds produce is held in one place, behind a disable that
+ * says so. `grep -rn 'eslint-disable' packages/device/src` is the audit — with
+ * `/src`, because without it a built tree returns the copies in `dist/` too and
+ * the count stops meaning anything.
  */
 
 export type Cell<T> = {
