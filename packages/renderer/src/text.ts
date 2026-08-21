@@ -54,7 +54,6 @@ function glyphOffset(codePoint: number): number {
   return (known ? index : fallback) * GLYPH_HEIGHT;
 }
 
-/** Blit one glyph, clipped to the framebuffer. */
 /** Paint one source pixel as a scale x scale block, clipped per device pixel. */
 function paintBlock(
   target: Framebuffer,
@@ -72,6 +71,7 @@ function paintBlock(
   }
 }
 
+/** Blit one glyph, clipped to the framebuffer. */
 function drawGlyph(target: Framebuffer, codePoint: number, pen: TextPen): void {
   const offset = glyphOffset(codePoint);
   const scale = pen.scale ?? 1;
@@ -208,8 +208,15 @@ export function wrapText(text: string, width: number): readonly string[] {
  */
 export const LINE_HEIGHT = GLYPH_HEIGHT + 1;
 
-/** Marker for text a box could not hold. ASCII, because the atlas is. */
-const ELLIPSIS = '...';
+/**
+ * Marker for text a box could not hold. ASCII, because the atlas is.
+ *
+ * Exported so nothing invents a second one. `scene.ts` did — it used U+2026,
+ * which is outside the atlas's U+0020..U+007E, so `glyphOffset` fell back to
+ * `?` and an over-long clock rendered as `abcd?` on the panel. The rule was
+ * stated right here and the other caller followed it.
+ */
+export const ELLIPSIS = '...';
 
 /** Where a block of text goes, and in what colour. */
 export type TextBox = {

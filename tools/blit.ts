@@ -21,9 +21,11 @@
  * the spec rather than with the code the daemon will use is a test of the wrong
  * thing.
  *
- * What it does not do is model the daemon. There is no state machine, no pack,
- * no text: one animation, looping. It answers "does a rect get from here to the
- * glass, correctly, at 8fps" and nothing else.
+ * What it does not do is model the daemon. It loads a pack and draws all four
+ * bands, because a panel showing three empty ones cannot be told from a panel
+ * that failed to draw them — but the bands hold placeholders, there is no
+ * state machine, and the animation simply loops. It answers "does a rendered
+ * panel get from here to the glass, correctly, at 8fps" and nothing else.
  */
 import type { Plan, Totals, Update, Window } from './blit-types.ts';
 import type { Sprite } from './png-rgb565.ts';
@@ -152,23 +154,6 @@ function packet(rect: Rect, pixels: Uint16Array): Update {
 }
 
 /**
- * Paint the whole panel black before anything else.
- *
- * The sprite covers 168x200 of a 172x320 panel. Without this the other 60%
- * keeps whatever the last run, the boot logo or uninitialised SRAM left there,
- * and a stale border reads as a fault in the part that is working. One RLE run:
- * four bytes of payload for 55,040 pixels.
- */
-function clearPacket(orientation: Orientation): Update {
-  // Not `fullScreenRect()`: that is the portrait panel, and in landscape a
-  // 172x320 rect fails the firmware's bounds check and is discarded as noise.
-  // The symptom would be the splash surviving everywhere the sprite does not
-  // cover, plus a resync count that climbs once at startup.
-  const { width, height } = panelSize(orientation);
-  return packet({ x: 0, y: 0, width, height }, new Uint16Array(width * height));
-}
-
-/**
  * The first frame in full, then every frame as a diff of the one before it.
  *
  * The device's panel contents are unknown at connect, so frame 0 cannot be a
@@ -248,20 +233,14 @@ async function reprimeIfNeeded(
         `${link.health.aborts} abort(s)`,
     );
   }
-  const recovering = link.health.lost;
   link.health.lost = false;
-  // Clear only when recovering. The sprite covers 168x160 of a 320x172 panel,
-  // so priming alone cannot repair anything outside it — and the thing most
-  // likely to be wrong out there is the boot splash. But that argument is
-  // about recovery, not about the timer: on a routine tick nothing outside the
-  // sprite can have changed, because nothing but this tool has written to the
-  // panel since the last clear. Clearing anyway costs a full-screen blit —
-  // 110KB, 22ms of SPI during which the device is deaf — twelve times a
-  // minute, which is a black frame every five seconds on the one instrument
-  // whose job is judging whether the panel looks right.
-  if (recovering) {
-    await writeAll(link.handle, clearPacket(plan.orientation).bytes);
-  }
+  // No clear. It used to precede this, on the grounds that the sprite covered
+  // only 168x160 of a 320x172 panel and priming could not repair the rest —
+  // true when a prime *was* the sprite. A prime is now a whole panel, so it
+  // repairs everything a clear would have, and the clear had become a
+  // full-screen black blit sent immediately before the frame that overwrites
+  // it: a visible flash and 22ms of deafness bought by a premise this file no
+  // longer holds. Review caught the comment; the comment was driving the work.
   await writeAll(link.handle, plan.full[at.frame % plan.full.length].bytes);
   return true;
 }
@@ -288,11 +267,13 @@ function mismatched(link: Link, plan: Plan): boolean {
 }
 
 async function stream(link: Link, plan: Plan): Promise<void> {
-  const clear = clearPacket(plan.orientation);
-  await writeAll(link.handle, clear.bytes);
+  // One whole-panel frame, and nothing before it. The panel's contents are
+  // unknown at connect — most likely the boot splash — and a full panel
+  // overwrites all of it, so the clear that used to lead was 110KB spent
+  // painting black under a frame drawn on top of it a moment later.
   await writeAll(link.handle, plan.prime.bytes);
-  const primed = clear.bytes.byteLength + plan.prime.bytes.byteLength;
-  console.log(`  primed with ${primed} B (full-screen clear + frame 0)`);
+  const primed = plan.prime.bytes.byteLength;
+  console.log(`  primed with ${primed} B (frame 0, whole panel)`);
 
   let start = process.hrtime.bigint();
   // Counted, because reporting bytes accurately is what this tool is for and

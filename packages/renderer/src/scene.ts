@@ -21,7 +21,7 @@ import {
   stageScale,
 } from './layout.js';
 import { paintStrip } from './strip.js';
-import { drawText, drawTextBlock, measureText } from './text.js';
+import { drawText, drawTextBlock, ELLIPSIS, measureText } from './text.js';
 
 /**
  * The scene: a declarative description of what is on the panel, and the one
@@ -37,20 +37,31 @@ import { drawText, drawTextBlock, measureText } from './text.js';
  * there is what lets a test render any panel state from a literal.
  */
 
-/** Everything the panel shows at one instant. */
 /**
  * A raster for one stage slot, and which of its pixels are drawn.
  *
- * The mask is optional so a test can pass a bare frame, but production art
- * always carries one: `svg2frames.ts` captures with `omitBackground`, so a
+ * Production art always carries one: `svg2frames.ts` captures with `omitBackground`, so a
  * raster's background is transparent, and treating it as opaque black paints
  * over whatever the pack — or later the environment — put behind Clawd.
  */
 export type StageSprite = {
   readonly frame: Frame;
-  readonly mask?: Uint8Array;
+  /**
+   * Required, not optional. `drawFrame` validates a mask's *length* loudly but
+   * cannot validate its absence — and a caller who omits it gets an opaque
+   * black rectangle with no type error and no throw, which is the defect this
+   * type exists to prevent. Tests that genuinely want every pixel drawn say so
+   * with `opaqueMask`.
+   */
+  readonly mask: Uint8Array;
 };
 
+/** A mask that draws every pixel, for callers with nothing to cut out. */
+export function opaqueMask(frame: Frame): Uint8Array {
+  return new Uint8Array(frame.pixels.length).fill(1);
+}
+
+/** Everything the panel shows at one instant. */
 export type Scene = {
   readonly orientation: Orientation;
   readonly layout: StageLayout;
@@ -76,15 +87,6 @@ export type Scene = {
 };
 
 /**
- * Paint the status band: clock hard left, subagent count hard right.
- *
- * The right-hand string is laid out from its own measured width rather than
- * from a column count, so a count that grows from `x2` to `x12` stays pinned
- * to the same edge.
- *
- * See `rightAlignedX` for why that edge is clamped.
- */
-/**
  * Magnification for the status bar. See `TextPen.scale` for why this is a
  * scale rather than a second font, and why it is not applied everywhere.
  */
@@ -102,10 +104,20 @@ const STATUS_TEXT_SCALE = 2;
  */
 function fitted(text: string, budget: number, scale: number): string {
   if (measureText(text, scale) <= budget) return text;
-  const columns = Math.max(0, Math.floor(budget / (GLYPH_WIDTH * scale)) - 1);
-  return `${text.slice(0, columns)}\u2026`;
+  const cells = Math.floor(budget / (GLYPH_WIDTH * scale));
+  const columns = Math.max(0, cells - ELLIPSIS.length);
+  return `${text.slice(0, columns)}${ELLIPSIS}`;
 }
 
+/**
+ * Paint the status band: clock hard left, subagent count hard right.
+ *
+ * The right-hand string is laid out from its own measured width rather than
+ * from a column count, so a count that grows from `x2` to `x12` stays pinned
+ * to the same edge.
+ *
+ * See `rightAlignedX` for why that edge is clamped.
+ */
 function paintStatus(painter: Painter, scene: Scene): void {
   const band = painter.bands.status;
   // Doubled here and nowhere else. This band holds a clock and a subagent

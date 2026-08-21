@@ -20,7 +20,7 @@ import {
   STAGE_LAYOUTS,
   stageScale,
 } from './layout.js';
-import { render } from './scene.js';
+import { opaqueMask, render } from './scene.js';
 import { stripFit } from './strip.js';
 
 const PACK: PackManifest = {
@@ -100,11 +100,13 @@ function solidSprite(
   height: number,
   value = 0x1234,
 ): StageSprite {
-  return { frame: solidFrame(width, height, value) };
+  const frame = solidFrame(width, height, value);
+  return { frame, mask: opaqueMask(frame) };
 }
 
 function stripedSprite(width: number, height: number): StageSprite {
-  return { frame: stripedFrame(width, height) };
+  const frame = stripedFrame(width, height);
+  return { frame, mask: opaqueMask(frame) };
 }
 
 const BAND_NAMES = [
@@ -343,5 +345,28 @@ describe('the status band', () => {
     // essentially every cell, a pair of fitted strings does not.
     const lit = litPixels(target).filter((at) => within(at, band)).length;
     expect(lit).toBeLessThan(band.width * band.height * 0.5);
+  });
+});
+
+describe('the status band marker', () => {
+  it('marks a cut string in glyphs the atlas actually has', () => {
+    // U+2026 is outside the atlas's U+0020..U+007E, so `glyphOffset` fell back
+    // to `?` and an over-long string rendered as `ab?`. `text.ts` states the
+    // rule — ASCII, because the atlas is — and this broke it.
+    //
+    // Asserted by rendering the string the truncation should produce and
+    // demanding the two panels be pixel-identical. A fallback glyph would make
+    // them differ, and so would truncating to a different length.
+    const long: Scene = { ...EMPTY, status: { left: 'abcdefghij', right: '' } };
+    // 172px band, 4px insets, half each: 81px of budget, five 14px cells at
+    // 2x, three of them spent on the marker.
+    const cut: Scene = { ...EMPTY, status: { left: 'ab...', right: '' } };
+    expect(litPixels(render(long))).toEqual(litPixels(render(cut)));
+  });
+
+  it('leaves a string that fits completely alone', () => {
+    const short: Scene = { ...EMPTY, status: { left: '06:40', right: '' } };
+    const marked: Scene = { ...EMPTY, status: { left: '06...', right: '' } };
+    expect(litPixels(render(short))).not.toEqual(litPixels(render(marked)));
   });
 });

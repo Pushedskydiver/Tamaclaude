@@ -125,7 +125,14 @@ and called it 8% of the floor. Both numbers are now unsupportable.** It was
 anchored to a `bouldering` worst frame of 1,680 B, which is 2,696 B after the
 animation rebuild; the floor it was a percentage of has been retired; and
 nothing in the tree composites a sprite into a full panel with a ticking cell,
-so the 24,000 B itself has no reproducer. A review caught all three at once.
+so the 24,000 B itself had no reproducer.
+
+`tools/blit-scene.ts` now composites a sprite into a full panel, and its clock
+ticks, so the two-band case has a driver at last — measured on `idle` in
+landscape it costs mean 452 B and worst 956 B, identical to the stage-only row
+above, because only the sprite changes between panels. That is not the case
+this paragraph is about: it will diverge the moment the bands carry content
+that changes independently of the sprite, which is what the daemon brings. A review caught all three at once.
 
 What survives is the mechanism, which is real and unchanged: one bounding box
 spanning two bands drags every unchanged pixel between them onto the wire, and
