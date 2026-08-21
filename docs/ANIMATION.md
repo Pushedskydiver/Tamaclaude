@@ -196,6 +196,41 @@ get out of sync with itself.
 
 **Blink on `linear`, not `ease`.** A lid that accelerates reads as a wince.
 
+## Clawd lives somewhere
+
+**The stage is an environment, not a void.** A character animating on black
+reads as an asset preview; the same character standing in a place reads as a
+creature. Upstream clawd-tank does this and it is most of why theirs feels
+alive — their idle is a night sky with stars, drifting fireflies, and a strip
+of grass he stands on.
+
+Ours will not be that scene. The idea is worth taking; the picture is theirs.
+What to put behind him is a design decision that has not been made yet, and it
+belongs with the pack work rather than here — see `BUILD_PLAN.md` Stage 4.
+
+What _is_ settled is where it lives, because that turns out to matter:
+
+**Ambient scenery is a renderer layer, drawn behind the sprite.** Not baked
+into each animation SVG. Four reasons, and the last is the one that decides it:
+
+- One definition, reused by every animation, so they cannot drift apart.
+- A pack can change it — which makes the environment a personalisation lever
+  rather than a fixed cost.
+- Time of day, or any other ambient variation, becomes trivial.
+- It keeps the animation contract intact. An SVG carrying a sky would no longer
+  be "the base geometry plus transforms", and the whole reason character
+  consistency is structural here is that every animation is provably the same
+  eight rectangles.
+
+**Scenery that moves with the action stays in the SVG.** `bouldering` scrolls
+its wall because the wall _is_ the animation — the holds pass him and that is
+what says "climbing". `road bike` will do the same horizontally. The test is
+whether the background would still make sense if the character were removed: a
+sky would, a climbing wall would not.
+
+Both can be on screen at once, and the layering is the obvious one: ambient
+behind, animation frame over it, sprite within that.
+
 ## Scrolling backgrounds
 
 A background that scrolls must **tile**, and tiling is arithmetic rather than

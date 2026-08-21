@@ -29,7 +29,16 @@ const quipsSchema = z.object({
 
 const packManifestSchema = z.object({
   name: z.string().min(1),
-  palette: z.array(z.tuple([rgbChannel, rgbChannel, rgbChannel])).min(1),
+  // Two, not one. Entry 0 is the background and entry 1 is the ink; a pack
+  // carrying only a background is schema-valid nonsense that renders an
+  // entirely blank panel — every glyph and chip drawn in the background
+  // colour, no error anywhere. The renderer deliberately will not invent a
+  // colour a pack does not contain (`packages/renderer/src/band.ts`), so the
+  // place to refuse it is here, at the boundary where untrusted input is
+  // parsed, with a message that names the problem.
+  palette: z
+    .array(z.tuple([rgbChannel, rgbChannel, rgbChannel]))
+    .min(2, 'a pack needs at least a background and an ink colour'),
   quips: quipsSchema,
 });
 

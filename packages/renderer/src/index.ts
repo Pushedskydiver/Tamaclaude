@@ -1,58 +1,32 @@
-import type { PackManifest } from '@tamaclaude/packs';
-
-import { packPalette } from '@tamaclaude/packs';
-import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
-
-// Panel band geometry, re-exported so consumers have one import path and
-// `tools/panel-mock.ts` cannot drift from the renderer it is mocking.
-export * from './layout.js';
-
 /**
  * The renderer: a virtual 172x320 screen composed entirely on the host.
  *
  * This is where every screen, animation and layout decision lives. It has two
  * sinks — a browser canvas in development and the panel over USB-CDC in
- * production — and does not know which one it is feeding.
- */
-
-/**
- * An RGB565 framebuffer.
+ * production — and does not know which one it is feeding. There is no sink
+ * abstraction between them: this package produces a `Framebuffer`, and what a
+ * consumer does with it is the consumer's business.
  *
- * `pixels` is deliberately mutable: this is the one place in the repo where
- * mutation is the correct design. Allocating a new buffer per frame at 10fps
- * would defeat the point. `eslint.config.ts` disables the functional rules for
- * this package for exactly this reason.
+ * This file is a barrel and nothing else. Everything it names lives in a
+ * module that can be imported directly, so a module needing a *value* from a
+ * sibling never has to come back through here and close a cycle.
  */
-export type Framebuffer = {
-  readonly pixels: Uint16Array;
-  readonly width: number;
-  readonly height: number;
-};
 
-/** Allocate a framebuffer sized to the physical panel. */
-export function createFramebuffer(): Framebuffer {
-  return {
-    pixels: new Uint16Array(SCREEN_WIDTH * SCREEN_HEIGHT),
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-  };
-}
+// Panel band geometry, re-exported so consumers have one import path and
+// `tools/panel-mock.ts` cannot drift from the renderer it is mocking.
+export * from './layout.js';
+export * from './framebuffer.js';
 
-/** Fill the whole framebuffer with a single RGB565 colour. */
-function fill(target: Framebuffer, colour: number): void {
-  target.pixels.fill(colour);
-}
+// The primitives every screen is built from. Consumer-facing: the harness
+// draws with these directly, not only through a scene.
+export * from './draw.js';
+export * from './text.js';
 
-/**
- * Clear a framebuffer to a pack's first palette entry — its background.
- *
- * By convention palette[0] is the background colour, so a pack swap changes
- * the whole screen's ground without any other code knowing.
- */
-export function clearToPackBackground(
-  target: Framebuffer,
-  manifest: PackManifest,
-): void {
-  const palette = packPalette(manifest);
-  fill(target, palette[0] ?? 0);
-}
+// The scene, and the session chip its strip is described in terms of.
+//
+// `band.js` is deliberately absent. Its palette roles and insets are how a
+// scene is *painted*, not how one is *described*, and nothing outside this
+// package composes a band by hand — `sceneColours` joins the barrel the day
+// something does.
+export * from './scene.js';
+export * from './strip.js';

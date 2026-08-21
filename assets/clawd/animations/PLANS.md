@@ -228,6 +228,58 @@ the difference instead.
 
 ---
 
+## The environment — a rock pool, through the day
+
+Not an animation. The ambient layer every animation is drawn on top of, built
+by the renderer rather than baked into any SVG (`docs/ANIMATION.md` §Clawd
+lives somewhere). One place, always the same place — a creature with a home,
+not a set of illustrations that share a sprite.
+
+**Why a rock pool.** He is a crab. Putting him where a crab lives earns the
+mascot instead of ignoring it, and it gives the one thing every animation
+already assumes: a ground line to stand on.
+
+- **Ground.** A wet rock shelf across the bottom, with the sprite standing on
+  it. Its line must be **derived from the sprite slot**, not chosen by eye:
+  `spriteSlots()` places the character, his feet sit at a fixed offset within
+  that, and every prop in every animation — the barbell, the laptop base —
+  already rests on the same line. If the shelf and the feet disagree by even a
+  pixel he floats, and that is the defect the idle rebuild spent an evening on.
+- **Pool.** A shallow band of water to one side, a tone off the rock, with a
+  single highlight line. Not centred — he stands where the sprite slot puts
+  him, and the pool should sit beside him rather than under him.
+- **Rock.** One silhouette breaking the horizon, off-centre. Enough to say
+  "coast" without competing with the character.
+- **Sky.** The majority of the frame. A vertical gradient, and the thing that
+  carries the time of day.
+
+**Time of day is the whole trick, and it is nearly free.** The same scene at
+dawn, day, dusk and night, as a palette swap on sky, water and rock — no new
+geometry. It means the object on the desk quietly knows when it is, and a
+late-night session actually looks like one. Night adds stars; that is the only
+addition beyond colour.
+
+**Ambient motion should be almost nothing.** A highlight shifting on the water,
+a star or two changing. The character is what moves; the place is what stays.
+A busy background competes with the animation and costs dirty rects for
+nothing.
+
+**It has to read at 168x160.** Upstream's works because it is a gradient, some
+dots and a strip of grass — the sprite is only about 88px wide, and anything
+with real detail turns to mush beside it. Judge it at true size from the first
+sketch, not scaled up.
+
+**Not wanted:** a scene that competes with Clawd; detail that dissolves at true
+size; a horizon that disagrees with the sprite's feet; anything that makes the
+existing props look wrong. `bouldering` is the one to check — its wall should
+read as a sea cliff above the pool, which is coherent, rather than as a gym
+wall that has wandered onto a beach.
+
+**Pack-swappable.** The environment is a personalisation lever, so this is the
+default rather than the only one.
+
+---
+
 ## Template
 
 ```
