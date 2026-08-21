@@ -55,8 +55,7 @@ type RegisteredEvent = {
  * `PreCompact` is deliberately absent: the sweeping animation it would drive is
  * Stage 4 work, and registering an event nothing consumes would be describing
  * behaviour that does not exist.
- */
-/**
+ *
  * Every event in `HANDLED_HOOK_EVENTS` must appear below, and nothing else may.
  * The list lives in `protocol` because this package and the daemon cannot see
  * each other; see the note there for the two ways they drifted apart.

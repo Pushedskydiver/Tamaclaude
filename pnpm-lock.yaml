@@ -98,6 +98,9 @@ importers:
       '@tamaclaude/renderer':
         specifier: workspace:*
         version: link:../renderer
+      zod:
+        specifier: ^4.1.12
+        version: 4.4.3
 
   packages/device:
     dependencies:

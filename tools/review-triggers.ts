@@ -18,9 +18,10 @@
  * the answer arrives unprompted rather than being remembered.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -99,7 +100,11 @@ function triggers(patterns: readonly string[]): readonly Trigger[] {
 }
 
 /** Changed files and changed lines against `base`, lockfiles excluded. */
-function diff(base: string): { files: string[]; lines: number } {
+function diff(base: string): {
+  files: string[];
+  lines: number;
+  binary: number;
+} {
   const range = `${base}...HEAD`;
   const names = execFileSync('git', ['diff', '--name-only', range], {
     encoding: 'utf8',
@@ -111,25 +116,64 @@ function diff(base: string): { files: string[]; lines: number } {
   })
     .split('\n')
     .filter(Boolean);
+  return { files: names, ...countChanged(numstat) };
+}
+
+/**
+ * Sum a `git diff --numstat` into changed lines, skipping lockfiles.
+ *
+ * Exported only so it can be tested. Git writes `-\t-` for a file it treats as
+ * binary, `Number('-')` is NaN, and one NaN turns the whole total into NaN —
+ * which printed as "NaN lines" and answered *no* to the over-200-lines
+ * trigger, on a diff of 3,194 lines. It reported fewer reviews than were
+ * owed, which is the one direction this tool must never fail in.
+ *
+ * Found because a test file had literal NUL bytes in it and git called it
+ * binary. The next one will be a PNG under `assets/`, which is ordinary.
+ */
+export function countChanged(numstat: readonly string[]): {
+  lines: number;
+  binary: number;
+} {
   let lines = 0;
+  let binary = 0;
   for (const row of numstat) {
     const [added, removed, file] = row.split('\t');
-    if (LOCKFILES.has(file)) continue;
+    if (file !== undefined && LOCKFILES.has(file)) continue;
+    if (added === '-' || removed === '-') {
+      binary += 1;
+      continue;
+    }
     lines += Number(added ?? 0) + Number(removed ?? 0);
   }
-  return { files: names, lines };
+  return { lines, binary };
+}
+
+/** The one-line summary above the trigger list. */
+function headline(counts: {
+  base: string;
+  files: number;
+  lines: number;
+  binary: number;
+}): string {
+  const plural = counts.binary === 1 ? '' : 's';
+  const note =
+    counts.binary > 0
+      ? ` (${counts.binary} binary file${plural} not counted)`
+      : '';
+  return `${counts.files} files, ${counts.lines} lines against ${counts.base}${note}`;
 }
 
 function main(): void {
   const base = process.argv[2] ?? 'main';
-  const { files, lines } = diff(base);
+  const { files, lines, binary } = diff(base);
   if (files.length === 0) {
     console.log(`no changes against ${base}`);
     return;
   }
 
   const owed = new Set<string>();
-  console.log(`\n${files.length} files, ${lines} lines against ${base}\n`);
+  console.log(`\n${headline({ base, files: files.length, lines, binary })}\n`);
   for (const trigger of triggers(blastRadius())) {
     const fires = trigger.fires(files, lines);
     if (fires) for (const review of trigger.reviews) owed.add(review);
@@ -147,4 +191,39 @@ function main(): void {
   );
 }
 
-main();
+/**
+ * Was this run as a command, rather than imported?
+ *
+ * Both sides are resolved through `realpath` because `import.meta.url` already
+ * is and `process.argv[1]` is not, so reaching the script through a symlink
+ * made a bare `===` false — and `.husky/pre-push` discarded the exit code, so
+ * nothing downstream noticed either. The one direction this tool must never
+ * fail in, reached by a path nobody would think to test. (The hook now prints a
+ * line of its own when this exits non-zero; it used to end in `|| true`, and
+ * this sentence went on describing that for a commit after it changed.)
+ *
+ * When there is an entry to compare and the comparison fails, run — whatever
+ * the reason, not just the symlink case above: a `process.argv[1]` that does
+ * not resolve lands here too. Deliberately. Over-reporting a review is the safe
+ * error here; staying quiet is the unsafe one, and this file exists because
+ * that is the direction things actually go wrong.
+ *
+ * Not running is the ordinary outcome, not an edge case, and it is reached both
+ * ways. An import from a file inherits the *importer's* entry and so returns
+ * false at the comparison — which is what `review-triggers.test.ts` does on
+ * every `pnpm test`. An import from `node -e`, or from the REPL, has no entry to
+ * inherit and returns false at the `undefined` branch instead. Measured, both.
+ * Two earlier versions of this paragraph each picked one of those and claimed it
+ * was the only one.
+ */
+function invokedDirectly(): boolean {
+  const entry = process.argv[1];
+  if (entry === undefined) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return true;
+  }
+}
+
+if (invokedDirectly()) main();

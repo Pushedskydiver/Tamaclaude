@@ -98,3 +98,96 @@ describe('liveSessions', () => {
     expect(liveSessions(registry, T0 + EVICT_AFTER_MS)).toHaveLength(0);
   });
 });
+
+describe('cardinality', () => {
+  const fill = (count: number, at = 1_000) =>
+    Array.from({ length: count }, (_, index) => `s${String(index)}`).reduce(
+      (registry, id) =>
+        observe(registry, { sessionId: id, kind: 'SessionStart' }, at),
+      createRegistry(0),
+    );
+
+  it('holds exactly the cap, not merely at most it', () => {
+    // `toBeLessThanOrEqual(64)` was the original assertion and it passed for a
+    // cap of one — which would have destroyed multi-session compositing while
+    // staying green. The number is the point, so the number is asserted.
+    expect(fill(500).sessions.size).toBe(64);
+  });
+
+  it('keeps every session when there is room', () => {
+    // The other half of pinning the cap: it must not bite early.
+    expect(fill(64).sessions.size).toBe(64);
+    expect(fill(63).sessions.size).toBe(63);
+  });
+
+  it('keeps the newest sessions when the cap bites', () => {
+    const filled = fill(100);
+    expect(filled.sessions.has('s99')).toBe(true);
+    expect(filled.sessions.has('s0')).toBe(false);
+  });
+
+  it('does not evict anyone when an existing session is updated at the cap', () => {
+    // The bug this catches: entries were appended to an array and *then*
+    // trimmed, so an update spent a slot on its own duplicate key. The cap was
+    // really 63, and an ordinary PostToolUse about one session silently
+    // dropped an unrelated live one.
+    const filled = fill(64);
+    const updated = observe(
+      filled,
+      { sessionId: 's63', kind: 'PostToolUse', tool: 'Read' },
+      2_000,
+    );
+    expect(updated.sessions.size).toBe(64);
+    expect(updated.sessions.has('s0')).toBe(true);
+  });
+
+  it('evicts the quietest session, not the first one seen', () => {
+    // Eviction by first sight would hand a flooder the strip: every minted
+    // session is new, so the real long-running one is first in line to die.
+    const filled = fill(64);
+    const busy = observe(
+      filled,
+      { sessionId: 's0', kind: 'PostToolUse', tool: 'Read' },
+      9_000,
+    );
+    const overflowed = observe(
+      busy,
+      { sessionId: 'new', kind: 'SessionStart' },
+      9_100,
+    );
+    expect(overflowed.sessions.size).toBe(64);
+    expect(overflowed.sessions.has('s0')).toBe(true);
+    expect(overflowed.sessions.has('s1')).toBe(false);
+  });
+});
+
+describe('what the cap does not protect', () => {
+  it('lets a flood evict a real session that is merely between events', () => {
+    // Pinned deliberately, because the comment on `withoutQuietest` used to
+    // claim the opposite. Eviction reads `lastEventAt` and nothing else, so a
+    // real session that has merely gone quiet for thirty seconds is older than
+    // every freshly minted id and goes first — its state does not come into it.
+    // (An earlier version of this comment said the session was in `WAITING`. It
+    // is in `THINKING`: `UserPromptSubmit` maps there, and `WAITING` needs a
+    // `Notification` plus `WAITING_AFTER_MS`, which is 60 s against this 30 s
+    // gap. The ordering the test pins was right; the example was not.)
+    // The cap bounds memory; it does not defend the display, and the 0600
+    // socket is what does.
+    const real = observe(
+      createRegistry(0),
+      { sessionId: 'real', kind: 'UserPromptSubmit' },
+      1_000_000,
+    );
+    const flooded = Array.from({ length: 64 }, (_, index) => index).reduce(
+      (registry, index) =>
+        observe(
+          registry,
+          { sessionId: `mint${String(index)}`, kind: 'SessionStart' },
+          1_030_000,
+        ),
+      real,
+    );
+    expect(flooded.sessions.size).toBe(64);
+    expect(flooded.sessions.has('real')).toBe(false);
+  });
+});

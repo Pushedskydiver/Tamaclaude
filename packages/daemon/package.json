@@ -15,6 +15,7 @@
     "@tamaclaude/device": "workspace:*",
     "@tamaclaude/packs": "workspace:*",
     "@tamaclaude/protocol": "workspace:*",
-    "@tamaclaude/renderer": "workspace:*"
+    "@tamaclaude/renderer": "workspace:*",
+    "zod": "^4.1.12"
   }
 }

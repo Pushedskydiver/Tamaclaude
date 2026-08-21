@@ -1,0 +1,149 @@
+import { describe, expect, it } from 'vitest';
+
+import { MAX_FIELD_LENGTH, parseHookEventLine } from './hook-line.js';
+
+const valid = JSON.stringify({
+  sessionId: 'abc',
+  kind: 'PreToolUse',
+  tool: 'Bash',
+});
+
+describe('parseHookEventLine', () => {
+  it('parses the line the hook actually sends', () => {
+    expect(parseHookEventLine(valid)).toEqual({
+      sessionId: 'abc',
+      kind: 'PreToolUse',
+      tool: 'Bash',
+    });
+  });
+
+  it('keeps the optional fields when they are there', () => {
+    const line = JSON.stringify({
+      sessionId: 'abc',
+      kind: 'StopFailure',
+      errorType: 'rate_limit',
+      agentId: 'a1',
+      agentType: 'Explore',
+    });
+    expect(parseHookEventLine(line)).toEqual({
+      sessionId: 'abc',
+      kind: 'StopFailure',
+      errorType: 'rate_limit',
+      agentId: 'a1',
+      agentType: 'Explore',
+    });
+  });
+
+  it('drops malformed JSON rather than throwing', () => {
+    // Anything can connect to a Unix socket. Every one of these is a line the
+    // daemon has to survive without the registry noticing.
+    const garbage = [
+      '',
+      '   ',
+      '{',
+      'not json at all',
+      '{"sessionId":}',
+      '\u0000\u0001',
+    ];
+    garbage.forEach((line) => {
+      expect(parseHookEventLine(line)).toBeUndefined();
+    });
+  });
+
+  it('drops valid JSON that is not an event', () => {
+    const wrong = ['null', '5', '"a string"', '[]', '[{"sessionId":"a"}]'];
+    wrong.forEach((line) => {
+      expect(parseHookEventLine(line)).toBeUndefined();
+    });
+  });
+
+  it('drops an event missing the fields the registry keys on', () => {
+    expect(
+      parseHookEventLine(JSON.stringify({ kind: 'Stop' })),
+    ).toBeUndefined();
+    expect(
+      parseHookEventLine(JSON.stringify({ sessionId: 'abc' })),
+    ).toBeUndefined();
+    expect(
+      parseHookEventLine(JSON.stringify({ sessionId: '', kind: 'Stop' })),
+    ).toBeUndefined();
+  });
+
+  it('drops an event whose fields are the wrong type', () => {
+    const line = JSON.stringify({ sessionId: 42, kind: 'Stop' });
+    expect(parseHookEventLine(line)).toBeUndefined();
+  });
+
+  it('strips fields it was not asked for', () => {
+    // `tool_input` carries the whole file on a Write. The hook already drops
+    // it; this is the second line of defence, because the hook is not the only
+    // thing that can reach the socket.
+    const line = JSON.stringify({
+      sessionId: 'abc',
+      kind: 'PreToolUse',
+      tool: 'Write',
+      tool_input: { content: 'x'.repeat(1000) },
+    });
+    expect(parseHookEventLine(line)).toEqual({
+      sessionId: 'abc',
+      kind: 'PreToolUse',
+      tool: 'Write',
+    });
+  });
+
+  it('does not let a line reach Object.prototype', () => {
+    const line = '{"sessionId":"abc","kind":"Stop","__proto__":{"owned":true}}';
+    const event = parseHookEventLine(line);
+    expect(event).toEqual({ sessionId: 'abc', kind: 'Stop' });
+    expect(Object.getPrototypeOf(event)).toBe(Object.prototype);
+    expect({}).not.toHaveProperty('owned');
+  });
+
+  it('refuses a key field long enough to be a problem downstream', () => {
+    // The registry is keyed on one of these and the strip renders it, so an
+    // unbounded string is both a map entry that never leaves and a panel full
+    // of somebody else's opinion.
+    const long = 'x'.repeat(MAX_FIELD_LENGTH + 1);
+    expect(
+      parseHookEventLine(JSON.stringify({ sessionId: long, kind: 'Stop' })),
+    ).toBeUndefined();
+    expect(
+      parseHookEventLine(JSON.stringify({ sessionId: 'a', kind: long })),
+    ).toBeUndefined();
+  });
+
+  it('degrades a decorative field rather than losing the event', () => {
+    // A `PreToolUse` that never lands leaves the panel claiming the session is
+    // idle while it runs. Dropping the tool name costs the animation its
+    // specificity and nothing else.
+    const bad = [
+      'x'.repeat(MAX_FIELD_LENGTH + 1),
+      '',
+      42,
+      null,
+      { nested: true },
+    ];
+    bad.forEach((tool) => {
+      expect(
+        parseHookEventLine(
+          JSON.stringify({ sessionId: 'a', kind: 'PreToolUse', tool }),
+        ),
+      ).toEqual({ sessionId: 'a', kind: 'PreToolUse' });
+    });
+  });
+
+  it('accepts a field exactly at the limit', () => {
+    const edge = 'x'.repeat(MAX_FIELD_LENGTH);
+    expect(
+      parseHookEventLine(JSON.stringify({ sessionId: edge, kind: 'Stop' })),
+    ).toEqual({ sessionId: edge, kind: 'Stop' });
+  });
+
+  it('tolerates the whitespace a line-oriented wire picks up', () => {
+    expect(parseHookEventLine(`  ${valid}  \r`)).toEqual({
+      sessionId: 'abc',
+      kind: 'PreToolUse',
+      tool: 'Bash',
+    });
+  });
+});

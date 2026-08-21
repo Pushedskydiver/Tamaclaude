@@ -14,7 +14,7 @@
     "build": "tsc -b",
     "test": "tsc -b && vitest run",
     "lint": "eslint .",
-    "typecheck": "tsc -b --noEmit && tsc -p tools/tsconfig.json --noEmit",
+    "typecheck": "tsc -b && tsc -p tools/tsconfig.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
