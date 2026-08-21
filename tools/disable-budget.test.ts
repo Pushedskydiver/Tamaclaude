@@ -76,18 +76,27 @@ function commentsIn(text: string): readonly string[] {
 }
 
 /**
- * A disable directive, as ESLint itself recognises one.
+ * A suppression, as ESLint itself recognises one.
  *
- * The comment must *begin* with `eslint-disable`, which is ESLint's own rule
- * and is also what keeps this from matching prose that merely mentions one.
+ * Two shapes count, because ESLint honours two, and this gate has now missed
+ * one of each. Both were demonstrated live against a planted file — ESLint
+ * reporting no violation, the gate staying green.
  *
- * Two earlier versions each honoured less than ESLint does, and each gap ran
- * the same way — a suppression ESLint applied that this gate did not count.
- * Every one was demonstrated live against a planted file, ESLint reporting no
- * violation and the gate staying green.
+ * **Disable directives.** The comment must *begin* with `eslint-disable`,
+ * which is ESLint's own rule and is what keeps this off prose that merely
+ * mentions one. In a `//` comment only `-line` and `-next-line` are directives:
+ * a bare `// eslint-disable` suppresses nothing, and counting it was this
+ * gate's own over-count.
  *
- * The first version filtered to comments starting their own line and required
- * a rule name to follow, which cost it three forms:
+ * **Inline config.** `/* eslint functional/no-let: "off" *\/` is not a disable
+ * directive at all — it is a config override, block-comment only, and it turns
+ * a rule off for the whole file. `eslint.config.ts` sets no `noInlineConfig`,
+ * so it is honoured here. Three versions of this gate could not see it, and it
+ * buys exactly what `BUDGET` exists to ration. Rule names are read as every
+ * identifier before a `:`, which over-reads an options object's keys — the
+ * safe direction, and there are none in the tree to over-read.
+ *
+ * The gaps that have been closed, each an under-count:
  *
  * - `let a = 1; // eslint-disable-line functional/no-let` — the trailing form
  *   is the *only* way `-line` is ever written, since alone on a line it has no
@@ -96,28 +105,64 @@ function commentsIn(text: string): readonly string[] {
  *   captured no rule name and so was dropped from the tally entirely. The most
  *   dangerous form was the one it was blindest to.
  * - Any directive that did not begin its line.
- *
- * The second version was one regex over the whole file text, and cost two more:
- *
  * - `[^\n*]` cut the capture at the first newline, so the second rule of a
  *   list wrapped inside a block comment was bought for free. Every entry in
- *   `BUDGET` holds exactly one rule, which is precisely the shape where a
- *   silently uncounted second one hides.
- * - It matched inside string and template literals, where there is no
- *   directive at all. That one fails loud rather than quiet, so it cost
- *   nothing — but it is why the comments come from the parser now and not
- *   from a search, which is the move `detached-docs.test.ts` had already made.
+ *   `BUDGET` holds exactly one rule, which is the shape that hides it.
+ * - The inline config form above.
  *
- * Two forms are correctly *not* directives, and are not counted: `/** ... *\/`
- * is a doc comment, whose value begins with `*` rather than `eslint-disable`,
- * and a rule continued after a leading `*` reaches ESLint as the literal rule
- * name `* functional/no-let`, which it rejects as undefined. Both measured.
+ * And one over-count, which failed loud and cost nothing: matching inside
+ * string and template literals. It is why the comments come from the parser
+ * now rather than from a search — that, and only that. What keeps prose out is
+ * the `^` anchor, not the parser.
+ *
+ * Not directives, measured against ESLint: `/** ... *\/`, whose value begins
+ * with `*`. A rule continued after a leading `*` *is* inside a directive and
+ * reaches ESLint as the literal rule name `* functional/no-let`, which it
+ * rejects as undefined — so it is counted, under that name, which is what
+ * keeps the wrapped-list fix from having a hole in it.
  */
-const DIRECTIVE =
-  /^(?:\/\/|\/\*)\s*eslint-disable(?:-next-line|-line)?\b([\s\S]*?)(?:\*\/)?$/;
+const LINE_DIRECTIVE = /^\/\/\s*eslint-disable-(?:next-line|line)\b(.*)$/;
+const BLOCK_DIRECTIVE =
+  /^\/\*\s*eslint-disable(?:-next-line|-line)?\b([\s\S]*?)(?:\*\/)?$/;
+const INLINE_CONFIG = /^\/\*\s*eslint\s+([\s\S]*?)(?:\*\/)?$/;
 
-/** What a blanket disable of the whole file buys, named so it cannot hide. */
+/** Rule names inside an inline config block: every identifier before a `:`. */
+const CONFIGURED_RULE = /([\w$@-]+(?:\/[\w$@-]+)*)\s*:/g;
+
+/** What a blanket disable buys, named so it cannot hide. */
 const EVERY_RULE = '(every rule)';
+
+/** Marks a rule reconfigured rather than disabled, so the two cannot blur. */
+const asConfig = (rule: string): string => `${rule} (inline config)`;
+
+/**
+ * Rules a single comment buys, or nothing if it is not a suppression.
+ *
+ * Order matters: `eslint-disable` is tried first, because `\s+` after `eslint`
+ * in `INLINE_CONFIG` cannot match the `-` that follows it, but relying on that
+ * silently would be one more thing to get wrong.
+ */
+function boughtBy(comment: string): readonly string[] {
+  const directive =
+    LINE_DIRECTIVE.exec(comment) ?? BLOCK_DIRECTIVE.exec(comment);
+  if (directive !== null) {
+    // Everything after the directive up to `--`, which is ESLint's separator
+    // for the human explanation. A comma-separated list is one directive
+    // buying several rules, and every one of them counts.
+    const listed = (directive[1] ?? '').split('--')[0] ?? '';
+    const rules = listed
+      .split(',')
+      .map((rule) => rule.trim())
+      .filter(Boolean);
+    return rules.length > 0 ? rules : [EVERY_RULE];
+  }
+  const config = INLINE_CONFIG.exec(comment);
+  if (config === null) return [];
+  return [...(config[1] ?? '').matchAll(CONFIGURED_RULE)]
+    .map((match) => match[1])
+    .filter((rule) => rule !== undefined)
+    .map((rule) => asConfig(rule));
+}
 
 function productionFiles(): readonly string[] {
   return globSync('packages/*/src/**/*.ts', {
@@ -131,19 +176,7 @@ function productionFiles(): readonly string[] {
 
 function disabledIn(file: string): readonly string[] {
   const text = readFileSync(join(ROOT, file), 'utf8');
-  return commentsIn(text).flatMap((comment) => {
-    const match = DIRECTIVE.exec(comment);
-    if (match === null) return [];
-    // Everything after the directive up to `--`, which is ESLint's separator
-    // for the human explanation. A comma-separated list is one directive
-    // buying several rules, and every one of them counts.
-    const listed = (match[1] ?? '').split('--')[0] ?? '';
-    const rules = listed
-      .split(',')
-      .map((rule) => rule.trim())
-      .filter(Boolean);
-    return rules.length > 0 ? rules : [EVERY_RULE];
-  });
+  return commentsIn(text).flatMap((comment) => boughtBy(comment));
 }
 
 describe('the eslint-disable budget', () => {

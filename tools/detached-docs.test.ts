@@ -17,14 +17,32 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  * written for one symbol and stranded above another does not vanish from the
  * file or the types; it vanishes from the place people read it.
  *
- * This has now bitten four times. Three landed in three consecutive commits: a
- * priming rule for `Transport.send` above `status()`, `observe` losing its
- * documentation to a constant inserted above it, and `render` — the renderer's
- * public entry point — emitted with no doc at all because its block sat above a
- * different function. The fourth was older and quieter: `svg2frames.ts`'s
- * panel-width rationale outlived the `PANEL_WIDTH` it described and came to
- * rest on `STAGE_HEIGHT`. It was then certified as deliberate by the very audit
- * that built the list below, and a fourth review is what found it.
+ * Three versions of this paragraph have tried to tally how often the class has
+ * bitten, and all three got the count or the commits wrong. It is not tallied
+ * here any more. What is stable is the shapes, each of which was found in this
+ * repo by a review rather than by a gate:
+ *
+ * - A priming rule written for `Transport.send` bound to `status()`, and
+ *   `observe`'s documentation taken by a constant inserted above it. Both in
+ *   `d7ad4b9`, one commit.
+ * - `render` — the renderer's public entry point — emitted with no doc at all,
+ *   because its block sat above `withEnvironment`; and `hook-settings.ts`
+ *   carrying two blocks for one constant. Both predate this branch, in
+ *   `cc6bd38`.
+ * - `svg2frames.ts`'s panel-width rationale outliving the `PANEL_WIDTH` it
+ *   described and coming to rest on `STAGE_HEIGHT`, from `8d72d08`. Older than
+ *   any of the others, and certified as deliberate by the audit built to catch
+ *   exactly this — twice, before a review took it off the list.
+ * - `withoutQuietest`'s doc bound to a one-line `type` alias inserted between
+ *   it and its function, in `630d15d` — inside the very hunk that fixed the
+ *   first two. This gate cannot see that one; see below.
+ *
+ * The generalisation worth keeping is not a number. It is that every one
+ * arrived as a side effect of editing something *else* nearby — a constant
+ * deleted, an alias inserted, a function moved — which is why none of them was
+ * noticed by the person who wrote it. The last in the list is the sharpest
+ * case: `630d15d` was the commit fixing the first two, and it introduced a
+ * third in the same hunk, in the shape this gate cannot see.
  *
  * **What this does not catch.** Only *adjacent* blocks are visible here. The
  * third instance put a one-line `type` alias between the doc and its function,
@@ -79,17 +97,24 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
  * adds it. The cost is a line and a moment deciding which kind it is — which is
  * the moment that was missing every time.
  *
- * Three entries have been deleted rather than recorded, each when a review
- * pointed out it was the bug and not a header: `scene.ts` had `render`'s doc
- * above `withEnvironment`, `hook-settings.ts` had two blocks describing the
- * same constant, and `svg2frames.ts` had the panel-width rationale left on
- * `STAGE_HEIGHT` by a deleted constant.
+ * Recording a count instead of deciding is the failure this list invites, and
+ * it has happened at every revision so far. Measured from `git log -p`:
  *
- * Recording a count instead of deciding is the failure this list invites. Its
- * first draft committed it twice; the audit written to catch that committed it
- * a third time, and published a completeness claim over the top. Every entry
- * left here has since been read against its file — twice, independently — and
- * that is the only thing this paragraph is entitled to assert.
+ * - `630d15d` wrote the list with fifteen entries. Three of them were the bug
+ *   and not a header — `scene.ts` and `hook-settings.ts`, each recorded as `2`
+ *   when the second block was `render`'s stranded doc and a duplicate; and
+ *   `svg2frames.ts`. A fourth, `make-font-atlas.ts`, was a regex false
+ *   positive that no longer exists once the walk went through the AST.
+ * - `f3cc11f` decremented `scene.ts` and `hook-settings.ts` to `1` by fixing
+ *   their real second block, and deleted `make-font-atlas.ts`. It re-certified
+ *   `svg2frames.ts` rather than reading it.
+ * - This revision deleted `svg2frames.ts`. Two entries have therefore ever
+ *   been deleted outright; the other two were decremented and are still here.
+ *
+ * Every entry left has since been read against its file, twice and
+ * independently, and every one is a header. That is a statement about an audit
+ * on a particular day, not a property of the list — which is why the entries
+ * are counts a person has to justify rather than a switch someone can flip.
  */
 const DELIBERATE: Readonly<Record<string, number>> = {
   'packages/daemon/src/state.ts': 2,

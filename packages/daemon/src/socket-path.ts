@@ -126,14 +126,17 @@ export function defaultSocketPath(): string {
  * check against 104, the smaller, so a path never binds on one platform and
  * not the other.
  *
- * The asymmetry is the header constant and nothing subtler. An earlier version
- * of this comment justified 104 by saying Linux needs a NUL inside the array
- * and so stops at 107; `unix(7)` says the terminator *should* be there, and
- * its BUGS section describes binding 108 non-null bytes as something that
- * works. 107 is simply 108 less a terminator — the ceiling for code that keeps
- * a C string in `sun_path`, which is a property of that code and not of the
- * kernel. Either way it was never the operative number here: 104 is under
- * every reading of both headers, which is the whole reason to check against it.
+ * An earlier version of this comment justified 104 by saying Linux needs a NUL
+ * inside the array and so stops at 107. `unix(7)` says the terminator *should*
+ * be there, and its BUGS section describes binding 108 non-null bytes as
+ * something that works, locating the trouble in reading an address back rather
+ * than in the bind — so 107 is not the kernel's number. It is 108 less a
+ * terminator: the ceiling for code that keeps a C string in `sun_path`, which
+ * some stacks do.
+ *
+ * Whether any layer under Node imposes that ceiling is not settled here, and
+ * does not need to be. 104 is under every reading of both headers, which is
+ * the whole reason to check against it rather than against either `sizeof`.
  *
  * This is the *inclusive* maximum, not the first failing length. Measured on
  * darwin 25.5.0 / Node 24: 104 bytes binds and accepts a connection, 105 is

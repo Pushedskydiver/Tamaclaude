@@ -201,11 +201,15 @@ function main(): void {
  * direction this tool must never fail in, reached by a path nobody would
  * think to test.
  *
- * When the comparison cannot be made at all, run — and `at all` is the whole
- * of it, not just the symlink case above: a `process.argv[1]` that does not
- * resolve lands here too. Deliberately. Over-reporting a review is the safe
+ * When there is an entry to compare and the comparison fails, run — whatever
+ * the reason, not just the symlink case above: a `process.argv[1]` that does
+ * not resolve lands here too. Deliberately. Over-reporting a review is the safe
  * error here; staying quiet is the unsafe one, and this file exists because
  * that is the direction things actually go wrong.
+ *
+ * No entry at all is the one case that does not run, and it is not the same
+ * question: `node -e`, a REPL and an ordinary import all arrive that way, and
+ * none of them is someone asking what reviews are owed.
  */
 function invokedDirectly(): boolean {
   const entry = process.argv[1];

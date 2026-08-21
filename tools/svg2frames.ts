@@ -42,10 +42,10 @@ import { chromium } from 'playwright';
 // `eslint.config.ts` enforces — and it stopped being true at all once the
 // boundary rule started allowing `tools` to read `protocol`.
 //
-// A line comment rather than a block: above an import a block is surfaced by
-// no hover, and it would re-enter the doc AST — so the day the two `import
-// type` lines go and prettier sorts this one up under the file header, the
-// two would stack, which is the shape `tools/detached-docs.test.ts` polices.
+// A line comment rather than a block: measured, a block above an import is
+// surfaced by no hover — neither on the binding here nor on `PANEL_WIDTH` at
+// its use below — so it would buy a reader nothing while adding one more node
+// to the doc AST that `tools/detached-docs.test.ts` walks.
 import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
 
 import {
