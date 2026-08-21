@@ -8,7 +8,6 @@
 
 import type { Transport } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
-import type { HookEvent } from '@tamaclaude/protocol';
 import type { Framebuffer } from '@tamaclaude/renderer';
 
 import { parsePackManifest } from '@tamaclaude/packs';
@@ -37,13 +36,16 @@ export function createDaemon(
   return { framebuffer, pack, transports };
 }
 
-/**
- * Map a hook event to the animation the panel should show.
- *
- * Placeholder — the real mapping table lands in BUILD_PLAN Stage 3, alongside
- * multi-session compositing. Both Alex and Jamie run several sessions at once,
- * so "the current animation" is a resolution problem, not a single value.
- */
-export function animationFor(event: HookEvent): string {
-  return event.tool ?? event.kind;
-}
+// The session pipeline. Everything below is pure and takes `now` as an
+// argument — there is no clock in this package, which is what lets a
+// ten-minute eviction be proved in microseconds.
+//
+// Only the four functions a consumer actually calls are here. `evictStale`,
+// `liveSessions`, `applyEvent`, `effectiveState` and the record types are
+// exported from their own modules and import cleanly from there; each joins
+// this barrel the day something outside the package needs it, which is the
+// same rule `packages/renderer/src/index.ts` applies to `band.js`. Adding one
+// early is what `knip` is configured to catch.
+export { animationFor } from './animation.js';
+export { createRegistry, observe } from './registry.js';
+export { resolvePanel } from './resolve.js';

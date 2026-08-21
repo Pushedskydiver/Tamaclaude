@@ -15,7 +15,8 @@
     "@tamaclaude/protocol": "workspace:*"
   },
   "bin": {
-    "tamaclaude-notify": "./dist/index.js"
+    "tamaclaude-notify": "./dist/index.js",
+    "tamaclaude-install-hooks": "./dist/install.js"
   },
   "devDependencies": {
     "vitest": "^4.1.9"
