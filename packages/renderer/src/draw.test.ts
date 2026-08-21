@@ -254,3 +254,45 @@ describe('drawFrame at panel scale', () => {
     expect(litCount(target)).toBe(rectArea(visible));
   });
 });
+
+describe('drawFrame with a mask', () => {
+  it('leaves masked-out pixels untouched', () => {
+    const target = buffer(5, 4);
+    const source = frame(Uint16Array.from([1, 2, 3, 4]), 2);
+    // Only the diagonal is drawn.
+    const mask = Uint8Array.from([1, 0, 0, 1]);
+    drawFrame(target, source, { x: 1, y: 1, mask });
+    expect(grid(target)).toEqual(['.....', '.1...', '..4..', '.....']);
+  });
+
+  it('refuses a mask that does not match the raster', () => {
+    // A short mask would otherwise read `undefined` past its end, which is
+    // not `=== 0`, so the tail would draw opaque — the exact failure the mask
+    // exists to prevent, and silent.
+    const target = buffer(4, 4);
+    const source = frame(Uint16Array.from([1, 2, 3, 4]), 2);
+    expect(() =>
+      drawFrame(target, source, { x: 0, y: 0, mask: Uint8Array.from([1, 1]) }),
+    ).toThrow(/2 entries for 4 pixels/);
+  });
+
+  it('clips a masked raster the same way as an unmasked one', () => {
+    // Two code paths — a whole-row `set` when there is no mask, a per-pixel
+    // loop when there is — and they must clip identically. A divergence here
+    // shows up on one caller only.
+    const source = frame(Uint16Array.from([1, 2, 3, 4, 5, 6]), 3);
+    const opaque = new Uint8Array(6).fill(1);
+    for (const at of [
+      { x: -1, y: 0 },
+      { x: 3, y: 1 },
+      { x: 0, y: -1 },
+      { x: -2, y: -1 },
+    ]) {
+      const plain = buffer(4, 3);
+      const masked = buffer(4, 3);
+      drawFrame(plain, source, at);
+      drawFrame(masked, source, { ...at, mask: opaque });
+      expect(grid(masked)).toEqual(grid(plain));
+    }
+  });
+});

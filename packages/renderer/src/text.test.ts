@@ -255,3 +255,64 @@ describe('drawTextBlock', () => {
     expect(target.pixels).toEqual(control.pixels);
   });
 });
+
+describe('scaled text', () => {
+  it('magnifies each glyph pixel into a scale x scale block', () => {
+    // Nearest-neighbour on the 1-bit mask, not a second atlas: Departure Mono
+    // only rasterises cleanly at 11px, so a 22px face would reintroduce the
+    // antialiasing `font-data.ts` exists to avoid.
+    const plain = scratch(GLYPH_WIDTH * 2, GLYPH_HEIGHT * 2);
+    drawText(plain, 'M', { x: 0, y: 0, colour: 1 });
+    const doubled = scratch(GLYPH_WIDTH * 2, GLYPH_HEIGHT * 2);
+    drawText(doubled, 'M', { x: 0, y: 0, colour: 1, scale: 2 });
+
+    // Every lit pixel of the 1x glyph becomes a 2x2 block in the 2x one.
+    for (let y = 0; y < GLYPH_HEIGHT; y += 1) {
+      for (let x = 0; x < GLYPH_WIDTH; x += 1) {
+        const lit = plain.pixels[y * plain.width + x] !== 0;
+        for (const [dy, dx] of [
+          [0, 0],
+          [0, 1],
+          [1, 0],
+          [1, 1],
+        ]) {
+          const at = (y * 2 + dy) * doubled.width + (x * 2 + dx);
+          expect(doubled.pixels[at] !== 0).toBe(lit);
+        }
+      }
+    }
+  });
+
+  it('advances by a scaled cell, so a measure agrees with the draw', () => {
+    // A measure that disagrees with the draw puts everything laid out after it
+    // in the wrong place — the defect `rightAlignedX` already guards against.
+    //
+    // Asserting only that nothing spills past the measured width does not
+    // catch this: an advance that is too *small* overlaps the glyphs inside
+    // that width and passes. The first version of this test did exactly that,
+    // and survived deleting the `* scale`. So it asserts the second glyph
+    // actually begins where the measure says it does.
+    expect(measureText('abc', 2)).toBe(3 * GLYPH_WIDTH * 2);
+
+    const width = GLYPH_WIDTH * 6;
+    const one = scratch(width, GLYPH_HEIGHT * 2);
+    drawText(one, 'M', { x: 0, y: 0, colour: 1, scale: 2 });
+    const two = scratch(width, GLYPH_HEIGHT * 2);
+    drawText(two, 'MM', { x: 0, y: 0, colour: 1, scale: 2 });
+
+    const rightmost = (target: Framebuffer): number => {
+      let found = -1;
+      for (let index = 0; index < target.pixels.length; index += 1) {
+        if (target.pixels[index] !== 0) {
+          found = Math.max(found, index % target.width);
+        }
+      }
+      return found;
+    };
+    // The second glyph must push the rightmost lit column out by exactly one
+    // scaled cell — not by one unscaled cell, and not by nothing at all.
+    expect(rightmost(two) - rightmost(one)).toBe(GLYPH_WIDTH * 2);
+    // And nothing may spill past what the measure promised.
+    expect(rightmost(two)).toBeLessThan(measureText('MM', 2));
+  });
+});

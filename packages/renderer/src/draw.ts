@@ -104,6 +104,16 @@ export function drawFrame(
   },
 ): void {
   const height = source.pixels.length / source.width;
+  // The mask is an invariant with two ends — `png-rgb565.ts` builds it and
+  // this consumes it — and a mismatch fails in the worst direction. A short
+  // mask reads `undefined` past its end, `undefined === 0` is false, and the
+  // tail draws *opaque*: the black rectangle this whole mechanism exists to
+  // prevent, back again and only over part of the sprite. Loud is better.
+  if (at.mask !== undefined && at.mask.length !== source.pixels.length) {
+    throw new Error(
+      `mask has ${at.mask.length} entries for ${source.pixels.length} pixels`,
+    );
+  }
   const placed = { x: at.x, y: at.y, width: source.width, height };
   const bounded = at.within ? intersectRect(placed, at.within) : placed;
   const clipped = bounded === null ? null : clipToBuffer(target, bounded);
