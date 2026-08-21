@@ -67,8 +67,13 @@ it is deliberately near-leaf, since Claude Code runs it on every hook event.
 
 The whole product, minus hardware.
 
-- [ ] Virtual screen: 172×320 RGB565 framebuffer in TS
-- [ ] `@napi-rs/canvas` sink (headless/tests) + browser `<canvas>` sink (dev harness)
+- [x] Virtual screen: 172×320 RGB565 framebuffer in TS (`packages/renderer/src/framebuffer.ts`)
+- [x] ~~`@napi-rs/canvas` sink~~ — **not built, deliberately.** The renderer
+      produces a `Framebuffer`; `tools/blit.ts` turns those into packets, tests
+      compare buffers, the harness draws to a canvas. A sink interface between
+      them would be indirection for its own sake, and the dirty-rect path _is_
+      the device sink. Also kept a native dependency out of the renderer, which
+      the daemon imports.
 - [x] Dev harness: local web page, scrub through frames, switch layout and
       orientation live, panel text in Departure Mono (`pnpm harness`)
 - [ ] Dev harness: hot reload, scrub through **states**, and fake event
@@ -79,13 +84,16 @@ The whole product, minus hardware.
       which are not the same thing: frames are the eight rasters of one loop,
       states are the ten catalogue entries the freeze locks.
 - [x] Departure Mono vendored and rendering in the harness
-- [ ] Departure Mono bitmap rendering in the renderer, nearest-neighbour,
+- [x] Departure Mono bitmap rendering in the renderer, nearest-neighbour,
       `imageSmoothingEnabled = false`
-- [ ] Scene primitives: sprite, text, badge, clock, progress
+- [x] Scene primitives: sprite, text, chips. **Badge, clock and progress are
+      not primitives** — a clock is text, a badge is text on a `fillRect`, a
+      progress track is a `drawBorder` with a `fillRect` inside. Nothing earned
+      its own function, and `knip` would have failed on one that did.
 - [ ] Harness draws through `render()` rather than approximating the bands —
       what makes Stage 2's exit true by construction instead of by inspection
 - [ ] Pack loader + manifest schema
-- [ ] `packs/example/` with placeholder geometric art
+- [x] `packs/example/` with a manifest and palette — placeholder art still to come
 - [x] Dirty-rect differ + RLE encoder, with unit tests and a compression-ratio assertion
 - [x] **SPIKE: generate one animation from base SVG to rendered frames.** The
       panel leg of this pipeline is Stage 2 and is not done. Base SVG → LLM → animated SVG →
@@ -130,14 +138,28 @@ that is not waiting on the design freeze.
 
 - [ ] Hook handler binary; installer patches `~/.claude/settings.json`
 - [ ] Daemon: Unix socket, session registry, staleness eviction, persistence across restart
-- [ ] **Confirm the hook names against current Claude Code docs before building
-      the state machine.** `PermissionRequest`, `StopFailure` and
-      `SubagentStart` are used in the state table below. `packs/example/` is
-      unaffected — it keys quips by state rather than by hook, deliberately, so
-      a wrong hook name cannot break a pack; upstream's README
-      lists the latter two, but none has been checked against live
-      documentation. A state machine keyed on a hook that does not fire is
-      silent, not loud.
+- [x] **Hook names confirmed against live documentation.** All three exist:
+      `PermissionRequest`, `StopFailure` and `SubagentStart`. Checked against
+      code.claude.com/docs/en/hooks.md rather than upstream's README, because a
+      state machine keyed on a hook that does not fire is silent, not loud.
+
+      Four things from that check change how this stage is built:
+
+              - **The session key is `session_id`**, and every event carries it along
+                with `hook_event_name`, `cwd` and `transcript_path`.
+              - **Subagents are identified by `agent_id` and `agent_type` on the same
+                events**, not by a separate stream. The counter badge counts
+                `SubagentStart` against `SubagentStop` per session.
+              - **Hooks block.** The default command timeout is 600s and Claude Code
+                waits, which makes the near-leaf rule in `CLAUDE.md` a correctness
+                constraint rather than a style one: a slow `tamaclaude-notify` stalls
+                the user's session. It must write and exit.
+              - **`StopFailure` ignores exit code and output entirely**, and `Stop`
+                fires on every response rather than at task completion — so "the turn
+                finished" is not a state this can observe the way the table assumes.
+                `StopFailure` also carries `error_type`, which is more specific than
+                the plan's single failure state.
+
 - [ ] Tool → state mapping (`PreToolUse.tool_name`)
 - [ ] Multi-session compositing — both Alex and Jamie run several at once, so this is required
 - [ ] Subagent lifecycle + counter badge
