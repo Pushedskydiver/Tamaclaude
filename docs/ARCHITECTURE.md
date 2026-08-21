@@ -152,8 +152,11 @@ nowhere near.
 ### The cost, and its mitigation
 
 A dumb device with no host software connected shows a black screen. Firmware
-therefore embeds one static RLE splash, displayed whenever no host is
-connected. This is the only asset stored on the device.
+therefore embeds one static RLE splash, drawn once at boot and left up until
+the host paints over it. Not "whenever no host is connected": that is not
+observable on this link — a Mac that has enumerated the device looks identical
+whether anything is running — and the obvious proxy for it would wipe a
+legitimately still frame. This is the only asset stored on the device.
 
 ## Package graph
 

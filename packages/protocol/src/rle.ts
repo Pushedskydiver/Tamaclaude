@@ -5,7 +5,12 @@
  * `tools/measure-compression.ts` measures the real ratio on real frames, and
  * that document quotes those measurements.
  *
- * Format: a mode byte, then the payload.
+ * Format: a mode, and a payload. The mode is a field on the returned object,
+ * not a byte in front of the bytes — on the wire it travels in the rect header
+ * (`packet.ts`, offset 12), because a leading byte misaligned every u16 behind
+ * it. `tools/bake-sprites.ts` does put a mode byte in front, because a baked
+ * sprite is a standalone blob with no header to carry one — but that is its
+ * own container, not this format.
  *
  * - Mode 0, raw: little-endian RGB565 words, exactly as given.
  * - Mode 1, RLE: repeated `(count: u16, value: u16)` pairs, little-endian.
