@@ -27,8 +27,10 @@ invalid manifest rather than coercing it.
 
 Keying by state rather than hook is deliberate. If a hook name turns out to be
 wrong or gets renamed, a state-keyed pack survives untouched while a hook-keyed
-one breaks — and three of the hook names this project relies on are still
-unverified against live Claude Code documentation.
+one breaks. The three hook names this project relies on —
+`PermissionRequest`, `StopFailure`, `SubagentStart` — have since been confirmed
+against live Claude Code documentation, but the indirection stays: it cost
+nothing, and a pack should not care what the events are called.
 
 ## Why quips have two tiers
 
