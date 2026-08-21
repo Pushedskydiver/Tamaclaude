@@ -1,0 +1,9 @@
+# Print which reviews this branch owes, before it becomes a PR.
+#
+# Reporting, not blocking: nothing here can tell whether a review actually
+# happened, only which ones the table in CLAUDE.md requires. The point is that
+# the answer arrives unprompted. The rule was "non-trivial changes get
+# reviewed" and was violated seven PRs running; it became a table, and the
+# table was then skipped three more times — because running the grep was still
+# something a person had to remember.
+node tools/review-triggers.ts || true
