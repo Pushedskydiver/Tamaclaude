@@ -121,9 +121,12 @@ export function defaultSocketPath(): string {
 }
 
 /**
- * The longest path that will bind: `sizeof(sockaddr_un.sun_path)`, which is 104
- * on macOS (`sys/un.h`) and 108 on Linux. We check the smaller so a path never
- * binds on one platform and not the other.
+ * The longest path that will bind. `sizeof(sockaddr_un.sun_path)` is 104 on
+ * macOS (`sys/un.h`) and 108 on Linux, but the longest *bindable* path is not
+ * the same number on both: macOS carries a separate `sun_len` and does not
+ * require a NUL inside the array, so all 104 bytes are usable, while Linux
+ * needs the terminator and stops at 107. We check against 104, which is under
+ * both, so a path never binds on one platform and not the other.
  *
  * This is the *inclusive* maximum, not the first failing length. Measured on
  * darwin 25.5.0 / Node 24: 104 bytes binds and accepts a connection, 105 is
@@ -135,9 +138,10 @@ export function defaultSocketPath(): string {
  * argument`, which says nothing about length and sends you looking at
  * permissions. What actually hits it is `TAMACLAUDE_SOCKET` pointed at a deep
  * directory. The suite's own temp paths are not close on their own — macOS
- * `tmpdir()` is a fixed 48 bytes and `mkdtemp` takes it to 62-66 — but the
- * nested case in `socket-path.test.ts` reaches 85, so the tightest margin in
- * the tree is 19 bytes rather than the comfortable 26 a first read suggested.
+ * `tmpdir()` is 48 bytes and `mkdtemp` takes this file's three prefixes to
+ * 62-66 (across the whole suite the range is 60 to 74) — but the nested case
+ * below reaches 85, so the tightest margin in the tree is 19 bytes rather than
+ * the comfortable 26 a first read suggested.
  */
 const SUN_PATH_MAX = 104;
 

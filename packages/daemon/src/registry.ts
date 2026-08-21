@@ -58,19 +58,30 @@ export function createRegistry(now: number): SessionRegistry {
  */
 const MAX_SESSIONS = 64;
 
+type Entry = readonly [string, Session];
+
 /**
  * Drop the session that has been quiet longest, to make room for a new one.
  *
- * Evicting by silence rather than by first sight is the difference between the
- * cap protecting the strip and the cap attacking it. The sessions that get
- * minted in an attack are all new, so first-sight order puts the real,
- * long-running session at the front of the queue to die — the cap would then
- * hand the flooder exactly the display it wanted. Quietest-first means a
- * session anyone is actually using is the last thing to go.
+ * Quietest-first beats first-sight order for the ordinary case: a session that
+ * has finished, or that somebody walked away from, is the quietest thing in
+ * the map and goes before a session still being used. First-sight order would
+ * instead evict whichever session had been open longest, which on a desk is
+ * usually the one that matters most.
+ *
+ * **It does not defend against a flood, and an earlier version of this comment
+ * claimed it did.** Measured: one real session, then 64 ids minted thirty
+ * seconds later, and the real session is gone — being *between events* is all
+ * it takes to be the quietest thing in the map. `MAX_SESSIONS` bounds memory,
+ * which is what it was added for; it cannot preserve what the panel shows
+ * against a local process that can write to the socket. Nothing here can,
+ * without peer identity a unix socket does not give us. The socket is 0600 and
+ * that is the layer doing that work.
  */
-type Entry = readonly [string, Session];
-
 function withoutQuietest(entries: readonly Entry[]): readonly Entry[] {
+  // Seedless, so this throws on an empty array. Safe only because the one
+  // caller guards on `length > MAX_SESSIONS`, which nothing in here said.
+  // Ties go to the first inserted, which is what keeps eviction deterministic.
   const quietest = entries.reduce((a, b) =>
     b[1].lastEventAt < a[1].lastEventAt ? b : a,
   );

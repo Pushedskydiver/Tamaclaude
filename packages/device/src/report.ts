@@ -138,7 +138,10 @@ const MAX_PENDING = 4096;
  *
  * Past `MAX_PENDING` the remainder is dropped rather than carried. It is not a
  * line by then, and the next newline resynchronises us — the same trade the
- * firmware makes when it discards to find a header.
+ * firmware makes when it discards to find a header. Strictly the fragment
+ * between the drop and that newline is still emitted as one line; it is
+ * harmless because `parseReport` is anchored and rejects anything that does
+ * not start with the report prefix.
  */
 export function splitLines(pending: string, chunk: string): LineSplit {
   const parts = (pending + chunk).split('\n');

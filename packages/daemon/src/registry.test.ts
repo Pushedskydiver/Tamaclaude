@@ -160,3 +160,28 @@ describe('cardinality', () => {
     expect(overflowed.sessions.has('s1')).toBe(false);
   });
 });
+
+describe('what the cap does not protect', () => {
+  it('lets a flood evict a real session that is merely between events', () => {
+    // Pinned deliberately, because the comment on `withoutQuietest` used to
+    // claim the opposite. A session in WAITING is quieter than every freshly
+    // minted id, so it goes first. The cap bounds memory; it does not defend
+    // the display, and the 0600 socket is what does.
+    const real = observe(
+      createRegistry(0),
+      { sessionId: 'real', kind: 'UserPromptSubmit' },
+      1_000_000,
+    );
+    const flooded = Array.from({ length: 64 }, (_, index) => index).reduce(
+      (registry, index) =>
+        observe(
+          registry,
+          { sessionId: `mint${String(index)}`, kind: 'SessionStart' },
+          1_030_000,
+        ),
+      real,
+    );
+    expect(flooded.sessions.size).toBe(64);
+    expect(flooded.sessions.has('real')).toBe(false);
+  });
+});

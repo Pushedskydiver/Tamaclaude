@@ -169,7 +169,7 @@ export function afterReport(state: LinkState, report: DeviceReport): LinkState {
  *
  * A whole frame every few seconds costs about 1.5 KB — 0.05% of a link
  * measured at 562.5 KB/s — and turns that silent divergence into something
- * heals itself. It is the same debt as a reported loss and gets the same
+ * that heals itself. It is the same debt as a reported loss and gets the same
  * answer, which is why it is the same flag rather than a second one.
  */
 export function afterRefresh(state: LinkState): LinkState {

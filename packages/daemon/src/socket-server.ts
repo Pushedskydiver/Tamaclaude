@@ -210,10 +210,14 @@ class Listener {
 
   #accept(socket: Socket): void {
     if (this.#connections.size >= MAX_CONNECTIONS) {
-      // Insertion order, so this is the longest-lived one.
+      // Insertion order, so this is the longest-lived one. Narrowed rather
+      // than asserted: `?.` and `as Socket` on consecutive lines disagreed
+      // about whether it could be undefined, and only one of them can be right.
       const oldest = this.#connections.values().next().value;
-      oldest?.destroy();
-      this.#connections.delete(oldest as Socket);
+      if (oldest !== undefined) {
+        oldest.destroy();
+        this.#connections.delete(oldest);
+      }
     }
     this.#connections.add(socket);
     // Strings, not buffers, from here on. The reader below would decode for

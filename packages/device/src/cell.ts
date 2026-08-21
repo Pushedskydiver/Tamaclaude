@@ -12,9 +12,11 @@
  *
  * This is the third option: every decision stays a pure fold in `link.ts`, and
  * the state those folds produce is held in one place, behind a disable that
- * says so. `grep -rn 'eslint-disable' packages/device/src` is the audit — with
- * `/src`, because without it a built tree returns the copies in `dist/` too and
- * the count stops meaning anything.
+ * says so. `tools/disable-budget.test.ts` is the audit, and it is a test rather
+ * than a grep on purpose: a grep for the directive matches this very sentence,
+ * and against `packages/device` rather than `packages/device/src` it also
+ * returns the copies in `dist/`. Both were true of the grep this comment used
+ * to recommend, which reported two disables in a package that has one.
  */
 
 export type Cell<T> = {

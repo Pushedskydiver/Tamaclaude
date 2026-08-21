@@ -21,7 +21,7 @@ describe('counting a numstat', () => {
     // Git writes `-` for both counts on a binary file. `Number('-')` is NaN,
     // and NaN propagates: the whole diff reported as "NaN lines", and
     // `NaN > 200` is false, so the over-200-lines trigger answered *no* on a
-    // diff of several hundred lines. Under-reporting the reviews owed is the
+    // diff of 3,194 lines. Under-reporting the reviews owed is the
     // one direction this tool must never fail in, and it did it silently.
     const counted = countChanged(['-\t-\tclawd.png', '300\t0\ta.ts']);
     expect(counted.lines).toBe(300);

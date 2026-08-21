@@ -18,7 +18,7 @@
  * the answer arrives unprompted rather than being remembered.
  */
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -125,7 +125,7 @@ function diff(base: string): {
  * Exported only so it can be tested. Git writes `-\t-` for a file it treats as
  * binary, `Number('-')` is NaN, and one NaN turns the whole total into NaN —
  * which printed as "NaN lines" and answered *no* to the over-200-lines
- * trigger, on a diff of several hundred. It reported fewer reviews than were
+ * trigger, on a diff of 3,194 lines. It reported fewer reviews than were
  * owed, which is the one direction this tool must never fail in.
  *
  * Found because a test file had literal NUL bytes in it and git called it
@@ -191,6 +191,27 @@ function main(): void {
   );
 }
 
-// Only when run as a command. Importing this module — which the test does, to
-// reach `countChanged` — must not shell out to git as a side effect.
-if (process.argv[1] === fileURLToPath(import.meta.url)) main();
+/**
+ * Was this run as a command, rather than imported?
+ *
+ * Both sides are resolved through `realpath` because `import.meta.url` already
+ * is and `process.argv[1]` is not, so reaching the script through a symlink
+ * made a bare `===` false — and `.husky/pre-push` ends the line with
+ * `|| true`, which turned that into a silent "no reviews owed". The one
+ * direction this tool must never fail in, reached by a path nobody would
+ * think to test.
+ *
+ * When the comparison cannot be made at all, run. Over-reporting a review is
+ * the safe error here; staying quiet is the unsafe one.
+ */
+function invokedDirectly(): boolean {
+  const entry = process.argv[1];
+  if (entry === undefined) return false;
+  try {
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch {
+    return true;
+  }
+}
+
+if (invokedDirectly()) main();

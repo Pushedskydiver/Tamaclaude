@@ -445,22 +445,40 @@ describe('many peers at once', () => {
 
   it('drops the longest-lived peer rather than growing without limit', async () => {
     const first = await open(path);
-    const closed = new Promise<void>((resolve) => {
-      first.on('close', () => resolve());
+    const closed = new Promise<boolean>((resolve) => {
+      first.on('close', () => resolve(true));
     });
     // Fill the rest of the cap, then push one past it.
     const rest = await openMany(64);
-    await closed; // The oldest is gone, and nothing had to time out for it.
+
+    // Raced against a deadline rather than left to the suite's timeout. The
+    // first version of this test had no `expect` at all: it passed or failed
+    // purely on whether a `close` event arrived in five seconds, which is the
+    // shape that goes intermittent on a loaded machine — and a review saw it
+    // fail three times before it settled. Now a slow machine still passes and
+    // a broken cap says what it was.
+    const evicted = await Promise.race([
+      closed,
+      new Promise<boolean>((resolve) =>
+        setTimeout(() => resolve(false), 2_000),
+      ),
+    ]);
+    expect(evicted).toBe(true);
+    expect(first.destroyed).toBe(true);
     rest.forEach((socket) => socket.destroy());
   });
 
   it('still serves a real hook once the cap has bitten', async () => {
     // The point of evicting the oldest rather than refusing the newest: a
-    // flooder must not be able to lock the actual hooks out.
+    // flooder must not be able to lock the actual hooks out. Asserting that
+    // some of the held sockets were dropped is what makes this pin the cap —
+    // without it the test passed with the cap removed entirely, since 70 idle
+    // connections plus a hook are served fine when nothing is bounded.
     const held = await openMany(70);
     await send(path, event('a', 'UserPromptSubmit'));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(server?.snapshot().sessions.has('a')).toBe(true);
+    expect(held.filter((socket) => socket.destroyed).length).toBeGreaterThan(0);
     held.forEach((socket) => socket.destroy());
   });
 });

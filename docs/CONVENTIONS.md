@@ -93,8 +93,17 @@ assert and catch real corruption.
 
 ## Quality gates
 
-The six-command suite in `CLAUDE.md` is the gate. Two of its members are
+The six-command suite in `CLAUDE.md` is the gate. Three of its members are
 configured in ways worth knowing about:
+
+**`typecheck` runs `tsc -b`, not `tsc -b --noEmit`.** A composite project may
+not disable emit in a referenced project, so `tsc -b --noEmit` is `TS6310` —
+five of them here. It appeared to pass only because `tsc -b` short-circuits
+when every `.tsbuildinfo` is current: warm it was silent, cold it failed, and
+a fresh checkout is always cold. It had been that way since the scaffold
+commit, and was found by a review noticing the six-command suite did not
+actually go green. Emitting is not a cost worth avoiding — `build` runs first
+in the suite regardless.
 
 **`knip` runs with `includeEntryExports: true`.** By default knip treats every
 export in a package's entry file as public API and never reports it — correct

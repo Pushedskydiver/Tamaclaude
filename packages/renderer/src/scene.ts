@@ -213,13 +213,6 @@ function paintMessage(painter: Painter, scene: Scene): void {
 }
 
 /**
- * Compose a scene into a fresh framebuffer.
- *
- * The buffer is cleared first, so a render is total: every pixel is defined by
- * this scene and none is left over from the last one. That is what makes
- * `dirtyRect` between two renders mean what it says.
- */
-/**
  * Paint the scenery, and hand back a painter whose ink reads against it.
  *
  * The ink swap only happens for a panel-wide environment, because that is the
@@ -249,6 +242,13 @@ function withEnvironment(painter: Painter, scene: Scene): Painter {
   };
 }
 
+/**
+ * Compose a scene into a fresh framebuffer.
+ *
+ * The buffer is cleared first, so a render is total: every pixel is defined by
+ * this scene and none is left over from the last one. That is what makes
+ * `dirtyRect` between two renders mean what it says.
+ */
 export function render(scene: Scene): Framebuffer {
   const target = createFramebuffer(scene.orientation);
   clearToPackBackground(target, scene.pack);
