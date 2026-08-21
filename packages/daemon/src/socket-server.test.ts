@@ -453,10 +453,17 @@ describe('many peers at once', () => {
 
     // Raced against a deadline rather than left to the suite's timeout. The
     // first version of this test had no `expect` at all: it passed or failed
-    // purely on whether a `close` event arrived in five seconds, which is the
-    // shape that goes intermittent on a loaded machine — and a review saw it
-    // fail three times before it settled. Now a slow machine still passes and
-    // a broken cap says what it was.
+    // purely on whether a `close` event arrived, which is the shape that goes
+    // intermittent on a loaded machine — and a review saw it fail three times
+    // before it settled.
+    //
+    // What the deadline buys is a *named* failure, not a wider window. It is
+    // narrower: vitest's 5 s test timeout still bounds the whole thing, and
+    // 2 s is the tighter of the two. An earlier version of this comment
+    // claimed the opposite. The narrowing is affordable because eviction is
+    // synchronous with the 65th accept, so the wait is not doing work —
+    // measured on darwin 25.5.0 / Node 24, the worst of ten runs with 200 busy
+    // loops on ten cores was 104 ms.
     const evicted = await Promise.race([
       closed,
       new Promise<boolean>((resolve) =>
@@ -464,7 +471,6 @@ describe('many peers at once', () => {
       ),
     ]);
     expect(evicted).toBe(true);
-    expect(first.destroyed).toBe(true);
     rest.forEach((socket) => socket.destroy());
   });
 

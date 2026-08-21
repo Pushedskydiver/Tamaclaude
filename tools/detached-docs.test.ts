@@ -17,11 +17,14 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  * written for one symbol and stranded above another does not vanish from the
  * file or the types; it vanishes from the place people read it.
  *
- * This has now bitten three times in three commits: a priming rule for
- * `Transport.send` landed above `status()`, `observe` lost its documentation to
- * a constant inserted above it, and `render` — the renderer's public entry
- * point — was emitted with no doc at all because its block sat above a
- * different function.
+ * This has now bitten four times. Three landed in three consecutive commits: a
+ * priming rule for `Transport.send` above `status()`, `observe` losing its
+ * documentation to a constant inserted above it, and `render` — the renderer's
+ * public entry point — emitted with no doc at all because its block sat above a
+ * different function. The fourth was older and quieter: `svg2frames.ts`'s
+ * panel-width rationale outlived the `PANEL_WIDTH` it described and came to
+ * rest on `STAGE_HEIGHT`. It was then certified as deliberate by the very audit
+ * that built the list below, and a fourth review is what found it.
  *
  * **What this does not catch.** Only *adjacent* blocks are visible here. The
  * third instance put a one-line `type` alias between the doc and its function,
@@ -37,7 +40,13 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
   });
   return files.flatMap((file) => {
     const source = program.getSourceFile(file);
-    if (source === undefined) return [];
+    if (source === undefined) {
+      // Loudly. A file that globbed but did not resolve is a file this gate
+      // does not cover, and the count below is of globbed files, so it would
+      // not notice. Silently returning nothing here is the gate failing open
+      // in the one place it exists to fail closed.
+      throw new Error(`globbed but did not resolve into the program: ${file}`);
+    }
     const found: string[] = [];
     // Every node, not just the top level. Members of a `type` literal carry
     // doc blocks too, and the first instance of this bug was one of them — a
@@ -68,13 +77,19 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
  * So this ratchets rather than forbids: a new pair in a listed file fails until
  * someone bumps the number, and one in an unlisted file fails until someone
  * adds it. The cost is a line and a moment deciding which kind it is — which is
- * the moment that was missing all three times.
+ * the moment that was missing every time.
  *
- * Two entries were removed rather than recorded when a review pointed out they
- * were the bug and not a header: `scene.ts` had `render`'s doc above
- * `withEnvironment`, and `hook-settings.ts` had two blocks describing the same
- * constant. Recording a count instead of deciding is the failure this list
- * invites, and its first draft committed it.
+ * Three entries have been deleted rather than recorded, each when a review
+ * pointed out it was the bug and not a header: `scene.ts` had `render`'s doc
+ * above `withEnvironment`, `hook-settings.ts` had two blocks describing the
+ * same constant, and `svg2frames.ts` had the panel-width rationale left on
+ * `STAGE_HEIGHT` by a deleted constant.
+ *
+ * Recording a count instead of deciding is the failure this list invites. Its
+ * first draft committed it twice; the audit written to catch that committed it
+ * a third time, and published a completeness claim over the top. Every entry
+ * left here has since been read against its file — twice, independently — and
+ * that is the only thing this paragraph is entitled to assert.
  */
 const DELIBERATE: Readonly<Record<string, number>> = {
   'packages/daemon/src/state.ts': 2,
@@ -90,16 +105,12 @@ const DELIBERATE: Readonly<Record<string, number>> = {
   'packages/renderer/src/strip.ts': 1,
   'packages/renderer/src/text.ts': 1,
   'tools/frame-palette.ts': 1,
-  'tools/svg2frames.ts': 1,
 };
 
 function sourceFiles(): readonly string[] {
   return globSync(['packages/*/src/**/*.ts', 'tools/**/*.ts'], {
     cwd: ROOT,
-    exclude: (path) =>
-      path.includes('dist') ||
-      path.includes('node_modules') ||
-      path.endsWith('.test.ts'),
+    exclude: (path) => path.includes('dist') || path.includes('node_modules'),
   }).map((file) => ROOT + file);
 }
 

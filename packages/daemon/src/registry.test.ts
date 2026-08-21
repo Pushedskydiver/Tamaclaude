@@ -164,9 +164,15 @@ describe('cardinality', () => {
 describe('what the cap does not protect', () => {
   it('lets a flood evict a real session that is merely between events', () => {
     // Pinned deliberately, because the comment on `withoutQuietest` used to
-    // claim the opposite. A session in WAITING is quieter than every freshly
-    // minted id, so it goes first. The cap bounds memory; it does not defend
-    // the display, and the 0600 socket is what does.
+    // claim the opposite. Eviction reads `lastEventAt` and nothing else, so a
+    // real session that has merely gone quiet for thirty seconds is older than
+    // every freshly minted id and goes first — its state does not come into it.
+    // (An earlier version of this comment said the session was in `WAITING`. It
+    // is in `THINKING`: `UserPromptSubmit` maps there, and `WAITING` needs a
+    // `Notification` plus `WAITING_AFTER_MS`, which is 60 s against this 30 s
+    // gap. The ordering the test pins was right; the example was not.)
+    // The cap bounds memory; it does not defend the display, and the 0600
+    // socket is what does.
     const real = observe(
       createRegistry(0),
       { sessionId: 'real', kind: 'UserPromptSubmit' },

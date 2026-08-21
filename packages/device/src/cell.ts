@@ -13,10 +13,15 @@
  * This is the third option: every decision stays a pure fold in `link.ts`, and
  * the state those folds produce is held in one place, behind a disable that
  * says so. `tools/disable-budget.test.ts` is the audit, and it is a test rather
- * than a grep on purpose: a grep for the directive matches this very sentence,
- * and against `packages/device` rather than `packages/device/src` it also
- * returns the copies in `dist/`. Both were true of the grep this comment used
- * to recommend, which reported two disables in a package that has one.
+ * than a grep on purpose: pointed at `packages/device` rather than
+ * `packages/device/src` a grep also returns the copies in `dist/`, which is how
+ * the one this comment used to recommend reported two disables in a package
+ * that has one. Nor can a grep tell a directive from a sentence mentioning one
+ * — the test reads the parser's comments, so it can.
+ *
+ * That second point used to be made by this paragraph containing the word and
+ * being matched by it. A rewrite took the word out and left the claim standing,
+ * which is a small instance of the thing this file is otherwise careful about.
  */
 
 export type Cell<T> = {

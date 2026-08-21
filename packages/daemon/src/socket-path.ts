@@ -122,15 +122,24 @@ export function defaultSocketPath(): string {
 
 /**
  * The longest path that will bind. `sizeof(sockaddr_un.sun_path)` is 104 on
- * macOS (`sys/un.h`) and 108 on Linux, but the longest *bindable* path is not
- * the same number on both: macOS carries a separate `sun_len` and does not
- * require a NUL inside the array, so all 104 bytes are usable, while Linux
- * needs the terminator and stops at 107. We check against 104, which is under
- * both, so a path never binds on one platform and not the other.
+ * macOS (`sys/un.h`, read on this machine) and 108 on Linux (`unix(7)`). We
+ * check against 104, the smaller, so a path never binds on one platform and
+ * not the other.
+ *
+ * The asymmetry is the header constant and nothing subtler. An earlier version
+ * of this comment justified 104 by saying Linux needs a NUL inside the array
+ * and so stops at 107; `unix(7)` says the terminator *should* be there, and
+ * its BUGS section describes binding 108 non-null bytes as something that
+ * works. 107 is simply 108 less a terminator — the ceiling for code that keeps
+ * a C string in `sun_path`, which is a property of that code and not of the
+ * kernel. Either way it was never the operative number here: 104 is under
+ * every reading of both headers, which is the whole reason to check against it.
  *
  * This is the *inclusive* maximum, not the first failing length. Measured on
  * darwin 25.5.0 / Node 24: 104 bytes binds and accepts a connection, 105 is
- * `EINVAL`. The first version of this guard rejected at `>= 104` and threw
+ * `EINVAL`. The Linux figure is read off `unix(7)` rather than measured here —
+ * it is the larger of the two, so this guard stays conservative there however
+ * it lands. The first version of this guard rejected at `>= 104` and threw
  * "104 bytes, over the 104-byte limit", which was both an off-by-one and a
  * sentence that contradicted itself.
  *

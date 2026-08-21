@@ -98,7 +98,8 @@ configured in ways worth knowing about:
 
 **`typecheck` runs `tsc -b`, not `tsc -b --noEmit`.** A composite project may
 not disable emit in a referenced project, so `tsc -b --noEmit` is `TS6310` —
-five of them here. It appeared to pass only because `tsc -b` short-circuits
+fourteen lines of it from a cold tree, naming five distinct referenced
+projects. It appeared to pass only because `tsc -b` short-circuits
 when every `.tsbuildinfo` is current: warm it was silent, cold it failed, and
 a fresh checkout is always cold. It had been that way since the scaffold
 commit, and was found by a review noticing the six-command suite did not

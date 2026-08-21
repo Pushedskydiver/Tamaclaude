@@ -34,6 +34,18 @@ import process from 'node:process';
 
 import { chromium } from 'playwright';
 
+// Panel width comes from the package that owns it.
+//
+// This was a hand-maintained copy of 172, justified by a claim that `tools/`
+// could not import the workspace. That was never the mechanism — what keeps
+// Playwright out of the shipped graph is that nothing imports `tools`, which
+// `eslint.config.ts` enforces — and it stopped being true at all once the
+// boundary rule started allowing `tools` to read `protocol`.
+//
+// A line comment rather than a block: above an import a block is surfaced by
+// no hover, and it would re-enter the doc AST — so the day the two `import
+// type` lines go and prettier sorts this one up under the file header, the
+// two would stack, which is the shape `tools/detached-docs.test.ts` polices.
 import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
 
 import {
@@ -61,15 +73,6 @@ const FPS = 8;
 const DEFAULT_LOOP_SECONDS = 1;
 /** Device pixels per SVG user unit. 21 units x 8 = 168px, inside the 172 panel. */
 const SCALE = 8;
-/**
- * Panel width comes from the package that owns it.
- *
- * This was a hand-maintained copy of 172, justified by a claim that `tools/`
- * could not import the workspace. That was never the mechanism — what keeps
- * Playwright out of the shipped graph is that nothing imports `tools`, which
- * `eslint.config.ts` enforces — and it stopped being true at all once the
- * boundary rule started allowing `tools` to read `protocol`.
- */
 /** Stage band height. The other three panel bands occupy the remaining 120px. */
 const STAGE_HEIGHT = 200;
 /**
