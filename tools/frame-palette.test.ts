@@ -17,7 +17,7 @@
  * and cannot be imported.
  */
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
@@ -55,12 +55,10 @@ beforeAll(async () => {
   );
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  const uri = `data:image/png;base64,${execFileSync('base64', [
-    '-i',
-    join(dir, 'frame_00.png'),
-  ])
-    .toString()
-    .replaceAll('\n', '')}`;
+  // `readFileSync`, not `base64` the command: its flags differ between macOS
+  // and the Linux runner, which is a portable-looking way to fail only in CI.
+  const png = readFileSync(join(dir, 'frame_00.png')).toString('base64');
+  const uri = `data:image/png;base64,${png}`;
   const decoded = await page.evaluate(async (source) => {
     const image = new Image();
     image.src = source;

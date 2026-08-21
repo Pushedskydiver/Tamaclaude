@@ -165,5 +165,5 @@ built rather than doing work themselves:
 - `CLAUDE.md` (and therefore `AGENTS.md`)
 - `docs/GIT.md`, `docs/CONVENTIONS.md`, `docs/ARCHITECTURE.md`
 - `eslint.config.ts` (especially `boundaries/dependencies`)
-- `.github/workflows/**`
+- `.github/workflows/**` and `.github/actions/**`
 - `BUILD_PLAN.md` dates
