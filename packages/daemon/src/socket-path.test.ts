@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   renameSync,
   rmSync,
@@ -94,9 +95,25 @@ describe('probeSocket', () => {
   });
 
   it('calls anything that is not a socket occupied', async () => {
-    const path = join(directory, 'regular.txt');
-    writeFileSync(path, 'someone else lives here');
-    await expect(probeSocket(path)).resolves.toBe('occupied');
+    // Every non-socket type, because the errno does not agree across platforms
+    // and this classification is what decides whether the file gets deleted.
+    // macOS refuses a connection to all of these with `ENOTSOCK`; Linux refuses
+    // a regular file with `ECONNREFUSED`, which is also what a dead socket
+    // gives — so classifying on the connect error alone read somebody's file as
+    // a stale socket and unlinked it.
+    //
+    // **This test cannot fail on darwin.** It passed for seven review rounds
+    // against code that was wrong, because on this platform the old errno route
+    // and the new type-first route give the same answer. CI is the only Linux
+    // run this repo has, and CI is what caught it. Anyone changing `probeSocket`
+    // should assume their machine will not tell them the truth.
+    const regular = join(directory, 'regular.txt');
+    writeFileSync(regular, 'someone else lives here');
+    await expect(probeSocket(regular)).resolves.toBe('occupied');
+
+    const nested = join(directory, 'a-directory');
+    mkdirSync(nested);
+    await expect(probeSocket(nested)).resolves.toBe('occupied');
   });
 });
 

@@ -56,7 +56,7 @@
  */
 
 import { Buffer } from 'node:buffer';
-import { mkdirSync, unlinkSync } from 'node:fs';
+import { lstatSync, mkdirSync, unlinkSync } from 'node:fs';
 import { connect } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -183,6 +183,30 @@ function classify(error: unknown): SocketProbe {
 }
 
 /**
+ * What is on disk at the path, before anyone tries to connect to it.
+ *
+ * **The connect errno is not enough, and believing it was is a bug this shipped
+ * with.** macOS refuses a connection to a regular file with `ENOTSOCK`, which
+ * `classify` reads as `occupied` and leaves alone. Linux refuses it with
+ * `ECONNREFUSED` — the same code it gives for a socket with nothing bound — so
+ * on Linux `classify` called somebody's regular file a stale socket and
+ * `prepareSocketPath` unlinked it. That is exactly the deletion this module's
+ * header says it never performs, and every test that covers it passed on
+ * darwin for seven review rounds. CI, on Linux, is what caught it.
+ *
+ * Any stat error other than `ENOENT` counts as `other`, so an unreadable path
+ * is something we refuse rather than something we remove. The safe answer to
+ * "I cannot tell" is always to leave the file where it is.
+ */
+function whatIsAt(path: string): 'missing' | 'socket' | 'other' {
+  try {
+    return lstatSync(path).isSocket() ? 'socket' : 'other';
+  } catch (error) {
+    return errorCode(error) === 'ENOENT' ? 'missing' : 'other';
+  }
+}
+
+/**
  * Ask the path whether anything is listening.
  *
  * Nothing is written and nothing is read: the connection is destroyed the
@@ -190,6 +214,11 @@ function classify(error: unknown): SocketProbe {
  * connected and left, which its own connection handling already survives.
  */
 export function probeSocket(path: string): Promise<SocketProbe> {
+  // Type first, connection second. Only a real socket can be `stale`, which is
+  // the only answer that lets the caller unlink anything.
+  const found = whatIsAt(path);
+  if (found === 'missing') return Promise.resolve('free');
+  if (found === 'other') return Promise.resolve('occupied');
   return new Promise((resolve) => {
     const socket = connect(path);
     const settle = (result: SocketProbe): void => {
