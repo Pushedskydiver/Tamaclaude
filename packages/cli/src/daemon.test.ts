@@ -263,6 +263,48 @@ describe('what the panel says', () => {
     });
   });
 
+  it('puts Clawd somewhere, rather than on a flat background', () => {
+    // `environment` is optional on `Scene` and the daemon simply did not pass
+    // it, so the rock pool in `packages/renderer/src/environment.ts` was built
+    // and reachable by nothing. `BUILD_PLAN.md` calls judging animations
+    // against a black stage "judging them in the wrong context", which is why
+    // this is wired before the next three animations rather than after.
+    const scene = sceneFor({
+      registry: after({ sessionId: 's', kind: 'SessionStart' }),
+      pack,
+      now: NOW,
+    });
+    expect(scene.environment?.extent).toBe('panel');
+  });
+
+  it('wears the sky the local hour calls for', () => {
+    // Local hours, because `timeOfDay` reads `getHours()` the way `clockText`
+    // does. Built from parts rather than an ISO string for that reason: an
+    // ISO instant would land in a different bucket in a different timezone and
+    // the test would pass or fail by where it was run.
+    // On the hour, so the assertions below sit exactly on the boundaries
+    // rather than half an hour inside them.
+    const at = (hour: number): number =>
+      new Date(2026, 8, 23, hour, 0).getTime();
+    const skyAt = (hour: number): string | undefined =>
+      sceneFor({
+        registry: after({ sessionId: 's', kind: 'SessionStart' }),
+        pack,
+        now: at(hour),
+      }).environment?.time;
+
+    expect(skyAt(6)).toBe('dawn');
+    expect(skyAt(12)).toBe('day');
+    expect(skyAt(18)).toBe('dusk');
+    expect(skyAt(23)).toBe('night');
+    expect(skyAt(3)).toBe('night');
+    // The boundaries themselves, which is where an off-by-one lives.
+    expect(skyAt(5)).toBe('dawn');
+    expect(skyAt(8)).toBe('day');
+    expect(skyAt(17)).toBe('dusk');
+    expect(skyAt(20)).toBe('night');
+  });
+
   it('gives a session that needs a human the attention tone', () => {
     const scene = sceneFor({
       registry: after({ sessionId: 's', kind: 'PermissionRequest' }),

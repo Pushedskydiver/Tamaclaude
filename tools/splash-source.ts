@@ -19,14 +19,13 @@
  * flashed once, so "edited the art, forgot to re-bake" ships the old picture
  * permanently.
  */
-import { createHash } from 'node:crypto';
-
 import {
   FIRST_CODE_POINT,
   GLYPH_HEIGHT,
   GLYPH_ROWS,
   GLYPH_WIDTH,
 } from '../packages/renderer/src/font-data.ts';
+import { fingerprint } from './art-fingerprint.ts';
 
 /** Where the placeholder says the wordmark goes, and in what colours. */
 type Wordmark = {
@@ -121,18 +120,4 @@ export function withWordmark(svg: string): string {
   return svg.replace(tag, `<g id="wordmark">${drawn}</g>`);
 }
 
-/**
- * A hash of the artwork, ignoring comments and whitespace.
- *
- * Comments are stripped so that rewording the long explanation in the SVG does
- * not demand a re-bake it would not change the output of, and whitespace is
- * collapsed so a reformat does not either. Everything that can move a pixel is
- * in here.
- */
-export function fingerprint(svg: string): string {
-  const meaningful = svg
-    .replaceAll(/<!--[\s\S]*?-->/g, '')
-    .replaceAll(/\s+/g, ' ')
-    .trim();
-  return createHash('sha256').update(meaningful).digest('hex').slice(0, 16);
-}
+export { fingerprint };

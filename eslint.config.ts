@@ -30,6 +30,10 @@ export default defineConfig(
       '**/sprites/*.data.ts',
       'packs/**',
       '.claude/worktrees/**',
+      // Build output. Gitignored, but `.gitignore` is not this file's ignore
+      // list: a stray script left in `out/` by a tool or an agent failed the
+      // lint gate with a parser error, because nothing there is in a tsconfig.
+      'out/**',
     ],
   },
 

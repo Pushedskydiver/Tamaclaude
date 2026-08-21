@@ -44,6 +44,7 @@ import { chromium } from 'playwright';
 
 import { encodeRect } from '@tamaclaude/protocol';
 
+import { fingerprint } from './art-fingerprint.ts';
 import { loadFrames } from './png-rgb565.ts';
 
 /** Where the generated modules go. Read by `packages/renderer/src/sprites`. */
@@ -99,6 +100,7 @@ function encodeMask(mask: Uint8Array): { mode: number; payload: Uint8Array } {
 
 type Baked = {
   readonly name: string;
+  readonly source: string;
   readonly width: number;
   readonly height: number;
   readonly pixels: readonly string[];
@@ -106,7 +108,7 @@ type Baked = {
 };
 
 function moduleSource(baked: Baked): string {
-  const { name, width, height, pixels, masks } = baked;
+  const { name, width, height, pixels, masks, source } = baked;
   const list = (items: readonly string[]): string =>
     items.map((item) => `  '${item}',`).join('\n');
   return `/**
@@ -119,7 +121,13 @@ function moduleSource(baked: Baked): string {
  * Each entry is base64 of one frame: a mode byte, then the payload, for the
  * codec in \`@tamaclaude/protocol\`. \`sprites/index.ts\` is what turns them back
  * into pixels; nothing else should read these strings.
+ *
+ * \`SOURCE\` is a hash of the SVG this was baked from, comments and whitespace
+ * excluded. \`tools/bake-sprites.test.ts\` fails when it stops matching, which is
+ * how "edited the animation, forgot to re-bake" is caught. Four of the six were
+ * stale that way, carrying holes where Clawd's eyes are.
  */
+export const SOURCE = '${source}';
 export const WIDTH = ${String(width)};
 export const HEIGHT = ${String(height)};
 
@@ -161,9 +169,17 @@ async function bake(page: Page, name: string): Promise<void> {
 
   await mkdir(OUT_DIR, { recursive: true });
   const path = resolve(OUT_DIR, `${name}.data.ts`);
+  const svg = await readFile(`assets/clawd/animations/${name}.svg`, 'utf8');
   await writeFile(
     path,
-    moduleSource({ name, width, height, pixels, masks }),
+    moduleSource({
+      name,
+      width,
+      height,
+      pixels,
+      masks,
+      source: fingerprint(svg),
+    }),
     'utf8',
   );
   const bytes = (await readFile(path)).byteLength;

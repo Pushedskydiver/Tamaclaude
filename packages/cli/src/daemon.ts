@@ -22,7 +22,12 @@ import type { AnimationName, Session, SessionState } from '@tamaclaude/daemon';
 import type { LinkStatus, SerialSystem } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
-import type { Scene, SessionChip, Sprite } from '@tamaclaude/renderer';
+import type {
+  Scene,
+  SessionChip,
+  Sprite,
+  TimeOfDay,
+} from '@tamaclaude/renderer';
 
 import process from 'node:process';
 
@@ -77,6 +82,23 @@ const FRAME_MS = 125;
  */
 const ORIENTATION = 'landscape';
 
+/**
+ * How far the rock pool reaches.
+ *
+ * `panel`, so the scenery fills the glass rather than sitting in a band behind
+ * Clawd with the pack's flat background above and below it. Both extents are
+ * built (`ENVIRONMENT_EXTENTS` in the renderer); this picks one, the way
+ * `ORIENTATION` above picks one.
+ *
+ * A constant rather than a pack field for now. Alex asked for a switch so that
+ * he or Jamie could change it later, and a pack manifest entry is where that
+ * belongs — the pack is the personalisation layer. That is deferred, not
+ * forgotten: it is a schema change to `@tamaclaude/packs` plus a migration for
+ * a manifest that already exists, and it was explicitly not taken in the same
+ * pass as wiring the scenery on at all.
+ */
+const ENVIRONMENT_EXTENT = 'panel';
+
 export type DaemonOptions = {
   readonly socketPath: string;
   readonly devicePath: string;
@@ -105,6 +127,28 @@ export type DaemonOptions = {
 export type RunningDaemon = {
   readonly stop: () => Promise<void>;
 };
+
+/**
+ * Which sky the panel is wearing.
+ *
+ * Here rather than in the renderer for the same reason `clockText` is here:
+ * turning an instant into a local hour needs a timezone, and
+ * `packages/renderer` is kept runtime-neutral so `BUILD_PLAN.md` Stage 1's open
+ * exit — bundling it for the browser so both ends call one function — stays
+ * available. The renderer takes the answer, not the clock.
+ *
+ * The boundaries are the ones a person would name looking out of a window,
+ * not civil twilight: this is a desk toy, and a rock pool that turns golden at
+ * six in the evening is the point. `dusk` gets three hours because it is the
+ * one most likely to be seen — it covers the end of a working day.
+ */
+function timeOfDay(now: number): TimeOfDay {
+  const hour = new Date(now).getHours();
+  if (hour >= 5 && hour < 8) return 'dawn';
+  if (hour >= 8 && hour < 17) return 'day';
+  if (hour >= 17 && hour < 20) return 'dusk';
+  return 'night';
+}
 
 /** The clock as the status band wants it: 24-hour, no seconds. */
 function clockText(now: number): string {
@@ -283,6 +327,7 @@ export function sceneFor(input: SceneInput): Scene {
     },
     sessions: panel.sessions.map((session) => chipFor(session, now)),
     message: messageFor(panel, pack, now),
+    environment: { time: timeOfDay(now), extent: ENVIRONMENT_EXTENT },
   };
 }
 
