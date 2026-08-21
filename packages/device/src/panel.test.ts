@@ -98,6 +98,10 @@ function fakeSerial(chunk = Number.MAX_SAFE_INTEGER) {
     wedge: () => {
       state.wedged = true;
     },
+    /** Drain it again, so a reopened port behaves. */
+    unwedge: () => {
+      state.wedged = false;
+    },
     /** Yank it without the read stream noticing, so only a write finds out. */
     stall: () => {
       state.present = false;
@@ -446,6 +450,40 @@ describe('closing', () => {
     expect(seen.trailing).toBe(0);
     expect(seen.packets[0].payload).toHaveLength(24);
   });
+});
+
+describe('a panel that wedges mid-write', () => {
+  it('gives up on the frame and recovers on the next port', async () => {
+    // The failure this bounds: `write(2)` to a panel whose tx buffer has filled
+    // neither returns nor throws, and every later frame queues behind it. A
+    // review measured the consequence end to end — unplug the wedged panel,
+    // plug in a healthy one, and **zero** frames reached the new port, while
+    // the daemon went on reporting the link online. Painting was over for the
+    // life of the process.
+    const serial = fakeSerial();
+    const panel = open({ serial: serial.system, retryMs: 5 });
+    await settle();
+    serial.say(HEALTHY);
+    await settle();
+
+    serial.wedge();
+    void panel.send(WHOLE, payload(1, 4));
+    await delay(30);
+    const stuck = serial.state.written.length;
+
+    // The write is still in flight and will never settle. Past the bound, the
+    // link is dropped, the port is reopened, and the panel works again.
+    await delay(1_100);
+    serial.plug();
+    serial.unwedge();
+    await delay(60);
+    serial.say(HEALTHY);
+    await settle();
+
+    await panel.send(WHOLE, payload(2, 4));
+    await delay(30);
+    expect(serial.state.written.length).toBeGreaterThan(stuck);
+  }, 10_000);
 });
 
 describe('shutting down a wedged panel', () => {

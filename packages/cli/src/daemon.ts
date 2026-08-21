@@ -19,7 +19,7 @@
  * framebuffers into the smallest rectangle that changed.
  */
 import type { Session, SessionState } from '@tamaclaude/daemon';
-import type { SerialSystem } from '@tamaclaude/device';
+import type { LinkStatus, SerialSystem } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
 import type { Scene, SessionChip } from '@tamaclaude/renderer';
@@ -162,14 +162,56 @@ function subagentText(sessions: readonly Session[]): string {
 }
 
 /**
+ * What the message band says, in words a person can act on.
+ *
+ * **The state comes first, and that is the whole point.** This used to be
+ * `panel.tool ?? panel.state`, which cannot express the two things the panel
+ * exists to tell you. `StopFailure` never clears `tool`, so a session that died
+ * on a rate limit rendered the word `Bash` — pixel-for-pixel identical to one
+ * happily running Bash. And `NEEDS_PERMISSION` has no tool, so it put the raw
+ * enum `NEEDS_PERMISSION` on the glass. Measured, all three.
+ *
+ * A pack's `quips.mapped` is keyed on exactly these state names — which
+ * `state.ts` says is *why* they are SCREAMING_SNAKE — and until now nothing in
+ * the repo read it: the example pack has "may I?" and "well, that happened"
+ * sitting unused while the panel showed enum names. So a mapped quip wins, then
+ * the tool for the states where a tool is the interesting fact, then an idle
+ * quip, and a lower-cased state name only as a last resort.
+ *
+ * The idle quip is chosen by the clock rather than at random, because a desk
+ * toy that reshuffles its own text every 125ms is a fidget, not a pet — and
+ * because a random one would make the dirty-rect diff send a frame per tick.
+ */
+function messageFor(
+  panel: ReturnType<typeof resolvePanel>,
+  pack: PackManifest,
+  now: number,
+): string {
+  const mapped = pack.quips.mapped[panel.state];
+  if (mapped !== undefined) return mapped;
+  if (panel.tool !== undefined) return panel.tool;
+  if (panel.state === 'IDLE' && pack.quips.idle.length > 0) {
+    // One quip a minute, so it changes at a human pace and the diff stays quiet.
+    const minute = Math.floor(now / 60_000);
+    return pack.quips.idle[minute % pack.quips.idle.length] ?? panel.state;
+  }
+  return panel.state.toLowerCase().replaceAll('_', ' ');
+}
+
+/**
  * What the panel should look like right now.
+ *
+ * Exported for its tests. Everything a person reads on the glass is decided
+ * here, and until it was exported the only assertions available were on the
+ * *byte count* that reached the wire — under which five of the six things this
+ * puts on the panel could be destroyed outright with the whole suite green.
  *
  * `sprites: []` is not a placeholder for missing wiring — `scene.ts` documents
  * that slots past the end of the array stay empty, so this is a complete scene
  * with an empty stage. The stage fills when the sprite data lands; everything
  * else on the panel is live from this commit.
  */
-function sceneFor(
+export function sceneFor(
   registry: Parameters<typeof resolvePanel>[0],
   pack: PackManifest,
   now: number,
@@ -185,7 +227,7 @@ function sceneFor(
       right: subagentText(panel.sessions),
     },
     sessions: panel.sessions.map((session) => chipFor(session, now)),
-    message: panel.tool ?? panel.state,
+    message: messageFor(panel, pack, now),
   };
 }
 
@@ -193,10 +235,11 @@ function sceneFor(
  * The rectangle that changed, or nothing.
  *
  * A whole frame goes whenever the link owes one. `link.ts` sets `needsPrime`
- * from four places, and only two of them are the device saying something:
- * `afterOpen` (connect) and `afterReport` (a resync, an abort, or a counter
- * that went backwards). The other two are the host deciding for itself —
- * `newLink` before the first frame, and `afterRefresh` on a five-second timer,
+ * from five places, three of them the device saying something: `afterOpen`
+ * (connect), `afterClose` (the port went away) and `afterReport` (a resync, an
+ * abort, or a counter that went backwards). The other two are the host deciding
+ * for itself — `newLink` before the first frame, and `afterRefresh` on a
+ * five-second timer,
  * which `panel.ts` runs precisely because the loss it covers is the one the
  * firmware cannot see. So a full 320x172 frame leaves here every five seconds
  * whether or not anything asked, and that is the design rather than a leak.
@@ -228,35 +271,106 @@ function changed(
 /**
  * The panel, with its link status wired to somewhere a person will see it.
  *
- * Separated from `runDaemon` only because that function hit the 50-line limit;
- * the reason it is worth its own name is the `onChange`. `link.ts` composes a
- * specific, actionable sentence for a firmware/panel mismatch, and before this
- * was passed the daemon computed it and dropped it — writes stopped after the
- * first frame, permanently, and nothing anywhere said why. `panel.ts` never
- * retries a refused link, by design, so that silence is forever.
+ * `link.ts` composes a specific, actionable sentence for a firmware/panel
+ * mismatch, and before this was passed the daemon computed it and dropped it —
+ * writes stopped after the first frame, permanently, in silence, because
+ * `panel.ts` never retries a refused link.
+ *
+ * Two things the first version of this got wrong, both measured:
+ *
+ * **It said nothing when the panel was not there at all** — the likeliest
+ * failure of the lot, a wrong `/dev/cu.*` or a cable not seated. `onChange`
+ * only fires on a *change* and `newLink` already starts at `offline`, so a
+ * device that never opens never changes anything and the daemon retried once a
+ * second in the dark. Hence the opening line, said before anything has
+ * happened.
+ *
+ * **And it said far too much when the panel was there** — `needsPrime` is part
+ * of the status, `panel.ts` sets it every five seconds and clears it on the
+ * next write, so `onChange` fired twice a refresh: about 43,200 identical
+ * `panel online` lines a day, which buries the one line worth reading.
+ *
+ * So `onChange` is not used at all. The paint loop already reads
+ * `transport.status()` every tick and already carries state forward without a
+ * mutable binding, so it carries the last line said too and reports only when
+ * that changes. Polling also sees the case a change-callback cannot: a panel
+ * that never arrives, and so never changes anything.
  */
 function openReporting(
   options: DaemonOptions,
   size: { readonly width: number; readonly height: number },
+  report: (line: string) => void,
 ): ReturnType<typeof openPanel> {
-  const report =
-    options.report ??
-    ((line: string): void => {
-      process.stderr.write(`${line}\n`);
-    });
+  report(`waiting for a panel on ${options.devicePath}`);
   return openPanel({
     path: options.devicePath,
     panel: size,
     serial: options.serial,
     refreshMs: options.refreshMs,
     retryMs: options.retryMs,
-    onChange: (status) => {
-      // The refusal first, because it is the one that needs a person. The
-      // phase is worth saying either way: "offline" with no explanation is what
-      // an unplugged cable looks like, and so is a wrong firmware build.
-      report(status.refusal ?? `panel ${status.phase}`);
-    },
   });
+}
+
+/** What a person would want said about the link, right now. */
+function linkLine(status: LinkStatus): string {
+  // The refusal first, because it is the one that needs a person. The phase is
+  // worth saying either way: "offline" with no explanation is what an unplugged
+  // cable looks like, and so is a wrong firmware build.
+  return status.refusal ?? `panel ${status.phase}`;
+}
+
+type Painting = {
+  readonly transport: ReturnType<typeof openPanel>;
+  readonly report: (line: string) => void;
+  readonly frameMs: number;
+  readonly aborted: () => boolean;
+  readonly paint: (previous: Frame | undefined) => Promise<Frame | undefined>;
+};
+
+/**
+ * Paint, say anything worth saying, then schedule the next one from the timer.
+ *
+ * **Scheduling from the timer rather than awaiting is the difference between
+ * this and a memory leak.** Written as `return loop(...)` inside an `async`
+ * function, every iteration awaits the next, so the promise chain never unwinds
+ * and each frame permanently adds a suspended context.
+ *
+ * **State the tick rate with any figure here.** The retention is per *frame*,
+ * about 83 bytes of it, so a measurement is meaningless without one — and the
+ * first version of this comment gave "8.06 -> 9.41 MB over eighteen seconds"
+ * (taken at `frameMs: 0`, the fastest tick the loop allows) next to "63 MB a
+ * day at 8fps", which are the same defect described at rates two orders apart.
+ * A reviewer who tried to reproduce the eighteen-second figure at 8fps saw
+ * nothing, which is the worst outcome a measured claim can have.
+ *
+ * So: 83 bytes a frame, which is ~57 MB a day at the shipping 8fps, in a
+ * process `BUILD_PLAN.md` intends to run under launchd. Handing the
+ * continuation to `setTimeout` lets each iteration settle and start the next
+ * from a fresh context — 0.035 MB over sixty seconds at `frameMs: 0`, flat.
+ *
+ * Both pieces of state — the frame on the glass and the last thing said about
+ * the link — are passed forward rather than held. Note that avoiding a `let`
+ * was never the point: `docs/CONVENTIONS.md` §"Holding mutable state" specifies
+ * a budget of one disable, not a clean sheet, and reading it as a purity score
+ * is what produced the leak in the first place. This shape happens to need
+ * neither.
+ */
+async function painting(
+  ctx: Painting,
+  previous?: Frame,
+  said?: string,
+): Promise<void> {
+  if (ctx.aborted()) return;
+  const line = linkLine(ctx.transport.status());
+  if (line !== said) ctx.report(line);
+  // A frame that fails is one frame, and the panel is repainted eight times a
+  // second. `openPanel` already survives an unplugged device, so there is
+  // nothing here worth stopping the daemon over — but it must carry on from the
+  // frame it last *sent*, which on a failure is the one before.
+  const shown = await ctx.paint(previous).catch(() => previous);
+  setTimeout(() => {
+    void painting(ctx, shown, line);
+  }, ctx.frameMs).unref();
 }
 
 export async function runDaemon(
@@ -271,7 +385,12 @@ export async function runDaemon(
     path: options.socketPath,
     now,
   });
-  const transport = openReporting(options, size);
+  const report =
+    options.report ??
+    ((line: string): void => {
+      process.stderr.write(`${line}\n`);
+    });
+  const transport = openReporting(options, size, report);
 
   /**
    * One frame, given what the panel is already showing. Returns what it shows
@@ -296,38 +415,13 @@ export async function runDaemon(
   };
 
   const stopping = new AbortController();
-  const frameMs = options.frameMs ?? FRAME_MS;
-
-  /**
-   * Paint, then schedule the next one from the timer rather than awaiting it.
-   *
-   * **The difference is a memory leak.** Written as `return loop(shown)` inside
-   * an `async` function, every iteration awaits the next, so the promise chain
-   * never unwinds while the daemon runs and each frame permanently adds a
-   * suspended context. Measured on the real loop: 8.06 -> 9.45 MB over
-   * eighteen seconds, linear, no plateau — about 63 MB a day at 8fps, in a
-   * process `BUILD_PLAN.md` intends to run under launchd. Handing the
-   * continuation to `setTimeout` lets each iteration settle and start the next
-   * from a fresh context.
-   *
-   * The frame is still passed forward rather than held, which is what keeps
-   * this file out of the disable budget — but note that avoiding a `let` was
-   * never the point. `docs/CONVENTIONS.md` §"Holding mutable state" specifies a
-   * budget of one disable, not a clean sheet, and reading it as a purity score
-   * is what produced the leak.
-   */
-  const loop = async (previous: Frame | undefined): Promise<void> => {
-    if (stopping.signal.aborted) return;
-    // A frame that fails is one frame, and the panel is repainted eight times a
-    // second. `openPanel` already survives an unplugged device, so there is
-    // nothing here worth stopping the daemon over — but the loop must carry on
-    // from the frame it last *sent*, which on a failure is the one before.
-    const shown = await paint(previous).catch(() => previous);
-    setTimeout(() => {
-      void loop(shown);
-    }, frameMs).unref();
-  };
-  void loop(undefined);
+  void painting({
+    transport,
+    report,
+    frameMs: options.frameMs ?? FRAME_MS,
+    aborted: () => stopping.signal.aborted,
+    paint,
+  });
 
   return {
     stop: async () => {

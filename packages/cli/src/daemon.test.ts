@@ -8,7 +8,10 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { runDaemon } from './daemon.js';
+import { createRegistry, observe } from '@tamaclaude/daemon';
+import { parsePackManifest } from '@tamaclaude/packs';
+
+import { runDaemon, sceneFor } from './daemon.js';
 
 const NOW = 1_700_000_000_000;
 
@@ -77,7 +80,10 @@ describe('the daemon command', () => {
     });
   });
 
-  async function start(serial: SerialSystem) {
+  async function start(
+    serial: SerialSystem,
+    extra: { readonly refreshMs?: number } = {},
+  ) {
     const directory = mkdtempSync(join(tmpdir(), 'tc-daemon-'));
     directories.push(directory);
     const socketPath = join(directory, 'daemon.sock');
@@ -88,6 +94,9 @@ describe('the daemon command', () => {
       serial,
       now: () => NOW,
       frameMs: 5,
+      // Quiet, so a test run does not print a link line per phase change.
+      report: () => undefined,
+      ...extra,
     });
     running.push(() => daemon.stop());
     return { socketPath, daemon };
@@ -161,25 +170,23 @@ describe('the daemon command', () => {
     expect(primed).toBeGreaterThan(1000);
   });
 
-  it('gives a session in each tier its own chip tone', async () => {
-    // `chipFor` had no test at all: a review replaced the whole state-to-tone
-    // mapping with a constant `'active'` and every test still passed. The tone
-    // table is now total, so a missing state is a build error — this covers the
-    // mapping itself being right rather than merely present.
+  it('re-primes on the refresh timer, with nothing else happening', async () => {
+    // `refreshMs` and `retryMs` were added to `DaemonOptions` so that a test
+    // could reach this path, and then no test did — public API on a promise it
+    // did not keep. `link.ts`'s `afterRefresh` owes a whole frame every five
+    // seconds precisely because the loss it covers is the one the firmware
+    // cannot see, so the daemon repaints the panel unprompted. This is that,
+    // with the timer wound right down.
     const serial = fakeSerial();
-    const { socketPath } = await start(serial.system);
+    await start(serial.system, { refreshMs: 30 });
     await delay(20);
     serial.announce();
-    await delay(30);
-
-    // `Notification` is what puts a session into the attention tier.
-    await send(
-      socketPath,
-      `${JSON.stringify({ sessionId: 'waiting', kind: 'Notification' })}\n`,
-    );
     await delay(40);
-    const withAttention = serial.state.written.length;
-    expect(withAttention).toBeGreaterThan(0);
+
+    const settled = serial.state.written.length;
+    // Nothing arrives on the socket; only the refresh can move this.
+    await delay(150);
+    expect(serial.state.written.length).toBeGreaterThan(settled);
   });
 
   it('stops cleanly, leaving no socket behind', async () => {
@@ -191,5 +198,100 @@ describe('the daemon command', () => {
     await daemon.stop();
     running.splice(0);
     await expect(send(socketPath, '{}\n')).rejects.toThrow();
+  });
+});
+
+describe('what the panel says', () => {
+  const pack = parsePackManifest(examplePack());
+
+  type HookEvent = Parameters<typeof observe>[1];
+  type Registry = ReturnType<typeof createRegistry>;
+
+  /** A registry with these events folded in, at a fixed clock. */
+  function after(...events: readonly HookEvent[]): Registry {
+    return events.reduce<Registry>(
+      (registry, event) => observe(registry, event, NOW),
+      createRegistry(NOW),
+    );
+  }
+
+  it('tells a blocked session apart from a working one', () => {
+    // The defect this exists for. `message` was `panel.tool ?? panel.state`,
+    // and `StopFailure` never clears `tool` — so a session that died on a rate
+    // limit rendered the word `Bash`, pixel-for-pixel identical to one happily
+    // running Bash. `NEEDS_PERMISSION` has no tool, so it put the raw enum on
+    // the glass. All three measured; all three now say something different.
+    const working = sceneFor(
+      after({ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }),
+      pack,
+      NOW,
+    );
+    const blocked = sceneFor(
+      after({ sessionId: 's', kind: 'PermissionRequest' }),
+      pack,
+      NOW,
+    );
+    const failed = sceneFor(
+      after(
+        { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+        { sessionId: 's', kind: 'StopFailure' },
+      ),
+      pack,
+      NOW,
+    );
+
+    expect(working.message).toBe('Bash');
+    expect(blocked.message).toBe(pack.quips.mapped.NEEDS_PERMISSION);
+    expect(failed.message).toBe(pack.quips.mapped.FAILED);
+    expect(
+      new Set([working.message, blocked.message, failed.message]).size,
+    ).toBe(3);
+  });
+
+  it('never puts a raw state name on the glass', () => {
+    // `state.ts` says these are SCREAMING_SNAKE *because a state name is also a
+    // quip key*. One reaching the panel means the pack was not consulted.
+    const states = ['SessionStart', 'Stop', 'PermissionRequest', 'StopFailure'];
+    states.forEach((kind) => {
+      const scene = sceneFor(after({ sessionId: 's', kind }), pack, NOW);
+      expect(scene.message).not.toMatch(/^[A-Z_]+$/);
+    });
+  });
+
+  it('gives a session that needs a human the attention tone', () => {
+    const scene = sceneFor(
+      after({ sessionId: 's', kind: 'PermissionRequest' }),
+      pack,
+      NOW,
+    );
+    expect(scene.sessions).toEqual([{ tone: 'attention', origin: 'local' }]);
+  });
+
+  it('shows one chip per live session, hero first', () => {
+    const scene = sceneFor(
+      after(
+        { sessionId: 'quiet', kind: 'Stop' },
+        { sessionId: 'loud', kind: 'PermissionRequest' },
+      ),
+      pack,
+      NOW,
+    );
+    expect(scene.sessions).toHaveLength(2);
+    expect(scene.sessions[0]?.tone).toBe('attention');
+  });
+
+  it('puts a padded 24-hour clock on the status band', () => {
+    const scene = sceneFor(createRegistry(NOW), pack, NOW);
+    expect(scene.status.left).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it('counts subagents, and says nothing when there are none', () => {
+    expect(sceneFor(createRegistry(NOW), pack, NOW).status.right).toBe('');
+    const busy = sceneFor(
+      after({ sessionId: 's', kind: 'SubagentStart' }),
+      pack,
+      NOW,
+    );
+    expect(busy.status.right).toBe('+1');
   });
 });

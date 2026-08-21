@@ -96,6 +96,17 @@ const REFRESH_MS = 5000;
  */
 const SHUTDOWN_DRAIN_MS = 250;
 
+/**
+ * How long one frame may sit in `write(2)` before the link is treated as lost.
+ *
+ * Generous against a real frame — `docs/ARCHITECTURE.md` puts a full-screen
+ * prime at 191ms on a 562.5 KB/s link, and a dirty rect at a fraction of that —
+ * and short against a person waiting for the panel to come back. Longer than
+ * `SHUTDOWN_DRAIN_MS` on purpose: shutdown may abandon a frame that this would
+ * still be waiting on, and the way out should never be the slower path.
+ */
+const WRITE_TIMEOUT_MS = 1000;
+
 export type PanelOptions = {
   /** The serial device, e.g. `/dev/cu.usbmodem1101`. */
   readonly path: string;
@@ -299,12 +310,46 @@ async function transmit(ctx: Ctx, rect: Rect, encoded: Encoded): Promise<void> {
   const now = ctx.state.read();
   if (!now.port || now.link.phase !== 'online') return;
   try {
-    await writeWhole(now.port, packet(rect, encoded));
+    const wrote = await Promise.race([
+      writeWhole(now.port, packet(rect, encoded)).then(() => true),
+      wedged(),
+    ]);
+    if (!wrote) {
+      // Treated as a lost frame, which is what it is. `dropped` shuts the port
+      // and the ordinary retry reopens it, so a wedged panel recovers the same
+      // way an unplugged one does.
+      dropped(ctx);
+      return;
+    }
   } catch {
     dropped(ctx);
     return;
   }
   commit(ctx, afterWrite(ctx.state.read().link, rect));
+}
+
+/**
+ * Resolves `false` if a write has taken long enough to count as wedged.
+ *
+ * **A write that never settles used to end the link for the life of the
+ * process.** `serial.ts` §openPort records the device state — a panel whose tx
+ * buffer fills stops servicing its rx path — and a `write(2)` to it in libuv's
+ * threadpool neither returns nor throws. Every later frame then queued behind
+ * it forever, because `send` chains on `queue`. Measured: unplugging the wedged
+ * panel and plugging in a healthy one delivered **zero** frames to the new
+ * port, while the daemon went on reporting the link online.
+ *
+ * `SHUTDOWN_DRAIN_MS` already bounded this on the way out; it needed bounding
+ * on the way through as well, and for the same reason. A frame abandoned here
+ * is one frame — the panel is repainted eight times a second and the reopened
+ * link owes a whole one anyway.
+ */
+function wedged(): Promise<false> {
+  return new Promise((done) => {
+    setTimeout(() => {
+      done(false);
+    }, WRITE_TIMEOUT_MS).unref();
+  });
 }
 
 function send(ctx: Ctx, rect: Rect, encoded: Encoded): Promise<void> {

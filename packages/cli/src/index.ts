@@ -52,6 +52,12 @@ function examplePack(): unknown {
   }
 }
 
+/** Printed for a missing device, an unknown command, and anything help-shaped. */
+const USAGE =
+  'usage: tamaclaude daemon <device>\n' +
+  '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n' +
+  '  with no command, prints one line of smoke-test output\n';
+
 /**
  * `tamaclaude daemon` — listen, render, and drive the panel until killed.
  *
@@ -62,10 +68,7 @@ function examplePack(): unknown {
 async function daemon(argv: readonly string[]): Promise<void> {
   const devicePath = argv[0];
   if (devicePath === undefined) {
-    process.stderr.write(
-      'usage: tamaclaude daemon <device>\n' +
-        '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n',
-    );
+    process.stderr.write(USAGE);
     process.exit(2);
   }
   const running = await runDaemon({
@@ -121,9 +124,19 @@ if (command === 'daemon') {
   try {
     await daemon(rest);
   } catch (cause) {
-    process.stderr.write(
-      `${cause instanceof Error ? cause.message : String(cause)}\n`,
-    );
+    // The message alone for the failures this CLI composes a sentence for; the
+    // stack for anything else. A `TypeError` from a real bug arriving as one
+    // context-free line is an hour lost on a day that cannot move — and
+    // `examplePack` deliberately attaches a `cause`, which a bare message
+    // throws away with it.
+    const known = /already listening|not a socket|over the .*-byte limit/;
+    const line =
+      cause instanceof Error
+        ? known.test(cause.message)
+          ? cause.message
+          : (cause.stack ?? cause.message)
+        : String(cause);
+    process.stderr.write(`${line}\n`);
     process.exit(1);
   }
 } else if (command === undefined) {
@@ -131,7 +144,8 @@ if (command === 'daemon') {
 } else {
   // Not the smoke test. `tamaclaude frobnicate` used to print a cheerful
   // `pack=example state=WORKING` and exit 0, so a typo of `daemon` looked like
-  // a successful run of something.
-  process.stderr.write(`unknown command: ${command}\n`);
+  // a successful run of something. With the usage, because the two most likely
+  // things typed here are a typo of `daemon` and something help-shaped.
+  process.stderr.write(`${USAGE}unknown command: ${command}\n`);
   process.exit(2);
 }
