@@ -207,9 +207,13 @@ function main(): void {
  * error here; staying quiet is the unsafe one, and this file exists because
  * that is the direction things actually go wrong.
  *
- * No entry at all is the one case that does not run, and it is not the same
- * question: `node -e`, a REPL and an ordinary import all arrive that way, and
- * none of them is someone asking what reviews are owed.
+ * Not running is the ordinary outcome, not an edge case: every import reaches
+ * the comparison and returns false there, which is what `review-triggers.test.ts`
+ * does on every `pnpm test`. The `undefined` branch is narrower than it looks —
+ * measured, `node -e` and the REPL leave `process.argv[1]` unset, but an import
+ * does not: it inherits the *importer's* entry, so it is a mismatch rather than
+ * an absence. An earlier version of this paragraph claimed all three arrive the
+ * same way, and the counter-example was the file's own test.
  */
 function invokedDirectly(): boolean {
   const entry = process.argv[1];

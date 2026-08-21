@@ -2,8 +2,11 @@ import { globSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { Linter } from 'eslint';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
+
+import { inBuildOutput } from './scan-scope.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -26,10 +29,11 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  *
  * Test files are excluded because the budget is about production code, not
  * because a disable there is meaningless — the test override switches off two
- * of the four functional rules, and leaves `no-loop-statements`,
- * `prefer-readonly-type`, `complexity`, `max-params` and the rest on. An
- * earlier version of this comment said a disable in a test "buys nothing",
- * which is wrong on all of those.
+ * of the four functional rules and eight others, but leaves
+ * `no-loop-statements`, `prefer-readonly-type`, `complexity` and `max-params`
+ * on. An earlier version of this comment said a disable in a test "buys
+ * nothing", which is wrong on all four; its correction said the override left
+ * "the rest" on, which is wrong on the eight.
  */
 const BUDGET: Readonly<Record<string, readonly string[]>> = {
   'packages/daemon/src/socket-server.ts': ['functional/prefer-readonly-type'],
@@ -91,10 +95,12 @@ function commentsIn(text: string): readonly string[] {
  * **Inline config.** `/* eslint functional/no-let: "off" *\/` is not a disable
  * directive at all — it is a config override, block-comment only, and it turns
  * a rule off for the whole file. `eslint.config.ts` sets no `noInlineConfig`,
- * so it is honoured here. Three versions of this gate could not see it, and it
- * buys exactly what `BUDGET` exists to ration. Rule names are read as every
- * identifier before a `:`, which over-reads an options object's keys — the
- * safe direction, and there are none in the tree to over-read.
+ * so it is honoured here. Three versions of this gate could not see it at all,
+ * and a fourth saw only the unquoted spelling — see `CONFIGURED_RULE`, which is
+ * where that went wrong and why. Rule names are read as every identifier before
+ * a `:`, which over-reads an options object's keys. That is the safe direction
+ * and there are none in the tree to over-read; it is not, as an earlier version
+ * of this sentence claimed, the *only* way the reading can be wrong.
  *
  * The gaps that have been closed, each an under-count:
  *
@@ -126,8 +132,18 @@ const BLOCK_DIRECTIVE =
   /^\/\*\s*eslint-disable(?:-next-line|-line)?\b([\s\S]*?)(?:\*\/)?$/;
 const INLINE_CONFIG = /^\/\*\s*eslint\s+([\s\S]*?)(?:\*\/)?$/;
 
-/** Rule names inside an inline config block: every identifier before a `:`. */
-const CONFIGURED_RULE = /([\w$@-]+(?:\/[\w$@-]+)*)\s*:/g;
+/**
+ * Rule names inside an inline config block: every identifier before a `:`.
+ *
+ * The quotes are not optional decoration. ESLint parses an inline config as
+ * JSON-ish, so `"functional/no-let": "off"` is the *most* canonical way to
+ * write one — and it is what `eslint.config.ts` itself writes, so copying a
+ * line out of the config produces exactly this form. Omitting `["']` here left
+ * the capture unable to cross the closing quote, which returned no rules at
+ * all: a whole-file suppression, counted as nothing. A review's differential
+ * put it at 640 of 1200 generated inline-config shapes, every one under-counted.
+ */
+const CONFIGURED_RULE = /["']?([\w$@-]+(?:\/[\w$@-]+)*)["']?\s*:/g;
 
 /** What a blanket disable buys, named so it cannot hide. */
 const EVERY_RULE = '(every rule)';
@@ -167,21 +183,102 @@ function boughtBy(comment: string): readonly string[] {
 function productionFiles(): readonly string[] {
   return globSync('packages/*/src/**/*.ts', {
     cwd: ROOT,
-    exclude: (path) =>
-      path.includes('dist') ||
-      path.includes('node_modules') ||
-      path.endsWith('.test.ts'),
+    exclude: (path) => inBuildOutput(path) || path.endsWith('.test.ts'),
   });
 }
 
-function disabledIn(file: string): readonly string[] {
-  const text = readFileSync(join(ROOT, file), 'utf8');
+function disabledInText(text: string): readonly string[] {
   return commentsIn(text).flatMap((comment) => boughtBy(comment));
+}
+
+function disabledIn(file: string): readonly string[] {
+  return disabledInText(readFileSync(join(ROOT, file), 'utf8'));
+}
+
+/**
+ * One offending line, wrapped in every shape that might suppress it.
+ *
+ * `no-var` rather than one of the functional rules, and `.js` rather than
+ * `.ts`, so this needs no plugin and no parser beyond the ones ESLint ships.
+ * Nothing is lost by that: whether a comment is a suppression is decided by the
+ * linter core before any rule runs, so the answer is the same for every rule.
+ */
+const OFFENCE = 'var a = 1;';
+const SHAPES: readonly string[] = [
+  OFFENCE,
+  `/* eslint-disable no-var */\n${OFFENCE}`,
+  `/* eslint-disable */\n${OFFENCE}`,
+  `/* eslint-disable no-var, no-undef */\n${OFFENCE}`,
+  `/* eslint-disable no-var,\n   no-undef */\n${OFFENCE}`,
+  `/* eslint-disable no-var -- because */\n${OFFENCE}`,
+  `// eslint-disable-next-line no-var\n${OFFENCE}`,
+  `${OFFENCE} // eslint-disable-line no-var`,
+  `// eslint-disable\n${OFFENCE}`,
+  `/** eslint-disable no-var */\n${OFFENCE}`,
+  `/* eslint no-var: "off" */\n${OFFENCE}`,
+  `/* eslint "no-var": "off" */\n${OFFENCE}`,
+  `/* eslint 'no-var': 'off' */\n${OFFENCE}`,
+  `/* eslint {"no-var": "off"} */\n${OFFENCE}`,
+  `/* eslint "no-var": ["off"] */\n${OFFENCE}`,
+  `/* eslint\n   "no-var": "off"\n */\n${OFFENCE}`,
+  `${OFFENCE}\n/* eslint "no-var": "off" */`,
+  `const s = '// eslint-disable no-var';\n${OFFENCE}`,
+  `const s = \`// eslint-disable no-var\`;\n${OFFENCE}`,
+  `// mentions eslint-disable in prose\n${OFFENCE}`,
+];
+
+/** Does ESLint let the offence through, given this shape? */
+function suppressedByEslint(source: string): boolean {
+  const messages = new Linter().verify(
+    source,
+    [{ rules: { 'no-var': 'error' } }],
+    'probe.js',
+  );
+  return messages.every((message) => message.ruleId !== 'no-var');
 }
 
 describe('the eslint-disable budget', () => {
   it('finds production files to check at all', () => {
-    expect(productionFiles().length).toBeGreaterThan(20);
+    // Every package, not a lone total. All three `BUDGET` entries live in
+    // daemon, device and hooks, so a glob that dropped renderer, protocol and
+    // packs — 19 of 40 files — still cleared `> 20` with both tests green.
+    // Measured. A package leaving the scan now fails by name.
+    const files = productionFiles();
+    const scanned = [
+      ...new Set(files.map((file) => file.split('/')[1])),
+    ].sort();
+    expect(scanned).toEqual([
+      'cli',
+      'daemon',
+      'device',
+      'hooks',
+      'packs',
+      'protocol',
+      'renderer',
+    ]);
+    expect(files.length).toBeGreaterThan(30);
+  });
+
+  /**
+   * The assertion that closes the class rather than the instance.
+   *
+   * The matcher above has now been wrong in five consecutive commits, and every
+   * time it was fixed by a throwaway probe that was then deleted — so the next
+   * divergence had nothing to catch it but another review round. This is that
+   * probe, kept.
+   *
+   * One-directional on purpose. Over-counting is safe: it fails loud and costs
+   * someone a `BUDGET` line they can argue with. Under-counting is the failure
+   * that has actually happened, every time, and it is silent. Strict
+   * equivalence would also be wrong — a rule reconfigured to `warn` is counted
+   * here and still reported by ESLint, which is deliberate.
+   */
+  it('never misses a suppression ESLint honours', () => {
+    const missed = SHAPES.filter(
+      (source) =>
+        suppressedByEslint(source) && disabledInText(source).length === 0,
+    );
+    expect(missed).toEqual([]);
   });
 
   it('spends exactly what is recorded, and nothing more', () => {

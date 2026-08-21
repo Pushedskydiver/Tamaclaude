@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
+import { inBuildOutput } from './scan-scope.ts';
+
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
@@ -34,21 +36,35 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  *   any of the others, and certified as deliberate by the audit built to catch
  *   exactly this — twice, before a review took it off the list.
  * - `withoutQuietest`'s doc bound to a one-line `type` alias inserted between
- *   it and its function, in `630d15d` — inside the very hunk that fixed the
- *   first two. This gate cannot see that one; see below.
+ *   it and its function, in `630d15d` — the commit that fixed the first two,
+ *   in the same hunk as its `observe` fix. This gate cannot see that one; see
+ *   below.
  *
- * The generalisation worth keeping is not a number. It is that every one
- * arrived as a side effect of editing something *else* nearby — a constant
- * deleted, an alias inserted, a function moved — which is why none of them was
- * noticed by the person who wrote it. The last in the list is the sharpest
- * case: `630d15d` was the commit fixing the first two, and it introduced a
- * third in the same hunk, in the shape this gate cannot see.
+ * There are two ways in, and it is worth knowing which is which rather than
+ * counting. Most arrived as a side effect of editing something *else* nearby —
+ * a constant deleted (`svg2frames.ts`, `registry.ts`), an alias inserted
+ * (`withoutQuietest`), a function inserted (`scene.ts`) — which is why nobody
+ * noticed. But `hook-settings.ts` was a new file written whole in `cc6bd38`,
+ * two blocks authored together where one was meant, and `transport.ts`'s
+ * priming rule was written fresh in `d7ad4b9`. Nothing had to move at all.
+ *
+ * The sharpest case is the last in the list: `630d15d` was the commit fixing
+ * the first two, and the same hunk that re-attached `observe`'s doc inserted
+ * the alias that stranded `withoutQuietest`'s — in the shape this gate cannot
+ * see.
  *
  * **What this does not catch.** Only *adjacent* blocks are visible here. The
- * third instance put a one-line `type` alias between the doc and its function,
- * which binds the doc to the alias and leaves the function bare — and no
- * regular shape distinguishes that from a type that is simply well documented.
- * A review caught that one, and a review is what will catch the next.
+ * `withoutQuietest` case above put a one-line `type` alias between the doc and
+ * its function, which binds the doc to the alias and leaves the function bare —
+ * and no regular shape distinguishes that from a type that is simply well
+ * documented. (This sentence used to say "the third instance", pointing into a
+ * tally that the paragraph above no longer keeps. An ordinal outliving its list
+ * is the same defect as a doc outliving its symbol.)
+ *
+ * A review caught that one, and a review is what will catch the next — a review
+ * measured the surface at seventeen shapes this walk cannot see, of which
+ * eleven strand the intended symbol. That is a much larger ask of a reader than
+ * this paragraph used to imply.
  */
 function multiDocNodes(files: readonly string[]): readonly string[] {
   const program = ts.createProgram([...files], {
@@ -70,10 +86,12 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
     // doc blocks too, and the first instance of this bug was one of them — a
     // top-level-only walk missed it, which a probe caught before this shipped.
     const visit = (node: ts.Node): void => {
-      // `jsDoc` is internal but stable, and is the only way to see that two
-      // blocks bound where one was meant. A regex over the text cannot tell a
-      // real block from one inside a template literal, and did report a false
-      // positive in `make-font-atlas.ts` for exactly that reason.
+      // `jsDoc` is internal but stable, and is what shows two blocks *bound*
+      // where one was meant — `getLeadingCommentRanges`, which the sibling gate
+      // uses, enumerates comments but not what they attached to. A regex over
+      // the text cannot tell a real block from one inside a template literal,
+      // and did report a false positive in `make-font-atlas.ts` for that
+      // reason.
       const blocks = (node as { jsDoc?: readonly unknown[] }).jsDoc;
       if (blocks !== undefined && blocks.length > 1) {
         found.push(file.slice(ROOT.length));
@@ -98,18 +116,23 @@ function multiDocNodes(files: readonly string[]): readonly string[] {
  * the moment that was missing every time.
  *
  * Recording a count instead of deciding is the failure this list invites, and
- * it has happened at every revision so far. Measured from `git log -p`:
+ * every revision that touched the entries did it. Measured from `git log -p`:
  *
  * - `630d15d` wrote the list with fifteen entries. Three of them were the bug
  *   and not a header — `scene.ts` and `hook-settings.ts`, each recorded as `2`
- *   when the second block was `render`'s stranded doc and a duplicate; and
+ *   when the second block was `render`'s stranded doc and, in `hook-settings`,
+ *   a second block of distinct prose that belonged in the first; and
  *   `svg2frames.ts`. A fourth, `make-font-atlas.ts`, was a regex false
  *   positive that no longer exists once the walk went through the AST.
  * - `f3cc11f` decremented `scene.ts` and `hook-settings.ts` to `1` by fixing
  *   their real second block, and deleted `make-font-atlas.ts`. It re-certified
  *   `svg2frames.ts` rather than reading it.
- * - This revision deleted `svg2frames.ts`. Two entries have therefore ever
- *   been deleted outright; the other two were decremented and are still here.
+ * - `4bea4d7` deleted `svg2frames.ts` after a fourth review read it. Two
+ *   entries have therefore ever been deleted outright; the other two were
+ *   decremented and are still here.
+ * - `f941169` changed no entry at all — only this paragraph, which had said
+ *   `4bea4d7`'s deletion was its own. Getting the provenance of the list wrong
+ *   is the same failure as getting an entry wrong, one level up.
  *
  * Every entry left has since been read against its file, twice and
  * independently, and every one is a header. That is a statement about an audit
@@ -135,14 +158,23 @@ const DELIBERATE: Readonly<Record<string, number>> = {
 function sourceFiles(): readonly string[] {
   return globSync(['packages/*/src/**/*.ts', 'tools/**/*.ts'], {
     cwd: ROOT,
-    exclude: (path) => path.includes('dist') || path.includes('node_modules'),
+    exclude: (path) => inBuildOutput(path),
   }).map((file) => ROOT + file);
 }
 
 describe('TSDoc blocks are where their author put them', () => {
   it('finds source files to check at all', () => {
-    // Without this, a bad glob turns the gate below into a green no-op.
-    expect(sourceFiles().length).toBeGreaterThan(30);
+    // Without this, a bad glob turns the gate below into a green no-op — and a
+    // lone lower bound does not give it. Measured: against 88 real files a
+    // `> 30` threshold let 56 of them vanish with both tests green, because the
+    // half that remained cleared the bar on its own. So assert the halves.
+    const files = sourceFiles();
+    expect(
+      files.filter((file) => file.includes('/packages/')).length,
+    ).toBeGreaterThan(40);
+    expect(
+      files.filter((file) => file.includes('/tools/')).length,
+    ).toBeGreaterThan(12);
   });
 
   it('has no stacked doc blocks beyond the recorded ones', () => {

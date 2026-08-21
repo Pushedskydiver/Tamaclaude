@@ -21,11 +21,12 @@
  * Reading the parser's comments rather than the file's text buys a different
  * thing: a directive-shaped string inside a literal is not a comment at all.
  *
- * That first point used to be made by this paragraph containing the word and
- * being matched by it. A rewrite took the word out and left the claim standing;
- * the correction then credited the parser for the anchor's work. Two passes,
- * two wrong sentences, over a conclusion that was right the whole time — which
- * is the thing this file is otherwise careful about.
+ * That middle point — anchor, not parser — used to be made by this paragraph
+ * containing the word and being matched by it. A rewrite took the word out and
+ * left the claim standing; the correction credited the parser for the anchor's
+ * work; the correction after that pointed at the wrong item in the list. Three
+ * passes, three wrong sentences, over a conclusion that was right the whole
+ * time — which is the thing this file is otherwise careful about.
  */
 
 export type Cell<T> = {
