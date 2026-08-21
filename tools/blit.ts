@@ -21,11 +21,14 @@
  * the spec rather than with the code the daemon will use is a test of the wrong
  * thing.
  *
- * What it does not do is model the daemon. There is no state machine, no pack,
- * no text: one animation, looping. It answers "does a rect get from here to the
- * glass, correctly, at 8fps" and nothing else.
+ * What it does not do is model the daemon. It loads a pack and draws all four
+ * bands, because a panel showing three empty ones cannot be told from a panel
+ * that failed to draw them — but the bands hold placeholders, there is no
+ * state machine, and the animation simply loops. It answers "does a rendered
+ * panel get from here to the glass, correctly, at 8fps" and nothing else.
  */
 import type { Plan, Totals, Update, Window } from './blit-types.ts';
+import type { Sprite } from './png-rgb565.ts';
 import type { Link } from './serial.ts';
 import type { Frame, Rect } from '@tamaclaude/protocol';
 import type { Orientation } from '@tamaclaude/renderer';
@@ -43,14 +46,10 @@ import {
   extractRect,
   writeRectHeader,
 } from '@tamaclaude/protocol';
-import {
-  ORIENTATIONS,
-  panelSize,
-  safeAreaCropUnits,
-  spriteSlots,
-} from '@tamaclaude/renderer';
+import { ORIENTATIONS, panelSize } from '@tamaclaude/renderer';
 
 import { describe, reportWindow, summarise } from './blit-report.ts';
+import { composePanels, loadPack } from './blit-scene.ts';
 import { FPS, FRAME_MS } from './blit-types.ts';
 import { frameNames, loadFrames } from './png-rgb565.ts';
 import { connect, writeAll } from './serial.ts';
@@ -64,9 +63,6 @@ const DEFAULT_PORT = '/dev/cu.usbmodem1101';
  * default to landscape, which is how the device is meant to sit.
  */
 const DEFAULT_ORIENTATION = 'landscape';
-
-/** Authored stage height in units, from `docs/ANIMATION.md` §Canvas conventions. */
-const STAGE_UNITS_PORTRAIT_HEIGHT = 25;
 
 /** Lateness past which the loop resets its clock instead of catching up. */
 const CATCH_UP_LIMIT_MS = 250;
@@ -125,8 +121,8 @@ async function resolveFrameDir(target: string): Promise<string> {
   return outDir;
 }
 
-/** Decode a directory of PNGs to RGB565, in a throwaway browser. */
-async function decode(frameDir: string): Promise<Frame[]> {
+/** Decode a directory of PNGs to RGB565 plus alpha, in a throwaway browser. */
+async function decode(frameDir: string): Promise<Sprite[]> {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage();
@@ -138,87 +134,6 @@ async function decode(frameDir: string): Promise<Frame[]> {
 }
 
 // ── Geometry ──────────────────────────────────────────────────────
-
-/**
- * Where a sprite frame sits on the panel, as a whole-frame panel rect.
- *
- * This is the trap in this file. `dirtyRect` and `extractRect` work in the
- * frame's own coordinate space — 168x200 for every animation in the repo —
- * while the packet header carries panel coordinates. Send a frame-space rect
- * unchanged and the sprite lands at 0,0: two pixels left and a whole status
- * band high. That looks like a firmware bug and is arithmetic.
- *
- * The origin comes from the renderer's hero slot rather than a constant here,
- * for the same reason `tools/panel-mock.ts` takes its geometry there — what the
- * panel is driven from must not drift from what the renderer draws.
- */
-function spriteOrigin(first: Frame, orientation: Orientation): Rect {
-  const height = first.pixels.length / first.width;
-  const panel = panelSize(orientation);
-  const slot = spriteSlots('hero', orientation)[0];
-  const origin = {
-    x: slot.x + Math.round((slot.width - first.width) / 2),
-    y: slot.y + Math.round((slot.height - height) / 2),
-    width: first.width,
-    height,
-  };
-  if (
-    origin.x < 0 ||
-    origin.y < 0 ||
-    origin.x + origin.width > panel.width ||
-    origin.y + origin.height > panel.height
-  ) {
-    throw new Error(
-      `a ${first.width}x${height} frame centred on the hero slot does not fit ` +
-        `the ${panel.width}x${panel.height} ${orientation} panel`,
-    );
-  }
-  return origin;
-}
-
-/**
- * Crop a frame to the landscape safe area.
- *
- * Landscape is not a rotated portrait layout. The stage band is 160px tall
- * against portrait's 200, because a 320px-wide panel only has 172px of height
- * and the text bands need the rest. Animations are authored at 21x25 units and
- * `docs/ANIMATION.md` reserves the top 5 of those as prop headroom — the space
- * a barbell or a thought bubble occupies — precisely so that landscape can drop
- * it and still have the character whole.
- *
- * So this takes the bottom 20 units and discards the top 5. Anything an
- * animation puts up there is gone in landscape, which is what the safe-area
- * warning in `tools/svg2frames.ts` exists to catch at authoring time.
- */
-function cropToSafeArea(frame: Frame, orientation: Orientation): Frame {
-  if (orientation === 'portrait') return frame;
-  // Derived from the frame's own height rather than multiplied by an assumed
-  // scale. `safeAreaCropUnits()` documents the trap in its own docstring:
-  // consumers must use the scale they are actually drawing at, and a frame
-  // rendered at scale 4 would lose ten units to a crop computed at scale 8.
-  // `svg2frames.ts` takes an arbitrary scale argument and `blit.ts` accepts a
-  // bare frame directory, so the two can genuinely disagree. Height over
-  // authored units is scale-free.
-  const height = frame.pixels.length / frame.width;
-  const drop = Math.round(
-    (height * safeAreaCropUnits()) / STAGE_UNITS_PORTRAIT_HEIGHT,
-  );
-  if (drop <= 0 || drop >= height) return frame;
-  return {
-    width: frame.width,
-    pixels: frame.pixels.slice(drop * frame.width),
-  };
-}
-
-/** Translate a frame-space rect into panel space. */
-function onPanel(rect: Rect, origin: Rect): Rect {
-  return {
-    x: origin.x + rect.x,
-    y: origin.y + rect.y,
-    width: rect.width,
-    height: rect.height,
-  };
-}
 
 // ── Packets ───────────────────────────────────────────────────────
 
@@ -239,23 +154,6 @@ function packet(rect: Rect, pixels: Uint16Array): Update {
 }
 
 /**
- * Paint the whole panel black before anything else.
- *
- * The sprite covers 168x200 of a 172x320 panel. Without this the other 60%
- * keeps whatever the last run, the boot logo or uninitialised SRAM left there,
- * and a stale border reads as a fault in the part that is working. One RLE run:
- * four bytes of payload for 55,040 pixels.
- */
-function clearPacket(orientation: Orientation): Update {
-  // Not `fullScreenRect()`: that is the portrait panel, and in landscape a
-  // 172x320 rect fails the firmware's bounds check and is discarded as noise.
-  // The symptom would be the splash surviving everywhere the sprite does not
-  // cover, plus a resync count that climbs once at startup.
-  const { width, height } = panelSize(orientation);
-  return packet({ x: 0, y: 0, width, height }, new Uint16Array(width * height));
-}
-
-/**
  * The first frame in full, then every frame as a diff of the one before it.
  *
  * The device's panel contents are unknown at connect, so frame 0 cannot be a
@@ -267,12 +165,9 @@ function clearPacket(orientation: Orientation): Update {
  * the send loop would be charged to the frame budget and surface as jitter in
  * the achieved-fps figure this tool exists to report.
  */
-function planFrames(
-  frames: readonly Frame[],
-  origin: Rect,
-  orientation: Orientation,
-): Plan {
-  const whole = { x: 0, y: 0, width: origin.width, height: origin.height };
+function planFrames(panels: readonly Frame[], orientation: Orientation): Plan {
+  const { width, height } = panelSize(orientation);
+  const whole = { x: 0, y: 0, width, height };
   // A full-frame packet for every frame, not just the first.
   //
   // Re-priming has to restore the frame the loop is actually on. Sending
@@ -282,11 +177,13 @@ function planFrames(
   // the mistake. It leaves fragments of whatever was on screen when the
   // re-prime landed, which on `idle` means a stripe of the yawn hanging above
   // a resting Clawd until the next loop happens to paint over it.
-  const full = frames.map((f) => packet(origin, extractRect(f, whole)));
-  const loop = frames.map((next, index) => {
-    const previous = frames[(index + frames.length - 1) % frames.length];
+  const full = panels.map((p) => packet(whole, extractRect(p, whole)));
+  // Rects are already in panel space — `render()` placed the sprite, so there
+  // is nothing left to translate.
+  const loop = panels.map((next, index) => {
+    const previous = panels[(index + panels.length - 1) % panels.length];
     const rect = dirtyRect(previous, next);
-    return rect ? packet(onPanel(rect, origin), extractRect(next, rect)) : null;
+    return rect ? packet(rect, extractRect(next, rect)) : null;
   });
   return { orientation, prime: full[0], full, loop };
 }
@@ -336,20 +233,14 @@ async function reprimeIfNeeded(
         `${link.health.aborts} abort(s)`,
     );
   }
-  const recovering = link.health.lost;
   link.health.lost = false;
-  // Clear only when recovering. The sprite covers 168x160 of a 320x172 panel,
-  // so priming alone cannot repair anything outside it — and the thing most
-  // likely to be wrong out there is the boot splash. But that argument is
-  // about recovery, not about the timer: on a routine tick nothing outside the
-  // sprite can have changed, because nothing but this tool has written to the
-  // panel since the last clear. Clearing anyway costs a full-screen blit —
-  // 110KB, 22ms of SPI during which the device is deaf — twelve times a
-  // minute, which is a black frame every five seconds on the one instrument
-  // whose job is judging whether the panel looks right.
-  if (recovering) {
-    await writeAll(link.handle, clearPacket(plan.orientation).bytes);
-  }
+  // No clear. It used to precede this, on the grounds that the sprite covered
+  // only 168x160 of a 320x172 panel and priming could not repair the rest —
+  // true when a prime *was* the sprite. A prime is now a whole panel, so it
+  // repairs everything a clear would have, and the clear had become a
+  // full-screen black blit sent immediately before the frame that overwrites
+  // it: a visible flash and 22ms of deafness bought by a premise this file no
+  // longer holds. Review caught the comment; the comment was driving the work.
   await writeAll(link.handle, plan.full[at.frame % plan.full.length].bytes);
   return true;
 }
@@ -376,11 +267,13 @@ function mismatched(link: Link, plan: Plan): boolean {
 }
 
 async function stream(link: Link, plan: Plan): Promise<void> {
-  const clear = clearPacket(plan.orientation);
-  await writeAll(link.handle, clear.bytes);
+  // One whole-panel frame, and nothing before it. The panel's contents are
+  // unknown at connect — most likely the boot splash — and a full panel
+  // overwrites all of it, so the clear that used to lead was 110KB spent
+  // painting black under a frame drawn on top of it a moment later.
   await writeAll(link.handle, plan.prime.bytes);
-  const primed = clear.bytes.byteLength + plan.prime.bytes.byteLength;
-  console.log(`  primed with ${primed} B (full-screen clear + frame 0)`);
+  const primed = plan.prime.bytes.byteLength;
+  console.log(`  primed with ${primed} B (frame 0, whole panel)`);
 
   let start = process.hrtime.bigint();
   // Counted, because reporting bytes accurately is what this tool is for and
@@ -452,11 +345,13 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   const frameDir = await resolveFrameDir(args[0]);
-  const decoded = await decode(frameDir);
-  const frames = decoded.map((f) => cropToSafeArea(f, orientation));
-  const origin = spriteOrigin(frames[0], orientation);
-  const plan = planFrames(frames, origin, orientation);
-  describe(basename(frameDir), origin, plan);
+  const rasters = await decode(frameDir);
+  const name = basename(frameDir);
+  const pack = await loadPack(resolve(ROOT, 'packs/example'));
+  const panels = composePanels(rasters, { orientation, pack, name });
+  const plan = planFrames(panels, orientation);
+  const { width, height } = panelSize(orientation);
+  describe(name, { x: 0, y: 0, width, height }, plan);
 
   const port = args[1] ?? DEFAULT_PORT;
   const link = await connect(port);

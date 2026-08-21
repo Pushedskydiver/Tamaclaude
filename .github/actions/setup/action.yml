@@ -13,3 +13,17 @@ runs:
 
     - shell: bash
       run: pnpm install --frozen-lockfile
+
+    # Chromium, because the rasteriser needs one and so does its test.
+    #
+    # `tools/svg2frames.ts` renders every animation frame in a headless
+    # browser, and `tools/frame-palette.test.ts` drives it end to end — which
+    # exists because the palette snapper shipped a defect that made every
+    # black pixel in the artwork transparent, with no automated coverage to
+    # catch it. Testing the rule against a reimplementation of the rule would
+    # have caught nothing.
+    #
+    # `--only-shell` fetches the headless build alone, and the browser is
+    # cached between runs by the action's own store.
+    - shell: bash
+      run: pnpm exec playwright install --with-deps --only-shell chromium

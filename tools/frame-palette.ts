@@ -123,9 +123,26 @@ export async function snapToPalette(input: {
       [0, 1, 2].map((c) => pixels[i + c] * alpha + input.bg[c] * (1 - alpha)),
     );
     if (!exact) soft += 1;
+    // Transparency needs both the snapped colour *and* the captured alpha.
+    //
+    // Deciding it from the colour alone makes this a black colour key, which
+    // is the one mechanism the sprite mask exists to avoid: the art's palette
+    // contains black, so every eye, the mouth and the ground shadow became
+    // transparent and the sprite rendered with holes through its face. That
+    // shipped, and was invisible only because the pack background was also
+    // black — on a lighter pack Clawd would have had windows for eyes.
+    //
+    // The captured alpha alone is not enough either. An antialiased edge over
+    // nothing arrives part-opaque, composites to something dark, and snapping
+    // resolves it to the background — drawing it would ring the sprite in a
+    // black fringe, which is the antialiasing the snap exists to remove.
+    //
+    // So: transparent where it snapped to the background *and* the capture was
+    // not fully opaque. A pixel drawn solidly in the background's own colour —
+    // an eye — is opaque, and an edge that resolved to background is not.
     const isBackground = colour.every((value, c) => value === input.bg[c]);
     [pixels[i], pixels[i + 1], pixels[i + 2]] = colour;
-    pixels[i + 3] = isBackground ? 0 : 255;
+    pixels[i + 3] = isBackground && pixels[i + 3] < 255 ? 0 : 255;
   }
   context.putImageData(data, 0, 0);
   return { uri: canvas.toDataURL('image/png'), soft };

@@ -1,6 +1,6 @@
 import type { Framebuffer } from './framebuffer.js';
 import type { BandName } from './layout.js';
-import type { Scene } from './scene.js';
+import type { Scene, StageSprite } from './scene.js';
 import type { SessionChip } from './strip.js';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
@@ -20,7 +20,7 @@ import {
   STAGE_LAYOUTS,
   stageScale,
 } from './layout.js';
-import { render } from './scene.js';
+import { opaqueMask, render } from './scene.js';
 import { stripFit } from './strip.js';
 
 const PACK: PackManifest = {
@@ -81,17 +81,32 @@ function pixelAt(target: Framebuffer, x: number, y: number): number {
 }
 
 /** A fully-lit raster, so any stray pixel is attributable and visible. */
-function solidSprite(width: number, height: number, value = 0x1234): Frame {
+function solidFrame(width: number, height: number, value = 0x1234): Frame {
   return frame(new Uint16Array(width * height).fill(value), width);
 }
 
 /** A raster whose every row carries its own value, so a crop is measurable. */
-function stripedSprite(width: number, height: number): Frame {
+function stripedFrame(width: number, height: number): Frame {
   const pixels = new Uint16Array(width * height);
   for (let row = 0; row < height; row += 1) {
     pixels.fill(row + 1, row * width, (row + 1) * width);
   }
   return frame(pixels, width);
+}
+
+/** A stage sprite with no mask: every pixel of the raster is drawn. */
+function solidSprite(
+  width: number,
+  height: number,
+  value = 0x1234,
+): StageSprite {
+  const frame = solidFrame(width, height, value);
+  return { frame, mask: opaqueMask(frame) };
+}
+
+function stripedSprite(width: number, height: number): StageSprite {
+  const frame = stripedFrame(width, height);
+  return { frame, mask: opaqueMask(frame) };
 }
 
 const BAND_NAMES = [
@@ -241,6 +256,29 @@ describe('the stage', () => {
     );
   });
 
+  it('lets the background through where the sprite is masked out', () => {
+    // A raster's background arrives as transparent-over-black, so treating it
+    // as opaque paints a black rectangle over whatever is behind Clawd. That
+    // is invisible while the pack background is also black and wrong the
+    // moment it is not — and it would hide the environment entirely.
+    //
+    // A colour key cannot substitute: the art's palette contains black, so
+    // keying on it would punch holes through his eyes. Hence a mask.
+    const slot = spriteSlots('hero', 'portrait')[0];
+    const size = 8;
+    const frame = solidFrame(size, size, 0x1234);
+    // Only the left half is drawn.
+    const mask = new Uint8Array(size * size);
+    for (let row = 0; row < size; row += 1) {
+      mask.fill(1, row * size, row * size + size / 2);
+    }
+    const target = render({ ...EMPTY, sprites: [{ frame, mask }] });
+    expect(litPixels(target)).toHaveLength(size * (size / 2));
+    // The masked-out half is the pack background, not the raster's black.
+    expect(pixelAt(target, slot.x + size - 1, slot.y)).toBe(BACKGROUND);
+    expect(pixelAt(target, slot.x, slot.y)).toBe(0x1234);
+  });
+
   it('clips a sprite larger than its slot rather than bleeding', () => {
     const slot = spriteSlots('hero', 'portrait')[0];
     const huge = solidSprite(slot.width + 40, slot.height + 40);
@@ -307,5 +345,28 @@ describe('the status band', () => {
     // essentially every cell, a pair of fitted strings does not.
     const lit = litPixels(target).filter((at) => within(at, band)).length;
     expect(lit).toBeLessThan(band.width * band.height * 0.5);
+  });
+});
+
+describe('the status band marker', () => {
+  it('marks a cut string in glyphs the atlas actually has', () => {
+    // U+2026 is outside the atlas's U+0020..U+007E, so `glyphOffset` fell back
+    // to `?` and an over-long string rendered as `ab?`. `text.ts` states the
+    // rule — ASCII, because the atlas is — and this broke it.
+    //
+    // Asserted by rendering the string the truncation should produce and
+    // demanding the two panels be pixel-identical. A fallback glyph would make
+    // them differ, and so would truncating to a different length.
+    const long: Scene = { ...EMPTY, status: { left: 'abcdefghij', right: '' } };
+    // 172px band, 4px insets, half each: 81px of budget, five 14px cells at
+    // 2x, three of them spent on the marker.
+    const cut: Scene = { ...EMPTY, status: { left: 'ab...', right: '' } };
+    expect(litPixels(render(long))).toEqual(litPixels(render(cut)));
+  });
+
+  it('leaves a string that fits completely alone', () => {
+    const short: Scene = { ...EMPTY, status: { left: '06:40', right: '' } };
+    const marked: Scene = { ...EMPTY, status: { left: '06...', right: '' } };
+    expect(litPixels(render(short))).not.toEqual(litPixels(render(marked)));
   });
 });

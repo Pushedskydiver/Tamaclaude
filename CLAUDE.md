@@ -115,6 +115,13 @@ degrade reasoning accuracy as context grows.
   stylesheets — and they now get a critic like any other code. Only genuinely
   static art keeps the exemption.
 
+  **`pnpm review-triggers` answers this for the current branch.** The table was
+  meant to make the rule a grep rather than a judgement, and it still got
+  skipped three times after that — because running the grep was itself
+  something to remember. The command is the grep, and `.husky/pre-push` runs it
+  unprompted. It reports rather than blocks: nothing can tell whether a review
+  happened, only which ones are owed.
+
   Dispatch from a fresh context — a context that just wrote something cannot
   see what it assumed. The two times these ran they found a blocking gate hole
   and a contradiction at the heart of the critical path, both of which had been

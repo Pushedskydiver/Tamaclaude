@@ -21,7 +21,7 @@ import {
   stageScale,
 } from './layout.js';
 import { paintStrip } from './strip.js';
-import { drawText, drawTextBlock, measureText } from './text.js';
+import { drawText, drawTextBlock, ELLIPSIS, measureText } from './text.js';
 
 /**
  * The scene: a declarative description of what is on the panel, and the one
@@ -37,6 +37,30 @@ import { drawText, drawTextBlock, measureText } from './text.js';
  * there is what lets a test render any panel state from a literal.
  */
 
+/**
+ * A raster for one stage slot, and which of its pixels are drawn.
+ *
+ * Production art always carries one: `svg2frames.ts` captures with `omitBackground`, so a
+ * raster's background is transparent, and treating it as opaque black paints
+ * over whatever the pack — or later the environment — put behind Clawd.
+ */
+export type StageSprite = {
+  readonly frame: Frame;
+  /**
+   * Required, not optional. `drawFrame` validates a mask's *length* loudly but
+   * cannot validate its absence — and a caller who omits it gets an opaque
+   * black rectangle with no type error and no throw, which is the defect this
+   * type exists to prevent. Tests that genuinely want every pixel drawn say so
+   * with `opaqueMask`.
+   */
+  readonly mask: Uint8Array;
+};
+
+/** A mask that draws every pixel, for callers with nothing to cut out. */
+export function opaqueMask(frame: Frame): Uint8Array {
+  return new Uint8Array(frame.pixels.length).fill(1);
+}
+
 /** Everything the panel shows at one instant. */
 export type Scene = {
   readonly orientation: Orientation;
@@ -48,7 +72,7 @@ export type Scene = {
    * repeating one sprite across both would claim they were the same session.
    * Slots past the end of the array stay empty.
    */
-  readonly sprites: readonly Frame[];
+  readonly sprites: readonly StageSprite[];
   /**
    * The status band's two ends: clock on the left, subagent count on the
    * right (spec §2). Both are opaque strings — formatting a clock is a
@@ -63,14 +87,11 @@ export type Scene = {
 };
 
 /**
- * Paint the status band: clock hard left, subagent count hard right.
- *
- * The right-hand string is laid out from its own measured width rather than
- * from a column count, so a count that grows from `x2` to `x12` stays pinned
- * to the same edge.
- *
- * See `rightAlignedX` for why that edge is clamped.
+ * Magnification for the status bar. See `TextPen.scale` for why this is a
+ * scale rather than a second font, and why it is not applied everywhere.
  */
+const STATUS_TEXT_SCALE = 2;
+
 /**
  * Cut a string to a pixel budget, marking that it was cut.
  *
@@ -81,22 +102,43 @@ export type Scene = {
  * never allowed, and "the daemon owns the contract" is exactly the
  * rationalisation `docs/DA-REVIEW.md` says not to accept.
  */
-function fitted(text: string, budget: number): string {
-  if (measureText(text) <= budget) return text;
-  const columns = Math.max(0, Math.floor(budget / GLYPH_WIDTH) - 1);
-  return `${text.slice(0, columns)}\u2026`;
+function fitted(text: string, budget: number, scale: number): string {
+  if (measureText(text, scale) <= budget) return text;
+  const cells = Math.floor(budget / (GLYPH_WIDTH * scale));
+  const columns = Math.max(0, cells - ELLIPSIS.length);
+  return `${text.slice(0, columns)}${ELLIPSIS}`;
 }
 
+/**
+ * Paint the status band: clock hard left, subagent count hard right.
+ *
+ * The right-hand string is laid out from its own measured width rather than
+ * from a column count, so a count that grows from `x2` to `x12` stays pinned
+ * to the same edge.
+ *
+ * See `rightAlignedX` for why that edge is clamped.
+ */
 function paintStatus(painter: Painter, scene: Scene): void {
   const band = painter.bands.status;
-  const y = centredTextY(band);
+  // Doubled here and nowhere else. This band holds a clock and a subagent
+  // count — short, glanceable, and the things read from across a desk — and
+  // the 24px band has room for a 22px glyph. The message band keeps 1x
+  // because doubling would take it from 21 columns to 10, and capacity is
+  // what that band is for.
+  const scale = STATUS_TEXT_SCALE;
+  const y = centredTextY(band, scale);
   const colour = painter.colours.ink;
   // Half the band each, so neither string can reach the other's territory.
   const budget = Math.floor((band.width - TEXT_INSET * 3) / 2);
-  const left = fitted(scene.status.left, budget);
-  const right = fitted(scene.status.right, budget);
-  drawText(painter.target, left, { x: band.x + TEXT_INSET, y, colour });
-  drawText(painter.target, right, { x: rightAlignedX(band, right), y, colour });
+  const left = fitted(scene.status.left, budget, scale);
+  const right = fitted(scene.status.right, budget, scale);
+  drawText(painter.target, left, { x: band.x + TEXT_INSET, y, colour, scale });
+  drawText(painter.target, right, {
+    x: rightAlignedX(band, right, scale),
+    y,
+    colour,
+    scale,
+  });
 }
 
 /**
@@ -129,10 +171,11 @@ function paintStage(painter: Painter, scene: Scene): void {
   for (const [index, slot] of slots.entries()) {
     const sprite = scene.sprites[index];
     if (sprite === undefined) continue;
-    drawFrame(painter.target, sprite, {
+    drawFrame(painter.target, sprite.frame, {
       x: slot.x,
       y: slot.y - crop,
       within: slot,
+      mask: sprite.mask,
     });
   }
 }

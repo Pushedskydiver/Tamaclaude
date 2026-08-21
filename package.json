@@ -23,7 +23,8 @@
     "measure": "rm -rf out/measure && for f in assets/clawd/animations/*.svg; do a=$(basename \"$f\" .svg); node tools/svg2frames.ts \"$f\" \"out/measure/$a\" >/dev/null; done && node tools/measure-compression.ts out/measure/*",
     "harness": "for a in typing thinking gym bouldering; do node tools/svg2frames.ts \"assets/clawd/animations/$a.svg\" \"out/$a\" >/dev/null; done && node tools/harness.ts out/typing out/thinking out/gym out/bouldering",
     "throughput": "node tools/usb-throughput.ts",
-    "throughput:sweep": "for c in 256 1024 4096 16384 65536; do echo \"$c B: $(node tools/usb-throughput.ts /dev/cu.usbmodem1101 6 \"$c\" | grep 'device saw' | sed 's/.*-> //')\"; done"
+    "throughput:sweep": "for c in 256 1024 4096 16384 65536; do echo \"$c B: $(node tools/usb-throughput.ts /dev/cu.usbmodem1101 6 \"$c\" | grep 'device saw' | sed 's/.*-> //')\"; done",
+    "review-triggers": "node tools/review-triggers.ts"
   },
   "lint-staged": {
     "*.ts": [
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+    "@tamaclaude/packs": "workspace:*",
     "@tamaclaude/protocol": "workspace:*",
     "@tamaclaude/renderer": "workspace:*",
     "@types/node": "^24.10.0",

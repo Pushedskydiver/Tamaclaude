@@ -93,7 +93,16 @@ console.log(
 );
 const rates: number[] = [];
 for (const dir of dirs) {
-  const frames = await loadFrames(page, resolve(dir));
+  // Bare rasters, dropping the mask: these figures are the stage band in
+  // isolation, which is what `docs/ARCHITECTURE.md` scopes them to.
+  //
+  // They are no longer what goes on the wire. `tools/blit.ts` now sends whole
+  // composed panels, and a panel's dirty rect happens to measure the same —
+  // only the sprite changes between frames — but that is a coincidence of the
+  // bands being static placeholders today, not a property. When the daemon
+  // gives them content the two diverge, and the doc already says to measure
+  // the composite case then.
+  const frames = (await loadFrames(page, resolve(dir))).map((s) => s.frame);
   rates.push(summarise(dir.split('/').pop() ?? dir, frames));
 }
 await browser.close();

@@ -72,8 +72,8 @@ export type Painter = {
 export const TEXT_INSET = 4;
 
 /** Top of a single line of text centred in a band. */
-export function centredTextY(rect: Rect): number {
-  return rect.y + Math.floor((rect.height - GLYPH_HEIGHT) / 2);
+export function centredTextY(rect: Rect, scale = 1): number {
+  return rect.y + Math.floor((rect.height - GLYPH_HEIGHT * scale) / 2);
 }
 
 /**
@@ -87,9 +87,9 @@ export function centredTextY(rect: Rect): number {
  * overruns to the right instead, where both right-hand bands are flush with
  * the panel edge and the buffer clip catches it.
  */
-export function rightAlignedX(rect: Rect, text: string): number {
+export function rightAlignedX(rect: Rect, text: string, scale = 1): number {
   return Math.max(
     rect.x + TEXT_INSET,
-    rect.x + rect.width - TEXT_INSET - measureText(text),
+    rect.x + rect.width - TEXT_INSET - measureText(text, scale),
   );
 }
