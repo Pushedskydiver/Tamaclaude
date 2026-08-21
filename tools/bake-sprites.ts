@@ -3,7 +3,7 @@
  *
  *   node tools/bake-sprites.ts [name...]
  *
- * `svg2frames.ts` rasterises an animation into `out/<name>/frame_NN.png`, and
+ * `svg2frames.ts` rasterises an animation into `out/<name>/frame_NNN.png`, and
  * `out/` is gitignored build output that nothing in `packages/` can reach — so
  * until now no animation could appear on the panel at all. This is the bridge:
  * it reads those PNGs and writes `packages/renderer/src/sprites/<name>.data.ts`.
@@ -17,13 +17,16 @@
  * way, by `tools/make-font-atlas.ts`, for the same reason.
  *
  * **The format, and why it is two encodings rather than one.** Measured across
- * all six animations: 24.19 MB of raw RGB565 becomes 557 KB through the repo's
- * own RLE codec — pixel art is nearly all flat runs. The mask is the awkward
- * half. It carries one bit of information per pixel and arrives as one *byte*
- * per pixel, which is 11.8 MB uncompressed and still 1.5 MB packed. Packing it
- * to a bit and then running the same codec over the packed bytes takes it to
- * 554 KB. So: 1.1 MB for six animations, 22:1 overall, and roughly 3.5 MB if
- * every animation clawd-tank has ever had eventually lands here.
+ * all six animations, in bytes so the units cannot drift: 24,192,000 bytes of
+ * raw RGB565 becomes 570,508 through the repo's own RLE codec — pixel art is
+ * nearly all flat runs. The mask is the awkward half. It carries one bit of
+ * information per pixel and arrives as one *byte* per pixel, so exactly half
+ * the pixel cost at 12,096,000 bytes, and still 1,512,000 merely packed to a
+ * bit. Running the same codec over the packed bytes takes it to 558,428.
+ *
+ * So 1,128,216 bytes for six animations — 21.4:1 against the pixels alone, or
+ * 32:1 if the mask's own raw cost is counted, which the sentence above says it
+ * should be. Size is not what limits how many animations this device gets.
  *
  * Each frame is one base64 string: a mode byte, then the payload. The mode is
  * the codec's own — `encodeRect` emits raw when RLE would be larger, and a
@@ -172,11 +175,15 @@ async function bake(page: Page, name: string): Promise<void> {
 /**
  * Rewrite the `SOURCES` table in `sprites/index.ts` to match what is baked.
  *
- * A template-literal `import()` would need no table, and a bundler will not
- * take one — Vite rejects it as an "unknown variable dynamic import" — so the
- * table has to exist and has to stay in step with the files beside it. Writing
- * it here means adding an animation is one command rather than one command and
- * a thing to remember.
+ * A template-literal `import()` would need no table. `knip` is why one exists
+ * anyway: it cannot follow one, so it reports all six generated modules as
+ * unused files and fails the gate — measured, not assumed. Vite is *not* the
+ * reason, whatever an earlier version of this comment said: it accepts the
+ * template literal and compiles it into a glob map of exactly this shape.
+ *
+ * So the table has to exist and has to stay in step with the files beside it.
+ * Writing it here means adding an animation is one command rather than one
+ * command and a thing to remember.
  */
 async function writeTable(names: readonly string[]): Promise<void> {
   const path = resolve(OUT_DIR, 'index.ts');
@@ -184,10 +191,7 @@ async function writeTable(names: readonly string[]): Promise<void> {
   const table =
     'const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {\n' +
     names
-      .map(
-        (name) =>
-          `  ${name}: () => import('./${name}.data.js') as Promise<Baked>,`,
-      )
+      .map((name) => `  ${name}: () => import('./${name}.data.js'),`)
       .join('\n') +
     '\n};';
   const list =
@@ -205,14 +209,36 @@ async function writeTable(names: readonly string[]): Promise<void> {
   }
 }
 
+/**
+ * Reject a name that cannot be a filename and a key.
+ *
+ * `permission sign` is one of the three animations `BUILD_PLAN.md` Stage 4
+ * schedules, and interpolated raw it writes a file called
+ * `permission sign.data.ts` and an `index.ts` that does not parse — into a
+ * hand-maintained file this tool edits rather than owns. Failing here costs a
+ * rerun; failing there costs repairing a file the header says is maintained.
+ *
+ * It is also what lets the generated key stay unquoted, which matters because
+ * prettier strips unnecessary quotes — a quoted key would be rewritten on the
+ * next format and put the generator back out of step with the file it writes.
+ */
+function checked(name: string): string {
+  if (!/^[a-z][a-z0-9-]*$/.test(name)) {
+    throw new Error(
+      `animation name ${JSON.stringify(name)} is not usable — lower-case letters, digits and hyphens only, because it becomes both a filename and an object key`,
+    );
+  }
+  return name;
+}
+
 /** Every animation with an SVG, unless the command line names some. */
 async function chosen(): Promise<readonly string[]> {
   const named = process.argv.slice(2);
-  if (named.length > 0) return named;
+  if (named.length > 0) return named.map((name) => checked(name));
   const files = await readdir('assets/clawd/animations');
   return files
     .filter((file) => file.endsWith('.svg'))
-    .map((file) => basename(file, '.svg'))
+    .map((file) => checked(basename(file, '.svg')))
     .sort();
 }
 

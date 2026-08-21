@@ -34,4 +34,4 @@ export * from './strip.js';
 
 // Clawd's frames, loaded on demand. See sprites/index.ts.
 export { loadSprite, SPRITE_NAMES } from './sprites/index.js';
-export type { Sprite, SpriteName } from './sprites/index.js';
+export type { Sprite } from './sprites/index.js';

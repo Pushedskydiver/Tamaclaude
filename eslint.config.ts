@@ -23,6 +23,11 @@ export default defineConfig(
       '**/dist/',
       'node_modules/',
       '**/firmware/**',
+      // Generated sprite data. `max-lines` would otherwise cap an animation at
+      // about 147 frames — 18 seconds at 8fps — and `idle` is already at 262 of
+      // 300. `tools/bake-sprites.ts` owns the shape of these files; style rules
+      // have nothing to say about a list of base64 strings.
+      '**/sprites/*.data.ts',
       'packs/**',
       '.claude/worktrees/**',
     ],

@@ -1,6 +1,10 @@
+import { Buffer } from 'node:buffer';
+
 import { describe, expect, it } from 'vitest';
 
-import { loadSprite, SPRITE_NAMES } from './index.js';
+import { encodeRect } from '@tamaclaude/protocol';
+
+import { loadSprite, rawSprite, SPRITE_NAMES } from './index.js';
 
 /**
  * The round trip, against the real baked data rather than a fixture.
@@ -61,5 +65,54 @@ describe('baked sprites', () => {
     const once = await loadSprite('typing');
     const twice = await loadSprite('typing');
     expect(twice).toBe(once);
+  });
+
+  it('re-encodes to exactly the bytes it was given', async () => {
+    // **The gate the round trip actually needed.** The four assertions above
+    // check shape, not fidelity: a review flipped `unpack`'s bit order — which
+    // mirrors transparency within every group of eight pixels — and byte-swapped
+    // every decoded pixel, and all 110 renderer tests stayed green for both.
+    //
+    // The commit that added this pipeline verified fidelity against the source
+    // PNGs, which live in a gitignored `out/` that CI does not have. This is the
+    // same property with no PNGs: decode, encode again with the generator's own
+    // rules, and require the bytes back. Any asymmetry in the pair fails here.
+    await Promise.all(
+      SPRITE_NAMES.map(async (name) => {
+        const frames = await loadSprite(name);
+        const source = await rawSprite(name);
+        frames.forEach((sprite, at) => {
+          const pixels = encodeRect(sprite.frame.pixels);
+          const blob = Buffer.concat([
+            Buffer.from([pixels.mode]),
+            Buffer.from(pixels.payload),
+          ]).toString('base64');
+          expect(blob).toBe(source.PIXELS[at]);
+
+          // The mask, through the generator's packing rules.
+          const packed = new Uint8Array(Math.ceil(sprite.mask.length / 8));
+          sprite.mask.forEach((bit, index) => {
+            if (bit === 0) return;
+            const byte = index >> 3;
+            packed[byte] = (packed[byte] ?? 0) | (0x80 >> (index & 7));
+          });
+          const even =
+            packed.byteLength % 2 === 0
+              ? packed
+              : Uint8Array.from([...packed, 0]);
+          const words = new Uint16Array(
+            even.buffer,
+            even.byteOffset,
+            even.byteLength / 2,
+          );
+          const mask = encodeRect(words);
+          const maskBlob = Buffer.concat([
+            Buffer.from([mask.mode]),
+            Buffer.from(mask.payload),
+          ]).toString('base64');
+          expect(maskBlob).toBe(source.MASKS[at]);
+        });
+      }),
+    );
   });
 });

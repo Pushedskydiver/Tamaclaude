@@ -7,25 +7,29 @@
  * scene wants. Nothing outside this directory should read the generated data.
  *
  * **Loaded on demand, and that is the point.** All six animations together are
- * about 1.1 MB of encoded data and roughly 3.5 MB of source; every consumer of
- * `@tamaclaude/renderer` would pay to parse all of it on import if the barrel
- * pulled them in eagerly. A dynamic import means a daemon showing `idle` parses
- * `idle` and nothing else, and an animation nobody reaches costs nothing at all.
+ * 1,128,216 bytes of encoded data and 1,515,153 of source — base64 is four
+ * bytes for three, so the second number can only ever be about a third above
+ * the first. Every consumer of `@tamaclaude/renderer` would pay to parse all of
+ * it on import if the barrel pulled them in eagerly. A dynamic import means a
+ * daemon showing `idle` parses `idle` and nothing else, and an animation nobody
+ * reaches costs nothing at all.
  *
- * The imports are a table of thunks rather than one template literal, which is
- * what a bundler needs — Vite rejects `import(\`./${name}.js\`)` outright as an
- * "unknown variable dynamic import" — and what lets `knip` see that the
- * generated modules are used at all. `tools/bake-sprites.ts` writes this table
- * along with the data, so adding an animation is one command.
+ * The imports are a table of thunks rather than one template literal because
+ * `knip` cannot follow one: with a template literal it reports all six
+ * generated modules as unused files and fails the gate. Measured. Vite is not
+ * the reason — an earlier version of this comment said it rejects the template
+ * literal outright, and it does not; it compiles it into a glob map of exactly
+ * this shape. `tools/bake-sprites.ts` writes this table along with the data, so
+ * adding an animation is one command.
  *
- * The cache is a `Map` rather than a binding: it is added to and never
- * reassigned, which is the shape `socket-server.ts`'s `#connections` already
- * uses and which `docs/CONVENTIONS.md` §"Holding mutable state" does not spend
- * a disable on.
+ * The cache is a `Map`, added to and never reassigned. No budget is being spent
+ * on that and none could be: `eslint.config.ts` turns the four functional rules
+ * off for `packages/renderer/src/**`, because a framebuffer cannot be written
+ * without mutation. `docs/CONVENTIONS.md` §"Holding mutable state" governs the
+ * packages where they are *on*, and an earlier version of this comment cited it
+ * as permission it is not in a position to give.
  */
 import type { Frame } from '@tamaclaude/protocol';
-
-import { Buffer } from 'node:buffer';
 
 import { decodeRect, frame } from '@tamaclaude/protocol';
 
@@ -75,17 +79,18 @@ const loaded = new Map<SpriteName, readonly Sprite[]>();
 
 /** A mode byte, then the payload — the shape `bake-sprites.ts` writes. */
 function decode(blob: string, words: number): Uint16Array {
-  const bytes = Buffer.from(blob, 'base64');
+  // `atob` rather than `Buffer`, because this package had no `node:` import
+  // before the sprites arrived and `BUILD_PLAN.md` Stage 1's open exit is
+  // bundling this renderer for the browser so both ends call one function. A
+  // bare `node:buffer` in the barrel's graph would make that need a polyfill.
+  const binary = atob(blob);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
   const mode = bytes[0];
   if (mode === undefined) throw new Error('empty sprite frame');
   return decodeRect(
     {
       mode,
-      payload: new Uint8Array(
-        bytes.buffer,
-        bytes.byteOffset + 1,
-        bytes.byteLength - 1,
-      ),
+      payload: bytes.subarray(1),
     },
     words,
   );
@@ -125,6 +130,24 @@ function rebuild(baked: Baked): readonly Sprite[] {
       mask: unpack(decode(mask, maskWords), pixels),
     };
   });
+}
+
+/**
+ * The stored blobs for one animation, for the round-trip gate.
+ *
+ * Exported for `index.test.ts` and nothing else. The encode/decode pair here is
+ * a second codec layered on `@tamaclaude/protocol` — MSB-first bit packing, an
+ * even-byte pad, then `encodeRect` — and a mistake in it is silent: a review
+ * flipped the bit order and byte-swapped every pixel and the whole renderer
+ * suite stayed green. The gate needs the source blobs to compare against.
+ */
+export async function rawSprite(name: SpriteName): Promise<{
+  readonly WIDTH: number;
+  readonly HEIGHT: number;
+  readonly PIXELS: readonly string[];
+  readonly MASKS: readonly string[];
+}> {
+  return SOURCES[name]();
 }
 
 /**

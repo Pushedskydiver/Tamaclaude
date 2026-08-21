@@ -165,15 +165,17 @@ that is not waiting on the design freeze.
       (`packages/cli/src/daemon.ts`). The listener's snapshot is resolved into a
       scene, rendered to a framebuffer, diffed against the last one and sent as
       a single dirty rect at 8fps. The clock, the session chips, the subagent
-      badge and the message band are live; the stage is empty.
-- [ ] **The stage.** The exit below asks for placeholder art and there is none —
-      `render()` draws every band but the sprite slots, because Clawd's frames
-      are rasterised by `tools/svg2frames.ts` into a gitignored `out/` and
-      nothing in `packages/` reads them. Measured at **24.19 MB raw RGB565**
-      across the six animations (`idle` 128 frames / 8.60 MB, `asleep` 96 /
-      6.45, `thinking` 64 / 4.30, `bouldering` 32 / 2.15, `gym` 24 / 1.61,
-      `typing` 16 / 1.08), so how they ship is a decision and not a detail.
-      Sessions drive the panel; this is the half of the exit still open.
+      badge, the message band and the stage are all live.
+- [x] **The stage.** Clawd is on it. `tools/bake-sprites.ts` reads the frames
+      `tools/svg2frames.ts` rasterises into a gitignored `out/` and writes them
+      as generated modules inside `packages/renderer/src/sprites/`, which the
+      daemon loads on demand and indexes by the clock. All six animations, all
+      360 frames, verified decoding back to the source PNGs with zero pixel and
+      zero mask mismatches — and seen animating on the real panel.
+      The raw art is 24,192,000 bytes of RGB565 plus the same again halved for
+      the mask; encoded it ships as 1,128,216. Size was never going to be what
+      limited how many animations this device gets, though it was quoted as
+      though it might be.
 - [x] **Hook names confirmed against live documentation** — all three exist:
       `PermissionRequest`, `StopFailure`, `SubagentStart`. Checked against
       code.claude.com/docs/en/hooks.md rather than upstream's README, because a
@@ -249,10 +251,10 @@ than partially. Eight good screens beat nine plus four rough ones.
 - [ ] TS generator: base SVG + example + plan → LLM → animated SVG, under the
       constraint that it may only add transforms and keyframes to existing IDs
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
-- [ ] Palette quantise; RLE pack
+- [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
   1. idle ✅ / asleep ✅
-  2. thinking
+  2. thinking ✅
   3. typing ✅ (Edit/Write)
   4. bouldering ✅ (Read)
   5. gym ✅ (Bash)

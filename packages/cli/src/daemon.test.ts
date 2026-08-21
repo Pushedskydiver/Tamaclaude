@@ -12,7 +12,7 @@ import { createRegistry, observe } from '@tamaclaude/daemon';
 import { parsePackManifest } from '@tamaclaude/packs';
 import { loadSprite, render } from '@tamaclaude/renderer';
 
-import { runDaemon, sceneFor } from './daemon.js';
+import { frameAt, framesFor, runDaemon, sceneFor } from './daemon.js';
 
 const NOW = 1_700_000_000_000;
 
@@ -344,5 +344,29 @@ describe('Clawd on the stage', () => {
       ).pixels;
     // 125ms is one frame at the 8fps `svg2frames.ts` rasterises at.
     expect(scene(0)).not.toEqual(scene(125));
+  });
+
+  it('actually supplies frames to the paint loop', async () => {
+    // A review deleted `framesFor`'s body so it always returned `[]` — no Clawd
+    // on the panel at all — and the whole 389-test suite stayed green. The two
+    // tests above load a sprite themselves and hand it to `sceneFor`, which
+    // proves the renderer can draw one, not that the daemon ever supplies one.
+    const frames = await framesFor('gym');
+    expect(frames.length).toBeGreaterThan(0);
+    expect(frames[0]?.frame.width).toBe(168);
+  });
+
+  it('moves the frame index on as the clock advances', async () => {
+    // The other half. A review made `frameAt` return a constant — Clawd frozen
+    // on frame 0 for ever — and the suite stayed green, because the test that
+    // looked like it covered this re-implemented the formula instead of calling
+    // it. This calls it.
+    const frames = await framesFor('gym');
+    const at = (ms: number) => frameAt(frames.length, ms);
+    expect(at(0)).toBe(0);
+    expect(at(125)).toBe(1);
+    // And it wraps rather than running off the end.
+    expect(at(125 * frames.length)).toBe(0);
+    expect(new Set([at(0), at(125), at(250), at(375)]).size).toBe(4);
   });
 });

@@ -18,16 +18,11 @@
  * other home: turning a `Resolution` into a `Scene`, and turning consecutive
  * framebuffers into the smallest rectangle that changed.
  */
-import type { Session, SessionState } from '@tamaclaude/daemon';
+import type { AnimationName, Session, SessionState } from '@tamaclaude/daemon';
 import type { LinkStatus, SerialSystem } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
-import type {
-  Scene,
-  SessionChip,
-  Sprite,
-  SpriteName,
-} from '@tamaclaude/renderer';
+import type { Scene, SessionChip, Sprite } from '@tamaclaude/renderer';
 
 import process from 'node:process';
 
@@ -56,10 +51,10 @@ import {
  * How often the panel is recomposed.
  *
  * Eight, because that is what `tools/svg2frames.ts` rasterises at and what the
- * animation timings in `docs/ANIMATION.md` divide into. Nothing is animated
- * yet — the stage is empty until the sprite data lands — but the cadence is
- * what the sprites will need, and a clock that ticks at some other rate would
- * have to be reconciled with it later.
+ * animation timings in `docs/ANIMATION.md` divide into. It is also now the rate
+ * Clawd is actually played at — `paintOnce` indexes the current animation by
+ * this same constant, so a clock that ticked at some other rate would show a
+ * loop at the wrong speed rather than merely disagree with the art.
  */
 const FRAME_MS = 125;
 
@@ -214,15 +209,26 @@ function messageFor(
 /**
  * The frames for an animation, or none if it has not been baked.
  *
- * `animationFor` maps ten states and every `PreToolUse.tool_name` onto a
- * handful of names, and three of those names have no art yet — `permission
- * sign`, `dizzy` and `confused` are `BUILD_PLAN.md` Stage 4. Asking for one is
- * an ordinary thing for the daemon to do and must not take the panel down, so a
- * missing animation is an empty stage rather than a throw.
+ * `animationFor` maps the seven session states and every `PreToolUse.tool_name`
+ * onto the six names in `ANIMATIONS`, and all six are baked — so this guard
+ * cannot fire today, and saying otherwise would be inventing a hazard.
+ *
+ * Typed `AnimationName` rather than `string` on purpose: adding `dizzy` to
+ * `ANIMATIONS` without baking it should be a compile error at
+ * `SPRITE_NAMES.includes`, not a silently empty stage. A `string` here is how
+ * "nothing in 360 tests notices a referenced animation going missing" happens
+ * one layer up.
+ *
+ * It exists for the next animation rather than the current ones. `permission
+ * sign`, `dizzy` and `confused` are `BUILD_PLAN.md` Stage 4, and the moment one
+ * is added to `ANIMATIONS` it is reachable here before its art is baked. An
+ * empty stage is the right answer to that; taking the panel down is not.
  */
-async function framesFor(name: string): Promise<readonly Sprite[]> {
-  if (!(SPRITE_NAMES as readonly string[]).includes(name)) return [];
-  return loadSprite(name as SpriteName);
+export async function framesFor(
+  name: AnimationName,
+): Promise<readonly Sprite[]> {
+  if (!SPRITE_NAMES.includes(name)) return [];
+  return loadSprite(name);
 }
 
 /**
@@ -230,10 +236,14 @@ async function framesFor(name: string): Promise<readonly Sprite[]> {
  *
  * Driven by the clock rather than by a counter, so it does not need to be
  * carried through the paint loop and so two panels started a minute apart are
- * on the same beat. `tools/svg2frames.ts` rasterises at 8fps and every loop is
- * a whole number of seconds at that rate, so the modulo lands on a real frame.
+ * on the same beat — the index is a pure function of absolute epoch time.
+ *
+ * Every loop is a whole number of seconds at 8fps (16, 12, 8, 4, 3 and 2), so a
+ * loop restarts on a wall-clock second. That is a nicety and not what makes
+ * this safe: the modulo lands in range for any frame count, and an earlier
+ * version of this comment offered the one as the reason for the other.
  */
-function frameAt(frames: number, now: number): number {
+export function frameAt(frames: number, now: number): number {
   return Math.floor(now / FRAME_MS) % frames;
 }
 
