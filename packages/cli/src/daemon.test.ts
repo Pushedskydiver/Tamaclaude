@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createRegistry, observe } from '@tamaclaude/daemon';
 import { parsePackManifest } from '@tamaclaude/packs';
+import { loadSprite, render } from '@tamaclaude/renderer';
 
 import { runDaemon, sceneFor } from './daemon.js';
 
@@ -221,24 +222,24 @@ describe('what the panel says', () => {
     // limit rendered the word `Bash`, pixel-for-pixel identical to one happily
     // running Bash. `NEEDS_PERMISSION` has no tool, so it put the raw enum on
     // the glass. All three measured; all three now say something different.
-    const working = sceneFor(
-      after({ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }),
+    const working = sceneFor({
+      registry: after({ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }),
       pack,
-      NOW,
-    );
-    const blocked = sceneFor(
-      after({ sessionId: 's', kind: 'PermissionRequest' }),
+      now: NOW,
+    });
+    const blocked = sceneFor({
+      registry: after({ sessionId: 's', kind: 'PermissionRequest' }),
       pack,
-      NOW,
-    );
-    const failed = sceneFor(
-      after(
+      now: NOW,
+    });
+    const failed = sceneFor({
+      registry: after(
         { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
         { sessionId: 's', kind: 'StopFailure' },
       ),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
 
     expect(working.message).toBe('Bash');
     expect(blocked.message).toBe(pack.quips.mapped.NEEDS_PERMISSION);
@@ -253,45 +254,95 @@ describe('what the panel says', () => {
     // quip key*. One reaching the panel means the pack was not consulted.
     const states = ['SessionStart', 'Stop', 'PermissionRequest', 'StopFailure'];
     states.forEach((kind) => {
-      const scene = sceneFor(after({ sessionId: 's', kind }), pack, NOW);
+      const scene = sceneFor({
+        registry: after({ sessionId: 's', kind }),
+        pack,
+        now: NOW,
+      });
       expect(scene.message).not.toMatch(/^[A-Z_]+$/);
     });
   });
 
   it('gives a session that needs a human the attention tone', () => {
-    const scene = sceneFor(
-      after({ sessionId: 's', kind: 'PermissionRequest' }),
+    const scene = sceneFor({
+      registry: after({ sessionId: 's', kind: 'PermissionRequest' }),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
     expect(scene.sessions).toEqual([{ tone: 'attention', origin: 'local' }]);
   });
 
   it('shows one chip per live session, hero first', () => {
-    const scene = sceneFor(
-      after(
+    const scene = sceneFor({
+      registry: after(
         { sessionId: 'quiet', kind: 'Stop' },
         { sessionId: 'loud', kind: 'PermissionRequest' },
       ),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
     expect(scene.sessions).toHaveLength(2);
     expect(scene.sessions[0]?.tone).toBe('attention');
   });
 
   it('puts a padded 24-hour clock on the status band', () => {
-    const scene = sceneFor(createRegistry(NOW), pack, NOW);
+    const scene = sceneFor({ registry: createRegistry(NOW), pack, now: NOW });
     expect(scene.status.left).toMatch(/^\d{2}:\d{2}$/);
   });
 
   it('counts subagents, and says nothing when there are none', () => {
-    expect(sceneFor(createRegistry(NOW), pack, NOW).status.right).toBe('');
-    const busy = sceneFor(
-      after({ sessionId: 's', kind: 'SubagentStart' }),
+    expect(
+      sceneFor({ registry: createRegistry(NOW), pack, now: NOW }).status.right,
+    ).toBe('');
+    const busy = sceneFor({
+      registry: after({ sessionId: 's', kind: 'SubagentStart' }),
       pack,
-      NOW,
-    );
+      now: NOW,
+    });
     expect(busy.status.right).toBe('+1');
+  });
+});
+
+describe('Clawd on the stage', () => {
+  const pack = parsePackManifest(examplePack());
+
+  it('paints a sprite into the stage band', async () => {
+    // Until the sprite pipeline landed the stage was empty on purpose, and the
+    // panel showed a clock and some chips against 52% blank glass. This is the
+    // test that Clawd actually arrives.
+    const frames = await loadSprite('typing');
+    const first = frames[0];
+    expect(first).toBeDefined();
+
+    const base = { registry: createRegistry(NOW), pack, now: NOW };
+    const empty = render(sceneFor(base));
+    const withClawd = render(
+      sceneFor({ ...base, sprites: first ? [first] : [] }),
+    );
+
+    const changed = empty.pixels.reduce<number>(
+      (total, pixel, at) => total + (pixel === withClawd.pixels[at] ? 0 : 1),
+      0,
+    );
+    // A real character, not a stray pixel and not the whole panel.
+    expect(changed).toBeGreaterThan(1_000);
+    expect(changed).toBeLessThan(empty.pixels.length);
+  });
+
+  it('advances through the loop as the clock moves', async () => {
+    const frames = await loadSprite('typing');
+    const scene = (at: number) =>
+      render(
+        sceneFor({
+          registry: createRegistry(NOW),
+          pack,
+          now: NOW,
+          sprites: frames
+            .slice(Math.floor(at / 125) % frames.length)
+            .slice(0, 1),
+        }),
+      ).pixels;
+    // 125ms is one frame at the 8fps `svg2frames.ts` rasterises at.
+    expect(scene(0)).not.toEqual(scene(125));
   });
 });

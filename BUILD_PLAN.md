@@ -153,6 +153,14 @@ that is not waiting on the design freeze.
       socket, so a restart mid-session does not show an empty desk. A leftover
       socket file is told from a running daemon by connecting to it rather than by
       unlinking it blind (`packages/daemon/src/socket-path.ts`).
+- [x] **Verified on the real panel, 21 Aug 2026.** `tamaclaude daemon
+/dev/cu.usbmodem1101` drove the flashed device end to end: the link
+      reached `online` with no refusal, so the firmware's geometry agrees with
+      the 320x172 landscape the host sends. Alex watched the glass through a
+      four-event session and saw the clock, the session chips, and the message
+      band going `Bash` -> `may I?` -> `well, that happened`. That is the first
+      time anything has driven the hardware, and the first confirmation the
+      picture is right rather than merely that bytes moved.
 - [x] Daemon wired to a transport — `tamaclaude daemon <device>`
       (`packages/cli/src/daemon.ts`). The listener's snapshot is resolved into a
       scene, rendered to a framebuffer, diffed against the last one and sent as
