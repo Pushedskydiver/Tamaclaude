@@ -25,10 +25,22 @@ import { animationFor, createDaemon } from '@tamaclaude/daemon';
  * from the format it is an example of.
  */
 function examplePack(): unknown {
+  // Repo-relative, and **this must not survive packaging**. Installed as a
+  // `brew` formula (BUILD_PLAN Stage 3) the four `..` land in
+  // `node_modules`, where `packs/` does not exist — and the smoke test cannot
+  // catch it, because the test only ever runs from the repo. That is the same
+  // shape of blind spot the test was added to close, one level out.
   const root = resolve(fileURLToPath(import.meta.url), '../../../..');
-  return JSON.parse(
-    readFileSync(resolve(root, 'packs/example/manifest.json'), 'utf8'),
-  );
+  const manifest = resolve(root, 'packs/example/manifest.json');
+  try {
+    return JSON.parse(readFileSync(manifest, 'utf8'));
+  } catch (cause) {
+    // Named rather than left as a bare ENOENT or a JSON syntax error, both of
+    // which point at Node's internals instead of at the file.
+    throw new Error(`could not read the example pack at ${manifest}`, {
+      cause,
+    });
+  }
 }
 
 function main(): void {

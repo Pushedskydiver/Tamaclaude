@@ -28,6 +28,11 @@ slipped animation and no present.
 
 ---
 
+**Checkbox notation.** `[x]` means done. `[ ]` means not started or in
+progress. `[~]` means neither — cancelled, or delivered in part with the rest
+named on the line. They were all `[x]` for a while, which made the column
+unreadable as progress: a cancelled item and a finished one looked identical.
+
 ## Stage 0 — Foundations (Tue 18 – Wed 19 Aug)
 
 No hardware required.
@@ -68,12 +73,12 @@ it is deliberately near-leaf, since Claude Code runs it on every hook event.
 The whole product, minus hardware.
 
 - [x] Virtual screen: 172×320 RGB565 framebuffer in TS (`packages/renderer/src/framebuffer.ts`)
-- [x] ~~`@napi-rs/canvas` sink~~ — **not built, deliberately.** The renderer
-      produces a `Framebuffer`; `tools/blit.ts` turns those into packets, tests
-      compare buffers, the harness draws to a canvas. A sink interface between
-      them would be indirection for its own sake, and the dirty-rect path _is_
-      the device sink. Also kept a native dependency out of the renderer, which
-      the daemon imports.
+- [~] ~~`@napi-rs/canvas` sink~~ — **cancelled, not built.** The renderer
+  produces a `Framebuffer`; `tools/blit.ts` turns those into packets, tests
+  compare buffers, the harness draws to a canvas. A sink interface between
+  them would be indirection for its own sake, and the dirty-rect path _is_
+  the device sink. Also kept a native dependency out of the renderer, which
+  the daemon imports.
 - [x] Dev harness: local web page, scrub through frames, switch layout and
       orientation live, panel text in Departure Mono (`pnpm harness`)
 - [ ] Dev harness: hot reload, scrub through **states**, and fake event
@@ -93,7 +98,8 @@ The whole product, minus hardware.
 - [ ] Harness draws through `render()` rather than approximating the bands —
       what makes Stage 2's exit true by construction instead of by inspection
 - [ ] Pack loader + manifest schema
-- [x] `packs/example/` with a manifest and palette — placeholder art still to come
+- [~] `packs/example/` — manifest and palette done; **placeholder art still to
+  come**, and Stage 1's exit depends on it
 - [x] Dirty-rect differ + RLE encoder, with unit tests and a compression-ratio assertion
 - [x] **SPIKE: generate one animation from base SVG to rendered frames.** The
       panel leg of this pipeline is Stage 2 and is not done. Base SVG → LLM → animated SVG →
@@ -145,12 +151,18 @@ that is not waiting on the design freeze.
       Four findings from that check shape this stage, recorded in
       `packages/protocol/src/events.ts`: the session key is `session_id`;
       subagents ride the ordinary events carrying `agent_id` and `agent_type`
-      rather than forming a separate stream; **hooks block, with a 600s default
-      timeout**, which makes the near-leaf rule for `packages/hooks` a
-      correctness constraint rather than a style one; and `Stop` fires on every
-      response rather than at task completion while `StopFailure` ignores exit
-      code and output entirely, so "the turn finished" is not observable the
-      way the state table assumes.
+      rather than forming a separate stream; **Claude Code waits for a hook
+      command to exit**, with a 600s default timeout — which confirms the
+      existing "latency budget" framing rather than upgrading it. The generous
+      timeout means events are not lost to slowness; it means every
+      millisecond of `tamaclaude-notify`'s startup is paid by the user,
+      synchronously, many times per turn. (Note the docs also use "blocking" in
+      a second sense — whether a hook can _veto_ an action via exit code 2 —
+      and by that sense `PermissionRequest` and `StopFailure` do not block. The
+      two senses are unrelated.) Finally, `Stop` fires on every response rather
+      than at task completion and `StopFailure` ignores exit code and output
+      entirely, so "the turn finished" is not observable the way Stage 4's
+      Model 3 payoff assumes.
 
 - [ ] Tool → state mapping (`PreToolUse.tool_name`)
 - [ ] Multi-session compositing — both Alex and Jamie run several at once, so this is required
@@ -160,7 +172,11 @@ that is not waiting on the design freeze.
 - [ ] **Remote transport** — TCP + shared secret, so Jamie's Raspberry Pi agent appears on the
       display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
       from day one (cheap), but ship it only if Stage 4 is on schedule.
-- [ ] launchd agent; `brew` tap formula
+- [ ] launchd agent; `brew` tap formula. **The CLI reads `packs/example`
+      by a repo-relative path** and that breaks the moment it is installed
+      somewhere else — its smoke test cannot catch it, because the test only
+      ever runs from the repo. Packaging is where a pack must come from a
+      configured location instead.
 
 **Exit:** real Claude Code sessions drive the panel, placeholder art.
 
@@ -221,6 +237,11 @@ than partially. Eight good screens beat nine plus four rough ones.
       timers and have no tool-call frequency at all, so this is not a claim
       about the whole catalogue
   12. road bike (long runs)
+
+**`Stop` does not mean "the turn finished".** Confirmed against live docs in
+Stage 3: it fires on every response. So the Model 3 payoff above cannot be
+keyed on it as written, and needs a different trigger — most likely a quiet
+period after the last event, which the daemon can see and a hook cannot.
 
 ## Stage 5 — Personalisation (Sun 6 – Sun 13 Sep)
 
