@@ -57,9 +57,13 @@ function fakeSerial(chunk = Number.MAX_SAFE_INTEGER) {
   };
   const port: SerialPort = {
     write: async (bytes) => {
-      // Never settles. A device whose tx buffer has filled stops servicing its
-      // rx path, and a write to it neither returns nor throws — see the note in
-      // `serial.ts` §openPort.
+      // Never settles. `serial.ts` §openPort records the device state — "a
+      // device whose tx buffer fills stops servicing its rx path" — and says
+      // its symptom is a link that mysteriously slows down. That a write to a
+      // panel in that state never settles at all is this fake's own
+      // assumption, not something the note establishes; it is the shape a
+      // blocking `FileHandle` write on a wedged CDC endpoint would take, and
+      // it is what makes the bound worth having.
       if (state.wedged) return new Promise<number>(() => undefined);
       await delay(0);
       if (!state.present) throw new Error('ENXIO: device not configured');
@@ -468,7 +472,10 @@ describe('shutting down a wedged panel', () => {
       delay(2_000).then(() => 'hung' as const),
     ]);
     expect(raced).toBe('closed');
-    // And the port is let go, not merely abandoned.
+    // `shutPort` does call close on it. Note what this does *not* prove:
+    // `close()` there is fire-and-forget (`void ... .catch()`), so this counts
+    // the invocation, not the release — a real port whose own `close()` hangs
+    // would satisfy it too.
     expect(serial.state.closes).toBe(1);
   });
 });

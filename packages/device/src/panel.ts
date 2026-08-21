@@ -66,8 +66,19 @@ const REFRESH_MS = 5000;
  * hang". This is that, for the wire.
  *
  * A quarter second is far longer than a healthy write of a few hundred bytes
- * and far shorter than a person waiting for a daemon to come back. A frame lost
- * to it is repainted by the next refresh; a shutdown lost to it is forever.
+ * and far shorter than a person waiting for a daemon to come back.
+ *
+ * The frame is genuinely lost, not deferred — `close()` clears the refresh
+ * interval before it calls this, so there is no next refresh for this
+ * transport. What repaints is the *next run*: `afterOpen` sets `needsPrime`, so
+ * the daemon that comes back owes a whole frame anyway. An earlier version of
+ * this paragraph credited the refresh, which by then no longer exists.
+ *
+ * The abandoned write is also abandoned as a promise. `Transport.send`
+ * documents that awaiting it is the backpressure, and the caller awaiting one
+ * that was dropped here waits for ever. Nothing in the daemon does that today —
+ * the composition that would is Stage 3's `daemon` command, and it should
+ * `void` a send it is not prepared to outlive.
  */
 const SHUTDOWN_DRAIN_MS = 250;
 

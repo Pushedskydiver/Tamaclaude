@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   renameSync,
@@ -15,6 +16,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  claimSocketPath,
   defaultSocketPath,
   prepareSocketPath,
   probeSocket,
@@ -114,6 +116,49 @@ describe('probeSocket', () => {
     const nested = join(directory, 'a-directory');
     mkdirSync(nested);
     await expect(probeSocket(nested)).resolves.toBe('occupied');
+  });
+});
+
+describe('claimSocketPath', () => {
+  let directory = '';
+  beforeEach(() => {
+    directory = mkdtempSync(join(tmpdir(), 'tc-claim-'));
+  });
+  afterEach(() => {
+    rmSync(directory, { recursive: true, force: true });
+  });
+
+  it('puts the public name on a socket bound to a private one', async () => {
+    const bindPath = join(directory, '.bind');
+    const path = join(directory, 'daemon.sock');
+    const server = await listenAt(bindPath);
+    claimSocketPath(bindPath, path);
+    expect(lstatSync(path).isSocket()).toBe(true);
+    // One name, not two: the private one is also the name libuv unlinks when
+    // the server closes, which is the whole reason the listener binds it.
+    expect(existsSync(bindPath)).toBe(false);
+    await expect(probeSocket(path)).resolves.toBe('live');
+    await server.close();
+  });
+
+  it('refuses a name another daemon holds, and leaves it listening', async () => {
+    // The arbitration. `rename` would silently succeed here and leave the
+    // victim on an inode with no name, receiving nothing — "two daemons, one
+    // of them permanently deaf, no error anywhere", which is the failure this
+    // module exists to prevent. A listener shipped with `rename` here for
+    // exactly as long as it took a review to measure it.
+    const path = join(directory, 'daemon.sock');
+    const victim = await listenAt(path);
+    const held = lstatSync(path).ino;
+
+    const bindPath = join(directory, '.bind');
+    const usurper = await listenAt(bindPath);
+    expect(() => claimSocketPath(bindPath, path)).toThrow(/already listening/);
+
+    expect(lstatSync(path).ino).toBe(held);
+    await expect(probeSocket(path)).resolves.toBe('live');
+    await usurper.close();
+    await victim.close();
   });
 });
 

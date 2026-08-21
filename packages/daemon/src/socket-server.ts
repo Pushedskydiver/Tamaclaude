@@ -52,7 +52,7 @@
 import type { SessionRegistry } from './registry.js';
 import type { Server, Socket } from 'node:net';
 
-import { chmodSync, renameSync, unlinkSync } from 'node:fs';
+import { chmodSync, unlinkSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { createInterface } from 'node:readline';
 
@@ -60,6 +60,7 @@ import { parseHookEventLine } from './hook-line.js';
 import { loadRegistry, saveRegistry, statePathFor } from './persistence.js';
 import { evictStale, observe } from './registry.js';
 import {
+  claimSocketPath,
   defaultSocketPath,
   prepareSocketPath,
   probeSocket,
@@ -90,9 +91,15 @@ import {
  * has written and is waiting, so evicting it would drop a delivered event
  * silently. Measured, and it does not happen: 150 hooks against this cap of 64,
  * paced so the accept backlog never saturates, fold 150 events and lose none.
- * An evicted connection has already had its line handed to `readline`. The cap
- * was raised to 256 on the strength of that argument and put back when the
- * measurement came in, because four times the worst-case memory bought nothing.
+ * An evicted connection has already had its line handed to `readline` —
+ * *because the hook writes in the same tick it connects*, which is the
+ * precondition the sentence needs and `packages/hooks/src/index.ts` supplies by
+ * ending the socket with the payload. It is load-bearing: a peer that connects
+ * and writes 50ms later does lose events here, measured at 80 such peers
+ * folding 64. No such peer exists in this system, and one that behaved that way
+ * would be the flooder the cap is for. The cap was raised to 256 on the
+ * strength of that argument and put back when the measurement came in, because
+ * four times the worst-case memory bought nothing.
  *
  * What *is* real, and is the kernel's rather than ours: a burst larger than the
  * listen backlog is refused at `connect`, before this file sees it at all.
@@ -198,16 +205,9 @@ class Listener {
   /**
    * Drop one connection, if one should be dropped, before admitting another.
    *
-   * A peer that has delivered nothing is the one costing a slot for free, so it
-   * goes first — and iteration is insertion order, so this is the longest-lived
-   * of those. Only when every connection has delivered something and there are
-   * more than `MAX_HELD_CONNECTIONS` of them does the oldest go regardless;
-   * below that a burst of real hooks is allowed through, because each of them
-   * has already done its work and is about to close.
-   *
-   * Narrowed rather than asserted: `?.` and `as Socket` on consecutive lines
-   * disagreed about whether the value could be undefined, and only one of them
-   * can be right.
+   * The longest-lived one, unconditionally. See `MAX_CONNECTIONS` for why age
+   * rather than delivery, and the note in the body for the signal that looked
+   * like it should work and does not.
    */
   #makeRoom(): void {
     if (this.#connections.size < MAX_CONNECTIONS) return;
@@ -273,22 +273,37 @@ class Listener {
   }
 
   /**
-   * Bind beside the real path, then rename onto it.
+   * Bind beside the real path, then hard-link onto it.
    *
-   * **The point is which name libuv thinks it owns.** `net.Server.close()`
-   * unlinks the path it bound, and it does so in libuv, by name, with no way to
-   * veto it from JavaScript — measured. So a daemon that binds the public path
-   * directly will, on a perfectly graceful shutdown, delete whatever socket
-   * file is sitting there, including one a *different* daemon put there after
-   * this one's was removed. That is the shutdown half of the rule
-   * `socket-path.ts` states for startup, and it was missing.
+   * **Two separate things have to be true, and `rename` only gave one of them.**
    *
-   * Binding a private name and renaming it into place fixes the ownership:
-   * libuv's close-time unlink targets a name that no longer exists and does
-   * nothing, and this class decides for itself whether the public path is still
-   * its own socket before removing it. `rename` is atomic, and the socket keeps
-   * its inode across it, so a peer that connects mid-rename reaches us either
-   * way.
+   * The first is ownership at shutdown. `net.Server.close()` unlinks the path it
+   * bound, in libuv, by name, with no way to veto it from JavaScript — measured.
+   * A daemon that binds the public path directly will therefore delete whatever
+   * socket file is sitting there when it closes, including one a *different*
+   * daemon put there after this one's was removed. Binding a private name and
+   * putting the public name on it another way fixes that: libuv's close-time
+   * unlink targets the private name, which is gone by then, and `#unlinkIfOurs`
+   * decides about the public one.
+   *
+   * The second is exclusivity at startup, and this is where `rename` was wrong.
+   * `renameSync` onto a live socket **succeeds silently**, leaving the previous
+   * daemon listening on an inode with no name and receiving nothing — the exact
+   * "two daemons, one of them permanently deaf, no error anywhere" that
+   * `socket-path.ts`'s header says the design exists to prevent, reintroduced by
+   * the change that fixed its shutdown half. `listen()` on a taken path used to
+   * fail loudly with `EADDRINUSE`; `rename` threw that away.
+   *
+   * `link` keeps both. It is atomic and it refuses with `EEXIST` if the name is
+   * taken, so the race `socket-path.ts` §"What this does not close" describes —
+   * probe says free, somebody binds before we do — fails loudly again instead of
+   * quietly winning. Dropping the private name afterwards leaves one name on the
+   * socket, which is what we want to reason about later.
+   *
+   * The window this does open, and it is real: between `listen` and `link` the
+   * public path does not exist, so a hook connecting in that turn gets `ENOENT`
+   * rather than us. It is one event-loop turn during startup, against a peer
+   * whose alternative was no daemon at all.
    */
   #bind(): Promise<void> {
     const bindPath = temporaryBindPath(this.path);
@@ -304,10 +319,10 @@ class Listener {
         // also be one that dies of a failed `accept`.
         this.#server.on('error', () => undefined);
         try {
-          renameSync(bindPath, this.path);
+          claimSocketPath(bindPath, this.path);
         } catch (error) {
-          // The private socket is live and unreachable if the rename failed;
-          // taking the listener down with it is the only tidy end.
+          // The private socket is live and unreachable either way; taking the
+          // listener down with it is the only tidy end.
           this.#server.close(() => undefined);
           reject(error instanceof Error ? error : new Error(String(error)));
           return;
