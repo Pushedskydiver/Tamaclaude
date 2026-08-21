@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 172" width="320" height="172">
+  <!--
+    Clawd: boot splash (the panel has power, nothing has driven it yet)
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates; the pose is transforms only. Two deliberate
+    departures from that rule, both forced and both visible in the markup:
+    `ground-shadow` is a flat #060910 rather than black at opacity, for the
+    reason in "The shadow" below, and the whole figure is scaled by a
+    transform rather than a viewBox. The animations widen the viewBox instead,
+    which they can because they choose their own canvas — this one is stuck
+    with the panel's 172 pixels, and 172 is not a whole multiple of base's
+    16-unit height. Scaling in a transform keeps base's own integers on every
+    rect, so a change to base.svg still diffs against this file.
+
+    Clawd is 7 device pixels per base unit here. The animations rasterise at 8
+    (`SCALE` in tools/svg2frames.ts), so he is 7/8 the size on the splash that
+    he is once the host takes over. Nothing depends on the two matching.
+
+    This is the one picture the device draws by itself. Everything else on this
+    panel is rendered on the Mac and blitted, so this is the only art that has
+    to survive with no host attached — it is what a plugged-in, unpaired
+    Tamaclaude shows, and it is never redrawn once the host paints over it.
+    A dark panel therefore still means a fault, which is the property the
+    placeholder fill it replaces existed to protect.
+
+    ── The pose ──────────────────────────────────────────────────────────
+
+    One claw raised in a wave, the other resting flush against the lower
+    body. The far claw matters more than it looks: left at its base position
+    it sits at mid-height on the opposite side and reads as a snout, which
+    turns Clawd into a pig facing the wrong way. Dropping it two units puts it
+    level with the torso's underside, where it reads as a resting claw and
+    keeps the silhouette unbroken. Rotating it there instead cut a notch out
+    of the torso edge that looked like a rendering fault.
+
+    The raised claw is the only rotated element. `tools/bake-splash.ts` snaps
+    every rasterised pixel to the palette declared here, so the diagonal
+    collapses onto whole device pixels after the fact rather than being
+    forbidden — the same licence the animations were rebuilt to use, applied
+    by a different tool. `tools/svg2frames.ts` never sees this file; it reads
+    `assets/clawd/animations/` only, and it captures with `omitBackground` to
+    produce a mask, which a full-screen splash has no use for.
+
+    ── The wordmark ──────────────────────────────────────────────────────
+
+    `#wordmark` is a placeholder that `tools/bake-splash.ts` expands into
+    rectangles, one run of set pixels each, from the very glyph table the
+    renderer draws quips with (`packages/renderer/src/font-data.ts`). So the
+    splash and the running device share one voice literally rather than by
+    resemblance, and the file carries no copy of the font to drift.
+
+    It is drawn rather than typed because `<text>` cannot be made crisp.
+    Departure Mono is a 7x11 pixel face, but Chromium greyscale-antialiases
+    glyph outlines whatever the size: measured, a grid-aligned 22px still left
+    19 stray pixels and the 26px this file used to declare left 120 — an 11%
+    contamination of the wordmark's ink, in Clawd's body salmon. That is not a
+    palette escape and the palette check cannot see it. The midpoint of
+    #C9D1D9 over #0D1117 is nearer #DE886D than it is to either end, so
+    `snapToPalette` resolved a soft edge to a colour that is genuinely in the
+    artwork, and painted a salmon stripe along the top of every glyph in
+    "tama". Rectangles on whole pixels cannot antialias, so the whole class
+    is gone rather than reduced.
+
+    `tama` in #C9D1D9 and `claude` in #F77849 — the split reads as one word
+    while still saying which half is the character. Neither is a colour the
+    renderer picks: pack palettes supply the real ink, and #F77849 is close
+    to Clawd's #DE886D without being it.
+
+    ── The shadow ────────────────────────────────────────────────────────
+
+    A flat colour, not `opacity`. `paletteOf` composites a partly-transparent
+    fill over black to decide what tone it becomes, but this splash sits on
+    #0D1117 rather than the animations' black stage — so the tone the
+    rasteriser actually produces is not the one the palette admitted, and it
+    snaps to whichever declared colour happens to be nearest. Measured at
+    base.svg's own 0.5 the result is solid black, and by 0.35 it is the ground
+    itself and the shadow is simply gone. Neither is a shadow, and neither is
+    visible anywhere but in the baked output.
+  -->
+
+  <rect id="ground" x="0" y="0" width="320" height="172" fill="#0D1117"/>
+
+  <!-- Outside `master-group`, as in base.svg: the shadow stays put. -->
+  <g transform="translate(10,28) scale(7)">
+    <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#060910"/>
+  </g>
+
+  <g id="master-group" transform="translate(10,28) scale(7)">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <!-- Raised: lifted clear of the torso line, then tilted. -->
+      <rect id="left-arm" x="0" y="9" width="2" height="2"
+            transform="translate(1,-5) rotate(-20 2 11)"/>
+      <!-- Resting: dropped two units to sit flush with the torso underside. -->
+      <rect id="right-arm" x="13" y="9" width="2" height="2"
+            transform="translate(0,2)"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+
+  <!-- Expanded from the renderer's glyph table by tools/bake-splash.ts. -->
+  <g id="wordmark" data-text="tamaclaude" data-x="148" data-y="75"
+     data-scale="2" data-ink="#C9D1D9" data-accent="#F77849"
+     data-accent-from="4"/>
+</svg>

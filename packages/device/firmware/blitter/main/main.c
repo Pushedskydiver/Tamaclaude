@@ -4,9 +4,11 @@
  * The Mac renders every frame; this firmware only receives rectangles and puts
  * them on the panel. It reads a 16-byte header and its payload from
  * USB-Serial/JTAG, decodes RLE or raw RGB565 into one framebuffer, and hands
- * that framebuffer to the ST7789 over SPI. There is no drawing code here and
- * there is no state worth keeping — `docs/HARDWARE.md` says this is flashed
- * once and never changes, and that only holds if it stays this dumb.
+ * that framebuffer to the ST7789 over SPI. The one exception is the boot
+ * splash below, which the board has to draw itself because it comes up before
+ * any host — beyond that there is no drawing code and no state worth keeping.
+ * `docs/HARDWARE.md` says this is flashed once and never changes, and that
+ * only holds if it stays this dumb.
  *
  * The wire format is `packages/protocol/src/packet.ts` and
  * `packages/protocol/src/rle.ts`. Read those; this file is the other half of
@@ -53,6 +55,8 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
+#include "splash-data.h"
+
 /*
  * Pin map and panel quirks are upstream clawd-tank's `firmware/main/display.c`
  * (MIT, credited in CREDITS.md), which targets this exact board.
@@ -76,7 +80,13 @@
  *
  * Landscape is the default because it is how the device is meant to sit —
  * Clawd on the left, the text bands stacked down the right, which is also what
- * upstream clawd-tank does. Set this to 0 for a portrait build.
+ * upstream clawd-tank does.
+ *
+ * Setting this to 0 no longer gives a portrait build on its own. The splash is
+ * baked at the panel's landscape geometry and the `_Static_assert` below the
+ * splash refuses to compile against the other one, deliberately — a portrait
+ * device needs portrait artwork, not the same picture stretched. Re-compose
+ * `assets/clawd/splash.svg` and re-bake before flipping this.
  */
 #define PANEL_LANDSCAPE 1
 
@@ -359,28 +369,50 @@ static void fill(size_t from, size_t count, uint16_t word) {
 
 /*
  * A dark screen has to mean a fault, so the panel is never left showing
- * nothing. This is placeholder art — the real splash comes later — but it is
- * not a flat fill, because a flat fill answers no questions. A two-pixel
- * border proves the gap is on the right axis (wrong axis and one edge is
- * clipped while the opposite gains a stripe) and a marker in one corner only
- * proves the mirror settings, which nobody has been able to test yet.
+ * nothing. This is the one picture the device draws by itself: everything else
+ * on this panel is rendered on the Mac and blitted, so the splash is the only
+ * art that has to survive with no host attached.
+ *
+ * It is `assets/clawd/splash.svg`, baked by `pnpm bake:splash` into the table
+ * beside this file. The payload encoding is the wire's own — (count, value)
+ * pairs with `value` in host RGB565 order — so this decodes with the same two
+ * calls `decode_rle()` makes, and a byte-order mistake here would be the same
+ * mistake there rather than a new one. It does not travel over USB, so it has
+ * no rect header and never meets `parse_header()`.
+ *
+ * What replaced the placeholder, and what was lost with it. The old fill drew
+ * a two-pixel border and a corner marker, to prove the gap landed on the right
+ * axis and to pin down the mirror settings. The artwork proves the second far
+ * better — a mirrored or rotated wordmark is unmistakable, where a corner
+ * square only ever said "one of these four corners". It does not prove the
+ * first: every edge of this splash is flat ground, so a gap on the wrong axis
+ * would show only as the uncovered band of power-on RAM. That diagnostic was
+ * spent once and is gone, which is the right trade for art that ships, but it
+ * is a trade rather than a free upgrade.
+ *
+ * The clamp is not ceremony. `fill()` has no bounds check, `count` is a
+ * uint16_t, and a table that overran would write up to 65,535 words past the
+ * end of a 55,040-word framebuffer and corrupt whatever `.bss` follows it, on
+ * a device meant to sit on a desk unattended. `decode_rle()` refuses the
+ * packet outright in that position; refusing is wrong here, because a splash
+ * that declines to draw is the blank screen this whole function exists to
+ * prevent. So it draws what fits and stops. `tools/bake-splash.test.ts` is
+ * what makes the clamp unreachable in practice, by asserting the committed
+ * table sums to exactly SPLASH_PIXELS — the firmware is in none of the six
+ * gates, so that test and the assertion below are the only automated things
+ * standing behind this file.
  */
-static void draw_splash(void) {
-  const uint16_t ground = panel_word(RGB565(8, 14, 28));
-  const uint16_t mark = panel_word(RGB565(232, 108, 60));
-  const int border = 2;
-  const int marker = 12;
+_Static_assert(SPLASH_WIDTH == SCREEN_WIDTH && SPLASH_HEIGHT == SCREEN_HEIGHT,
+               "the baked splash is not the size of the panel");
 
-  fill(0, SCREEN_PIXELS, ground);
-  for (int y = 0; y < SCREEN_HEIGHT; y++) {
-    bool edge_row = y < border || y >= SCREEN_HEIGHT - border;
-    for (int x = 0; x < SCREEN_WIDTH; x++) {
-      bool edge = edge_row || x < border || x >= SCREEN_WIDTH - border;
-      /* The marker sits inside the border, in what should be the top left. */
-      bool corner = x >= border + 2 && x < border + 2 + marker &&
-                    y >= border + 2 && y < border + 2 + marker;
-      if (edge || corner) framebuffer[y * SCREEN_WIDTH + x] = mark;
-    }
+static void draw_splash(void) {
+  size_t written = 0;
+  for (size_t run = 0; run < SPLASH_RUNS; run++) {
+    size_t count = splash_rle[run * 2];
+    if (count > SPLASH_PIXELS - written) count = SPLASH_PIXELS - written;
+    if (count == 0) continue;
+    fill(written, count, panel_word(splash_rle[run * 2 + 1]));
+    written += count;
   }
   blit(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
