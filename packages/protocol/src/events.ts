@@ -15,7 +15,15 @@
 export type HookEvent = {
   /** Claude Code's `session_id`. Stable across every event of one session. */
   readonly sessionId: string;
-  /** Claude Code's `hook_event_name`, e.g. `PreToolUse`, `SubagentStart`. */
+  /**
+   * Claude Code's `hook_event_name`.
+   *
+   * A plain string, not the `HANDLED_HOOK_EVENTS` union: Claude Code sends
+   * around thirty events and this system acts on eleven. Narrowing here would
+   * make an unhandled event a type error at the boundary that receives it,
+   * which is the wrong place to be strict — the hook's job is to forward
+   * whatever arrives, and the daemon's is to ignore what it does not know.
+   */
   readonly kind: string;
   /** `tool_name`, on the tool-scoped events. What the daemon maps to a state. */
   readonly tool?: string;
@@ -40,3 +48,36 @@ export type HookEvent = {
    */
   readonly errorType?: string;
 };
+
+/**
+ * The hook events this system acts on.
+ *
+ * Canonical, and here rather than in either package that uses it, because
+ * `hooks` and `daemon` cannot see each other — `eslint-plugin-boundaries`
+ * forbids it, deliberately — and `protocol` is the only thing both import.
+ *
+ * They disagreed twice, and neither package could have noticed alone. The
+ * daemon grew a `WAITING` state driven by `Notification`, which the installer
+ * never registered, so a state, a timeout, a field and four tests described
+ * behaviour production could not produce. And the installer registered
+ * `SessionEnd` on the grounds that "the session is gone before the five-minute
+ * sleep would notice", while the daemon had no entry for it — so it fell
+ * through to the default and *refreshed* the session's proof of life,
+ * postponing the sleep it was registered to trigger.
+ *
+ * Deriving both sides from this list makes the first kind impossible and the
+ * second kind testable.
+ */
+export const HANDLED_HOOK_EVENTS = [
+  'SessionStart',
+  'UserPromptSubmit',
+  'PreToolUse',
+  'PostToolUse',
+  'PermissionRequest',
+  'StopFailure',
+  'Stop',
+  'Notification',
+  'SubagentStart',
+  'SubagentStop',
+  'SessionEnd',
+] as const;

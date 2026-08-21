@@ -12,7 +12,13 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { animationFor, createDaemon } from '@tamaclaude/daemon';
+import {
+  animationFor,
+  createDaemon,
+  createRegistry,
+  observe,
+  resolvePanel,
+} from '@tamaclaude/daemon';
 
 /**
  * The example pack, read from disk rather than inlined.
@@ -43,13 +49,28 @@ function examplePack(): unknown {
   }
 }
 
+/**
+ * A smoke test with a `main()`: load the real pack, push one event through the
+ * real session pipeline, print what the panel would show.
+ *
+ * It exists because five of the six gates can be green while this binary
+ * throws on its first line — which is exactly what happened when the pack
+ * schema tightened underneath it. One event is enough to prove the whole path
+ * is wired; the daemon's own tests prove the path is right.
+ */
 function main(): void {
   const state = createDaemon(examplePack(), []);
-  const animation = animationFor({
-    sessionId: 'placeholder',
-    kind: 'SessionStart',
-  });
-  process.stdout.write(`pack=${state.pack.name} animation=${animation}\n`);
+  const now = Date.now();
+  const sessions = observe(
+    createRegistry(now),
+    { sessionId: 'placeholder', kind: 'PreToolUse', tool: 'Bash' },
+    now,
+  );
+  const panel = resolvePanel(sessions, now);
+  process.stdout.write(
+    `pack=${state.pack.name} state=${panel.state} ` +
+      `animation=${animationFor(panel.state, panel.tool)}\n`,
+  );
 }
 
 main();

@@ -20,6 +20,7 @@ export * from './framebuffer.js';
 // The primitives every screen is built from. Consumer-facing: the harness
 // draws with these directly, not only through a scene.
 export * from './draw.js';
+export * from './environment.js';
 export * from './text.js';
 
 // The scene, and the session chip its strip is described in terms of.

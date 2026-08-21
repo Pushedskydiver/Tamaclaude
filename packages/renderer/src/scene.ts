@@ -1,4 +1,5 @@
 import type { Painter } from './band.js';
+import type { EnvironmentExtent, TimeOfDay } from './environment.js';
 import type { Framebuffer } from './framebuffer.js';
 import type { Orientation, StageLayout } from './layout.js';
 import type { SessionChip } from './strip.js';
@@ -12,10 +13,12 @@ import {
   TEXT_INSET,
 } from './band.js';
 import { drawFrame } from './draw.js';
+import { environmentInk, paintEnvironment } from './environment.js';
 import { GLYPH_WIDTH } from './font-data.js';
 import { clearToPackBackground, createFramebuffer } from './framebuffer.js';
 import {
   panelBands,
+  panelSize,
   safeAreaCropUnits,
   spriteSlots,
   stageScale,
@@ -73,6 +76,21 @@ export type Scene = {
    * Slots past the end of the array stay empty.
    */
   readonly sprites: readonly StageSprite[];
+  /**
+   * The rock pool behind Clawd, or nothing.
+   *
+   * `extent` is deliberately not decided here. Confining the scenery to the
+   * stage keeps the pack's ink legible but makes the panel look like a picture
+   * bolted to a terminal; letting the sky run behind the text is one coherent
+   * object but needs the scheme's ink rather than the pack's, because white on
+   * a midday sky is invisible. Both are built; the 25 Aug design freeze picks
+   * one. Omitting this entirely is what tests mostly want — a scene on the
+   * pack background is far easier to assert about than one on scenery.
+   */
+  readonly environment?: {
+    readonly time: TimeOfDay;
+    readonly extent: EnvironmentExtent;
+  };
   /**
    * The status band's two ends: clock on the left, subagent count on the
    * right (spec §2). Both are opaque strings — formatting a clock is a
@@ -201,14 +219,47 @@ function paintMessage(painter: Painter, scene: Scene): void {
  * this scene and none is left over from the last one. That is what makes
  * `dirtyRect` between two renders mean what it says.
  */
+/**
+ * Paint the scenery, and hand back a painter whose ink reads against it.
+ *
+ * The ink swap only happens for a panel-wide environment, because that is the
+ * only case where the bands stop sitting on the pack background. A stage-only
+ * environment leaves them exactly where they were.
+ */
+function withEnvironment(painter: Painter, scene: Scene): Painter {
+  const environment = scene.environment;
+  if (environment === undefined) return painter;
+  const into =
+    environment.extent === 'panel'
+      ? { x: 0, y: 0, ...panelSize(scene.orientation) }
+      : painter.bands.stage;
+  paintEnvironment(
+    painter.target,
+    { into, stage: painter.bands.stage },
+    {
+      layout: scene.layout,
+      orientation: scene.orientation,
+      time: environment.time,
+    },
+  );
+  if (environment.extent !== 'panel') return painter;
+  return {
+    ...painter,
+    colours: { ...painter.colours, ink: environmentInk(environment.time) },
+  };
+}
+
 export function render(scene: Scene): Framebuffer {
   const target = createFramebuffer(scene.orientation);
   clearToPackBackground(target, scene.pack);
-  const painter: Painter = {
+  const base: Painter = {
     target,
     bands: panelBands(scene.orientation),
     colours: sceneColours(scene.pack),
   };
+  // Behind everything, and before the sprite: the environment is a ground for
+  // Clawd to stand on, not a decoration over him.
+  const painter = withEnvironment(base, scene);
   paintStatus(painter, scene);
   paintStage(painter, scene);
   paintStrip(painter, scene.sessions);
