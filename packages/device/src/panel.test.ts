@@ -98,6 +98,10 @@ function fakeSerial(chunk = Number.MAX_SAFE_INTEGER) {
     wedge: () => {
       state.wedged = true;
     },
+    /** Drain it again, so a reopened port behaves. */
+    unwedge: () => {
+      state.wedged = false;
+    },
     /** Yank it without the read stream noticing, so only a write finds out. */
     stall: () => {
       state.present = false;
@@ -446,6 +450,55 @@ describe('closing', () => {
     expect(seen.trailing).toBe(0);
     expect(seen.packets[0].payload).toHaveLength(24);
   });
+});
+
+describe('a panel that wedges mid-write', () => {
+  it('refuses the link and says what a person has to do', async () => {
+    // The bound stops a wedged write freezing the panel for ever. What it must
+    // *not* do is retry: a `write(2)` blocked in libuv's threadpool cannot be
+    // taken back, so each attempt costs a thread and an fd. Measured — four
+    // abandoned writes exhaust the default pool, after which `fs.open` never
+    // completes anywhere in the process, so the daemon could no longer open the
+    // port at all. That is the freeze this bound exists to prevent, reached
+    // four retries later and now poisoning everything else too.
+    //
+    // An earlier version of this test asserted the opposite — that the panel
+    // recovered on the next port — which was the behaviour that had that cost.
+    const serial = fakeSerial();
+    const panel = open({ serial: serial.system, retryMs: 5 });
+    await settle();
+    serial.say(HEALTHY);
+    await settle();
+    expect(panel.status().phase).toBe('online');
+
+    serial.wedge();
+    void panel.send(WHOLE, payload(1, 4));
+    await delay(1_100);
+
+    const status = panel.status();
+    expect(status.phase).toBe('refused');
+    expect(status.refusal).toMatch(/unplug it and plug it back in/);
+  }, 10_000);
+
+  it('does not reopen the port after a wedge, however long it waits', async () => {
+    // `refused` is absorbing by design, and this is why it has to be: every
+    // reopen would abandon another blocked write.
+    const serial = fakeSerial();
+    const panel = open({ serial: serial.system, retryMs: 5 });
+    await settle();
+    serial.say(HEALTHY);
+    await settle();
+
+    serial.wedge();
+    void panel.send(WHOLE, payload(1, 4));
+    await delay(1_100);
+    const opens = serial.state.opens;
+
+    serial.unwedge();
+    serial.plug();
+    await delay(200);
+    expect(serial.state.opens).toBe(opens);
+  }, 10_000);
 });
 
 describe('shutting down a wedged panel', () => {
