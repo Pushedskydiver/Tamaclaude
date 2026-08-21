@@ -279,10 +279,16 @@ export function temporaryBindPath(path: string): string {
  * above says this module exists to prevent. A version of the listener shipped
  * with `rename` here for exactly as long as it took a review to measure it.
  *
- * The private name is dropped either way. It has done its job, and leaving it
- * would be a second door onto the same socket — and, worse, the name libuv
- * unlinks when the server closes, which is the whole reason the listener binds
- * one in the first place.
+ * The private name is dropped only when the claim *fails*. On success it stays,
+ * for two reasons that pull the same way: it is the name libuv unlinks when the
+ * server closes, which is the whole reason the listener binds one; and while it
+ * exists it is a second link onto the same inode, which is how the listener
+ * proves at shutdown that the public name is still its own socket rather than
+ * asking whether anybody answers on it. A busy daemon does not answer either.
+ *
+ * It is a dotfile beside the socket for the life of the daemon. A crash between
+ * `listen` and here, or after, leaves one behind; nothing sweeps them and
+ * nothing needs to, since the next name is a different one.
  */
 export function claimSocketPath(bindPath: string, path: string): void {
   try {
@@ -297,10 +303,9 @@ export function claimSocketPath(bindPath: string, path: string): void {
       cause: error,
     });
   }
-  unlinkQuietly(bindPath);
 }
 
-function unlinkQuietly(path: string): void {
+export function unlinkQuietly(path: string): void {
   try {
     unlinkSync(path);
   } catch {

@@ -134,9 +134,11 @@ describe('claimSocketPath', () => {
     const server = await listenAt(bindPath);
     claimSocketPath(bindPath, path);
     expect(lstatSync(path).isSocket()).toBe(true);
-    // One name, not two: the private one is also the name libuv unlinks when
-    // the server closes, which is the whole reason the listener binds it.
-    expect(existsSync(bindPath)).toBe(false);
+    // Both names, on one inode. The private one stays: it is what libuv
+    // unlinks when the server closes, and it is how the listener proves at
+    // shutdown that the public name is still its own socket — a question it
+    // cannot answer by probing, because a busy daemon refuses connections too.
+    expect(lstatSync(bindPath).ino).toBe(lstatSync(path).ino);
     await expect(probeSocket(path)).resolves.toBe('live');
     await server.close();
   });

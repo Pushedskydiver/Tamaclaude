@@ -52,7 +52,7 @@
 import type { SessionRegistry } from './registry.js';
 import type { Server, Socket } from 'node:net';
 
-import { chmodSync, unlinkSync } from 'node:fs';
+import { chmodSync, lstatSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { createInterface } from 'node:readline';
 
@@ -63,8 +63,8 @@ import {
   claimSocketPath,
   defaultSocketPath,
   prepareSocketPath,
-  probeSocket,
   temporaryBindPath,
+  unlinkQuietly,
 } from './socket-path.js';
 
 /**
@@ -77,9 +77,6 @@ import {
  * disappearance would leak, which is true of a peer that *disappears* and not
  * of one that lingers. Same actor as `MAX_SESSIONS` in `registry.ts`, and the
  * socket being 0600 is a layer rather than an answer.
- *
- * At the cap a connection goes, not the newcomer. Refusing new ones would let
- * whoever got there first hold every slot and lock the real hooks out.
  *
  * At the cap the *oldest* connection goes, not the newest. Refusing new ones
  * would let whoever got there first hold every slot and lock the real hooks
@@ -170,6 +167,7 @@ class Listener {
   readonly #statePath: string;
   readonly #onChange: ((registry: SessionRegistry) => void) | undefined;
   readonly #connections = new Set<Socket>();
+  readonly #bindPath: string;
   readonly #server: Server = createServer();
   // The whole reason this file is a class: the registry is a value, and this
   // is the one binding in the package allowed to point at a new one.
@@ -178,6 +176,10 @@ class Listener {
 
   constructor(path: string, options: SocketServerOptions) {
     this.path = path;
+    // Before `prepareSocketPath` runs, so a path whose private name will not
+    // fit fails while the tree is still untouched. It used to throw after a
+    // stale socket had already been removed.
+    this.#bindPath = temporaryBindPath(path);
     this.#now = options.now ?? Date.now;
     this.#statePath = options.statePath ?? statePathFor(path);
     this.#onChange = options.onChange;
@@ -236,39 +238,42 @@ class Listener {
     // connection to finish and a peer holding one open is not a reason for a
     // restart to hang.
     [...this.#connections].forEach((socket) => socket.destroy());
+    // Asked before the close, because the close is what removes the evidence.
+    const ours = this.#ownsPath();
     await new Promise<void>((resolve) => {
       // The callback's error means the server was not running, which is what a
       // second close looks like and is not a failure. The unlink libuv does
-      // here targets the private bind name from `#bind`, which the rename
-      // already took away, so it is a no-op.
+      // here takes the private bind name, which is ours and is the point.
       this.#server.close(() => {
         resolve();
       });
     });
-    await this.#unlinkIfOurs();
+    if (ours) unlinkQuietly(this.path);
   }
 
   /**
    * Remove the public path, but only while it is still this listener's socket.
    *
-   * The same question `prepareSocketPath` asks at startup, asked at shutdown,
-   * and answered by the same primitive: connect to it. This runs after the
-   * server has closed, so our own socket refuses and reads `stale` — that is
-   * the one signal that means the file is ours to take away. Anything that
-   * *answers* belongs to a daemon that is still running and is left where it
-   * is; anything that is not a socket was never ours.
+   * **By identity, not by asking whether anyone answers.** The obvious check —
+   * probe the path, and treat `stale` as "nobody is home, so it is ours" — is
+   * wrong in a way that matters here: a *live* daemon whose accept backlog is
+   * saturated also refuses connections, so it also reads `stale`. A review
+   * reproduced it against a real listener held busy for under a second by an
+   * ordinary synchronous save. Deleting on that answer is the deaf-daemon
+   * failure this whole file is about, arrived at from the other direction.
    *
-   * Act on one specific signal, never on the absence of one. A probe that
-   * cannot make up its mind removes nothing, which is the safe direction, and
-   * a leftover file is what the next daemon's `prepareSocketPath` is for.
+   * So compare inodes instead. The private name is still a second link onto
+   * this listener's own socket, so the two agreeing is proof of ownership that
+   * no amount of load can fake. It is read *before* the server closes, because
+   * closing is what takes the private name away — libuv unlinks the name it
+   * bound, which is exactly why the listener bound a private one.
    */
-  async #unlinkIfOurs(): Promise<void> {
-    if ((await probeSocket(this.path)) !== 'stale') return;
+  #ownsPath(): boolean {
     try {
-      unlinkSync(this.path);
+      return lstatSync(this.path).ino === lstatSync(this.#bindPath).ino;
     } catch {
-      // Gone between the probe and here, or not ours to remove. Neither is
-      // worth failing a shutdown over.
+      // Either name gone, or unreadable. Not proof, so not ours to remove.
+      return false;
     }
   }
 
@@ -304,9 +309,12 @@ class Listener {
    * public path does not exist, so a hook connecting in that turn gets `ENOENT`
    * rather than us. It is one event-loop turn during startup, against a peer
    * whose alternative was no daemon at all.
+   *
+   * The private name is kept, not dropped — see `claimSocketPath`. It is what
+   * `#ownsPath` compares against at shutdown, and what libuv unlinks then.
    */
   #bind(): Promise<void> {
-    const bindPath = temporaryBindPath(this.path);
+    const bindPath = this.#bindPath;
     return new Promise((resolve, reject) => {
       const failed = (error: Error): void => {
         reject(error);

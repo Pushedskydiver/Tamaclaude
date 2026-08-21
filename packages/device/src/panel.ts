@@ -65,8 +65,22 @@ const REFRESH_MS = 5000;
  * the same reason: "a peer holding one open is not a reason for a restart to
  * hang". This is that, for the wire.
  *
- * A quarter second is far longer than a healthy write of a few hundred bytes
- * and far shorter than a person waiting for a daemon to come back.
+ * Be precise about what it buys, because an earlier version of this paragraph
+ * was not. It bounds `close()`. It does not on its own guarantee the process
+ * leaves: a review measured the real shape — a genuinely blocked `write(2)` in
+ * libuv's threadpool — and found that `FileHandle.close()`, which `serial.ts`
+ * awaits, also never resolves, and that the process survives even
+ * `process.exit(0)`. Whatever composes this eventually may still need a signal
+ * to die. What the bound removes is the daemon waiting on a promise that will
+ * never settle, which is the part this file controls.
+ *
+ * A quarter second is comfortably longer than a real frame and far shorter
+ * than a person waiting for a daemon to come back. "Comfortably" rather than
+ * "far": `docs/ARCHITECTURE.md` puts the link at 562.5 KB/s and a full-screen
+ * prime at 110,080 bytes, which is 191ms — so this is 1.3x the worst
+ * *legitimate* write, not orders above it. Real art compresses 37:1 to 148:1,
+ * so nothing near that is sent today, and the number is right for the wrong
+ * reason if you only think about steady-state frames.
  *
  * The frame is genuinely lost, not deferred — `close()` clears the refresh
  * interval before it calls this, so there is no next refresh for this

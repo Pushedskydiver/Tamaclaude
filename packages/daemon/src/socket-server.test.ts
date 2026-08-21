@@ -299,6 +299,28 @@ describe('startSocketServer', () => {
     );
   });
 
+  it('leaves a silent socket alone when it is not the one it bound', async () => {
+    // Ownership is decided by inode, not by asking whether anybody answers.
+    // The difference matters because "nobody answers" is not the same as "this
+    // is mine": a *live* daemon whose accept backlog is saturated refuses
+    // connections too, and a review reproduced `stale` against a real listener
+    // held busy for under a second. A shutdown that deleted on that answer
+    // would be the deaf-daemon failure again, reached from the other end.
+    //
+    // A stale socket standing in for it, because it presents a prober with the
+    // same thing — a socket file that refuses — while plainly not being ours.
+    const first = await start();
+    rmSync(path, { force: true });
+    await leaveStaleSocket(path);
+    const stranger = statSync(path).ino;
+
+    await first.close();
+    server = undefined;
+
+    expect(existsSync(path)).toBe(true);
+    expect(statSync(path).ino).toBe(stranger);
+  });
+
   it('leaves a socket file it does not own alone when it closes', async () => {
     // The shutdown half of the rule `socket-path.ts` states for startup: never
     // unlink a socket you did not put there. The sequence is real — something
@@ -530,17 +552,31 @@ describe('many peers at once', () => {
     const burst = 80;
     await server?.close();
     const folds: number[] = [];
+
+    let settled: (() => void) | undefined;
     server = await startSocketServer({
       path,
       now: () => NOW,
-      onChange: () => folds.push(1),
+      onChange: () => {
+        folds.push(1);
+        if (folds.length >= burst) settled?.();
+      },
     });
     await Promise.all(
       Array.from({ length: burst }, () =>
         send(path, event('burst', 'UserPromptSubmit')),
       ),
     );
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    // Awaited, not slept through. This file's own header calls a socket test
+    // that sleeps "slow when it passes and flaky when it fails", and then this
+    // test slept for 300ms.
+    await Promise.race([
+      new Promise<void>((resolve) => {
+        settled = resolve;
+        if (folds.length >= burst) resolve();
+      }),
+      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
+    ]);
     expect(folds.length).toBe(burst);
   });
 
