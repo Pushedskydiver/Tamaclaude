@@ -52,14 +52,20 @@
 import type { SessionRegistry } from './registry.js';
 import type { Server, Socket } from 'node:net';
 
-import { chmodSync } from 'node:fs';
+import { chmodSync, lstatSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { createInterface } from 'node:readline';
 
 import { parseHookEventLine } from './hook-line.js';
 import { loadRegistry, saveRegistry, statePathFor } from './persistence.js';
 import { evictStale, observe } from './registry.js';
-import { defaultSocketPath, prepareSocketPath } from './socket-path.js';
+import {
+  claimSocketPath,
+  defaultSocketPath,
+  prepareSocketPath,
+  temporaryBindPath,
+  unlinkQuietly,
+} from './socket-path.js';
 
 /**
  * How many peers may be connected at once.
@@ -76,8 +82,30 @@ import { defaultSocketPath, prepareSocketPath } from './socket-path.js';
  * would let whoever got there first hold every slot and lock the real hooks
  * out; a hook connects, writes about 150 bytes and closes, so anything old
  * enough to be evicted is the suspect and not the customer.
+ *
+ * **A review argued that last clause is false in a burst** — that connections
+ * are then accepted faster than they are read, making the oldest a hook that
+ * has written and is waiting, so evicting it would drop a delivered event
+ * silently. Measured, and it does not happen: 150 hooks against this cap of 64,
+ * paced so the accept backlog never saturates, fold 150 events and lose none.
+ * An evicted connection has already had its line handed to `readline` —
+ * *because the hook writes in the same tick it connects*, which is the
+ * precondition the sentence needs and `packages/hooks/src/index.ts` supplies by
+ * ending the socket with the payload. It is load-bearing: a peer that connects
+ * and writes 50ms later does lose events here, measured at 80 such peers
+ * folding 64. No such peer exists in this system, and one that behaved that way
+ * would be the flooder the cap is for. The cap was raised to 256 on the
+ * strength of that argument and put back when the measurement came in, because
+ * four times the worst-case memory bought nothing.
+ *
+ * What *is* real, and is the kernel's rather than ours: a burst larger than the
+ * listen backlog is refused at `connect`, before this file sees it at all.
+ * `kern.ipc.somaxconn` is 128 on darwin, and 200 simultaneous hooks lose
+ * exactly 72. Nothing here can help — the events never arrive — and 128
+ * concurrent hooks is far past any real session count, but it is the number
+ * that bounds a burst, not this one.
  */
-const MAX_CONNECTIONS = 64;
+export const MAX_CONNECTIONS = 64;
 
 /**
  * How much one connection may write before it is cut off.
@@ -139,6 +167,7 @@ class Listener {
   readonly #statePath: string;
   readonly #onChange: ((registry: SessionRegistry) => void) | undefined;
   readonly #connections = new Set<Socket>();
+  readonly #bindPath: string;
   readonly #server: Server = createServer();
   // The whole reason this file is a class: the registry is a value, and this
   // is the one binding in the package allowed to point at a new one.
@@ -147,6 +176,10 @@ class Listener {
 
   constructor(path: string, options: SocketServerOptions) {
     this.path = path;
+    // Before `prepareSocketPath` runs, so a path whose private name will not
+    // fit fails while the tree is still untouched. It used to throw after a
+    // stale socket had already been removed.
+    this.#bindPath = temporaryBindPath(path);
     this.#now = options.now ?? Date.now;
     this.#statePath = options.statePath ?? statePathFor(path);
     this.#onChange = options.onChange;
@@ -171,6 +204,30 @@ class Listener {
     }
   }
 
+  /**
+   * Drop one connection, if one should be dropped, before admitting another.
+   *
+   * The longest-lived one, unconditionally. See `MAX_CONNECTIONS` for why age
+   * rather than delivery, and the note in the body for the signal that looked
+   * like it should work and does not.
+   */
+  #makeRoom(): void {
+    if (this.#connections.size < MAX_CONNECTIONS) return;
+    // Insertion order, so this is the longest-lived one. Narrowed rather than
+    // asserted: `?.` and `as Socket` on consecutive lines disagreed about
+    // whether it could be undefined, and only one of them can be right.
+    //
+    // `bytesRead === 0` was tried here as a way to prefer a peer that has
+    // delivered nothing. It is not the signal it looks like: a connection
+    // accepted moments ago also reads 0, because its bytes are still in
+    // flight, so in a burst the only peer at 0 is the newest arrival — the one
+    // worth keeping.
+    const victim = this.#connections.values().next().value;
+    if (victim === undefined) return;
+    victim.destroy();
+    this.#connections.delete(victim);
+  }
+
   snapshot(): SessionRegistry {
     return this.#registry;
   }
@@ -181,44 +238,110 @@ class Listener {
     // connection to finish and a peer holding one open is not a reason for a
     // restart to hang.
     [...this.#connections].forEach((socket) => socket.destroy());
+    // Asked before the close, because the close is what removes the evidence.
+    const ours = this.#ownsPath();
     await new Promise<void>((resolve) => {
       // The callback's error means the server was not running, which is what a
-      // second close looks like and is not a failure. Node unlinks the socket
-      // file itself as part of this.
+      // second close looks like and is not a failure. The unlink libuv does
+      // here takes the private bind name, which is ours and is the point.
       this.#server.close(() => {
         resolve();
       });
     });
+    if (ours) unlinkQuietly(this.path);
   }
 
+  /**
+   * Remove the public path, but only while it is still this listener's socket.
+   *
+   * **By identity, not by asking whether anyone answers.** The obvious check —
+   * probe the path, and treat `stale` as "nobody is home, so it is ours" — is
+   * wrong in a way that matters here: a *live* daemon whose accept backlog is
+   * saturated also refuses connections, so it also reads `stale`. A review
+   * reproduced it against a real listener held busy for under a second by an
+   * ordinary synchronous save. Deleting on that answer is the deaf-daemon
+   * failure this whole file is about, arrived at from the other direction.
+   *
+   * So compare inodes instead. The private name is still a second link onto
+   * this listener's own socket, so the two agreeing is proof of ownership that
+   * no amount of load can fake. It is read *before* the server closes, because
+   * closing is what takes the private name away — libuv unlinks the name it
+   * bound, which is exactly why the listener bound a private one.
+   */
+  #ownsPath(): boolean {
+    try {
+      return lstatSync(this.path).ino === lstatSync(this.#bindPath).ino;
+    } catch {
+      // Either name gone, or unreadable. Not proof, so not ours to remove.
+      return false;
+    }
+  }
+
+  /**
+   * Bind beside the real path, then hard-link onto it.
+   *
+   * **Two separate things have to be true, and `rename` only gave one of them.**
+   *
+   * The first is ownership at shutdown. `net.Server.close()` unlinks the path it
+   * bound, in libuv, by name, with no way to veto it from JavaScript — measured.
+   * A daemon that binds the public path directly will therefore delete whatever
+   * socket file is sitting there when it closes, including one a *different*
+   * daemon put there after this one's was removed. Binding a private name and
+   * putting the public name on it another way fixes that: libuv's close-time
+   * unlink targets the private name, which is gone by then, and `#unlinkIfOurs`
+   * decides about the public one.
+   *
+   * The second is exclusivity at startup, and this is where `rename` was wrong.
+   * `renameSync` onto a live socket **succeeds silently**, leaving the previous
+   * daemon listening on an inode with no name and receiving nothing — the exact
+   * "two daemons, one of them permanently deaf, no error anywhere" that
+   * `socket-path.ts`'s header says the design exists to prevent, reintroduced by
+   * the change that fixed its shutdown half. `listen()` on a taken path used to
+   * fail loudly with `EADDRINUSE`; `rename` threw that away.
+   *
+   * `link` keeps both. It is atomic and it refuses with `EEXIST` if the name is
+   * taken, so the race `socket-path.ts` §"What this does not close" describes —
+   * probe says free, somebody binds before we do — fails loudly again instead of
+   * quietly winning. Dropping the private name afterwards leaves one name on the
+   * socket, which is what we want to reason about later.
+   *
+   * The window this does open, and it is real: between `listen` and `link` the
+   * public path does not exist, so a hook connecting in that turn gets `ENOENT`
+   * rather than us. It is one event-loop turn during startup, against a peer
+   * whose alternative was no daemon at all.
+   *
+   * The private name is kept, not dropped — see `claimSocketPath`. It is what
+   * `#ownsPath` compares against at shutdown, and what libuv unlinks then.
+   */
   #bind(): Promise<void> {
+    const bindPath = this.#bindPath;
     return new Promise((resolve, reject) => {
       const failed = (error: Error): void => {
         reject(error);
       };
       this.#server.once('error', failed);
-      this.#server.listen(this.path, () => {
+      this.#server.listen(bindPath, () => {
         this.#server.off('error', failed);
         // Nothing supervises this process, and an `error` with no listener on
         // an EventEmitter throws. A daemon that outlives its display cannot
         // also be one that dies of a failed `accept`.
         this.#server.on('error', () => undefined);
+        try {
+          claimSocketPath(bindPath, this.path);
+        } catch (error) {
+          // The private socket is live and unreachable either way; taking the
+          // listener down with it is the only tidy end.
+          this.#server.close(() => undefined);
+          reject(error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
         resolve();
       });
     });
   }
 
   #accept(socket: Socket): void {
-    if (this.#connections.size >= MAX_CONNECTIONS) {
-      // Insertion order, so this is the longest-lived one. Narrowed rather
-      // than asserted: `?.` and `as Socket` on consecutive lines disagreed
-      // about whether it could be undefined, and only one of them can be right.
-      const oldest = this.#connections.values().next().value;
-      if (oldest !== undefined) {
-        oldest.destroy();
-        this.#connections.delete(oldest);
-      }
-    }
+    this.#makeRoom();
     this.#connections.add(socket);
     // Strings, not buffers, from here on. The reader below would decode for
     // us either way; what matters is that nothing in this path cuts bytes by

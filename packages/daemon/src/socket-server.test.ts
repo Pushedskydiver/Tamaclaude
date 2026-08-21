@@ -3,6 +3,7 @@ import type { SocketServer } from './socket-server.js';
 import type { Socket } from 'node:net';
 
 import {
+  existsSync,
   mkdtempSync,
   renameSync,
   rmSync,
@@ -17,7 +18,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { statePathFor } from './persistence.js';
 import { resolvePanel } from './resolve.js';
-import { MAX_CONNECTION_BYTES, startSocketServer } from './socket-server.js';
+import {
+  MAX_CONNECTION_BYTES,
+  MAX_CONNECTIONS,
+  startSocketServer,
+} from './socket-server.js';
 import { EVICT_AFTER_MS } from './state.js';
 
 const NOW = 1_700_000_000_000;
@@ -294,6 +299,54 @@ describe('startSocketServer', () => {
     );
   });
 
+  it('leaves a silent socket alone when it is not the one it bound', async () => {
+    // Ownership is decided by inode, not by asking whether anybody answers.
+    // The difference matters because "nobody answers" is not the same as "this
+    // is mine": a *live* daemon whose accept backlog is saturated refuses
+    // connections too, and a review reproduced `stale` against a real listener
+    // held busy for under a second. A shutdown that deleted on that answer
+    // would be the deaf-daemon failure again, reached from the other end.
+    //
+    // A stale socket standing in for it, because it presents a prober with the
+    // same thing — a socket file that refuses — while plainly not being ours.
+    const first = await start();
+    rmSync(path, { force: true });
+    await leaveStaleSocket(path);
+    const stranger = statSync(path).ino;
+
+    await first.close();
+    server = undefined;
+
+    expect(existsSync(path)).toBe(true);
+    expect(statSync(path).ino).toBe(stranger);
+  });
+
+  it('leaves a socket file it does not own alone when it closes', async () => {
+    // The shutdown half of the rule `socket-path.ts` states for startup: never
+    // unlink a socket you did not put there. The sequence is real — something
+    // removes a running daemon's socket file (a tmp reaper, a stray `rm`), a
+    // second daemon then finds the path free and binds it, and the first one's
+    // *graceful* close takes the second's socket away with it. The second is
+    // left listening on a path nothing can reach, with no error anywhere,
+    // which is precisely the "two daemons, one permanently deaf" failure the
+    // probe design exists to prevent.
+    const first = await start();
+    rmSync(path, { force: true });
+
+    const second = await startSocketServer({ path, now: () => clock });
+    const owner = statSync(path).ino;
+
+    await first.close();
+    server = second;
+
+    expect(existsSync(path)).toBe(true);
+    expect(statSync(path).ino).toBe(owner);
+    // And it is still a working daemon, not just a surviving inode.
+    await send(path, event('survivor', 'UserPromptSubmit'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(second.snapshot().sessions.has('survivor')).toBe(true);
+  });
+
   it('remembers its sessions across a restart', async () => {
     const first = await start();
     await send(path, event('a', 'PreToolUse', 'Bash'));
@@ -449,7 +502,7 @@ describe('many peers at once', () => {
       first.on('close', () => resolve(true));
     });
     // Fill the rest of the cap, then push one past it.
-    const rest = await openMany(64);
+    const rest = await openMany(MAX_CONNECTIONS);
 
     // Raced against a deadline rather than left to the suite's timeout. The
     // first version of this test had no `expect` at all: it passed or failed
@@ -474,13 +527,66 @@ describe('many peers at once', () => {
     rest.forEach((socket) => socket.destroy());
   });
 
+  it('folds every event in a burst larger than the connection cap', async () => {
+    // End to end, because a review argued eviction must drop delivered events
+    // in a burst — the oldest connection then being a hook that has written and
+    // is waiting to be read rather than a flooder. It holds the other way: 80
+    // hooks against a cap of 64 fold all 80, because an evicted connection has
+    // already handed its line to `readline`.
+    //
+    // **Declared honestly: I could not make this test fail.** Shrinking the cap
+    // to 4 does not; evicting the newest instead breaks the eviction-order test
+    // next door, not this one. It is kept as an end-to-end burst check rather
+    // than as a pin on the victim choice, which is what that other test is for.
+    //
+    // Folds, not sessions. Eighty distinct ids would run into `MAX_SESSIONS`,
+    // which is 64 and is a different cap with a different job — counting
+    // sessions here would measure the registry's bound and call it a socket
+    // bug. That mistake was made once already, and it is what made the review's
+    // argument look confirmed. Every hook uses the same session, so every
+    // accepted event is a fold.
+    //
+    // 80 and not more: `kern.ipc.somaxconn` is 128 on darwin, and a burst past
+    // the listen backlog is refused at `connect` before this file sees it.
+    // That loss is real and is the kernel's; it is not what this test is for.
+    const burst = 80;
+    await server?.close();
+    const folds: number[] = [];
+
+    let settled: (() => void) | undefined;
+    server = await startSocketServer({
+      path,
+      now: () => NOW,
+      onChange: () => {
+        folds.push(1);
+        if (folds.length >= burst) settled?.();
+      },
+    });
+    await Promise.all(
+      Array.from({ length: burst }, () =>
+        send(path, event('burst', 'UserPromptSubmit')),
+      ),
+    );
+    // Awaited, not slept through. This file's own header calls a socket test
+    // that sleeps "slow when it passes and flaky when it fails", and then this
+    // test slept for 300ms.
+    await Promise.race([
+      new Promise<void>((resolve) => {
+        settled = resolve;
+        if (folds.length >= burst) resolve();
+      }),
+      new Promise<void>((resolve) => setTimeout(resolve, 2_000)),
+    ]);
+    expect(folds.length).toBe(burst);
+  });
+
   it('still serves a real hook once the cap has bitten', async () => {
     // The point of evicting the oldest rather than refusing the newest: a
     // flooder must not be able to lock the actual hooks out. Asserting that
     // some of the held sockets were dropped is what makes this pin the cap —
     // without it the test passed with the cap removed entirely, since 70 idle
     // connections plus a hook are served fine when nothing is bounded.
-    const held = await openMany(70);
+    const held = await openMany(MAX_CONNECTIONS + 8);
     await send(path, event('a', 'UserPromptSubmit'));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(server?.snapshot().sessions.has('a')).toBe(true);

@@ -49,14 +49,17 @@
  * because it is not a race at all — it corrupts every double start, reliably.
  *
  * One known false negative, on macOS specifically: a listener whose accept
- * backlog is full also answers `ECONNREFUSED`, so a daemon wedged with 511
- * connections queued would read as stale. The hook connects, writes ~150 bytes
+ * backlog is full also answers `ECONNREFUSED`, so a daemon wedged with a full
+ * backlog would read as stale. The number is `kern.ipc.somaxconn`, measured at
+ * 128 on darwin — not the 511 Node asks for, which the kernel clamps down. 200
+ * simultaneous connections lose exactly 72, five runs out of five. The hook connects, writes ~150 bytes
  * and closes, so reaching that backlog means the daemon has already stopped
  * accepting, which is not a state worth protecting.
  */
 
 import { Buffer } from 'node:buffer';
-import { lstatSync, mkdirSync, unlinkSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { linkSync, lstatSync, mkdirSync, unlinkSync } from 'node:fs';
 import { connect } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -229,6 +232,85 @@ export function probeSocket(path: string): Promise<SocketProbe> {
     socket.on('connect', () => settle('live'));
     socket.on('error', (error) => settle(classify(error)));
   });
+}
+
+/**
+ * The private name a listener binds before claiming the public path.
+ *
+ * `net.Server.close()` unlinks the name it bound, inside libuv, by name, and
+ * nothing in JavaScript can stop it. Binding this name instead means that
+ * unlink lands on a name `claimSocketPath` has already taken away — so the
+ * listener, not libuv, decides whether the public path should go.
+ *
+ * Same directory, because a hard link has to stay on one filesystem. Random
+ * rather than derived from the pid: `.b<pid>` collides between two listeners in
+ * one process, which is `EADDRINUSE` on the second `listen`, and a counter to
+ * fix that would be a third piece of module state where
+ * `docs/CONVENTIONS.md` allows two. Six hex characters make a collision with a
+ * *live* private socket vanishingly unlikely, and loud rather than quiet if it
+ * ever happened.
+ *
+ * Shorter than any realistic basename — eight bytes against `daemon.sock`'s
+ * eleven — so the 104-byte budget the public path is checked against
+ * still holds for it. It is checked anyway, because a one-character basename
+ * would invert that. Note the order if it ever fires: `prepareSocketPath` runs
+ * first and may already have removed a stale socket, so the throw arrives after
+ * that side effect and names a path the user never configured.
+ *
+ * A crash between `listen` and the claim leaves one of these behind. Nothing
+ * sweeps them, and nothing needs to: the next name is a different one, so
+ * debris never blocks a start. It is litter in the socket directory, which is
+ * a better failure than unlinking a name on the assumption it is ours.
+ */
+export function temporaryBindPath(path: string): string {
+  const candidate = join(dirname(path), `.b${randomBytes(3).toString('hex')}`);
+  assertPathFitsSunPath(candidate);
+  return candidate;
+}
+
+/**
+ * Put the public name on a socket already bound to a private one.
+ *
+ * **Atomic, and loud when it loses.** `link` refuses with `EEXIST` if the name
+ * is taken, which is what makes this an arbitration rather than a hope. The
+ * alternative, `rename`, silently succeeds onto a live socket and leaves the
+ * previous daemon listening on an inode with no name — "two daemons, one of
+ * them permanently deaf, no error anywhere", which is the failure the header
+ * above says this module exists to prevent. A version of the listener shipped
+ * with `rename` here for exactly as long as it took a review to measure it.
+ *
+ * The private name is dropped only when the claim *fails*. On success it stays,
+ * for two reasons that pull the same way: it is the name libuv unlinks when the
+ * server closes, which is the whole reason the listener binds one; and while it
+ * exists it is a second link onto the same inode, which is how the listener
+ * proves at shutdown that the public name is still its own socket rather than
+ * asking whether anybody answers on it. A busy daemon does not answer either.
+ *
+ * It is a dotfile beside the socket for the life of the daemon. A crash between
+ * `listen` and here, or after, leaves one behind; nothing sweeps them and
+ * nothing needs to, since the next name is a different one.
+ */
+export function claimSocketPath(bindPath: string, path: string): void {
+  try {
+    linkSync(bindPath, path);
+  } catch (error) {
+    unlinkQuietly(bindPath);
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    if (code !== 'EEXIST') {
+      throw error instanceof Error ? error : new Error(String(error));
+    }
+    throw new Error(`another daemon is already listening on ${path}`, {
+      cause: error,
+    });
+  }
+}
+
+export function unlinkQuietly(path: string): void {
+  try {
+    unlinkSync(path);
+  } catch {
+    // Already gone. Nothing here is worth failing a start or a stop over.
+  }
 }
 
 /**
