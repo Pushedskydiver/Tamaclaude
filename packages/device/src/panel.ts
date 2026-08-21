@@ -29,6 +29,7 @@ import {
   afterOpen,
   afterRefresh,
   afterReport,
+  afterWedge,
   afterWrite,
   newLink,
   statusOf,
@@ -180,6 +181,12 @@ function shutPort(ctx: Ctx): void {
   if (now.port) void now.port.close().catch(() => undefined);
 }
 
+/** Refuse the link because a write wedged, and let the port go. */
+function wedgedOut(ctx: Ctx): void {
+  commit(ctx, afterWedge(ctx.state.read().link));
+  shutPort(ctx);
+}
+
 function scheduleRetry(ctx: Ctx): void {
   const now = ctx.state.read();
   // A refused link is not waiting for a better moment: the firmware is flashed
@@ -315,10 +322,11 @@ async function transmit(ctx: Ctx, rect: Rect, encoded: Encoded): Promise<void> {
       wedged(),
     ]);
     if (!wrote) {
-      // Treated as a lost frame, which is what it is. `dropped` shuts the port
-      // and the ordinary retry reopens it, so a wedged panel recovers the same
-      // way an unplugged one does.
-      dropped(ctx);
+      // Not a lost frame — a lost *panel*. See `afterWedge`: the write cannot
+      // be taken back, so retrying costs a threadpool thread and an fd each
+      // time and cannot reset the board anyway. Refuse once, loudly, and let a
+      // person do the one thing that works.
+      wedgedOut(ctx);
       return;
     }
   } catch {

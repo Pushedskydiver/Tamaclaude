@@ -453,13 +453,36 @@ describe('closing', () => {
 });
 
 describe('a panel that wedges mid-write', () => {
-  it('gives up on the frame and recovers on the next port', async () => {
-    // The failure this bounds: `write(2)` to a panel whose tx buffer has filled
-    // neither returns nor throws, and every later frame queues behind it. A
-    // review measured the consequence end to end — unplug the wedged panel,
-    // plug in a healthy one, and **zero** frames reached the new port, while
-    // the daemon went on reporting the link online. Painting was over for the
-    // life of the process.
+  it('refuses the link and says what a person has to do', async () => {
+    // The bound stops a wedged write freezing the panel for ever. What it must
+    // *not* do is retry: a `write(2)` blocked in libuv's threadpool cannot be
+    // taken back, so each attempt costs a thread and an fd. Measured — four
+    // abandoned writes exhaust the default pool, after which `fs.open` never
+    // completes anywhere in the process, so the daemon could no longer open the
+    // port at all. That is the freeze this bound exists to prevent, reached
+    // four retries later and now poisoning everything else too.
+    //
+    // An earlier version of this test asserted the opposite — that the panel
+    // recovered on the next port — which was the behaviour that had that cost.
+    const serial = fakeSerial();
+    const panel = open({ serial: serial.system, retryMs: 5 });
+    await settle();
+    serial.say(HEALTHY);
+    await settle();
+    expect(panel.status().phase).toBe('online');
+
+    serial.wedge();
+    void panel.send(WHOLE, payload(1, 4));
+    await delay(1_100);
+
+    const status = panel.status();
+    expect(status.phase).toBe('refused');
+    expect(status.refusal).toMatch(/unplug it and plug it back in/);
+  }, 10_000);
+
+  it('does not reopen the port after a wedge, however long it waits', async () => {
+    // `refused` is absorbing by design, and this is why it has to be: every
+    // reopen would abandon another blocked write.
     const serial = fakeSerial();
     const panel = open({ serial: serial.system, retryMs: 5 });
     await settle();
@@ -468,21 +491,13 @@ describe('a panel that wedges mid-write', () => {
 
     serial.wedge();
     void panel.send(WHOLE, payload(1, 4));
-    await delay(30);
-    const stuck = serial.state.written.length;
-
-    // The write is still in flight and will never settle. Past the bound, the
-    // link is dropped, the port is reopened, and the panel works again.
     await delay(1_100);
-    serial.plug();
-    serial.unwedge();
-    await delay(60);
-    serial.say(HEALTHY);
-    await settle();
+    const opens = serial.state.opens;
 
-    await panel.send(WHOLE, payload(2, 4));
-    await delay(30);
-    expect(serial.state.written.length).toBeGreaterThan(stuck);
+    serial.unwedge();
+    serial.plug();
+    await delay(200);
+    expect(serial.state.opens).toBe(opens);
   }, 10_000);
 });
 
