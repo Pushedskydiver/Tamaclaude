@@ -12,7 +12,11 @@
     }
   },
   "dependencies": {
-    "@tamaclaude/daemon": "workspace:*"
+    "@tamaclaude/daemon": "workspace:*",
+    "@tamaclaude/device": "workspace:*",
+    "@tamaclaude/packs": "workspace:*",
+    "@tamaclaude/protocol": "workspace:*",
+    "@tamaclaude/renderer": "workspace:*"
   },
   "bin": {
     "tamaclaude": "./dist/index.js"

@@ -10,6 +10,18 @@
   "references": [
     {
       "path": "../daemon"
+    },
+    {
+      "path": "../device"
+    },
+    {
+      "path": "../packs"
+    },
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../renderer"
     }
   ]
 }

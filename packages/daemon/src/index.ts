@@ -49,3 +49,10 @@ export function createDaemon(
 export { animationFor } from './animation.js';
 export { createRegistry, observe } from './registry.js';
 export { resolvePanel } from './resolve.js';
+// Joined the barrel when `packages/cli`'s `daemon` command became the first
+// thing outside this package to compose the listener with the registry.
+export type { Session } from './session.js';
+export { effectiveState } from './session.js';
+export type { SessionState } from './state.js';
+export { startSocketServer } from './socket-server.js';
+export { defaultSocketPath } from './socket-path.js';

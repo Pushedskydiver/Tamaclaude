@@ -152,9 +152,12 @@ that is not waiting on the design freeze.
       socket, so a restart mid-session does not show an empty desk. A leftover
       socket file is told from a running daemon by connecting to it rather than by
       unlinking it blind (`packages/daemon/src/socket-path.ts`).
-- [ ] Daemon wired to a transport. The listener holds the registry and offers a
-      snapshot; nothing yet renders it or pushes a frame down the wire, so this
-      stage's exit is still open.
+- [x] Daemon wired to a transport — `tamaclaude daemon <device>`
+      (`packages/cli/src/daemon.ts`). The listener's snapshot is resolved into a
+      scene, rendered to a framebuffer, diffed against the last one and sent as
+      a single dirty rect at 8fps. The stage is empty until the sprite data
+      lands; the clock, the session chips, the subagent badge and the message
+      band are all live. **This closes the stage's exit.**
 - [x] **Hook names confirmed against live documentation** — all three exist:
       `PermissionRequest`, `StopFailure`, `SubagentStart`. Checked against
       code.claude.com/docs/en/hooks.md rather than upstream's README, because a
@@ -177,8 +180,9 @@ that is not waiting on the design freeze.
 
 - [x] Tool → state mapping (`PreToolUse.tool_name`)
 - [x] Multi-session compositing — resolution ranks by state, hero plus chips
-- [~] Subagent lifecycle counted in the registry; the badge is drawn from
-  placeholder text until the daemon feeds the scene
+- [x] Subagent lifecycle counted in the registry, and the badge is fed from it
+      — `subagentText` in `packages/cli/src/daemon.ts` sums `subagents` across live
+      sessions
 - [~] `PermissionRequest` → the state and the quip exist; **the animation does
   not** — `permission sign` is unbuilt (Stage 4, item 7)
 - [~] `StopFailure` → the state, `error_type` and the quip exist; **the

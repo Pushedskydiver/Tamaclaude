@@ -16,9 +16,12 @@ import {
   animationFor,
   createDaemon,
   createRegistry,
+  defaultSocketPath,
   observe,
   resolvePanel,
 } from '@tamaclaude/daemon';
+
+import { runDaemon } from './daemon.js';
 
 /**
  * The example pack, read from disk rather than inlined.
@@ -50,15 +53,51 @@ function examplePack(): unknown {
 }
 
 /**
- * A smoke test with a `main()`: load the real pack, push one event through the
- * real session pipeline, print what the panel would show.
+ * `tamaclaude daemon` — listen, render, and drive the panel until killed.
+ *
+ * The device path is an argument rather than a discovery, because guessing
+ * which `/dev/cu.*` is the panel is a worse failure than being told: the wrong
+ * guess writes packets at somebody's modem.
+ */
+async function daemon(argv: readonly string[]): Promise<void> {
+  const devicePath = argv[0];
+  if (devicePath === undefined) {
+    process.stderr.write(
+      'usage: tamaclaude daemon <device>\n' +
+        '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n',
+    );
+    process.exit(2);
+  }
+  const running = await runDaemon({
+    socketPath: defaultSocketPath(),
+    devicePath,
+    pack: examplePack(),
+  });
+  process.stdout.write(`listening on ${defaultSocketPath()}\n`);
+  // Stopped on a signal rather than left to the process teardown, so the
+  // socket file goes with it — `socket-server.ts` only removes a path it can
+  // still prove is its own, and it cannot prove that after the process is gone.
+  const stop = (): void => {
+    void running.stop();
+  };
+  process.once('SIGINT', stop);
+  process.once('SIGTERM', stop);
+}
+
+/**
+ * The default command: load the real pack, push one event through the real
+ * session pipeline, print what the panel would show.
  *
  * It exists because five of the six gates can be green while this binary
  * throws on its first line — which is exactly what happened when the pack
  * schema tightened underneath it. One event is enough to prove the whole path
  * is wired; the daemon's own tests prove the path is right.
+ *
+ * It was called `main` and its documentation ended up above `daemon` when that
+ * was added — the stranded-doc class `tools/detached-docs.test.ts` exists for,
+ * caught by that gate on the first run.
  */
-function main(): void {
+function smoke(): void {
   const state = createDaemon(examplePack(), []);
   const now = Date.now();
   const sessions = observe(
@@ -73,4 +112,9 @@ function main(): void {
   );
 }
 
-main();
+const [, , command, ...rest] = process.argv;
+if (command === 'daemon') {
+  await daemon(rest);
+} else {
+  smoke();
+}

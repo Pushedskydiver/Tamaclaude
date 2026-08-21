@@ -83,6 +83,18 @@ importers:
       '@tamaclaude/daemon':
         specifier: workspace:*
         version: link:../daemon
+      '@tamaclaude/device':
+        specifier: workspace:*
+        version: link:../device
+      '@tamaclaude/packs':
+        specifier: workspace:*
+        version: link:../packs
+      '@tamaclaude/protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@tamaclaude/renderer':
+        specifier: workspace:*
+        version: link:../renderer
 
   packages/daemon:
     dependencies:

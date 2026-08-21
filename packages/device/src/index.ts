@@ -14,3 +14,6 @@
 export type { LinkStatus, PanelSize } from './link.js';
 export { openPanel } from './panel.js';
 export type { Transport } from './transport.js';
+// Exported for the `daemon` command, which injects a fake port in its tests
+// the same way this package's own tests do.
+export type { SerialSystem, SerialWatch } from './serial.js';
