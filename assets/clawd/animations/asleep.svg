@@ -160,7 +160,7 @@
     </style>
   </defs>
 
-  <!-- ── base geometry: assets/clawd/base.svg, verbatim ────────────────── -->
+  <!-- ── base geometry: assets/clawd/base.svg, less its shadow ───────── -->
 
   <g id="body-color-group" fill="#DE886D">
     <!-- Outside both animated groups: the feet are on the floor and stay

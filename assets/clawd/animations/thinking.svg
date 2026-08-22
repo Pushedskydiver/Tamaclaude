@@ -129,7 +129,7 @@
     for three frames and flicked the second through in two, which is a tic on
     one eye-pass and a doze on the other.
 
-    ── The bubble, the dots and the shadow ────────────────────────────────
+    ── The bubble and the dots ────────────────────────────────────────────
 
     Why the bubble does not move. Everything else here is eased, and the
     rasteriser snaps the antialiased edges that produces back to the palette
@@ -284,9 +284,6 @@
         65.625%, 67.1875% { transform: scaleY(0.15); }
         68.75%, 100%      { transform: scaleY(1); }
       }
-
-      /* Half the body's travel, in the same direction. A leaning body does not
-         narrow its shadow, so this only slides. */
 
       @keyframes dot-1 {
         0%   { opacity: 1; }

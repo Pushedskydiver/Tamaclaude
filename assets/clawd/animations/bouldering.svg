@@ -150,11 +150,16 @@
     shadow moved into the renderer and was drawn for everything.
 
     That second attempt is worth recording because the evidence for it looked
-    fine. It rested on this animation's feet being on the same line as the
-    others — measured at unit 15.13, which was frame 0 of a 32-frame scrolling
-    loop; across the loop the lowest drawn pixel reaches 15.625. And composed,
-    the wall's joint band scrolls through the shadow row and covers 89% of it
-    for four frames in every thirty-two, so the shadow blinked twice a loop.
+    fine and was measuring the wrong thing. It rested on his feet being on the
+    same line as the other animations' — which is true, his lowest body pixel
+    is unit 14.875 like theirs — argued from "unit 15.13", which is frame 0's
+    lowest *drawn* pixel and is a wall hold. The loop maximum of 15.625 is the
+    joint band. Both numbers are scenery.
+
+    What rules it out is that his legs leave the ground line on 24 frames of
+    32, by up to six device pixels, and that the joint band scrolls through the
+    shadow row and covers 89% of it on four frames in every thirty-two — so it
+    blinked twice a loop.
 
     `castsShadow` in packages/renderer/src/environment.ts is what holds the
     line now, and it names this animation.
@@ -438,10 +443,10 @@
     </g>
   </g>
 
-  <!-- ── base geometry: assets/clawd/base.svg, verbatim ──────────────────
-       The shadow is drawn at zero opacity: he is on a wall, and at half
-       opacity it would darken every joint and hold that passed behind his
-       feet, which is a smear rather than a shadow. -->
+  <!-- ── base geometry: assets/clawd/base.svg, less its shadow ───────────
+       No shadow element at all — see the note at the top of this file. The
+       renderer draws the ground shadow now and skips it here, because he is
+       on a wall. -->
 
   <g id="body-color-group" fill="#DE886D">
     <!-- The arms sit inside #climb-sway and outside #climb-bob, so they lean

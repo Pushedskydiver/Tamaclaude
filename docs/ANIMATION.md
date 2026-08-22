@@ -50,8 +50,9 @@ without drowning in decimal path data.
 The two colour groups are why packs can stay thin — a pack recolours Clawd by
 overriding two `fill` attributes, not by shipping its own character.
 
-**`ground-shadow` is the one base element an animation must not carry.** Black
-at half opacity is exactly what `snapToPalette` drops — it snaps to the
+**`ground-shadow` is the one base element an animation must not carry.** Seven of the eight carried it at half opacity, which is what
+`snapToPalette` drops, and `bouldering` carried it at zero on purpose. Black at
+half opacity is dropped — it snaps to the
 background and arrives part-transparent, which is the pair of conditions the
 transparency rule tests for — so all eight animations declared a shadow and all
 eight drew zero pixels of it. Invisible for as long as the stage behind Clawd
@@ -164,7 +165,8 @@ every animation would land between pixels.
 Measured topmost drawn pixel, across every frame of all eight: `idle` +4.25,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
 `asleep` -3, `bouldering` -8.5. So the closest anything non-exempt comes to the
--4 line is two units of margin, not none.
+-4 line is `thinking` and `asleep` at -3, which is one unit of margin, not
+none.
 
 **`bouldering`'s -8.5 is its wall, and the wall does not count.** It is inside
 `#fx-wall`, which carries `data-safe-area="ignore"` precisely so this rule skips
@@ -371,15 +373,27 @@ Two consequences for authors:
   palette entry.
 
   The ground shadow used to be the worked example here, on the reasoning that
-  over a black stage it composites to black and vanishes — "which is what the
-  panel already did" — while over a lighter stage it would stay a real tone.
-  The second half was never true. `snapToPalette` writes alpha 0 whenever a
-  pixel snaps to the background _and_ arrived part-opaque, unconditionally, so
-  a half-opacity black could not have survived on any background. Eight
-  animations carried it and eight drew nothing. Do not reach for this pattern:
-  if an effect must be semi-transparent, give it a flat colour that composites
-  to the tone you want, or draw it in the renderer where the background is
-  known.
+  over a black stage it composites to black and vanishes while over a lighter
+  stage it stays a real tone. Both halves are true of the mechanism, and the
+  conclusion drawn from them was still wrong.
+
+  What makes the shadow a special case is not the snap, it is `BACKGROUND` at
+  `tools/frame-palette.ts` — a hard-coded `[0, 0, 0]`. Every bake is taken
+  against black, so a half-opacity black always composites to the background
+  entry, dedupes into it, and is dropped. Measured: the same rect over a
+  `[48, 48, 48]` stage yields a distinct `[24, 24, 24]` entry and survives at
+  full alpha. There is no stage but black, so it never did.
+
+  The pattern is still not one to reach for, on a stronger ground than "it
+  cannot work": bakes are static. A pack that sets a lighter stage at runtime
+  cannot recover a pixel already dropped at bake time, so the effect can never
+  arrive for the pack it was kept for. If something must be semi-transparent,
+  give it a flat colour that composites to the tone you want, or draw it in the
+  renderer, where the background is known at paint time.
+
+  An earlier attempt at this correction said the snap drops such a pixel "on
+  any background". That is false, and it contradicted the comment in
+  `frame-palette.ts` that it left standing. That comment is right.
 
 ## Render scale
 

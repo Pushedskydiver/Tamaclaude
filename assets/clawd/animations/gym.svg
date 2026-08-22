@@ -415,10 +415,6 @@
         66.666667%, 100% { transform: translateY(0px); }
       }
 
-      /* Wide and dark while the weight is going through him into the floor,
-         narrow and faint at lockout when he is tall. Invisible on the default
-         black stage — see the note on the rule above. */
-
       @keyframes press-grimace {
         0%, 20.833333% { opacity: 0; transform: scaleX(0.6); }
         25%            { opacity: 1; transform: scaleX(1); }

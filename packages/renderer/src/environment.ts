@@ -56,15 +56,17 @@ type Scheme = {
    * separation tuned to it rather than the same ratio applied to four very
    * different starting points.
    *
-   * **Night is inherently the weakest and cannot be fixed by going darker.**
-   * Measured as a luminance delta against each sand: day 18.9, dawn 9.4, dusk
-   * 6.5, night 2.8 — and night only reaches 2.8 because the tone was taken to
-   * about as dark as RGB565 allows here; at the first draft's value it was 2.1,
-   * and the floor is near. The sand at night is already almost black, so there
-   * is very little room beneath it. That is also true of real shadows after
-   * dark, so it is the right kind of wrong, but a review looking at a true-size
-   * strip could not find it at night and that should be checked on glass
-   * before anyone calls it done: `node tools/blit.ts idle <port> landscape night`.
+   * **Night is inherently the weakest, and the limit is the sand rather than
+   * the format.** Rec.709 relative luminance, linear-light, x100, against each
+   * sand as the panel receives it after `rgb565` truncation: day 19.1, dawn
+   * 9.4, dusk 6.5, night 2.6. The first draft's night tone gave 2.1.
+   *
+   * Going darker still buys very little: pure black would reach 3.3, because
+   * night's sand is itself at 3.3 and that is the entire budget. RGB565 has
+   * plenty of darker codes — the constraint is not colour depth. Real shadows
+   * after dark are faint too, so this is the right kind of wrong, but a review
+   * looking at a true-size strip could not find it at night, and that wants
+   * checking on glass: `node tools/blit.ts idle <port> landscape night`.
    */
   readonly shadow: number;
   readonly stars: boolean;
@@ -310,19 +312,26 @@ function paintGround(target: Framebuffer, layer: Layer): void {
  *
  * The geometry is base.svg's own shadow rect — units 3 to 12 of the character,
  * on the line its feet stand on — so it lands where every animation already
- * expected it. The height is two device pixels rather than the rect's eight: a
- * contact shadow is a line where he meets the ground, and a full unit reads as
- * a plinth he is standing on.
+ * expected it. The height is a quarter of a unit rather than the rect's whole one — two
+ * device pixels at `hero`'s scale of 8, one at `twoUp`'s 4 — because a contact
+ * shadow is a line where he meets the ground and a full unit reads as a plinth
+ * he is standing on.
  *
  * **Not drawn for `bouldering`**, via `contact: false`. A first version drew it
- * for everything, on the grounds that its feet are on the same line as every
- * other animation's. Two things were wrong with that. The measurement behind it
- * — "unit 15.13" — was frame 0 of a 32-frame scrolling loop, and across the
- * loop the lowest drawn pixel reaches 15.625. And composed, the wall's joint
- * band scrolls through the shadow row and covers 89% of it for four frames of
- * every thirty-two, so the shadow blinked twice a loop. `PLANS.md` had already
- * ruled on this — "a shadow on the floor beneath a climber is worse than no
- * shadow" — and `bouldering.svg` records an earlier version overriding it too.
+ * for everything, on the grounds that its feet sit on the same line as every
+ * other animation's. That premise is true — his lowest *body* pixel is unit
+ * 14.875 on the frames he is down, exactly like the other seven — and it was
+ * argued from a number that did not show it: "unit 15.13" is the lowest *drawn*
+ * pixel of frame 0, which is a wall hold, and the loop maximum of 15.625 is the
+ * wall's joint band. Both measure the scenery.
+ *
+ * What actually rules it out is motion and occlusion. His legs leave the ground
+ * line on 24 frames of 32, by up to six device pixels — a static mark under
+ * feet that are climbing reads as neither contact nor climbing. And the wall's
+ * joint band scrolls through the shadow row and covers 89% of it on four frames
+ * of every thirty-two, so it blinked twice a loop. `PLANS.md` had already ruled
+ * on this — "a shadow on the floor beneath a climber is worse than no shadow" —
+ * and `bouldering.svg` records an earlier version overriding it too.
  */
 function paintContactShadow(
   target: Framebuffer,
@@ -355,10 +364,11 @@ function paintContactShadow(
  * earlier version overriding that, so this is the second time it has needed
  * defending.
  *
- * Here rather than in `packages/daemon` because the shadow is a renderer
- * concern and `tools/` composes panels too: the daemon is above the renderer in
- * the graph and the tools cannot reach it, so a rule kept there would have to
- * be duplicated to be applied while judging. Keyed on the name because the
+ * Here rather than beside the scene composition in `packages/cli`, because
+ * `tools/` composes panels too and `eslint.config.ts` grants it only `tools`,
+ * `renderer`, `packs` and `protocol` — so a rule kept in `cli` would have to be
+ * duplicated to be applied while judging, which is how the first override
+ * happened. Keyed on the name because the
  * environment is painted before any sprite exists — nothing else at that point
  * knows what is about to stand in front of it.
  */

@@ -223,10 +223,10 @@
 
       /* ── keyframes ───────────────────────────────────────────────────
          Every value below is a multiple of 0.125px — one device pixel at the
-         8x render scale — and every hold spans at least one sample point. The
-         scale factors are the exception and they are chosen the same way:
-         the shadow rect is 9 units wide about a centre pivot, so 0.944444 and
-         0.972222 move each edge exactly 2 and 1 device pixels inward. */
+         8x render scale — and every hold spans at least one sample point. There
+         used to be two scale factors here as the exception, belonging to the
+         shadow rect; that rect and its track are gone, so the rule holds
+         without exception now. */
 
 
       /* Down one pixel for frames 3..12, level either side of that. Sampled at
