@@ -89,6 +89,7 @@ frames are regenerated each time, since `out/` is gitignored.
 | `idle`            |            451 B |       988 B |  3.5 KB/s | 149:1 |     0.63% |
 | `thinking`        |            488 B |     1,228 B |  3.8 KB/s | 138:1 |     0.68% |
 | `dizzy`           |            730 B |       940 B |  5.7 KB/s |  92:1 |     1.01% |
+| `overheated`      |            770 B |       948 B |  6.0 KB/s |  87:1 |     1.07% |
 | `asleep`          |            792 B |     1,208 B |  6.2 KB/s |  85:1 |     1.10% |
 | `typing`          |          1,246 B |     1,324 B |  9.7 KB/s |  54:1 |     1.73% |
 | `gym`             |          1,818 B |     2,052 B | 14.2 KB/s |  37:1 |     2.53% |

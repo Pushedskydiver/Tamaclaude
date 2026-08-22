@@ -10,8 +10,8 @@
  * the bake still matches its SVG, which is a property no consumer of the
  * pixels can see.
  *
- * **Loaded on demand, and that is the point.** All nine animations together are
- * 1,817,940 bytes of encoded data and 2,444,376 of source — base64 is four
+ * **Loaded on demand, and that is the point.** All ten animations together are
+ * 1,918,964 bytes of encoded data and 2,581,059 of source — base64 is four
  * bytes for three, so the second number can only ever be about a third above
  * the first. (It read six, 1,128,216 and 1,515,153 until `permission-sign`,
  * `confused` and `dizzy` landed; only a re-bake refreshes these, so treat them
@@ -54,6 +54,7 @@ export const SPRITE_NAMES = [
   'dizzy',
   'gym',
   'idle',
+  'overheated',
   'permission-sign',
   'thinking',
   'typing',
@@ -82,6 +83,7 @@ const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {
   dizzy: () => import('./dizzy.data.js'),
   gym: () => import('./gym.data.js'),
   idle: () => import('./idle.data.js'),
+  overheated: () => import('./overheated.data.js'),
   'permission-sign': () => import('./permission-sign.data.js'),
   thinking: () => import('./thinking.data.js'),
   typing: () => import('./typing.data.js'),

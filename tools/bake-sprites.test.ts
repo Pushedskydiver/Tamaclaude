@@ -11,6 +11,7 @@ import { SOURCE as DIZZY } from '../packages/renderer/src/sprites/dizzy.data.ts'
 import { SOURCE as GYM } from '../packages/renderer/src/sprites/gym.data.ts';
 import { SOURCE as IDLE } from '../packages/renderer/src/sprites/idle.data.ts';
 import { loadSprite } from '../packages/renderer/src/sprites/index.ts';
+import { SOURCE as OVERHEATED } from '../packages/renderer/src/sprites/overheated.data.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
@@ -32,7 +33,7 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and nine full renders into `pnpm test`. It would also be flaky —
+ * and ten full renders into `pnpm test`. It would also be flaky —
  * `svg2frames` is not bit-reproducible, and two runs of `confused` differ on
  * one frame of 96 at a claw edge that lands on a fractional pixel and snaps
  * either way.
@@ -45,6 +46,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['dizzy', DIZZY],
   ['gym', GYM],
   ['idle', IDLE],
+  ['overheated', OVERHEATED],
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
