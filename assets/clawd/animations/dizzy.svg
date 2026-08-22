@@ -23,15 +23,20 @@
     one-pixel steps across the top edge — is in `PLANS.md` §Confused and in
     `confused.svg`, not in `ANIMATION.md`; an earlier version of this line put
     both at the same citation and half of it is not there. The wobble is
-    translation against planted legs. Its keyframe values are multiples of 0.25
-    units — two device pixels — but it is eased, so the track passes through
+    translation against planted legs. Its keyframe values are eighths of a unit
+    — whole device pixels — but it is eased, so the track passes through
     fractional positions between them and most frames land on one; what makes
     that safe is the palette snap resolving the edge after the fact, per
     `docs/ANIMATION.md` §Palette snapping, and not the values. The whole-pixel
     rule an earlier version of this line invoked was repealed by §Ease, don't
-    step. The range is -0.75 to +0.5 units,
-    which is -6 to +4 device pixels and not the symmetric half-unit this line
-    claimed before the stagger was rewritten; see §the deep lurch below.
+    step.
+
+    **Measured range: -5 to +4 device pixels**, the minimum on frames 63-64 and
+    the maximum on 15-17 and 79-82. Two earlier versions of this line said -6 to
+    +4 and quarter-unit keyframes, both true of the track before §the deep lurch
+    below was cut — so the file stated two different amplitudes for one
+    animation, a hundred lines apart. This is the paragraph to update when the
+    stagger changes; it has been missed twice.
 
     Not the stars either. A one-pixel prop is entirely edge, and rotating one
     is a still pixel with a fringe: at a fractional position the snap resolves
@@ -129,7 +134,8 @@
          that repeats every four is not a stagger, it is a metronome.
 
          So the amplitude varies across the twelve: two ordinary sways, two
-         smaller ones, then a deeper lurch and a fast recovery. The values are
+         smaller ones, then a deeper lurch, a hard rebound and a slow settle.
+         The values are
          whole device pixels at the keyframes — eighths of a unit — though the
          eased track passes through fractions between them; the palette snap
          resolves those, per `docs/ANIMATION.md` §Palette snapping.
@@ -146,7 +152,9 @@
              thinking   7    (never below)
              idle       6    (never below)
              dizzy      2    before this fix, on frames 63-66
-             dizzy      3    after, on frames 63-64 only
+             dizzy      3    after, on frames 63-64 at every torso row
+                              (frame 65 also reads 3 on its bottom row alone,
+                              where the sub-pixel edge drops one corner pixel)
 
          At 2 the leg does not read as under the body — it reads as dropping
          off the corner while the torso overhangs empty air on the other side.
@@ -171,8 +179,16 @@
 
          What survives all of that is the arrival, which was always the good
          part: the offset builds over frames 57-63 and is gone by 75, legs under
-         the torso throughout. It now returns faster than it came, which is what
-         a stagger does. The constraint to hold on any future edit is the one
+         the torso throughout.
+
+         **It does not return faster than it came — it rebounds faster and then
+         settles slower**, which a draft of this note had backwards. Measured
+         from the bake: neutral at frame 54, the extreme on 63-64, neutral again
+         at 75 — nine frames in and eleven out. The two frames after the extreme
+         cover 2 of the 5 device pixels, and the remaining 3 take nine. That is
+         what a knock does, and it is a better description than the one it
+         replaces; the sentence matters because it is the one a future editor
+         would cite to slow the recovery further. The constraint to hold on any future edit is the one
          the critic named: **the outer leg keeps at least 3 device pixels of
          body outboard of it, and the extreme is passed through in no more than
          two or three frames.** Both are measurable from the bake; neither is a
