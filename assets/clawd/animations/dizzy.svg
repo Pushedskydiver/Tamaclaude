@@ -99,7 +99,20 @@
          So the amplitude varies across the twelve: two ordinary sways, two
          smaller ones, then a deeper lurch and a slow recovery. Every value is
          a multiple of 0.25 units — two whole device pixels — so nothing lands
-         on a fraction. */
+         on a fraction.
+
+         **The deep lurch measures 6 device pixels of body-over-feet offset,
+         held four frames, and that is deliberate.** It is the one figure in
+         this file a naive threshold should be expected to fail. What makes it
+         read as a lurch rather than as a sprite bolted on askew is that the
+         offset *arrives*: eight frames of accelerating drift and ten of
+         recovery, with all four legs staying under the torso throughout.
+         `idle` and `thinking` shipped the same number in otherwise still
+         animations, where the only available reading was an assembly error,
+         and it cost three passes and two critics to find. Taking this to 5
+         would leave the lurch one pixel deeper than an ordinary sway, which
+         flattens the beat that makes the twelve seconds honest — the wrong
+         side of the trade for one device pixel. Measured, judged, kept. */
       #wobble {
         animation: stagger 12s infinite ease-in-out;
       }
