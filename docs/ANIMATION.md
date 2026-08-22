@@ -164,7 +164,7 @@ every animation would land between pixels.
 
 Measured topmost drawn pixel, across every frame of all eight: `idle` +4.25,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
-`asleep` -3, `bouldering` -8.5. So the closest anything non-exempt comes to the
+`asleep` -3, `bouldering` -9. So the closest anything non-exempt comes to the
 -4 line is `thinking` and `asleep` at -3, which is one unit of margin, not
 none.
 
@@ -461,7 +461,7 @@ outside the SVG. The variety lives in the animation.
 It is also among the cheapest things in the repo. `idle` measures 3,620 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
 the six until `permission-sign` (2,645) and `confused` (3,323) landed; the eight
-now run 2,645 / 3,323 / 3,620 / 3,905 / 6,332 / 9,966 / 14,545 / 19,992. The
+now run 2,645 / 3,323 / 3,620 / 3,905 / 6,332 / 9,966 / 14,545 / 22,568. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

@@ -186,6 +186,25 @@ tile seamlessly, and the technique every scrolling background depends on
 (`road bike` in Tier C needs exactly this). The hold pattern has to be periodic
 in the scroll distance or the loop visibly jumps once a second.
 
+**Diverged from this plan: the wall got a face.** The plan described joints and
+holds and nothing behind them, which was right while every screen was on black.
+Once `packages/renderer/src/environment.ts` put a rock pool behind every
+animation, an unfilled wall let the sky through and read as wires strung across
+the horizon with purple notes pegged to them, with Clawd on sand below the sea
+line — two places at once, which is the thing §Clawd lives somewhere tests for.
+
+The face is the sand's own tonal family rather than a gym's slate, so it reads
+as a sea cliff at the edge of the shore he lives on; a crab climbing a rock in
+his own rock pool is the better joke, and it is one place. Its right edge steps
+on an 8-unit period — the scroll distance — so the silhouette travels with its
+own texture rather than sitting still while the courses slide past it. The
+joints and holds are clipped to that silhouette, which is what stops a course
+running off the rock into the sky.
+
+Suppressing the environment for this one animation was the alternative. It left
+half the panel black, and it hid the defect rather than fixing it — against
+black an overhanging joint is invisible, which is how this survived six PRs.
+
 ---
 
 ## Idle — connected, nothing running

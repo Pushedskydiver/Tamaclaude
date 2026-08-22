@@ -45,6 +45,41 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['typing', TYPING],
 ];
 
+/**
+ * The first structural fault in an SVG, or `undefined`.
+ *
+ * Comment delimiters are counted rather than stripped, because a stripping
+ * regex pairs a runaway `<!--` with the next comment's `-->` and hides exactly
+ * the fault it is looking for. Tags are walked on a stack, so a self-closing
+ * element is not an unclosed one and a balanced-but-mis-nested pair is still a
+ * fault.
+ */
+function nestingFault(body: string): string | undefined {
+  const stack: string[] = [];
+  for (const match of body.matchAll(/<(\/?)([a-zA-Z][\w:-]*)[^>]*?(\/?)>/g)) {
+    const [, closing, name, selfClosing] = match;
+    if (selfClosing === '/' || name === undefined) continue;
+    if (closing !== '/') {
+      stack.push(name);
+      continue;
+    }
+    if (stack.pop() !== name) {
+      return `</${name}> does not close the open element`;
+    }
+  }
+  const unclosed = stack[stack.length - 1];
+  return unclosed === undefined ? undefined : `unclosed <${unclosed}>`;
+}
+
+function faultIn(svg: string): string | undefined {
+  const opens = (svg.match(/<!--/g) ?? []).length;
+  const closes = (svg.match(/-->/g) ?? []).length;
+  if (opens !== closes) {
+    return `${String(opens)} <!-- against ${String(closes)} -->`;
+  }
+  return nestingFault(svg.replaceAll(/<!--[\s\S]*?-->/g, ''));
+}
+
 describe('the baked animations', () => {
   it('were baked from the SVGs committed beside them', () => {
     const stale = BAKED.filter(
@@ -57,24 +92,60 @@ describe('the baked animations', () => {
     expect(stale).toEqual([]);
   });
 
-  it('is well-formed XML, every one of them', () => {
-    // Two malformed SVGs shipped in a single session and neither was noticed:
-    // an unterminated `<!--` in `asleep`, and an unclosed `<g>` in
-    // `bouldering`. Both rendered correctly, because the rasteriser is a
-    // browser and browsers recover from broken markup — so `svg2frames` was
-    // silent, the frames were right, and every gate stayed green. Nothing else
-    // here reads these files as XML.
+  it('has balanced comments and correctly nested elements', () => {
+    // **Not an XML validator, and the name says so.** A first version claimed
+    // to be one and was not: it stripped paired comments with a non-greedy
+    // regex and compared `<g>` counts, which a review showed caught one of ten
+    // planted malformations. It missed the exact case it was written for —
+    // deleting a single `-->` lets the runaway opener pair with a *later*
+    // comment's terminator, and all eight files passed — and it false-flagged
+    // a legitimate `<g />`. A green assertion certifying a property it cannot
+    // see is worse than no assertion, which is `docs/DA-REVIEW.md`'s point
+    // about test code that lies.
+    //
+    // This walks the tags instead, so it catches both failure modes that
+    // actually occurred during authoring — an unterminated `<!--` in `asleep`
+    // and an unclosed `<g>` in `bouldering` — plus mis-nesting, which the
+    // count comparison could not see. Neither reached a commit; a review
+    // confirmed no malformed version exists anywhere in history. But nothing
+    // here caught them either: `svg2frames` rasterises through
+    // `page.setContent()`, so a browser recovers from broken markup, the
+    // frames come out right and every gate stays green. `bouldering` went
+    // through a full `animation-critic` review malformed and the critic did
+    // not see it, because it was looking at frames.
+    //
+    // A real parse is available — Playwright's `DOMParser` is ~100ms — but it
+    // needs a `playwright install` step in CI that does not exist, and this
+    // catches what has actually gone wrong.
     const broken = readdirSync('assets/clawd/animations')
       .filter((file) => file.endsWith('.svg'))
-      .filter((file) => {
-        const svg = readFileSync(`assets/clawd/animations/${file}`, 'utf8');
-        const stripped = svg.replaceAll(/<!--[\s\S]*?-->/g, '');
-        // Unbalanced groups, and any `<!--` the strip could not pair.
-        const opens = (stripped.match(/<g[\s>]/g) ?? []).length;
-        const closes = (stripped.match(/<\/g>/g) ?? []).length;
-        return opens !== closes || stripped.includes('<!--');
-      });
+      .map((file) => ({
+        file,
+        fault: faultIn(readFileSync(`assets/clawd/animations/${file}`, 'utf8')),
+      }))
+      .filter(({ fault }) => fault !== undefined);
     expect(broken).toEqual([]);
+  });
+
+  it("clips bouldering's wall to the same rects the rock is drawn from", () => {
+    // `#rock-face` and `#fx-wall-face` are two hand-maintained copies of one
+    // silhouette, and the copy is what stops the joints running off the rock
+    // into the sky. Editing one without the other reopens that defect, and it
+    // is invisible: the bake stamp covers both, so a drifted clip re-bakes
+    // happily and only shows once there is scenery behind him.
+    const svg = readFileSync('assets/clawd/animations/bouldering.svg', 'utf8');
+    const rectsOf = (id: string): string[] => {
+      const group = new RegExp(
+        `id="${id}"[^>]*>([\\s\\S]*?)</(?:g|clipPath)>`,
+      ).exec(svg);
+      return [...(group?.[1] ?? '').matchAll(/<rect[^>]*\/>/g)].map((m) =>
+        m[0].replace(/\s+/g, ' '),
+      );
+    };
+    const face = rectsOf('fx-wall-face');
+    const clip = rectsOf('rock-face');
+    expect(face.length).toBeGreaterThan(0);
+    expect(clip).toEqual(face);
   });
 
   it('covers every animation that has an SVG', () => {

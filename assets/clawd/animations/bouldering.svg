@@ -129,7 +129,10 @@
 
     **Drawn on a filled rock face, which reverses an earlier decision.** That
     decision was measured rather than guessed — a filled slate face cost
-    22,235 B/s against 21,792 for none, so it was always affordable — and it
+    22,235 B/s against 21,792 for none at the time, a 2% difference. That is not
+    this decision's cost: 21,792 was measured before the violet hold undersides
+    were deleted, and unfilled today is 19,992, so filling it is +2,576 B/s or
+    +13% — and it
     was dropped because at 172px a slate field flattened the scene and because
     every other screen was on black, so one filled background read as the odd
     one out.
@@ -143,11 +146,15 @@
     cliff at the edge of the beach he lives on rather than a gym wall pasted
     over it. Cost is 22,568 B/s, 4% of the measured link.
 
-    The prediction that a filled face mutes the joints half came true, and the
+    The prediction that a filled face would mute the joints and stop the holds
+    popping came half true — the joints are muted, the holds are not — and the
     joint tone stays anyway. Measured after the RGB565 round trip the face is
-    (74,65,58) and the joint (49,53,58): only a 5% luminance step, but the
-    per-channel delta is +25R/+12G/0B, so it is a cool line on a warm field and
-    hue carries what luminance does not. Muted is also right now — they read as
+    (74,65,58) and the joint (49,53,58): a 5.4% step measured against full
+    scale, which is 20.9% measured against the face — the smaller number was
+    quoted here first and it was the one that made the argument, which is the
+    wrong way round. Luminance does carry them. What hue adds is that the
+    per-channel delta is +25R/+12G/0B: a cool line on a warm field, so they stay
+    legible without competing with the holds. Muted is also right now — they read as
     bedding planes in rock, which is the scene, rather than as ply seams, which
     was the gym. A darker, warmer joint would cost a new palette entry, and
     §Palette snapping has caught this file twice already.
@@ -187,8 +194,12 @@
     `topmostVisibleUnit` walks every `rect` in the document including the one
     inside `<clipPath>`, and an unmarked clip rect reports a bounding box at
     the origin and trips the check. That clip used to inset the wall
-    from the frame — 2 device pixels each side, 4 top and bottom — so no joint
-    scrolling in ever landed in row 0. It runs to the frame edge now, and the
+    from the frame — 2 device pixels left, right and bottom, 4 at the top — so
+    no joint scrolling in ever landed in row 0. It is the viewBox exactly now,
+    which means it clips nothing — the root `<svg>` already bounds the viewport
+    — and it is kept only because `topmostVisibleUnit` walks every `rect` in
+    the document and the marker above is what exempts these. Treat it as inert.
+    It runs to the frame edge now, and the
     inset would be a defect rather than a guard: against a black stage a joint
     reaching row 0 was a bar ending in nothing, and against a full-bleed rock
     it is the wall continuing past the frame, which is what a cliff does. What
@@ -449,9 +460,16 @@
 
          Three things a first version got wrong, all the same mistake — it was
          an opaque backdrop where it needed to be the wall's silhouette. The
-         joints and holds were clipped to the stage rather than to the rock, so
-         up to 1,576 joint pixels and 128 hold pixels a frame still painted on
-         the sky: the defect this exists to remove, shrunk rather than gone.
+         joints and holds were clipped to the stage rather than to the rock,
+         so joint courses still ran off it into the sky — a review reconstructed
+         the attempt and measured 144 to 224 pixels a frame depending on the
+         configuration. The defect this exists to remove, shrunk rather than
+         gone. The holds never escaped in any version: their maximum x is 15.5
+         and the narrowest face band reaches 17, so they cannot. Figures of
+         1,576 and 128 were quoted here and are wrong — both came from counting
+         pixels beyond the rightmost *face-coloured* pixel on each row, which
+         the joints themselves cover, so the method reports escapes where the
+         rock is merely painted over.
          The face sat outside `#fx-wall-scroll`, so its edge was nailed to the
          screen while the texture slid past it, which reads as a window and not
          as rock. And the crop's two-pixel inset — a virtue on black, where it
@@ -462,7 +480,18 @@
          So: the face lives inside the scroll, the texture is clipped to the
          face's own silhouette, and the crop runs to the frame edge. The
          silhouette repeats every 8 units because that is the scroll distance,
-         and spans y -17 to 31 so the travel never reveals an end. -->
+         and spans y -17 to 31 so the travel never reveals an end.
+
+         **What the new colour sits between.** §Palette snapping asks this
+         before one is added and it was not asked at the time. Measured after,
+         over all 32 frames, counting wall-coloured pixels strictly inside the
+         torso: 632 pixels of #4A4038 arrive at the antialiased eye edge, where
+         a black-over-peach blend now lands nearer the face than to black,
+         peach or the joint grey. On `main` those same pixels snapped to
+         #30363D, so the artefact count is unchanged at about 62 a frame —
+         about half changed hue from cool grey to warm brown, and the torso's
+         top edge now snaps to the colour it is actually sitting on, which is
+         an improvement. Benign, and recorded because the rule is to ask. -->
     <g id="fx-wall-scroll">
       <g id="fx-wall-face" fill="#4A4038">
         <rect x="-4" y="-17" width="22" height="2"/>

@@ -82,16 +82,18 @@ frames are regenerated each time, since `out/` is gitignored.
 110,080-byte full screen above. Animations are authored and rendered at
 168x200, which is the stage band, and that is what a sprite update covers.
 
-| Animation    | Mean on the wire | Worst frame |   At 8fps | Ratio | % of link |
-| ------------ | ---------------: | ----------: | --------: | ----: | --------: |
-| `idle`       |            453 B |       956 B |  3.5 KB/s | 148:1 |     0.63% |
-| `thinking`   |            488 B |     1,228 B |  3.8 KB/s | 138:1 |     0.68% |
-| `asleep`     |            792 B |     1,208 B |  6.2 KB/s |  85:1 |     1.10% |
-| `typing`     |          1,246 B |     1,324 B |  9.7 KB/s |  54:1 |     1.73% |
-| `gym`        |          1,818 B |     2,052 B | 14.2 KB/s |  37:1 |     2.53% |
-| `bouldering` |          2,499 B |     2,696 B | 19.5 KB/s |  27:1 |     3.47% |
+| Animation         | Mean on the wire | Worst frame |   At 8fps | Ratio | % of link |
+| ----------------- | ---------------: | ----------: | --------: | ----: | --------: |
+| `permission-sign` |            331 B |       692 B |  2.6 KB/s | 203:1 |     0.46% |
+| `confused`        |            415 B |       780 B |  3.2 KB/s | 162:1 |     0.58% |
+| `idle`            |            453 B |       956 B |  3.5 KB/s | 148:1 |     0.63% |
+| `thinking`        |            488 B |     1,228 B |  3.8 KB/s | 138:1 |     0.68% |
+| `asleep`          |            792 B |     1,208 B |  6.2 KB/s |  85:1 |     1.10% |
+| `typing`          |          1,246 B |     1,324 B |  9.7 KB/s |  54:1 |     1.73% |
+| `gym`             |          1,818 B |     2,052 B | 14.2 KB/s |  37:1 |     2.53% |
+| `bouldering`      |          2,821 B |     3,008 B | 22.0 KB/s |  24:1 |     3.92% |
 
-**The busiest uses 3.47% of the measured link — 29x headroom.** `bouldering`
+**The busiest uses 3.92% of the measured link — 26x headroom.** `bouldering`
 scrolls its entire background every frame, the same shape as the road bike, and
 costs the most both on average and by worst single frame, which is the number a
 real-time link has to survive.
@@ -122,7 +124,7 @@ better.
 
 **This paragraph previously quoted a composite worst frame of roughly 24,000 B
 and called it 8% of the floor. Both numbers are now unsupportable.** It was
-anchored to a `bouldering` worst frame of 1,680 B, which is 2,696 B after the
+anchored to a `bouldering` worst frame of 1,680 B, which is 3,008 B after the
 animation rebuild; the floor it was a percentage of has been retired; and
 nothing in the tree composites a sprite into a full panel with a ticking cell,
 so the 24,000 B itself had no reproducer.
