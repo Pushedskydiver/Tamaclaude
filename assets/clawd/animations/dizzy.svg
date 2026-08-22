@@ -129,44 +129,54 @@
          that repeats every four is not a stagger, it is a metronome.
 
          So the amplitude varies across the twelve: two ordinary sways, two
-         smaller ones, then a deeper lurch and a slow recovery. Every value is
-         a multiple of 0.25 units — two whole device pixels — so nothing lands
-         on a fraction.
+         smaller ones, then a deeper lurch and a fast recovery. The values are
+         whole device pixels at the keyframes — eighths of a unit — though the
+         eased track passes through fractions between them; the palette snap
+         resolves those, per `docs/ANIMATION.md` §Palette snapping.
 
-         **The deep lurch measures 6 device pixels of body-over-feet offset,
-         held four frames, and that is deliberate.** It is the one figure in
-         this file a naive threshold should be expected to fail. What makes it
-         read as a lurch rather than as a sprite bolted on askew is that the
-         offset *arrives*: eight frames of accelerating drift and ten of
-         recovery, with all four legs staying under the torso throughout.
+         **The deep lurch is 5 device pixels of body-over-feet offset, passed
+         through in two frames, and both halves of that are the fix.** It was 6,
+         held four, and `animation-critic` ruled it needs-work on a measurement
+         nobody had taken: not the offset, but how much torso is left outboard
+         of the outer leg.
 
-         **The precedent this file cited twice does not exist.** Both earlier
-         versions said `idle` and `thinking` shipped six device pixels, or
-         7.6, in otherwise still animations. Neither did. `thinking`'s `sway`
-         and `idle`'s `lean-look` are both +/-0.25 units — two device pixels —
-         and the 6 and 0.95 figures in those files are the *rejected* versions
-         each records as a defect, quoted here as though they had shipped. What
-         both files record as the fix is both halves: amplitude cut to 0.25,
-         and the hold at the extreme removed.
+           minimum outer-leg inset, device pixels, measured at the torso's
+           bottom row against the four planted feet:
 
-         So here is the comparison, measured off the three bakes rather than
-         read off anyone's prose. Torso-edge excursion, in device pixels, and
-         the share of frames more than two from centre:
+             thinking   7    (never below)
+             idle       6    (never below)
+             dizzy      2    before this fix, on frames 63-66
+             dizzy      3    after, on frames 63-64 only
 
-           thinking  -2 .. +2    0 of 64    (0%)
-           idle      -4 .. +5   15 of 128  (12%)   <- the yawn, not the lean
-           dizzy     -5 .. +4   33 of 96   (34%)
+         At 2 the leg does not read as under the body — it reads as dropping
+         off the corner while the torso overhangs empty air on the other side.
+         And the deep pose was *held*: within 1.5 pixels of the extreme for ten
+         frames, the longest static-body run in the loop, at its worst point.
 
-         The span is `idle`'s span exactly, nine device pixels, and it arrives
-         the same way — as an event rather than a resting pose. What is three
-         times `idle` is the *rate*: this is off-centre on a third of its
-         frames, where `idle` is on an eighth.
+         The precedent is `thinking.svg`, and it is exact rather than
+         approximate. That file chose three quarters of a unit — six device
+         pixels — on the grounds that "the outer leg still had a quarter unit of
+         body over it at that offset, so nothing was standing off the edge",
+         and then recorded that the reasoning was sound and the conclusion still
+         wrong. This file had reproduced that value *and* that argument, word
+         for word, in the comment defending it.
 
-         That is the number to judge, and being off-centre is this animation's
-         subject rather than a defect in it — but that is a judgement for
-         `animation-critic`, and the `ship` on this file was given while these
-         comments claimed a precedent that says the opposite. Re-put with these
-         figures. Whatever it rules, the numbers above are the measured ones. */
+         Two earlier versions of this paragraph made it worse by citing `idle`
+         and `thinking` as having shipped six device pixels themselves. Neither
+         did; their sway tracks are a quarter unit, and the 6 and 0.95 in those
+         files are the rejected values each records as a defect. A third version
+         compared torso-edge excursion across the three, which conflates a
+         scale with a displacement — `idle`'s wide frames are its yawn getting
+         broader, not its body leaving its feet.
+
+         What survives all of that is the arrival, which was always the good
+         part: the offset builds over frames 57-63 and is gone by 75, legs under
+         the torso throughout. It now returns faster than it came, which is what
+         a stagger does. The constraint to hold on any future edit is the one
+         the critic named: **the outer leg keeps at least 3 device pixels of
+         body outboard of it, and the extreme is passed through in no more than
+         two or three frames.** Both are measurable from the bake; neither is a
+         matter of taste. */
       #wobble {
         animation: stagger 12s infinite ease-in-out;
       }
@@ -180,8 +190,9 @@
         41.66667% { transform: translate(0, 0); }
         50%       { transform: translate(0.25px, 0); }
         58.33333% { transform: translate(0, -0.25px); }
-        66.66667% { transform: translate(-0.75px, 0); }
-        75%       { transform: translate(-0.5px, -0.25px); }
+        66.66667% { transform: translate(-0.625px, 0); }
+        69.79167% { transform: translate(-0.375px, -0.125px); }
+        75%       { transform: translate(-0.125px, -0.25px); }
         83.33333% { transform: translate(0.5px, 0); }
         91.66667% { transform: translate(0.25px, -0.25px); }
         100%      { transform: translate(-0.5px, 0); }
@@ -190,14 +201,25 @@
       /* `idle`'s breath, about the hips, so the body settles onto planted legs
          rather than lifting off them.
 
-         Not on every frame. On 5 of the 96 — 5, 27, 59, 69 and 91 — the breath
-         and the stagger's -0.25px together clear one device-pixel row between
-         the torso and all four feet. `idle` does the same on 14 of 128 and
-         shipped that way; `thinking`, `confused`, `permission-sign` and
-         `asleep` are at zero, and `thinking.svg` states its zero as a measured
-         property. So this is inherited rather than introduced, and at half
-         `idle`'s rate, but it is a gap and this file should not claim
-         otherwise. Fixing it belongs with `idle`, in one pass over both. */
+         Not on every frame. On 6 of the 96 — 5, 27, 59, 66, 67 and 91 — the
+         breath and the stagger's vertical component together clear **one**
+         device-pixel row between the torso and all four feet.
+
+         Worth the exact number, because a draft of this note said `idle` "does
+         the same on 14 of 128" and that understates `idle` by an order of
+         magnitude. Measured: `idle` opens 1 to **9** device pixels across
+         frames 81-94, eight or more of them for seven consecutive frames.
+         Dizzy's is one row, on isolated single frames. `thinking`, `confused`,
+         `permission-sign` and `asleep` are at zero, and `thinking.svg` states
+         its zero as a measured property.
+
+         So the corpus is inconsistent and this is its mildest instance, which
+         is why it is recorded rather than fixed. `docs/ANIMATION.md` §Animating
+         the whole sprite is not animating is on this side of it — "the gap that
+         opens between body and legs is what the eye reads as a breath" — and
+         `thinking.svg` takes the opposite line. That disagreement wants
+         settling in the doc before either animation is edited, and `idle` is
+         the one that would change. */
       #breathe {
         transform-origin: 7.5px 13px;
         animation: breathe 2s infinite alternate ease-in-out;
