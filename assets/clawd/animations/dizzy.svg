@@ -23,8 +23,13 @@
     one-pixel steps across the top edge — is in `PLANS.md` §Confused and in
     `confused.svg`, not in `ANIMATION.md`; an earlier version of this line put
     both at the same citation and half of it is not there. The wobble is
-    translation against planted legs, on multiples of 0.25 units — two device
-    pixels — so no edge lands on a fraction. The range is -0.75 to +0.5 units,
+    translation against planted legs. Its keyframe values are multiples of 0.25
+    units — two device pixels — but it is eased, so the track passes through
+    fractional positions between them and most frames land on one; what makes
+    that safe is the palette snap resolving the edge after the fact, per
+    `docs/ANIMATION.md` §Palette snapping, and not the values. The whole-pixel
+    rule an earlier version of this line invoked was repealed by §Ease, don't
+    step. The range is -0.75 to +0.5 units,
     which is -6 to +4 device pixels and not the symmetric half-unit this line
     claimed before the stagger was rewritten; see §the deep lurch below.
 
@@ -127,24 +132,34 @@
          read as a lurch rather than as a sprite bolted on askew is that the
          offset *arrives*: eight frames of accelerating drift and ten of
          recovery, with all four legs staying under the torso throughout.
-         The precedent is about dwell, not amplitude, and this file had it
-         wrong. `thinking` shipped six device pixels; `idle` shipped 0.95 units
-         — 7.6, and its own comment makes a point of that not being a whole
-         pixel. Two numbers, not "the same number".
 
-         What both files record as the defect is *sitting* at the extreme:
-         `thinking` held its lean for six frames and was near it on 34 of 64,
-         `idle` sat within a pixel of its own for fifteen. Here the stagger
-         track is within a pixel of -6 on 7 frames of 96, four of them at -6
-         itself. Those are the three files' own figures rather than one metric
-         applied to all three — the tracks are not comparable frame for frame,
-         and every attempt this branch made to compare them produced a
-         different percentage.
+         **The precedent this file cited twice does not exist.** Both earlier
+         versions said `idle` and `thinking` shipped six device pixels, or
+         7.6, in otherwise still animations. Neither did. `thinking`'s `sway`
+         and `idle`'s `lean-look` are both +/-0.25 units — two device pixels —
+         and the 6 and 0.95 figures in those files are the *rejected* versions
+         each records as a defect, quoted here as though they had shipped. What
+         both files record as the fix is both halves: amplitude cut to 0.25,
+         and the hold at the extreme removed.
 
-         Taking this to 5 would leave the lurch one pixel deeper than an
-         ordinary sway, which flattens the beat that makes the twelve seconds
-         honest — the wrong side of the trade for one device pixel. Measured,
-         judged, kept. */
+         So here is the comparison, measured off the three bakes rather than
+         read off anyone's prose. Torso-edge excursion, in device pixels, and
+         the share of frames more than two from centre:
+
+           thinking  -2 .. +2    0 of 64    (0%)
+           idle      -4 .. +5   15 of 128  (12%)   <- the yawn, not the lean
+           dizzy     -5 .. +4   33 of 96   (34%)
+
+         The span is `idle`'s span exactly, nine device pixels, and it arrives
+         the same way — as an event rather than a resting pose. What is three
+         times `idle` is the *rate*: this is off-centre on a third of its
+         frames, where `idle` is on an eighth.
+
+         That is the number to judge, and being off-centre is this animation's
+         subject rather than a defect in it — but that is a judgement for
+         `animation-critic`, and the `ship` on this file was given while these
+         comments claimed a precedent that says the opposite. Re-put with these
+         figures. Whatever it rules, the numbers above are the measured ones. */
       #wobble {
         animation: stagger 12s infinite ease-in-out;
       }

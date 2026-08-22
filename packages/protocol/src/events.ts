@@ -4,9 +4,11 @@
  * Field names are ours, not Claude Code's: the wire carries `session_id`,
  * `hook_event_name` and `tool_name`. The intent is that `packages/hooks`
  * translates once at the boundary, so everything downstream speaks one shape
- * and an upstream payload change lands in one file — **but that translation is
- * not written yet**. `packages/hooks` currently reads nothing from stdin and
- * emits a hardcoded placeholder. This is the target shape, not a live one.
+ * and an upstream payload change lands in one file. That is now live:
+ * `translate()` in `packages/hooks/src/index.ts` reads stdin and maps
+ * `session_id`, `hook_event_name`, `tool_name`, `agent_id`, `agent_type` and
+ * `error_type` onto the fields below. This block said the translation was
+ * unwritten and the shape aspirational for as long as it has been neither.
  *
  * Verified against code.claude.com/docs/en/hooks.md rather than assumed —
  * `BUILD_PLAN.md` Stage 3 gated the state machine on exactly that, because a

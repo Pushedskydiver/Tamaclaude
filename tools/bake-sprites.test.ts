@@ -267,10 +267,14 @@ describe("dizzy's orbiting stars", () => {
     // bake. Three runs of 320 on every frame, or a star has merged with the
     // body or with another star.
     const frames = await loadSprite('dizzy');
+    // `toEqual` against a list derived from `frames` passes on an empty list,
+    // which is the shape a broken loader would hand back.
+    expect(frames.length).toBeGreaterThan(0);
     const stars = frames.map(
       (sprite) =>
-        componentSizes(sprite.mask, 168).filter((size) => size === STAR_PIXELS)
-          .length,
+        componentSizes(sprite.mask, sprite.frame.width).filter(
+          (size) => size === STAR_PIXELS,
+        ).length,
     );
     expect(stars).toEqual(frames.map(() => 3));
   });

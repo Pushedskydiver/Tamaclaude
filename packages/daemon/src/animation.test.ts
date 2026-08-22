@@ -59,9 +59,11 @@ describe('animationFor', () => {
 
   it('gives FAILED its own art, so no state is on the fallback', () => {
     // The last of the three. `FALLBACK` is now reached only from `WORKING` —
-    // with an unmapped tool, or with no tool at all; the two tests above this
-    // one cover both — which is the case it was written for: a panel that says
-    // "busy, unspecified" rather than claiming nothing is happening.
+    // with an unmapped tool, or with no tool at all. Both paths are covered by
+    // "falls an unknown tool back to thinking rather than throwing" and "falls
+    // back when WORKING carries no tool at all" above. That is the case it was
+    // written for: a panel that says "busy, unspecified" rather than claiming
+    // nothing is happening.
     expect(animationFor('FAILED')).toBe('dizzy');
     // Against `FALLBACK` rather than the literal `'thinking'`. The two are the
     // same string today, and hard-coding it would mean retargeting the

@@ -14,10 +14,12 @@ wanted, so there was no way to tell a bug from a choice.
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
-Eight of the nine carry one; only `gym` files its bar under Effects, which is a
-distinction not worth enforcing. Two constraints apply to all of them, from
-`docs/ANIMATION.md`: no rotation, and every transform must land on a whole
-device pixel at the render scale.
+Eight of the nine carry one; `gym` alone has none, because its bar is described
+under Action rather than filed as a prop, which is a distinction not worth
+enforcing. One constraint applies to all of them, from `docs/ANIMATION.md`: no
+rotation. The second constraint this paragraph used to name — that every
+transform land on a whole device pixel at the render scale — was repealed by
+§Ease, don't step once palette snapping landed, and stood here after it.
 
 ---
 
@@ -385,8 +387,10 @@ drift off the viewer: at that point this is `thinking` with a different prop.
 
 Clawd has taken a knock and is seeing stars.
 
-`data-loop-seconds="12"`. **Built**, ahead of the two Tier B entries above it
-and ahead of `sweeping`. It was catalogued Tier B and cuttable, on the grounds
+`data-loop-seconds="12"`. **Built**, ahead of `sweeping` and the Model 3 —
+`BUILD_PLAN.md` items 8 and 6. (An earlier line here said "ahead of the two Tier
+B entries above it"; the two plans above this one are both Tier A and both
+shipped first.) It was catalogued Tier B and cuttable, on the grounds
 that `packages/daemon/src/animation.ts` could fall `FAILED` back to `thinking`
 and stay honest about something being wrong. That reasoning was sound and it
 was pulled forward anyway: `FAILED` was the last state on the fallback, so a

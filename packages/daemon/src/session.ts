@@ -40,8 +40,9 @@ export type Session = {
    * `authentication_failed`. Kept rather than collapsed into `FAILED` because
    * it arrives exactly once and cannot be recovered afterwards.
    *
-   * Nothing reads it yet. `resolve.ts` does not return it, the quip is keyed
-   * on the state alone, and `FAILED` shows `dizzy` for all three — one state,
+   * Nothing reads it yet. `resolve.ts` returns whole `Session` objects, so it
+   * does cross that boundary — but the quip is keyed on the state alone and
+   * `FAILED` shows `dizzy` for all three of them. One state,
    * one picture, which is the split this module and `animation.ts` are built
    * on. Storing it keeps the option of a rate-limit screen open; it does not
    * mean one exists.
