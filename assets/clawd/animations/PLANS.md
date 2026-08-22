@@ -16,10 +16,15 @@ following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
 Eight of the nine carry one; `gym` alone has none, because its bar is described
 under Action rather than filed as a prop, which is a distinction not worth
-enforcing. One constraint applies to all of them, from `docs/ANIMATION.md`: no
-rotation. The second constraint this paragraph used to name — that every
-transform land on a whole device pixel at the render scale — was repealed by
-§Ease, don't step once palette snapping landed, and stood here after it.
+enforcing. Both constraints this paragraph used to name have since been repealed by
+`docs/ANIMATION.md`, and it took two passes to notice. Palette snapping
+retired the whole-device-pixel rule and the rotation ban together — §Render
+scale says so in as many words, "Rotation is now allowed" — and a correction
+that removed the first promoted the second to sole universal constraint.
+`gym`'s raised claw is built on a -73deg rotation. What is left is a
+judgement rather than a rule, and §What a claw cannot do is where it lives:
+a rotation has to buy a shape, which on a 2x2 block turned a few degrees it
+does not.
 
 ---
 

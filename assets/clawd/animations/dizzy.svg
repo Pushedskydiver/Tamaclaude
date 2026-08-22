@@ -62,11 +62,17 @@
     round the same way and change nothing, because the direction is a property
     of the repeating digits rather than the precision. What collapses the orbit
     to an even 2/2/2 — and takes the animation with it — is truncating instead
-    of rounding (`16.666666%` is 499.99998ms, the other side of the sample), or
-    writing enough digits that the boundary lands exactly on it: ten decimals
-    give 250.00000000 and 500.00000000. An earlier version of this note blamed
-    the digit count, which warns the next editor off a harmless change and
-    leaves the destructive one unnamed.
+    of rounding: `16.666666%` is 499.99998ms, the other side of the sample.
+
+    Nothing else does. Ten decimals give 249.999999999 and 500.000000001, and
+    fifteen significant digits give 249.99999999999991 and 500.00000000000011 —
+    the same side every time, because the rounding direction is a property of
+    the repeating digits and no terminating decimal lands on the sample. This
+    note has now blamed the digit count twice: first by claiming any extra digit
+    breaks it, then by claiming ten decimals do. Both warned the next editor off
+    a harmless change while leaving the one destructive edit — truncating —
+    beside it. The second version printed its own figures to eight decimals and
+    read the rounding as an exact landing.
 
     It reads better this way. Measured over the loop: the gaps are 4/4/4 on
     all 48 odd frames and 3/4/5 on all 48 even ones, and one or two of the three
@@ -151,15 +157,23 @@
 
              thinking   7    (never below)
              idle       6    (never below)
-             dizzy      2    before this fix, on frames 63-66
+             dizzy      2    before this fix, on frames 63-66 at row 174 —
+                              63-67 taking each frame's own bottom row, the same
+                              sub-pixel corner case noted below
              dizzy      3    after, on frames 63-64 at every torso row
                               (frame 65 also reads 3 on its bottom row alone,
                               where the sub-pixel edge drops one corner pixel)
 
          At 2 the leg does not read as under the body — it reads as dropping
          off the corner while the torso overhangs empty air on the other side.
-         And the deep pose was *held*: within 1.5 pixels of the extreme for ten
-         frames, the longest static-body run in the loop, at its worst point.
+         And the deep pose was *held*: four frames at the extreme itself and
+         eight within 1.5 pixels of it, at the worst point in the loop. (A draft
+         of this line said ten frames and called it the longest static run in
+         the loop. It is eight, and it is not the longest — an ordinary sway
+         sits at one position for five frames, and one 1.5-pixel band runs
+         thirteen. What made the lurch worse than either was where it held, not
+         how long.) After the fix: two frames at the extreme, seven within 1.5
+         pixels of it.
 
          The precedent is `thinking.svg`, and it is exact rather than
          approximate. That file chose three quarters of a unit — six device
@@ -178,21 +192,29 @@
          broader, not its body leaving its feet.
 
          What survives all of that is the arrival, which was always the good
-         part: the offset builds over frames 57-63 and is gone by 75, legs under
+         part: the offset builds from frame 59 to its extreme at 63, legs under
          the torso throughout.
 
-         **It does not return faster than it came — it rebounds faster and then
-         settles slower**, which a draft of this note had backwards. Measured
-         from the bake: neutral at frame 54, the extreme on 63-64, neutral again
-         at 75 — nine frames in and eleven out. The two frames after the extreme
-         cover 2 of the 5 device pixels, and the remaining 3 take nine. That is
-         what a knock does, and it is a better description than the one it
-         replaces; the sentence matters because it is the one a future editor
-         would cite to slow the recovery further. The constraint to hold on any future edit is the one
-         the critic named: **the outer leg keeps at least 3 device pixels of
-         body outboard of it, and the extreme is passed through in no more than
-         two or three frames.** Both are measurable from the bake; neither is a
-         matter of taste. */
+         **It does not return faster than it came — it rebounds hard and then
+         settles slowly**, which a draft of this note had backwards. Measuring
+         the descent against the body's resting position: first frame off rest
+         59, extreme -5 on 63-64, back at rest by 73. Four or five frames down
+         and nine back up, so the return is about twice the descent.
+
+         Do not quote a single pair of frame counts here without saying what
+         "neutral" means. Against the loop's mean position the same interval
+         reads nine in and eleven out; against the resting position it reads
+         five and nine. Both say the return is longer, which is the claim, and
+         the disagreement between them is the reason a draft got the direction
+         backwards in the first place. What is baseline-free: the two frames
+         after the extreme cover 2 of the 5 device pixels and the remaining 3
+         take nine.
+
+         The constraint to hold on any future edit is the one the critic named:
+         **the outer leg keeps at least 3 device pixels of body outboard of it,
+         and the extreme is passed through in no more than two or three
+         frames.** Both are measurable from the bake; neither is a matter of
+         taste. */
       #wobble {
         animation: stagger 12s infinite ease-in-out;
       }
