@@ -435,7 +435,6 @@
        The shadow is drawn at zero opacity: he is on a wall, and at half
        opacity it would darken every joint and hold that passed behind his
        feet, which is a smear rather than a shadow. -->
-  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0"/>
 
   <g id="body-color-group" fill="#DE886D">
     <!-- The arms sit inside #climb-sway and outside #climb-bob, so they lean

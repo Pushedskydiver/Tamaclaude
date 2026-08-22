@@ -11,10 +11,12 @@
  *
  * `SOURCE` is a hash of the SVG this was baked from, comments and whitespace
  * excluded. `tools/bake-sprites.test.ts` fails when it stops matching, which is
- * how "edited the animation, forgot to re-bake" is caught. Four of the six were
- * stale that way, carrying holes where Clawd's eyes are.
+ * how a bake that does not match its source is caught. `svg2frames` writes the
+ * same hash beside the frames it renders, and `bake-sprites.ts` refuses to bake
+ * when the two disagree — so this stamp describes the pixels, not just the file
+ * that happened to be on disk at the time.
  */
-export const SOURCE = 'e4d893588b231288';
+export const SOURCE = '8e539966afda9dae';
 export const WIDTH = 168;
 export const HEIGHT = 200;
 

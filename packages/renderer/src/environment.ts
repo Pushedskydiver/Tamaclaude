@@ -49,6 +49,14 @@ type Scheme = {
   readonly sand: number;
   readonly pool: number;
   readonly rock: number;
+  /**
+   * The ground where Clawd is standing on it.
+   *
+   * Per scheme rather than a darkening of `sand`, because a multiply loses the
+   * shadow exactly where it is needed most: at night the sand is already dark
+   * and 30% off it is invisible. Measured on a prototype before this existed.
+   */
+  readonly shadow: number;
   readonly stars: boolean;
   /**
    * Text colour that reads on this sky.
@@ -72,6 +80,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(70, 84, 118),
     sand: rgb565(126, 108, 96),
+    shadow: rgb565(84, 70, 64),
     pool: rgb565(92, 106, 126),
     rock: rgb565(72, 64, 68),
     stars: false,
@@ -86,6 +95,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(58, 110, 150),
     sand: rgb565(178, 156, 128),
+    shadow: rgb565(126, 108, 88),
     pool: rgb565(96, 154, 168),
     rock: rgb565(96, 88, 84),
     stars: false,
@@ -100,6 +110,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(56, 54, 92),
     sand: rgb565(112, 88, 82),
+    shadow: rgb565(74, 56, 56),
     pool: rgb565(84, 78, 104),
     rock: rgb565(58, 50, 56),
     stars: false,
@@ -114,6 +125,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(16, 26, 52),
     sand: rgb565(52, 50, 58),
+    shadow: rgb565(30, 28, 36),
     pool: rgb565(34, 44, 70),
     rock: rgb565(26, 26, 34),
     stars: true,
@@ -269,6 +281,53 @@ function paintGround(target: Framebuffer, layer: Layer): void {
   paintRock(target, { x: stage.x + 6, base: horizon + sea + 6 }, scheme.rock);
 }
 
+/**
+ * The ground darkening under Clawd's feet.
+ *
+ * Every animation used to draw its own, as `#ground-shadow` inherited from
+ * `assets/clawd/base.svg` — black at `opacity="0.5"`. None of them ever
+ * rendered it. `svg2frames` captures with `omitBackground` and `snapToPalette`
+ * drops a pixel that snaps to the background and arrives part-transparent,
+ * which is exactly what a half-opacity black over nothing does. Eight
+ * animations declared a shadow and eight drew zero pixels of it, invisible for
+ * as long as the stage behind him was black.
+ *
+ * Drawing it here fixes the mechanism and the medium at once. A per-animation
+ * flat colour could survive the snap but could not know what it is falling on,
+ * and this panel has four grounds; the renderer does know. It is also one
+ * definition rather than eight, which `docs/ANIMATION.md` §Clawd lives
+ * somewhere gives as the reason the scenery is a renderer layer at all.
+ *
+ * The geometry is base.svg's own shadow rect — units 3 to 12 of the character,
+ * on the line its feet stand on — so it lands where every animation already
+ * expected it. It is drawn for every animation including `bouldering`, whose
+ * wall is a scrolling backdrop rather than a change of position: measured, its
+ * lowest drawn pixel is unit 15.13 against 14.88 for the rest, so its feet are
+ * on the same line and a shadow under them is not a crab hovering up a cliff.
+ */
+function paintContactShadow(
+  target: Framebuffer,
+  at: { readonly layout: StageLayout; readonly orientation: Orientation },
+  colour: number,
+): void {
+  const slot = spriteSlots(at.layout, at.orientation)[0];
+  if (slot === undefined) return;
+  const scale = stageScale(at.layout);
+  const row = groundRow(at.layout, at.orientation);
+  // base.svg: `ground-shadow` is x=3 width=9 on a canvas whose left edge is
+  // unit -3, so it starts six units into the raster.
+  fillRect(
+    target,
+    {
+      x: slot.x + Math.round(6 * scale),
+      y: row,
+      width: Math.round(9 * scale),
+      height: Math.max(1, Math.round(scale / 4)),
+    },
+    colour,
+  );
+}
+
 /** How far the scenery reaches. See `Scene.environment`. */
 export const ENVIRONMENT_EXTENTS = ['stage', 'panel'] as const;
 
@@ -299,4 +358,5 @@ export function paintEnvironment(
   const layer: Layer = { into: region.into, horizon, scheme };
   paintSky(target, layer);
   paintGround(target, layer);
+  paintContactShadow(target, at, scheme.shadow);
 }

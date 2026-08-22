@@ -475,7 +475,6 @@
   </defs>
 
   <!-- ── base geometry: assets/clawd/base.svg, regrouped, never redrawn ─── -->
-  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
     <!-- Planted. Out of the body group on purpose: these fold about the feet

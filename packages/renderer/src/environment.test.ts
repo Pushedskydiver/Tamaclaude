@@ -98,6 +98,48 @@ describe('paintEnvironment', () => {
     });
   }
 
+  it('darkens the ground where Clawd is standing on it', () => {
+    // Every animation used to declare its own `#ground-shadow`, inherited from
+    // base.svg as black at half opacity — and every one of the eight drew zero
+    // pixels of it, because that is exactly what `snapToPalette` drops. It was
+    // invisible for as long as the stage behind him was black. Drawn here, it
+    // cannot be dropped and it can know which ground it is falling on.
+    const target = paint('landscape', 'panel');
+    const row = groundRow('hero', 'landscape');
+    const slot = spriteSlots('hero', 'landscape')[0];
+    expect(slot).toBeDefined();
+    const scale = stageScale('hero');
+    const at = (unit: number): number | undefined =>
+      target.pixels[
+        row * target.width + Math.round((slot?.x ?? 0) + unit * scale)
+      ];
+    // base.svg puts the shadow at units 3..12 of a canvas starting at -3, so
+    // it spans 6..15 of the raster. Sample inside it, and beside it.
+    const beneath = at(10);
+    const beside = at(2);
+    expect(beneath).toBeDefined();
+    expect(beside).toBeDefined();
+    expect(beneath).not.toBe(beside);
+    // and it is a band, not a stray pixel
+    expect(at(7)).toBe(beneath);
+    expect(at(13)).toBe(beneath);
+  });
+
+  it('gives every sky its own shadow, rather than one darkening', () => {
+    // A multiply would vanish at night, where the sand is already dark. That
+    // was measured on a prototype and is why `Scheme` carries the tone.
+    const row = groundRow('hero', 'landscape');
+    const slot = spriteSlots('hero', 'landscape')[0];
+    expect(slot).toBeDefined();
+    const at = (time: (typeof TIMES_OF_DAY)[number]): number => {
+      const target = paint('landscape', 'panel', time);
+      const x = Math.round((slot?.x ?? 0) + 10 * stageScale('hero'));
+      return target.pixels[row * target.width + x] ?? 0;
+    };
+    const tones = TIMES_OF_DAY.map((time) => at(time));
+    expect(new Set(tones).size).toBe(TIMES_OF_DAY.length);
+  });
+
   it('draws a continuous sky across the whole panel', () => {
     // The first comparison of this was composited from two separate renders
     // and the bands stepped where the stage met the text. Alex spotted it. One
