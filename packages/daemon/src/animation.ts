@@ -21,6 +21,8 @@ export const ANIMATIONS = [
   'bouldering',
   'idle',
   'asleep',
+  'confused',
+  'permission-sign',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -64,19 +66,25 @@ const TOOL_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
 /**
  * Every state except `WORKING`, which needs the tool to choose.
  *
- * The three attention states share the fallback because their art — the
- * permission sign, the dizzy spin and the confused stare — is Tier A in the
- * spec's build order and none of it is drawn yet. **That is a placeholder, not
- * the design.** What makes those states unmissable meanwhile is the strip tint
- * and the pack's mapped quip, both of which key on the state rather than on
- * the raster, so nothing about the priority rules is waiting on the art.
+ * `FAILED` is the last state still on the fallback. Its art is the dizzy spin,
+ * which the screen spec tiers below the other two and `BUILD_PLAN.md` schedules
+ * behind `sweeping` — so it is cuttable, and until it is drawn `thinking` is
+ * the honest thing to show: "busy, unspecified" rather than a claim that
+ * nothing is happening. What makes the state unmissable meanwhile is the strip
+ * tint and the pack's mapped quip, both of which key on the state rather than
+ * on the raster.
+ *
+ * The other two are drawn. They are deliberately different pictures — the
+ * permission sign holds up a `?` on a plate, `confused` blinks a prompt caret
+ * — because both are attention states, both can be the hero, and a viewer
+ * glancing at the panel must not read them as the same screen.
  */
 const STATE_ANIMATIONS: Readonly<
   Record<Exclude<SessionState, 'WORKING'>, AnimationName>
 > = {
-  NEEDS_PERMISSION: FALLBACK,
+  NEEDS_PERMISSION: 'permission-sign',
   FAILED: FALLBACK,
-  WAITING: FALLBACK,
+  WAITING: 'confused',
   THINKING: 'thinking',
   IDLE: 'idle',
   ASLEEP: 'asleep',

@@ -44,9 +44,29 @@ describe('animationFor', () => {
     expect(animationFor('IDLE', 'Bash')).toBe('idle');
   });
 
+  it('gives the two answered attention states their own art', () => {
+    // Both were on the fallback until the art existed, which meant the panel
+    // showed "thinking" while Clawd was actually blocked on a human. They are
+    // deliberately different pictures from each other as well: both are
+    // attention states, both can be the hero, and a glance must not read them
+    // as one screen.
+    expect(animationFor('NEEDS_PERMISSION')).toBe('permission-sign');
+    expect(animationFor('WAITING')).toBe('confused');
+    expect(animationFor('NEEDS_PERMISSION')).not.toBe(animationFor('WAITING'));
+  });
+
+  it('leaves FAILED on the fallback, deliberately', () => {
+    // `dizzy` is tiered below the other two and is cuttable. Until it exists
+    // `thinking` is the honest answer — "busy, unspecified" rather than a
+    // claim that nothing is happening, which is the direction the fallback
+    // rule exists to avoid being wrong in.
+    expect(animationFor('FAILED')).toBe('thinking');
+  });
+
   it('returns a built animation for every state', () => {
-    // The attention states have no art yet, so this is really asserting that
-    // none of them returns a name with no SVG behind it.
+    // Asserts that no state returns a name with no SVG behind it. It caught
+    // nothing when the attention states shared the fallback; it is load-bearing
+    // now that two of them name their own art.
     const unbuilt = SESSION_STATES.map((state) => animationFor(state)).filter(
       (name) => !ANIMATIONS.includes(name),
     );

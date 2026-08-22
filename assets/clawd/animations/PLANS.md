@@ -253,17 +253,34 @@ existing pipeline. Decide to take it early rather than on 22 September.
     _and_ `scaleX(2.85)`, which puts the claw tip at about (13.7, 4.3), 1.74
     units clear of the head. Use that. `docs/ANIMATION.md` §What a claw cannot
     do carries the arithmetic.
-  - **Plate 5 wide by 6 tall**, its bottom edge at the claw tip and therefore
-    around y = -1.7 to 4.3: clear of the torso top at y=6, and clear of the
-    -4 safe-area line. Fill `#C9D1D9`, which is the tone `thinking`'s bubble
-    already proves readable against both the day sky and the night one.
-  - **Glyph `?`, 3 wide by 5 tall**, fill `#0D1117`, with a real gap row
+  - **Plate 5 wide by 7 tall**, spanning y -2 to 5: clear of the torso top at
+    y=6, and two units inside the -4 safe-area line. Fill `#C9D1D9`, the tone
+    `thinking`'s bubble already proves readable against both the day sky and
+    the night one. Seven rather than six because a 5-tall glyph needs a whole
+    unit of border top _and_ bottom.
+  - **Glyph `?`, 3 wide by 5 tall**, fill `#000000`, with a real gap row
     between stem and dot. Five rows is the minimum: at three the dot merges
     into the stem and it degenerates, which is the same finding `asleep`
     records for the Z at three rows.
-  - **The post overlaps the claw by a whole unit.** §Props need contact — an
-    unheld prop reads as hovering, and `gym`'s bar racked three units clear
-    read as a bar floating above a crab.
+  - **Black, not a new near-black.** A first version used `#0D1117` and it
+    stitched a dark keyline round the arm, torso and legs on every frame — up
+    to 418 pixels. §Palette snapping is explicit that every declared colour
+    becomes a snap target for every other colour's edges, and `#0D1117` sits
+    nearer a faint peach edge than the background black does, so it captured
+    the pixels the transparency rule needs to resolve to the background. Use a
+    tone the document already declares.
+  - **No post.** The extended claw crosses the plate's lower corner directly,
+    which is the contact §Props need contact asks for — an unheld prop reads as
+    hovering, and `gym`'s bar racked three units clear read as a bar floating
+    above a crab. A post was planned and is unnecessary once the arm reaches.
+  - **The sign and the arm sit outside the breath.** He holds it steady while
+    his body breathes underneath — what a person does with a placard, and the
+    only way the plate stays on whole device pixels. Inside the breath group
+    its edges land on fractions, and the midpoint of `#C9D1D9` over a dark
+    glyph is nearer `#DE886D` than either, so every soft edge snapped to
+    Clawd's own body colour and drew an orange keyline through the `?`. It cost
+    2.8x on the wire as well. Same defect, same cause, as the boot splash's
+    wordmark before that was drawn as rectangles.
 - **Effects.** None. No shake, no glow, no colour cycling.
 
 **Not wanted:** a claw rotated but not extended — §What a claw cannot do, an
@@ -303,15 +320,34 @@ about how often `Notification` fires. Do not spend budget on the strength of it.
   left one unit down, right one unit up. That is `gym`'s technique and it is
   what carries the head-cock with no rotation anywhere. Two blinks per loop,
   well apart.
-- **Props.** A prompt caret: a 3x1 rect above and to the right of his head,
-  `#C9D1D9`, blinking on a `steps(1)` track at roughly a one-second cycle. It
-  is the universal "type something" and this is a device for a person who
-  lives in a terminal. It is also nothing like `thinking`'s 9x5 bubble with a
-  tail and three cyan dots, which is the real separator: prop _mass_ and
-  silhouette are what a glance reads, not eye direction.
+- **Props.** A prompt caret above and to the right of his head, blinking on a
+  `steps(1)` track at a one-second cycle. It is the universal "type something"
+  and this is a device for a person who lives in a terminal. It is also nothing
+  like `thinking`'s 9x5 bubble with a tail and three cyan dots, which is the
+  real separator: prop _mass_ and silhouette are what a glance reads, not eye
+  direction.
+
+  **Two tones, and it has to be.** A bare `#C9D1D9` bar measured 1.31:1 against
+  the day sky and 1.80:1 against dawn — invisible, on the path the daemon
+  actually takes. `thinking`'s bubble survives the same colour only because it
+  is a 9x5 mass spanning three sky bands with a cyan dot inside it. So the
+  caret is a `#0D1117` block with a `#C9D1D9` core: the block carries the pale
+  skies, the core the dark one, and it reads 8:1 or better at all four.
+
 - **Silhouette.** The asymmetric claws — one riding a unit high, one a unit low
   — are what stop this being `idle` with a glyph. `asleep` needed the same
   thing and solved it the same way, with claws hanging two art pixels low.
+  Rendering it with all four offsets zeroed is indistinguishable from `idle`,
+  so this is doing real work.
+
+  **They tilt the same way as the eyes, not against them.** The first version
+  had the claws counter-tilting, on the reasoning that a level body under a
+  cocked eye line would read as a cocked head. It does not — there is no neck
+  to absorb an opposing shoulder line, so the two cues cancel into a shear and
+  it reads as a lopsided crab. All four tilting together is a rotation
+  approximated in whole units, which is what §Scale by size asks for in place
+  of an actual rotation.
+
 - **Effects.** None.
 
 **Not wanted:** a thought bubble in any form, or any prop with a tail. Any

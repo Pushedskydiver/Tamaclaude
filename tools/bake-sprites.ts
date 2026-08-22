@@ -204,10 +204,18 @@ async function bake(page: Page, name: string): Promise<void> {
 async function writeTable(names: readonly string[]): Promise<void> {
   const path = resolve(OUT_DIR, 'index.ts');
   const source = await readFile(path, 'utf8');
+  // Quoted only where the name is not a bare identifier, which is what
+  // prettier's default `quoteProps: "as-needed"` also settles on — so the file
+  // this writes survives a format unchanged. `permission-sign` is the first
+  // name to need it: `checked()` below allows hyphens and anticipated the
+  // *space* in "permission sign", but an unquoted `permission-sign:` key is a
+  // syntax error and took the build down with six parse errors.
+  const key = (name: string): string =>
+    /^[A-Za-z_$][\w$]*$/.test(name) ? name : `'${name}'`;
   const table =
     'const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {\n' +
     names
-      .map((name) => `  ${name}: () => import('./${name}.data.js'),`)
+      .map((name) => `  ${key(name)}: () => import('./${name}.data.js'),`)
       .join('\n') +
     '\n};';
   const list =
@@ -234,9 +242,12 @@ async function writeTable(names: readonly string[]): Promise<void> {
  * hand-maintained file this tool edits rather than owns. Failing here costs a
  * rerun; failing there costs repairing a file the header says is maintained.
  *
- * It is also what lets the generated key stay unquoted, which matters because
- * prettier strips unnecessary quotes — a quoted key would be rewritten on the
- * next format and put the generator back out of step with the file it writes.
+ * It does not make every name a bare identifier, and `writeTable` above is
+ * where that is handled: a hyphen is allowed here because `permission-sign` is
+ * a reasonable filename, but it cannot be an unquoted object key. Prettier's
+ * default `quoteProps` is "as-needed", so quoting exactly the names that
+ * require it is also what a format would settle on, and the generator stays in
+ * step with the file it writes.
  */
 function checked(name: string): string {
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
