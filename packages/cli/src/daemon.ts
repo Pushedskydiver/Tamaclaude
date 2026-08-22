@@ -261,7 +261,7 @@ function messageFor(
  * The frames for an animation, or none if it has not been baked.
  *
  * `animationFor` maps the seven session states and every `PreToolUse.tool_name`
- * onto the six names in `ANIMATIONS`, and all six are baked — so this guard
+ * onto the nine names in `ANIMATIONS`, and all nine are baked — so this guard
  * cannot fire today, and saying otherwise would be inventing a hazard.
  *
  * Typed `AnimationName` rather than `string` on purpose: adding `dizzy` to
@@ -469,15 +469,16 @@ async function paintOnce(
   //
   // `framesFor` resolves an unbaked name to nothing rather than throwing, and
   // the empty check below is what that buys. Both are currently unreachable:
-  // `ANIMATIONS` and `SPRITE_NAMES` are the same eight names, so every name
+  // `ANIMATIONS` and `SPRITE_NAMES` are the same nine names, so every name
   // this can produce has data behind it. They are kept because the two lists
   // are maintained in different packages by different tools — `animation.ts`
   // by hand, `sprites/index.ts` by `bake-sprites.ts` — and the failure mode
   // when they drift is a panel that throws mid-frame rather than one that
   // shows an empty stage for a beat.
   //
-  // An earlier version of this comment said three states still fall back to
-  // `thinking`. One does: `FAILED`, until `dizzy` is drawn.
+  // Earlier versions of this comment said three states fall back to
+  // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
+  // reached only by `WORKING` with a tool nobody has mapped.
   const wanted = animationFor(panel.state, panel.tool);
   const frames = await framesFor(wanted);
   const showing =

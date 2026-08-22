@@ -31,8 +31,13 @@
     twelve discrete cells on whole units, stepped with `steps(1)`.
 
     Twelve is the number that makes the phasing work. The orbit is 3s — 24
-    frames — so twelve cells is two frames each, and three stars four cells
-    apart are evenly spaced. Three on a four second loop cannot be evenly
+    frames — so twelve cells is two frames each, and the three stars sit four
+    cells apart. They do not step in unison: -1s and -2s are a third and two
+    thirds of a 3s period, which no float represents exactly, so `steps(1)`
+    resolves them on different frames and the spacing alternates 4/4/4 and
+    3/4/5. That reads better than the alternative — one star advances per
+    frame rather than all three every other frame — but it is not the even
+    spacing an earlier version of this note claimed. Three on a four second loop cannot be evenly
     phased at all, because 32/3 is not an integer.
 
     ── The eyes ───────────────────────────────────────────────────────────
@@ -54,43 +59,65 @@
          1.041667%; the 3s orbit inside it is 24 frames, and 12s / 3s is 4, so
          it tiles exactly and the loop seam is clean. */
 
-      #fx-star-a, #fx-star-b, #fx-star-c {
+      #fx-star-a {
         animation: orbit 3s infinite steps(1);
       }
 
       /* Four cells apart, which is a third of the orbit. Negative delays start
          each star already in position rather than waiting to enter. */
-      #fx-star-b { animation-delay: -1s; }
-      #fx-star-c { animation-delay: -2s; }
+      #fx-star-b { animation: orbit 3s -1s infinite steps(1); }
+      #fx-star-c { animation: orbit 3s -2s infinite steps(1); }
 
       @keyframes orbit {
         0.000000% { transform: translate(5px, 0px); }
-        8.333333% { transform: translate(4px, -1px); }
+        8.333333% { transform: translate(4px, -2px); }
         16.666667% { transform: translate(3px, -3px); }
         25.000000% { transform: translate(0px, -3px); }
         33.333333% { transform: translate(-2px, -3px); }
-        41.666667% { transform: translate(-4px, -1px); }
+        41.666667% { transform: translate(-4px, -2px); }
         50.000000% { transform: translate(-5px, 0px); }
         58.333333% { transform: translate(-4px, 2px); }
-        66.666667% { transform: translate(-3px, 3px); }
-        75.000000% { transform: translate(0px, 3px); }
-        83.333333% { transform: translate(3px, 3px); }
+        66.666667% { transform: translate(-3px, 2px); }
+        75.000000% { transform: translate(0px, 2px); }
+        83.333333% { transform: translate(3px, 2px); }
         91.666667% { transform: translate(4px, 2px); }
       }
 
-      /* The wobble: translation against planted legs, never rotation. Two
-         seconds, six whole cycles in the loop. Half a unit is four device
-         pixels, so every position is a whole pixel. */
+      /* The wobble: translation against planted legs, never rotation, and on
+         the full twelve seconds rather than a two second cycle repeated six
+         times.
+
+         **This is what earns the loop length.** With a 2s sway the file
+         rendered four seconds: three identical stars four cells apart on a
+         twelve-cell path are invariant under a four-cell rotation, so the
+         orbit's visual period is eight frames, and 32/16/8 all divide 32.
+         Frames 32-95 were byte-for-byte copies of 0-31 in a 402KB bake, while
+         the comment above claimed a resting screen built like `idle`. `idle`
+         earns sixteen seconds with blinks, two looks and a yawn; a stagger
+         that repeats every four is not a stagger, it is a metronome.
+
+         So the amplitude varies across the twelve: two ordinary sways, two
+         smaller ones, then a deeper lurch and a slow recovery. Every value is
+         a multiple of 0.25 units — two whole device pixels — so nothing lands
+         on a fraction. */
       #wobble {
-        animation: sway 2s infinite ease-in-out;
+        animation: stagger 12s infinite ease-in-out;
       }
 
-      @keyframes sway {
-        0%   { transform: translate(-0.5px, 0); }
-        25%  { transform: translate(0, -0.25px); }
-        50%  { transform: translate(0.5px, 0); }
-        75%  { transform: translate(0, -0.25px); }
-        100% { transform: translate(-0.5px, 0); }
+      @keyframes stagger {
+        0%        { transform: translate(-0.5px, 0); }
+        8.333333% { transform: translate(0, -0.25px); }
+        16.66667% { transform: translate(0.5px, 0); }
+        25%       { transform: translate(0, -0.25px); }
+        33.33333% { transform: translate(-0.25px, 0); }
+        41.66667% { transform: translate(0, 0); }
+        50%       { transform: translate(0.25px, 0); }
+        58.33333% { transform: translate(0, -0.25px); }
+        66.66667% { transform: translate(-0.75px, 0); }
+        75%       { transform: translate(-0.5px, -0.25px); }
+        83.33333% { transform: translate(0.5px, 0); }
+        91.66667% { transform: translate(0.25px, -0.25px); }
+        100%      { transform: translate(-0.5px, 0); }
       }
 
       /* `idle`'s breath, about the hips, so the body settles onto planted legs
@@ -106,8 +133,42 @@
       }
 
       /* Crossed. Static offsets, not an animation. */
-      #left-eye  { transform: translateX(2px); }
-      #right-eye { transform: translateX(-2px); }
+      #left-eye-cross  { transform: translateX(2px); }
+      #right-eye-cross { transform: translateX(-2px); }
+
+      /* Squashed about each eye's own line, never hidden — §Closing an eye.
+         Linear, because a lid that accelerates reads as a wince.
+
+         **This is also what makes the loop twelve seconds.** Without it the
+         file rendered four: three identical stars four cells apart on a
+         twelve-cell path are invariant under a four-cell rotation, so the
+         orbit's visual period is eight frames rather than twenty-four, and
+         frames 32-95 were byte-for-byte copies of 0-31 — a 402KB bake, two
+         thirds of it duplicate, claiming to be a resting screen built like
+         `idle`. A blink on a twelve-second track is the cheapest beat that
+         makes the length real, and every other awake animation has one. */
+      #left-eye-blink {
+        transform-origin: 4.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      #right-eye-blink {
+        transform-origin: 10.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      /* Two blinks, at frames 30 and 70 of 96, far enough apart that they
+         never read as a pair. Two frames shut, every value a whole frame. */
+      @keyframes blink {
+        0%, 31.25%       { transform: scaleY(1); }
+        32.291667%       { transform: scaleY(0.1); }
+        33.333333%       { transform: scaleY(0.1); }
+        34.375%          { transform: scaleY(1); }
+        72.916667%       { transform: scaleY(1); }
+        73.958333%       { transform: scaleY(0.1); }
+        75.000000%       { transform: scaleY(0.1); }
+        76.041667%, 100% { transform: scaleY(1); }
+      }
     </style>
   </defs>
 
@@ -128,9 +189,13 @@
        new dark tone is declared — it captures the antialiased edges the
        transparency rule needs and stitches a keyline round the character.
 
-       The lowest cell puts the cross at y=4..5 against a torso topping out at
-       y=6, so none of them ever touches him — `asleep` shipped a glyph
-       crossing the face once and it read as display corruption. -->
+       The lowest cells are raised a unit so the cross's bottom arm clears the
+       torso. The first version measured the *pip* at y=4 against a torso
+       topping out at y=6 and concluded there was clearance; the arm is a unit
+       below the pip, so it sat flush against the torso on 33 of 96 frames —
+       a dark notch welded to the top of his head, which is on this plan's own
+       "Not wanted" list. `asleep` shipped a glyph crossing the face once and
+       it read as display corruption. Measure the prop, not its centre. -->
   <g>
     <g id="fx-star-a">
       <rect x="7" y="0" width="1" height="1" fill="#000000"/>
@@ -175,8 +240,16 @@
         </g>
 
         <g id="eyes-color-group" fill="#000000">
-          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+          <g id="left-eye-cross">
+            <g id="left-eye-blink">
+              <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+            </g>
+          </g>
+          <g id="right-eye-cross">
+            <g id="right-eye-blink">
+              <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+            </g>
+          </g>
         </g>
       </g>
     </g>
