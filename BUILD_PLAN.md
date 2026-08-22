@@ -307,7 +307,7 @@ than partially. Eight good screens beat nine plus four rough ones.
       have a measured trigger. Six catalogue entries fire on hook events or
       timers and have no tool-call frequency at all, so this is not a claim
       about the whole catalogue
-  12. **overheated (`StopFailure` with `error_type: rate_limit`)** — proposed
+  12. **overheated (`StopFailure` with `error_type` `rate_limit` or `overloaded`)** — proposed
       on 22 Aug, not part of the original catalogue, and therefore a change to
       this plan rather than work under it. It is the cheapest screen left:
       `error_type` has been stored since Stage 3 and read by nothing, so the

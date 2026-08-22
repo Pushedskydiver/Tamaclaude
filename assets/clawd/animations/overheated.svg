@@ -10,7 +10,7 @@
 
     The first plan for this screen kept the standing silhouette and separated it
     from `asleep` by eye state and rising heat. Both separators were false.
-    `asleep`'s `@keyframes eyelid` holds `scale(2, 0.5)` for its entire loop,
+    `asleep`'s `@keyframes eyelid` holds a `scaleY` of 0.5 for its entire loop,
     which is a half-height eye and not a shut one, so "half-closed against shut"
     is not a difference; and `dizzy.svg` already records rejecting a held
     `scaleY` squash on this same state because it "would have made the two
@@ -40,7 +40,7 @@
     on the ground, more so than usual. The bottom edge stays on the ground line
     at y=15. What changes is 2 units of height and a 4-unit drop.
 
-    `#legs-sploot` is four 1x1 at y=9, in the same four columns as the standing
+    `#legs-sploot` holds four 1x1 rects at y=9, in the same four columns as the standing
     legs (3, 5, 9, 11), so they read as his legs — splayed out above a body that
     has spread beneath them. They sit directly on the torso's top edge:
     the legs' bottom row is the torso's top row minus one on all 48 frames,
@@ -48,8 +48,10 @@
 
     **`hipGap` reading 0 is not evidence of that.** That gate walks up from the
     bottom-most drawn row *through the legs*; here the bottom-most row is the
-    torso and there is nothing below it, so the walk ends immediately and
-    returns 0 for any pose of this shape. It is vacuous for a sploot, and the
+    torso and there is nothing below it, so the walk runs the whole 48-row body
+    and then trips the gate's own `LEG_BAND` bound, returning 0 without ever
+    looking for a gap. It does that for any pose whose contiguous bottom band is
+    deeper than 24 rows. It is vacuous for a sploot, and the
     contiguity measured above is what actually holds.
 
     The eyes are 1x1 at y=12, in the standing columns, half the standing height.
@@ -79,11 +81,22 @@
 
     ── Timing ─────────────────────────────────────────────────────────────
 
-    Six seconds is 48 frames at 8fps, and every period divides it. An
-    `alternate` track must run an even number of times: the breath at 1.5s is 12
-    frames each way and 4 alternations, the fan at 0.5s is 4 frames each way and
-    12. The steam runs twice on a 3s track, three puffs at delays 0, -1s and
-    -2s, which is `dizzy`'s phasing and lands them 8 frames apart.
+    Six seconds is 48 frames at 8fps, and every period divides it.
+
+    **The breath is a 6s track, not `1.5s alternate`, and that distinction is
+    the whole animation.** An earlier version of this paragraph specified
+    `1.5s alternate` — 12 frames each way, 4 alternations — which is exactly the
+    arrangement that made the fan's 8-frame period, the steam's 24 and the
+    breath's 24 all divide 24, so frames 24-47 came out byte-for-byte copies of
+    0-23. Anyone re-deriving the loop from that sentence reinstates the defect,
+    which is why it is written down rather than quietly replaced. The breath
+    keeps four beats at the same rate; they are just keyframes on a full-loop
+    track with four different depths.
+
+    The fan is `alternate` and does have to run an even number of times: at 0.5s
+    it is 4 frames each way and 12 alternations. The steam runs twice on a 3s
+    track, three puffs at delays 0, -1s and -2s, which is `dizzy`'s phasing and
+    lands them 8 frames apart.
 
     **Six and not twelve.** `dizzy` needed twelve because `FAILED` does not
     decay and it had to survive being stared at, and it earned them with a blink
@@ -127,11 +140,17 @@
 
     ── Safe area ──────────────────────────────────────────────────────────
 
-    The pose creates headroom rather than spending it. The topmost body pixel is
-    a splayed leg at y=9, against y=6 standing, and the steam tops out at
-    **y=+1** — five units inside the -4 line, where `dizzy` sits at -3 on 72
-    frames of 96. (An earlier version of this line said y=2 and six units; both
-    were guessed from the keyframes rather than measured off the bake.)
+    The pose creates headroom rather than spending it. Measured on the bake, the
+    topmost body-coloured pixel over the loop is at **unit y=8.25** — the fanning
+    claw at its -58deg extreme on frame 12, not a leg. The legs cannot be it:
+    they sit at y=9 and `heave` scales about y=15 with `scaleY` never above 1,
+    so they only ever move down. The steam tops out at **y=+1**, five units
+    inside the -4 line, where `dizzy` sits at -3 on 72 frames of 96.
+
+    Two earlier versions of this paragraph were wrong: one said the steam
+    reached y=2 with six units of margin, the other said the topmost body pixel
+    was a leg at y=9. Both were read off the keyframes instead of the bake, and
+    the second is 6 device pixels out.
   -->
   <defs>
     <style>
@@ -261,12 +280,19 @@
         <!-- The sploot: same x and width as the standing torso, 2 units
              shorter, dropped 4 so its bottom sits on the ground line. -->
         <rect id="torso-sploot" x="2" y="10" width="11" height="5"/>
-        <!-- Splayed above the spread body, in the standing leg columns. -->
-        <rect id="outer-left-leg" x="3" y="9" width="1" height="1"/>
-        <rect id="inner-left-leg" x="5" y="9" width="1" height="1"/>
-        <rect id="inner-right-leg" x="9" y="9" width="1" height="1"/>
-        <rect id="outer-right-leg" x="11" y="9" width="1" height="1"/>
-        <!-- Flat on the ground beside him, doing nothing. -->
+        <!-- Splayed above the spread body, in the standing leg columns. Their
+             own ids, not the base `outer-left-leg` and friends: those carry
+             1x2 at y=13 in every other animation and in `base.svg`, and a
+             reader diffing a pose against the base has to be able to trust
+             that an id means the geometry it has always meant. -->
+        <g id="legs-sploot">
+          <rect id="outer-left-leg-sploot" x="3" y="9" width="1" height="1"/>
+          <rect id="inner-left-leg-sploot" x="5" y="9" width="1" height="1"/>
+          <rect id="inner-right-leg-sploot" x="9" y="9" width="1" height="1"/>
+          <rect id="outer-right-leg-sploot" x="11" y="9" width="1" height="1"/>
+        </g>
+        <!-- Flat on the ground beside him, doing nothing. Base geometry is
+             2x2 at y=9; this is the same rect dropped, so it keeps its id. -->
         <rect id="left-arm" x="0" y="13" width="2" height="2"/>
       </g>
 
@@ -275,8 +301,8 @@
       </g>
 
       <g id="eyes-color-group" fill="#000000">
-        <rect id="left-eye" x="4" y="12" width="1" height="1"/>
-        <rect id="right-eye" x="10" y="12" width="1" height="1"/>
+        <rect id="left-eye-slit" x="4" y="12" width="1" height="1"/>
+        <rect id="right-eye-slit" x="10" y="12" width="1" height="1"/>
       </g>
     </g>
   </g>

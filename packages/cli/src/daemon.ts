@@ -295,7 +295,7 @@ export async function framesFor(
  * carried through the paint loop and so two panels started a minute apart are
  * on the same beat — the index is a pure function of absolute epoch time.
  *
- * Every loop is a whole number of seconds at 8fps (16, 12, 8, 4, 3 and 2), so a
+ * Every loop is a whole number of seconds at 8fps (16, 12, 8, 6, 4, 3 and 2), so a
  * loop restarts on a wall-clock second. That is a nicety and not what makes
  * this safe: the modulo lands in range for any frame count, and an earlier
  * version of this comment offered the one as the reason for the other.
@@ -475,8 +475,9 @@ async function paintOnce(
   //
   // `framesFor` resolves an unbaked name to nothing rather than throwing, and
   // the empty check below is what that buys. Both are currently unreachable:
-  // `ANIMATIONS` and `SPRITE_NAMES` hold the same names, so every name this can
-  // produce has data behind it. They are kept because the two lists are
+  // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
+  // has data behind it. Subset and not equality: an animation can be baked
+  // before it is wired, which is how `overheated` sits today. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what

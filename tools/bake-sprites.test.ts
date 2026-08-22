@@ -276,6 +276,15 @@ describe('the baked animations', () => {
  * Bounded to `LEG_BAND` rows above the feet. Unbounded, the walk runs past the
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
+ *
+ * **The bound is also an escape, and one bake already takes it.** Any pose whose
+ * contiguous bottom band is deeper than `LEG_BAND` returns 0 without the walk
+ * ever looking for a gap, so the assertion passes for reasons that have nothing
+ * to do with the legs. `overheated` is splooted: its bottom-most row is the
+ * torso and there are no legs beneath it, so this reads 0 vacuously. What holds
+ * there instead is contiguity — a single connected body component on all 48
+ * frames — and nothing here asserts it. A second sploot would get the same
+ * green light and the same absence of coverage.
  */
 const LEG_BAND = 24;
 

@@ -460,7 +460,7 @@ Clawd has worked himself flat and is lying there fanning himself. He is not
 hurt and not asleep — he is spent, and he will be fine in a bit.
 
 `data-loop-seconds="6"`. **Proposed, not scheduled** — it is not one of the
-eleven animations `BUILD_PLAN.md` Stage 4 catalogues, so adding it is a change
+animations `BUILD_PLAN.md` Stage 4 catalogues, so adding it is a change
 to the plan and not work under it.
 
 The scene is upstream's `clawd-working-overheated.svg` — _"sitting down
@@ -495,7 +495,7 @@ for sleeping… give the variant its own id (`torso-sploot`)".
   in the renderer changes and `castsShadow` needs no new entry — he is on the
   ground, more so than usual. The bottom edge stays on the ground line at y=15;
   what changes is 2 units of height and a 4-unit drop.
-- **Legs.** `#legs-sploot`: four **1x1 at y=9**, at x=3, 5, 9, 11 — the same
+- **Legs.** `#legs-sploot`, a group of four **1x1 rects at y=9**, at x=3, 5, 9, 11 — the same
   four columns as the standing legs, so they read as his legs, now splayed out
   above a body that has spread beneath them. Upstream's move exactly.
 - **Eyes.** `#left-eye-slit` / `#right-eye-slit`, **1x1 at y=12**, x=4 and x=10
@@ -522,7 +522,9 @@ for sleeping… give the variant its own id (`torso-sploot`)".
 
 **Timing, and every period checked against the loop.** 6s is 48 frames at 8fps.
 An `alternate` track must run an even number of times (`docs/ANIMATION.md`), so:
-the breath at **1.5s alternate** is 12 frames each way and 4 alternations;
+the breath is a **6s track**, not `1.5s alternate` — that arrangement made
+every period divide 24 and produced 24 duplicate frames, and the SVG records
+why in full;
 the fan at **0.5s alternate** is 4 frames each way and 12 alternations; the
 steam at **3s** runs twice. All three land on whole frames. The breath is
 faster than `idle`'s 2s, which is what makes it a labouring one.
@@ -532,13 +534,15 @@ decay and it had to survive being stared at, and it earned them with a blink on
 a 12s track. This has three tracks at three speeds and no beat that wants a
 twelfth second, and `dizzy.svg` records what happens when a loop is longer than
 its content: frames 32-95 were byte-for-byte copies of 0-31 in a 402KB bake.
-48 frames should bake to roughly half of `dizzy`'s 401KB.
+48 frames baked to 136,683 B against `dizzy`'s 401,428 — about a third, where
+this line forecast a half.
 
 **Safe area.** The pose creates headroom rather than spending it. The topmost
 body pixel is a splayed leg at y=9, against y=6 standing, so the steam has 13
 units before the -4 line — where `dizzy` sits at -3 on 72 frames of 96 and is
-the one `docs/ANIMATION.md` singles out to watch. Steam topping out at y=2
-leaves six units of margin.
+the one `docs/ANIMATION.md` singles out to watch. Steam tops out at y=+1, five units of margin, and the
+topmost _body_ pixel is the fanning claw at y=8.25 rather than a leg at y=9 —
+both measured off the bake after this plan guessed them from the keyframes.
 
 **Which errors get it.** `rate_limit` and `overloaded`. An earlier version of
 this plan split them — `overloaded` is the server being busy rather than this
@@ -565,9 +569,12 @@ ordinary, and the joke is that Clawd is having a lie-down about it.
 **Measured, because this list is ordered by measured frequency and an earlier
 version of this entry was inserted without one.** Across 1,030 local transcripts
 outside this project, a usage limit was actually hit in **one session** —
-roughly 0.1%. For scale, `board game` fires on `Agent` at 0.7% of tool calls and
-`BUILD_PLAN.md` calls that "the least-seen of the screens that have a measured
-trigger". This is an order of magnitude rarer than the rarest thing catalogued.
+roughly 0.1% **of sessions**. `board game` fires on `Agent` at 0.7% **of tool
+calls**, which `BUILD_PLAN.md` calls "the least-seen of the screens that have a
+measured trigger" — a different denominator, so the two do not divide. What can
+be said without mixing units is that this is the only entry whose trigger was
+counted in sessions at all, and that one session in a thousand is rare by any
+reading.
 
 That is not automatically an argument against it. `permission sign` and
 `confused` were built because they are the screens the whole design principle
