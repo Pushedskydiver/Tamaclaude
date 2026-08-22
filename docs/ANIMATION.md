@@ -162,7 +162,7 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost drawn pixel, across every frame of all nine: `idle` +4.25,
+Measured topmost drawn pixel, across every frame of all nine: `idle` +5.375,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
 `asleep` -3, `dizzy` -3, `bouldering` -9. So the closest anything non-exempt
 comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
