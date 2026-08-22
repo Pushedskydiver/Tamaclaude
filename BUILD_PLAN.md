@@ -307,7 +307,18 @@ than partially. Eight good screens beat nine plus four rough ones.
       have a measured trigger. Six catalogue entries fire on hook events or
       timers and have no tool-call frequency at all, so this is not a claim
       about the whole catalogue
-  12. road bike (long runs)
+  12. **overheated (`StopFailure` with `error_type: rate_limit`)** — proposed
+      on 22 Aug, not part of the original catalogue, and therefore a change to
+      this plan rather than work under it. It is the cheapest screen left:
+      `error_type` has been stored since Stage 3 and read by nothing, so the
+      trigger needs no new event, no settings change and no protocol field —
+      only for `animationFor` to refine `FAILED` by `errorType` the way it
+      already refines `WORKING` by `tool`. Tier B, behind the 6 Sep gate with
+      the rest, and the first thing to cut if that gate is at risk: `dizzy`
+      already draws every `StopFailure`, so cutting this loses a distinction
+      rather than leaving a state blank. Plan in `PLANS.md`; through
+      `spec-grill` before any art
+  13. road bike (long runs)
 
 **`Stop` does not mean "the turn finished".** Confirmed against live docs in
 Stage 3: it fires on every response. So the Model 3 payoff above cannot be

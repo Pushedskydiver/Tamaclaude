@@ -454,6 +454,71 @@ tint carries severity.
 
 ---
 
+## Overheated — `StopFailure` with `error_type: rate_limit`
+
+Clawd has worked himself too hard and has to cool off before he can go again.
+
+`data-loop-seconds="12"`. **Proposed, not scheduled** — it is not one of the
+eleven animations `BUILD_PLAN.md` Stage 4 catalogues, so adding it is a change
+to the plan and not work under it.
+
+**Why this state can carry its own picture at all.** `StopFailure` is the only
+event that arrives with a discriminator already attached: `error_type`, which
+the daemon has stored since Stage 3 and which nothing has ever read. The
+documented values are `rate_limit`, `overloaded`, `authentication_failed`,
+`oauth_org_not_allowed`, `billing_error`, `invalid_request`, `model_not_found`,
+`server_error`, `max_output_tokens` and `unknown` — verified against
+code.claude.com/docs/en/hooks.md, where `StopFailure` is defined as firing "when
+the turn ends due to an API error" and `error_type` is a matcher field. A plan
+limit reaching the client as a 429 is `rate_limit`, so this is the one value the
+recipient will actually see, and the one worth a screen.
+
+**The split proposed:** `rate_limit` shows `overheated`; every other
+`error_type` keeps `dizzy`. That refines `FAILED` by `errorType` exactly as
+`WORKING` is already refined by `tool` — same shape, same function, and the
+session's _state_ is unchanged, so nothing about priority or the strip tint
+moves. `overloaded` is the judgement call: it is the most literally
+"overheating" of the ten, but it describes the server being busy rather than
+this session having spent itself, and a screen that says "you have hit your
+limit" when the API merely blinked would be the panel lying in the direction the
+whole design forbids.
+
+- **Action.** Flat-out and cooling. He is not hurt and not asleep — he is
+  spent, and he will be fine in a bit.
+- **Body mechanics.** A pant: a breath faster and shallower than `idle`'s, on a
+  period that divides the loop evenly. This is the one animation where panting
+  is on-message — `dizzy`'s plan forbids it precisely because a knock should not
+  read as exhaustion, and the reverse holds here.
+- **Eyes.** Half-closed, squashed about their own line rather than hidden, the
+  technique `gym` uses under the bar. Not shut: shut is `asleep`, and the two
+  screens must not be confusable.
+- **Props.** Heat rising off him — discrete two-tone cells stepped with
+  `steps(1)`, on the pattern `dizzy`'s stars proved, never an opacity fade.
+
+**The collision to design against, and it is the whole risk.** Something rising
+off a resting Clawd is `asleep`, which already ships three Zs drifting up from a
+still body with closed eyes. Overheated must be legible as a different screen at
+a glance and at true size. Three things separate them and all three have to
+hold: the Zs are glyphs and heat is formless; `asleep`'s eyes are shut where
+these are half-open; `asleep` is still and slow where this pants. If a rendered
+frame of this could be mistaken for `asleep`, the plan has failed and the prop
+is what should change first.
+
+**Not wanted:** an opacity fade on the heat — `clawd-coffee-done.svg` upstream
+fades steam from 0.6 to 0, and partial opacity composites over the background
+and snaps to transparent in this pipeline; this is the defect the boot splash's
+wordmark, `confused`'s caret and `dizzy`'s stars each hit in turn. A new colour
+declared for the heat, unless it earns itself against both a pale sky and a dark
+one — declaring a colour makes it a snap target for every other colour's edges.
+Drooping arms: upstream's `clawd-error.svg` droops them ±30deg and
+`docs/ANIMATION.md` §What a claw cannot do argues a shallow rotation on a 2x2
+block with nothing to hold does not buy a pose. Sweat drops as upstream draws
+them, for the colour reason above. Anything that reads as distress or as
+illness — the recipient hitting a usage limit is an ordinary Tuesday, and the
+joke is that Clawd is having a lie-down about it.
+
+---
+
 ## The environment — a rock pool, through the day
 
 Not an animation. The ambient layer every animation is drawn on top of, built
