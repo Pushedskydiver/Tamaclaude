@@ -169,7 +169,8 @@ comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
 unit of margin, not none.
 
 `dizzy` is the one to watch, though not for the reason a first draft of this
-paragraph gave. Its body tops out at +6, so every bit of that -3 is an orbiting
+paragraph gave. Its body tops out at +5.875, so every bit of that -3 is an
+orbiting
 star and a one-unit change of orbit radius changes the figure with no drawing
 edited. That is not new — `asleep`'s -3 is a rising Z on the same terms. What is
 different is how much of the loop is spent there: measured across the bakes,

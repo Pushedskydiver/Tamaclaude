@@ -425,9 +425,11 @@ being stared at.
   which is invisible on the path the daemon takes. The cross carries the pale
   skies and the pip carries night — the same two-tone fix `confused`'s caret
   needed, and the third time this defect has landed after the boot splash's
-  wordmark. The orbit widened with them: a 3-unit prop needs more clearance
-  than a 1-unit one, and at the first radius two of the three stars read as a
-  single zigzag. A 3s orbit period inside the 12s loop with delays 0 / -1s /
+  wordmark. The orbit's lowest cells were raised for them: a 3-unit prop
+  needs more clearance than a 1-unit one, and the clearance that was short
+  was vertical — the cross's bottom arm against the top of his head. The
+  horizontal cells have never moved, so "widened", which this line said
+  before, describes an orbit no version of the file ever had. A 3s orbit period inside the 12s loop with delays 0 / -1s /
   -2s authors them eight frames apart and lands every delay on a whole frame;
   three stars on a 4s loop cannot be evenly phased at all, because 32/3 is not
   an integer. **Eight frames apart is what is authored, not what renders** —
