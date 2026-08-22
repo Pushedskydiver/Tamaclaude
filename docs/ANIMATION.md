@@ -469,10 +469,10 @@ The advantage is structural rather than aesthetic. A pool needs the daemon to
 own a list, pick from it, and decide when to switch; beats need nothing at all
 outside the SVG. The variety lives in the animation.
 
-It is also among the cheapest things in the repo. `idle` measures 3,620 B/s
+It is also among the cheapest things in the repo. `idle` measures 3,609 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
 the six until `permission-sign` (2,645) and `confused` (3,323) landed; the nine
-now run 2,645 / 3,323 / 3,620 / 3,905 / 5,836 / 6,332 / 9,966 / 14,545 /
+now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,332 / 9,966 / 14,545 /
 22,568. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
@@ -502,9 +502,32 @@ nineteen use easing.
 **Animating the whole sprite is not animating.** `idle` originally drove
 `#master-group`, which contains the legs, so the entire character slid up and
 down as one rigid block. Nothing deformed, so nothing read as breathing. Keep
-the legs _outside_ the group that moves. The gap that opens between body and
-legs is what the eye reads as a breath — it is the deformation, not the
+the legs _outside_ the group that moves: it is the deformation, not the
 displacement, that sells it.
+
+**So pivot at the body's own bottom edge, and never translate upward.** This
+sentence used to end "the gap that opens between body and legs is what the eye
+reads as a breath", which contradicts the clause before it — a gap is
+displacement — and `thinking` had already disproved it. `thinking.svg` records
+the reviewed version opening "up to eleven device pixels of daylight under the
+hips on 50 of 64 frames", the legs left behind as four free-floating stubs, and
+the fix being to compress about a base pivot: "the bottom edge is the pivot, so
+it does not move at all". Measured across all nine animations, seven have no
+transparent row between body and legs at any frame, and the two that do split
+cleanly:
+
+|         |                   gap | frames    |
+| ------- | --------------------: | --------- |
+| `dizzy` |        1 device pixel | 6 of 96   |
+| `idle`  | up to 9 device pixels | 14 of 128 |
+
+**One device pixel is rasterisation; a whole art unit is a lift.** At 8 device
+pixels to the unit, `dizzy`'s single row is an eighth of an art pixel — an
+artefact of an eased track crossing a boundary, not an authored move. `idle`'s
+nine is more than a whole art pixel, and it came from an explicit
+`translate(0, -1.2px)` in its yawn, which lifts the body off the legs one for
+one. The rule is therefore **at most one device pixel**, and `tools/bake-sprites.test.ts`
+asserts it against every bake.
 
 **Layer tracks at different periods.** One keyframe timeline doing everything
 produces motion that visibly repeats. Nest groups instead, slowest outermost,

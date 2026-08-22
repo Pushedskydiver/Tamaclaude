@@ -11,7 +11,7 @@
  * pixels can see.
  *
  * **Loaded on demand, and that is the point.** All nine animations together are
- * 1,820,336 bytes of encoded data and 2,447,556 of source — base64 is four
+ * 1,817,940 bytes of encoded data and 2,444,376 of source — base64 is four
  * bytes for three, so the second number can only ever be about a third above
  * the first. (It read six, 1,128,216 and 1,515,153 until `permission-sign`,
  * `confused` and `dizzy` landed; only a re-bake refreshes these, so treat them

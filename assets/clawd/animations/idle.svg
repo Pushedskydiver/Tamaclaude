@@ -224,11 +224,32 @@
          the body settling rather than stopping dead. That overshoot lengthens
          the torso without translating it, so the settle happens above feet the
          body is still standing on. */
+      /* No upward translate anywhere in the stretch, and that is the whole
+         fix. `transform-origin` is already 7.5px 13px — the torso's own bottom
+         edge — so `scaleY` above 1 grows the body upward from a bottom that
+         does not move, which is a stretch. The three `translate(0, -Npx)`
+         values that used to sit beside those scales moved the whole body up
+         instead, one device pixel per 0.125 units, and the legs are outside
+         this group: they stayed put. That opened up to nine device pixels of
+         daylight under the hips on 14 of 128 frames — four free-floating stubs
+         under a levitating crab, for nearly two seconds of every loop.
+
+         `thinking` shipped this same defect at eleven device pixels on 50 of
+         64 frames, diagnosed it, and fixed it exactly this way; its comment
+         records "the bottom edge is the pivot, so it does not move at all".
+         `docs/ANIMATION.md` disagreed until 22 Aug, on a sentence that
+         contradicted itself in one breath, and this file was the last thing
+         still following it.
+
+         The 0.92/1.12 scales are untouched: at 1.12 the 7-unit torso grows to
+         7.84, which is most of an art pixel of stretch and is what a yawn
+         actually is. The downward `+0.5px` at 75% stays — sinking pushes the
+         hips *into* the legs, which is the safe direction. */
       @keyframes yawn-body {
         0%, 59.375%     { transform: scale(1, 1) translate(0, 0); }
-        62.5%           { transform: scale(0.98, 1.05) translate(0, -0.5px); }
-        66.40625%       { transform: scale(0.94, 1.12) translate(0, -1.2px); }
-        71.875%         { transform: scale(0.95, 1.1) translate(0, -1.05px); }
+        62.5%           { transform: scale(0.98, 1.05) translate(0, 0); }
+        66.40625%       { transform: scale(0.94, 1.12) translate(0, 0); }
+        71.875%         { transform: scale(0.95, 1.1) translate(0, 0); }
         75%             { transform: scale(1.07, 0.92) translate(0, 0.5px); }
         79.6875%        { transform: scale(0.99, 1.02) translate(0, 0); }
         83.59375%, 100% { transform: scale(1, 1) translate(0, 0); }
