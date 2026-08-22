@@ -95,7 +95,28 @@
 
     2x2 puffs, three dark cells and one pale, in `#000000` and `#C9D1D9` — the
     two tones `dizzy`'s stars already carry, so the palette gains no entry and
-    no new snap target. Declaring a colour makes it a snap target for every
+    no new snap target.
+
+    **Measured landscape/panel, which is the production config** — `daemon.ts`
+    sets `ORIENTATION = 'landscape'` and `ENVIRONMENT_EXTENT = 'panel'`. Worst
+    puff, best-reading pixel, against the real composed sky:
+
+      steam        7.76 dawn   10.64 day   5.06 dusk    8.96 night
+      dizzy stars  3.75 dawn    8.05 day   5.06 dusk   10.62 night
+
+    Better on dawn and day, level on dusk, and **lower on night** — the pale cell
+    carries night for both, and one pale cell in four reads less than one in
+    five. The floor is what matters and it is 5.06 at dusk, which is exactly
+    `dizzy`'s floor on the same sky: the corpus figure, already accepted.
+
+    **State the orientation with any contrast figure.** Landscape crops 32 raster
+    rows off the top, which slides the sprite a whole sky band relative to
+    `paintSky`, so the same art measured portrait gives different numbers on
+    three of the four skies. Two harnesses disagreed on this animation and
+    agreed exactly on dusk — dusk being the one sky where the band shift cannot
+    change which cell wins, so the single matching number was hiding the error
+    rather than corroborating the method. A bare ratio with no config is not
+    reproducible. Declaring a colour makes it a snap target for every
     other colour's edges, which is the defect the boot splash's wordmark,
     `confused`'s caret and `dizzy`'s stars each hit in turn.
 
