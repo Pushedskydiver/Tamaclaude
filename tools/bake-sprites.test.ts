@@ -1,3 +1,5 @@
+import type { SpriteName } from '../packages/renderer/src/sprites/index.ts';
+
 import { readdirSync, readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
@@ -258,6 +260,66 @@ describe('the baked animations', () => {
       .map((file) => file.replace(/\.svg$/, ''))
       .sort();
     expect(onDisk).toEqual(named);
+  });
+});
+
+/**
+ * Transparent rows separating the legs from the body, in one frame.
+ *
+ * Walks up from the bottom-most drawn row — the feet — through the legs, and
+ * counts the empty rows immediately above them. Derived rather than measured
+ * against a fixed row, because `typing` is seated and his legs start eight rows
+ * lower than everyone else's.
+ *
+ * Bounded to `LEG_BAND` rows above the feet. Unbounded, the walk runs past the
+ * body entirely and returns the daylight between the body and a floating prop —
+ * 31 rows for `asleep`'s Zs, which is the animation working as designed.
+ */
+const LEG_BAND = 24;
+
+function hipGap(mask: Uint8Array, width: number): number {
+  const height = mask.length / width;
+  const drawn = (y: number): boolean => {
+    for (let x = 0; x < width; x++) if (mask[y * width + x] === 1) return true;
+    return false;
+  };
+  let y = height - 1;
+  while (y >= 0 && !drawn(y)) y--;
+  const feet = y;
+  while (y >= 0 && drawn(y)) y--;
+  if (feet - y > LEG_BAND) return 0;
+  let gap = 0;
+  while (y >= 0 && !drawn(y)) {
+    gap++;
+    y--;
+  }
+  // Empty all the way to the top is a frame with no body above the legs, not a
+  // hip gap.
+  return y < 0 ? 0 : gap;
+}
+
+describe('the body stays on its legs', () => {
+  it('never lifts more than a device pixel clear of them', async () => {
+    // `docs/ANIMATION.md` §Animating the whole sprite is not animating: pivot
+    // at the body's own bottom edge and never translate upward. One device
+    // pixel is an eased track crossing a boundary; a whole art unit is the
+    // body leaving its feet, which reads as four free-floating stubs under a
+    // levitating crab.
+    //
+    // Both animations that have ever failed this shipped and were reviewed
+    // first: `thinking` at eleven device pixels on 50 of 64 frames, and `idle`
+    // at nine on 14 of 128 — nearly two seconds of every loop, in the
+    // animation that shows most. Neither is visible in a still frame and
+    // neither changes the bake stamp, which is why this is a test and not a
+    // reading.
+    const worst = await Promise.all(
+      BAKED.map(async ([name]) => {
+        const frames = await loadSprite(name as SpriteName);
+        const gaps = frames.map((s) => hipGap(s.mask, s.frame.width));
+        return [name, Math.max(...gaps)] as const;
+      }),
+    );
+    expect(worst.filter(([, gap]) => gap > 1)).toEqual([]);
   });
 });
 

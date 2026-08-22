@@ -18,13 +18,13 @@
  *
  * **The format, and why it is two encodings rather than one.** Measured across
  * all nine animations, in bytes so the units cannot drift: 41,395,200 bytes of
- * raw RGB565 becomes 946,864 through the repo's own RLE codec — pixel art is
+ * raw RGB565 becomes 945,256 through the repo's own RLE codec — pixel art is
  * nearly all flat runs. The mask is the awkward half. It carries one bit of
  * information per pixel and arrives as one *byte* per pixel, so exactly half
  * the pixel cost at 20,697,600 bytes, and still 2,587,200 merely packed to a
- * bit. Running the same codec over the packed bytes takes it to 873,472.
+ * bit. Running the same codec over the packed bytes takes it to 872,684.
  *
- * So 1,820,336 bytes for nine animations — 22.7:1 against the pixels alone, or
+ * So 1,817,940 bytes for nine animations — 22.7:1 against the pixels alone, or
  * 34.1:1 if the mask's own raw cost is counted, which the sentence above says
  * it should be. Size is not what limits how many animations this device gets.
  * (These were six animations and 1,128,216 bytes until three more landed. Only

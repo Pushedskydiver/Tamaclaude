@@ -86,7 +86,7 @@ frames are regenerated each time, since `out/` is gitignored.
 | ----------------- | ---------------: | ----------: | --------: | ----: | --------: |
 | `permission-sign` |            331 B |       692 B |  2.6 KB/s | 203:1 |     0.46% |
 | `confused`        |            415 B |       780 B |  3.2 KB/s | 162:1 |     0.58% |
-| `idle`            |            453 B |       956 B |  3.5 KB/s | 148:1 |     0.63% |
+| `idle`            |            451 B |       988 B |  3.5 KB/s | 149:1 |     0.63% |
 | `thinking`        |            488 B |     1,228 B |  3.8 KB/s | 138:1 |     0.68% |
 | `dizzy`           |            730 B |       940 B |  5.7 KB/s |  92:1 |     1.01% |
 | `asleep`          |            792 B |     1,208 B |  6.2 KB/s |  85:1 |     1.10% |
