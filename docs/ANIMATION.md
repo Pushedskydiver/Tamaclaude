@@ -31,24 +31,42 @@ coordinate space is load-bearing, not incidental: it is what lets a language
 model reason reliably about `translateY(1px)` meaning exactly one art pixel,
 without drowning in decimal path data.
 
-| Element ID         | Rect           | Notes                                                              |
-| ------------------ | -------------- | ------------------------------------------------------------------ |
-| `ground-shadow`    | 3,15 9x1       | Outside `master-group` — the shadow stays put while the body moves |
-| `master-group`     | —              | Wraps everything animatable                                        |
-| `body-color-group` | fill `#DE886D` | One attribute recolours the whole crab                             |
-| `torso`            | 2,6 11x7       |                                                                    |
-| `left-arm`         | 0,9 2x2        | Taps by translating; never rotates                                 |
-| `right-arm`        | 13,9 2x2       | Taps by translating; never rotates                                 |
-| `outer-left-leg`   | 3,13 1x2       |                                                                    |
-| `inner-left-leg`   | 5,13 1x2       |                                                                    |
-| `inner-right-leg`  | 9,13 1x2       |                                                                    |
-| `outer-right-leg`  | 11,13 1x2      |                                                                    |
-| `eyes-color-group` | fill `#000000` |                                                                    |
-| `left-eye`         | 4,8 1x2        |                                                                    |
-| `right-eye`        | 10,8 1x2       |                                                                    |
+| Element ID         | Rect           | Notes                                                            |
+| ------------------ | -------------- | ---------------------------------------------------------------- |
+| `ground-shadow`    | 3,15 9x1       | **Reference only — do not copy it into an animation.** See below |
+| `master-group`     | —              | Wraps everything animatable                                      |
+| `body-color-group` | fill `#DE886D` | One attribute recolours the whole crab                           |
+| `torso`            | 2,6 11x7       |                                                                  |
+| `left-arm`         | 0,9 2x2        | Taps by translating; never rotates                               |
+| `right-arm`        | 13,9 2x2       | Taps by translating; never rotates                               |
+| `outer-left-leg`   | 3,13 1x2       |                                                                  |
+| `inner-left-leg`   | 5,13 1x2       |                                                                  |
+| `inner-right-leg`  | 9,13 1x2       |                                                                  |
+| `outer-right-leg`  | 11,13 1x2      |                                                                  |
+| `eyes-color-group` | fill `#000000` |                                                                  |
+| `left-eye`         | 4,8 1x2        |                                                                  |
+| `right-eye`        | 10,8 1x2       |                                                                  |
 
 The two colour groups are why packs can stay thin — a pack recolours Clawd by
 overriding two `fill` attributes, not by shipping its own character.
+
+**`ground-shadow` is the one base element an animation must not carry.** Black
+at half opacity is exactly what `snapToPalette` drops — it snaps to the
+background and arrives part-transparent, which is the pair of conditions the
+transparency rule tests for — so all eight animations declared a shadow and all
+eight drew zero pixels of it. Invisible for as long as the stage behind Clawd
+was black, and a floating crab the moment the rock pool was wired on.
+
+The renderer draws it now, at these same coordinates, in a tone that knows which
+of the four grounds it is falling on: `paintContactShadow` in
+`packages/renderer/src/environment.ts`. It is skipped for animations where he is
+not on the ground — `castsShadow` names them, and `bouldering` is the one.
+
+The note is here rather than in `base.svg` because that file is a byte-identical
+copy of upstream's, `CREDITS.md` asserts its md5 as part of the MIT attribution,
+and `.editorconfig` carries a rule whose only job is protecting that identity. A
+ten-line comment added there broke the claim in three tracked files at once,
+which is a false attribution statement in a public repo.
 
 ## The generation contract
 
@@ -82,14 +100,14 @@ like tiles.
 **Put the pivot where the joint is.** This is most of the difference between a
 part that articulates and a part that slides. The pivots that recur:
 
-| Pivot          | Use                                       |
-| -------------- | ----------------------------------------- |
-| `2px 10px`     | left shoulder                             |
-| `13px 10px`    | right shoulder                            |
-| `7.5px 13px`   | torso base — breathing, stretching        |
-| `7.5px 15px`   | the floor — whole-body squash, sway, lean |
-| `7.5px 9px`    | the eye line — blinks                     |
-| `7.5px 15.5px` | the shadow                                |
+| Pivot          | Use                                         |
+| -------------- | ------------------------------------------- |
+| `2px 10px`     | left shoulder                               |
+| `13px 10px`    | right shoulder                              |
+| `7.5px 13px`   | torso base — breathing, stretching          |
+| `7.5px 15px`   | the floor — whole-body squash, sway, lean   |
+| `7.5px 9px`    | the eye line — blinks                       |
+| `7.5px 15.5px` | the shadow — retired; the renderer draws it |
 
 **Scale is how a body deforms.** Non-uniform `scale()` about a floor or
 torso-base pivot gives squash and stretch: `scale(1.02, 1.25)` is a chest
@@ -350,9 +368,18 @@ Two consequences for authors:
   21,792. Before adding a colour, ask what edge it now sits between.
 
 - **Semi-transparent effects still work**, because their composited value is a
-  palette entry. The ground shadow is black at 0.5; over the black stage it
-  composites to black and vanishes, which is what the panel already did, and
-  over a pack that sets a lighter stage it stays a real tone.
+  palette entry.
+
+  The ground shadow used to be the worked example here, on the reasoning that
+  over a black stage it composites to black and vanishes — "which is what the
+  panel already did" — while over a lighter stage it would stay a real tone.
+  The second half was never true. `snapToPalette` writes alpha 0 whenever a
+  pixel snaps to the background _and_ arrived part-opaque, unconditionally, so
+  a half-opacity black could not have survived on any background. Eight
+  animations carried it and eight drew nothing. Do not reach for this pattern:
+  if an effect must be semi-transparent, give it a flat colour that composites
+  to the tone you want, or draw it in the renderer where the background is
+  known.
 
 ## Render scale
 

@@ -158,15 +158,18 @@
     that lifted. It is a wider float than before because the body no longer
     rises into it; the dots descending toward the crown are what connect them.
 
-    #ground-shadow animates and emits nothing. It is black at half opacity over
-    a black stage, so it composites to black and the snap turns it transparent:
-    a palette census over all 64 frames finds #DE886D, #C9D1D9 and #40C4FF and
-    no fourth colour. It is kept, and kept moving with the lean, so that a pack
-    which sets a lighter stage gets a shadow that tracks the body rather than a
-    static smudge — but that is an untested path, and worth knowing before
-    taking it: the rect spans y=15..16 against a viewBox that ends at 16, so on
-    any stage that makes it visible it sits flush against the bottom of the
-    frame.
+    There is no shadow in this file, and there is none in any of the other
+    seven either. `#ground-shadow` used to be here, inherited from base.svg as
+    black at half opacity, animating and emitting nothing: over a black stage
+    it composites to black and the snap turns it transparent, so a palette
+    census over all 64 frames found #DE886D, #C9D1D9 and #40C4FF and no fourth
+    colour. It was kept anyway, on the theory that a pack setting a lighter
+    stage would get a shadow tracking the body.
+
+    That path was never taken, and the rock pool is what made it moot: the
+    renderer draws the shadow now, at these same coordinates, in a tone that
+    knows which of the four grounds it is falling on. See `paintContactShadow`
+    in packages/renderer/src/environment.ts.
   -->
   <defs>
     <style>
@@ -219,11 +222,6 @@
         animation: blink 8s infinite linear;
       }
 
-      /* Tracks the lean. On the black stage it composites to black and the
-         panel shows nothing — see the header before relying on it. */
-      #ground-shadow {
-        animation: shadow-react 8s infinite ease-in-out;
-      }
 
       /* steps(1) is right here and wrong everywhere else in this file. These
          are discrete state changes, not motion: a dot is lit or it is not, and
@@ -289,13 +287,6 @@
 
       /* Half the body's travel, in the same direction. A leaning body does not
          narrow its shadow, so this only slides. */
-      @keyframes shadow-react {
-        0%           { transform: translateX(0); }
-        15.625%, 25% { transform: translateX(-0.375px); }
-        45.3125%     { transform: translateX(0); }
-        65.625%, 75% { transform: translateX(0.375px); }
-        100%         { transform: translateX(0); }
-      }
 
       @keyframes dot-1 {
         0%   { opacity: 1; }

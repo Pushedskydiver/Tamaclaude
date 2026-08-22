@@ -90,6 +90,15 @@ export type Scene = {
   readonly environment?: {
     readonly time: TimeOfDay;
     readonly extent: EnvironmentExtent;
+    /**
+     * Whether to darken the ground under the sprite. Default true.
+     *
+     * False for an animation that is not standing on it — `bouldering` is on a
+     * wall, and a floor shadow under a climber is worse than none. The caller
+     * decides because the environment is painted before any sprite exists, so
+     * this layer cannot tell what it is about to be behind.
+     */
+    readonly contact?: boolean;
   };
   /**
    * The status band's two ends: clock on the left, subagent count on the
@@ -233,6 +242,7 @@ function withEnvironment(painter: Painter, scene: Scene): Painter {
       layout: scene.layout,
       orientation: scene.orientation,
       time: environment.time,
+      contact: environment.contact ?? true,
     },
   );
   if (environment.extent !== 'panel') return painter;

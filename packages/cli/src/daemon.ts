@@ -46,6 +46,7 @@ import {
   frame,
 } from '@tamaclaude/protocol';
 import {
+  castsShadow,
   loadSprite,
   panelSize,
   render,
@@ -303,6 +304,15 @@ export type SceneInput = {
   readonly now: number;
   /** Empty is a complete scene: `scene.ts` leaves unfilled slots empty. */
   readonly sprites?: readonly Sprite[];
+  /**
+   * Which animation the sprites are frames of.
+   *
+   * Only the ground shadow needs it: the environment is painted before any
+   * sprite exists, so the layer that draws the shadow cannot tell whether the
+   * character about to go in front of it is standing on the ground or half way
+   * up a wall. The name is the only thing that knows.
+   */
+  readonly animation?: AnimationName;
 };
 
 /**
@@ -333,7 +343,11 @@ export function sceneFor(input: SceneInput): Scene {
     },
     sessions: panel.sessions.map((session) => chipFor(session, now)),
     message: messageFor(panel, pack, now),
-    environment: { time: timeOfDay(now), extent: ENVIRONMENT_EXTENT },
+    environment: {
+      time: timeOfDay(now),
+      extent: ENVIRONMENT_EXTENT,
+      contact: input.animation === undefined || castsShadow(input.animation),
+    },
   };
 }
 
@@ -471,7 +485,15 @@ async function paintOnce(
       ? frames.slice(frameAt(frames.length, at)).slice(0, 1)
       : [];
   const next = frame(
-    render(sceneFor({ registry, pack, now: at, sprites: showing })).pixels,
+    render(
+      sceneFor({
+        registry,
+        pack,
+        now: at,
+        sprites: showing,
+        animation: wanted,
+      }),
+    ).pixels,
     size.width,
   );
   const rect = status.needsPrime ? whole : changed(previous, next, whole);

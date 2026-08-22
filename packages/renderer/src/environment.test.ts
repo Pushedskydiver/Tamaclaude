@@ -13,6 +13,7 @@ import type { Framebuffer } from './framebuffer.js';
 import { describe, expect, it } from 'vitest';
 
 import {
+  castsShadow,
   ENVIRONMENT_EXTENTS,
   groundRow,
   paintEnvironment,
@@ -125,19 +126,51 @@ describe('paintEnvironment', () => {
     expect(at(13)).toBe(beneath);
   });
 
-  it('gives every sky its own shadow, rather than one darkening', () => {
-    // A multiply would vanish at night, where the sand is already dark. That
-    // was measured on a prototype and is why `Scheme` carries the tone.
+  it('darkens the ground at every time of day, not just the bright ones', () => {
+    // An earlier version of this test sampled the four shadow pixels and
+    // asserted they were distinct. That passed with the shadow deleted, because
+    // the four *sands* are already distinct — it was re-testing the sky check
+    // above. It also could not fail under the design it claimed to rule out: a
+    // uniform 30% multiply of each sand gives four distinct values too.
+    //
+    // What matters is that the shadow is visible against its own ground at
+    // every sky, which is exactly what a multiply loses at night.
     const row = groundRow('hero', 'landscape');
     const slot = spriteSlots('hero', 'landscape')[0];
     expect(slot).toBeDefined();
-    const at = (time: (typeof TIMES_OF_DAY)[number]): number => {
+    const scale = stageScale('hero');
+    TIMES_OF_DAY.forEach((time) => {
       const target = paint('landscape', 'panel', time);
-      const x = Math.round((slot?.x ?? 0) + 10 * stageScale('hero'));
-      return target.pixels[row * target.width + x] ?? 0;
-    };
-    const tones = TIMES_OF_DAY.map((time) => at(time));
-    expect(new Set(tones).size).toBe(TIMES_OF_DAY.length);
+      const at = (unit: number): number | undefined =>
+        target.pixels[
+          row * target.width + Math.round((slot?.x ?? 0) + unit * scale)
+        ];
+      expect(at(10), `no shadow at ${time}`).not.toBe(at(2));
+    });
+  });
+
+  it('draws no shadow under an animation that is not on the ground', () => {
+    // `bouldering` is on a wall. The plan says a floor shadow under a climber
+    // is worse than none, and the file records two separate versions
+    // overriding that — the second being the one that moved the shadow here.
+    expect(castsShadow('idle')).toBe(true);
+    expect(castsShadow('bouldering')).toBe(false);
+
+    const stage = panelBands('landscape').stage;
+    const target = createFramebuffer('landscape');
+    paintEnvironment(
+      target,
+      { into: { x: 0, y: 0, ...panelSize('landscape') }, stage },
+      { layout: 'hero', orientation: 'landscape', time: 'day', contact: false },
+    );
+    const row = groundRow('hero', 'landscape');
+    const slot = spriteSlots('hero', 'landscape')[0];
+    const scale = stageScale('hero');
+    const at = (unit: number): number | undefined =>
+      target.pixels[
+        row * target.width + Math.round((slot?.x ?? 0) + unit * scale)
+      ];
+    expect(at(10)).toBe(at(2));
   });
 
   it('draws a continuous sky across the whole panel', () => {

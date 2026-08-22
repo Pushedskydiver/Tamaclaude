@@ -52,9 +52,19 @@ type Scheme = {
   /**
    * The ground where Clawd is standing on it.
    *
-   * Per scheme rather than a darkening of `sand`, because a multiply loses the
-   * shadow exactly where it is needed most: at night the sand is already dark
-   * and 30% off it is invisible. Measured on a prototype before this existed.
+   * Per scheme rather than a fixed darkening of `sand`, so each ground gets a
+   * separation tuned to it rather than the same ratio applied to four very
+   * different starting points.
+   *
+   * **Night is inherently the weakest and cannot be fixed by going darker.**
+   * Measured as a luminance delta against each sand: day 18.9, dawn 9.4, dusk
+   * 6.5, night 2.8 — and night only reaches 2.8 because the tone was taken to
+   * about as dark as RGB565 allows here; at the first draft's value it was 2.1,
+   * and the floor is near. The sand at night is already almost black, so there
+   * is very little room beneath it. That is also true of real shadows after
+   * dark, so it is the right kind of wrong, but a review looking at a true-size
+   * strip could not find it at night and that should be checked on glass
+   * before anyone calls it done: `node tools/blit.ts idle <port> landscape night`.
    */
   readonly shadow: number;
   readonly stars: boolean;
@@ -125,7 +135,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(16, 26, 52),
     sand: rgb565(52, 50, 58),
-    shadow: rgb565(30, 28, 36),
+    shadow: rgb565(16, 14, 20),
     pool: rgb565(34, 44, 70),
     rock: rgb565(26, 26, 34),
     stars: true,
@@ -300,10 +310,19 @@ function paintGround(target: Framebuffer, layer: Layer): void {
  *
  * The geometry is base.svg's own shadow rect — units 3 to 12 of the character,
  * on the line its feet stand on — so it lands where every animation already
- * expected it. It is drawn for every animation including `bouldering`, whose
- * wall is a scrolling backdrop rather than a change of position: measured, its
- * lowest drawn pixel is unit 15.13 against 14.88 for the rest, so its feet are
- * on the same line and a shadow under them is not a crab hovering up a cliff.
+ * expected it. The height is two device pixels rather than the rect's eight: a
+ * contact shadow is a line where he meets the ground, and a full unit reads as
+ * a plinth he is standing on.
+ *
+ * **Not drawn for `bouldering`**, via `contact: false`. A first version drew it
+ * for everything, on the grounds that its feet are on the same line as every
+ * other animation's. Two things were wrong with that. The measurement behind it
+ * — "unit 15.13" — was frame 0 of a 32-frame scrolling loop, and across the
+ * loop the lowest drawn pixel reaches 15.625. And composed, the wall's joint
+ * band scrolls through the shadow row and covers 89% of it for four frames of
+ * every thirty-two, so the shadow blinked twice a loop. `PLANS.md` had already
+ * ruled on this — "a shadow on the floor beneath a climber is worse than no
+ * shadow" — and `bouldering.svg` records an earlier version overriding it too.
  */
 function paintContactShadow(
   target: Framebuffer,
@@ -328,6 +347,28 @@ function paintContactShadow(
   );
 }
 
+/**
+ * Animations where Clawd is not standing on the ground.
+ *
+ * `bouldering` puts him on a wall. Its plan says so — "a shadow on the floor
+ * beneath a climber is worse than no shadow" — and its own SVG records an
+ * earlier version overriding that, so this is the second time it has needed
+ * defending.
+ *
+ * Here rather than in `packages/daemon` because the shadow is a renderer
+ * concern and `tools/` composes panels too: the daemon is above the renderer in
+ * the graph and the tools cannot reach it, so a rule kept there would have to
+ * be duplicated to be applied while judging. Keyed on the name because the
+ * environment is painted before any sprite exists — nothing else at that point
+ * knows what is about to stand in front of it.
+ */
+const UNGROUNDED: ReadonlySet<string> = new Set(['bouldering']);
+
+/** Whether the ground should be darkened under this animation. */
+export function castsShadow(name: string): boolean {
+  return !UNGROUNDED.has(name);
+}
+
 /** How far the scenery reaches. See `Scene.environment`. */
 export const ENVIRONMENT_EXTENTS = ['stage', 'panel'] as const;
 
@@ -346,6 +387,8 @@ export function paintEnvironment(
     readonly layout: StageLayout;
     readonly orientation: Orientation;
     readonly time: TimeOfDay;
+    /** False where Clawd is not on the ground. See `Scene.environment`. */
+    readonly contact?: boolean;
   },
 ): void {
   const scheme = SCHEMES[at.time];
@@ -358,5 +401,5 @@ export function paintEnvironment(
   const layer: Layer = { into: region.into, horizon, scheme };
   paintSky(target, layer);
   paintGround(target, layer);
-  paintContactShadow(target, at, scheme.shadow);
+  if (at.contact !== false) paintContactShadow(target, at, scheme.shadow);
 }

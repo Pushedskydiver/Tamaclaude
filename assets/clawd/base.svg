@@ -1,14 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15 16" width="300" height="320">
-  <!--
-    Reference geometry only: the animations do not copy this one.
-
-    A half-opacity black is exactly what `snapToPalette` drops — it snaps to the
-    background and arrives part-transparent — so every animation that copied it
-    declared a shadow and drew zero pixels of it, invisible for as long as the
-    stage behind Clawd was black. The real one is drawn by the renderer, at
-    these coordinates, in a tone that knows which of the four grounds it is
-    falling on. See `paintContactShadow` in packages/renderer/src/environment.ts.
-  -->
   <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
   
   <g id="master-group">

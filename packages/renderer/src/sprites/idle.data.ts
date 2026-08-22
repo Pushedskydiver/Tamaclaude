@@ -16,7 +16,7 @@
  * when the two disagree — so this stamp describes the pixels, not just the file
  * that happened to be on disk at the time.
  */
-export const SOURCE = '8e539966afda9dae';
+export const SOURCE = 'd2fa779e85cb5007';
 export const WIDTH = 168;
 export const HEIGHT = 200;
 

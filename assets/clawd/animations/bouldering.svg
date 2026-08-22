@@ -142,15 +142,22 @@
     notices. Verified by rendering two loops and hashing: t=0 and t=4s are
     byte-identical.
 
-    `#ground-shadow` is present at zero opacity. Every other animation stands
-    him on a floor; here he is on a wall, and a floor shadow under a climber is
-    worse than no shadow — which is what the plan asked for and what the
-    previous version quietly overrode by scaling it into a slab on the wall
-    instead. At its base half opacity it would darken every joint and hold that
-    passed behind his feet, which is a smear rather than a shadow. Zero opacity
-    rather than deletion keeps every base element in the file at its own
-    coordinates, and keeps it out of the safe-area walk, which skips anything
-    transparent.
+    **No shadow, and this file is the reason the renderer has to be told.**
+    Every other animation stands him on a floor; here he is on a wall, and a
+    floor shadow under a climber is worse than no shadow — which is what the
+    plan asked for, what an early version quietly overrode by scaling it into a
+    slab on the wall, and what a *second* version overrode again when the
+    shadow moved into the renderer and was drawn for everything.
+
+    That second attempt is worth recording because the evidence for it looked
+    fine. It rested on this animation's feet being on the same line as the
+    others — measured at unit 15.13, which was frame 0 of a 32-frame scrolling
+    loop; across the loop the lowest drawn pixel reaches 15.625. And composed,
+    the wall's joint band scrolls through the shadow row and covers 89% of it
+    for four frames in every thirty-two, so the shadow blinked twice a loop.
+
+    `castsShadow` in packages/renderer/src/environment.ts is what holds the
+    line now, and it names this animation.
 
     `data-safe-area="ignore"` exempts the wall from the landscape safe-area
     check: its tiles run past the crop and lose nothing, because the pattern

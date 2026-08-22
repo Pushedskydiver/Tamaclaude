@@ -118,10 +118,6 @@
     <style>
       /* One animation per element, one element per rule. See the header. */
 
-      #ground-shadow {
-        transform-origin: 7.5px 15.5px;
-        animation: shadow-action 16s infinite ease-in-out;
-      }
 
       #fx-lean {
         animation: lean-look 16s infinite ease-in-out;
@@ -237,21 +233,6 @@
 
       /* Tracks the body: narrow and pale as he lifts off it, broad and dark
          under the landing. */
-      @keyframes shadow-action {
-        0%, 12.5%       { transform: translateX(0) scaleX(1); opacity: 0.5; }
-        18.75%          { transform: translateX(0.5px) scaleX(1); opacity: 0.5; }
-        31.25%          { transform: translateX(0.62px) scaleX(1); opacity: 0.5; }
-        37.5%           { transform: translateX(0) scaleX(1); opacity: 0.5; }
-        43.75%          { transform: translateX(-0.5px) scaleX(1); opacity: 0.5; }
-        53.125%         { transform: translateX(-0.62px) scaleX(1); opacity: 0.5; }
-        59.375%         { transform: translateX(0) scaleX(1); opacity: 0.5; }
-        62.5%           { transform: translateX(0) scaleX(0.94); opacity: 0.44; }
-        66.40625%       { transform: translateX(0) scaleX(0.86); opacity: 0.36; }
-        71.875%         { transform: translateX(0) scaleX(0.88); opacity: 0.38; }
-        75%             { transform: translateX(0) scaleX(1.12); opacity: 0.62; }
-        79.6875%        { transform: translateX(0) scaleX(0.98); opacity: 0.48; }
-        83.59375%, 100% { transform: translateX(0) scaleX(1); opacity: 0.5; }
-      }
 
       /* Up to 45deg, where a 2x2 claw renders as a diamond and reads as a
          shape rather than as a square that has moved. Then it flops the same
