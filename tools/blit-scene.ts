@@ -26,7 +26,13 @@
  */
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame } from '@tamaclaude/protocol';
-import type { Orientation, Scene, StageSprite } from '@tamaclaude/renderer';
+import type {
+  EnvironmentExtent,
+  Orientation,
+  Scene,
+  StageSprite,
+  TimeOfDay,
+} from '@tamaclaude/renderer';
 
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -90,6 +96,18 @@ export function composePanels(
     readonly orientation: Orientation;
     readonly pack: PackManifest;
     readonly name: string;
+    /**
+     * Which sky to compose against, for judging an animation in context.
+     *
+     * `BUILD_PLAN.md` calls judging animations against a black stage "judging
+     * them in the wrong context", and until the daemon started passing an
+     * environment there was no context to judge in. It is an option rather
+     * than the clock because the thing worth checking is a pale prop against
+     * `day` and the same prop against `night` — a tool that only ever showed
+     * the current hour could not show you the pair.
+     */
+    readonly time?: TimeOfDay;
+    readonly extent?: EnvironmentExtent;
   },
 ): readonly Frame[] {
   // The crop `paintStage` applies is derived from the *layout's* scale, and
@@ -124,6 +142,10 @@ export function composePanels(
       sprites: [raster],
       sessions: [],
       ...placeholderBands(options.name),
+      environment: {
+        time: options.time ?? 'day',
+        extent: options.extent ?? 'panel',
+      },
     });
     return frame(panel.pixels, panel.width);
   });

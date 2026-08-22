@@ -31,7 +31,7 @@ import type { Plan, Totals, Update, Window } from './blit-types.ts';
 import type { Sprite } from './png-rgb565.ts';
 import type { Link } from './serial.ts';
 import type { Frame, Rect } from '@tamaclaude/protocol';
-import type { Orientation } from '@tamaclaude/renderer';
+import type { Orientation, TimeOfDay } from '@tamaclaude/renderer';
 
 import { execFileSync } from 'node:child_process';
 import { stat } from 'node:fs/promises';
@@ -46,7 +46,7 @@ import {
   extractRect,
   writeRectHeader,
 } from '@tamaclaude/protocol';
-import { ORIENTATIONS, panelSize } from '@tamaclaude/renderer';
+import { ORIENTATIONS, panelSize, TIMES_OF_DAY } from '@tamaclaude/renderer';
 
 import { describe, reportWindow, summarise } from './blit-report.ts';
 import { composePanels, loadPack } from './blit-scene.ts';
@@ -63,6 +63,16 @@ const DEFAULT_PORT = '/dev/cu.usbmodem1101';
  * default to landscape, which is how the device is meant to sit.
  */
 const DEFAULT_ORIENTATION = 'landscape';
+
+/**
+ * The sky to compose against when none is named.
+ *
+ * `day` because it is the hardest: it is the palest of the four, so a prop
+ * that reads on it reads everywhere. Two of the defects in this repo's
+ * animations were invisible against a black stage and only appeared once
+ * there was scenery, and both were worst on `day`.
+ */
+const DEFAULT_SKY: TimeOfDay = 'day';
 
 /** Lateness past which the loop resets its clock instead of catching up. */
 const CATCH_UP_LIMIT_MS = 250;
@@ -331,11 +341,14 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length === 0) {
     console.error(
-      'usage: node tools/blit.ts <animation|frameDir> [port] [orientation]\n' +
+      'usage: node tools/blit.ts <animation|frameDir> [port] [orientation] [sky]\n' +
         `       port defaults to ${DEFAULT_PORT}\n` +
         `       orientation is ${ORIENTATIONS.join(' or ')}, default ` +
         `${DEFAULT_ORIENTATION} — it must match how the firmware was built ` +
-        '(PANEL_LANDSCAPE in packages/device/firmware/blitter/main/main.c)',
+        '(PANEL_LANDSCAPE in packages/device/firmware/blitter/main/main.c)\n' +
+        `       sky is ${TIMES_OF_DAY.join(', ')}, default ${DEFAULT_SKY} — ` +
+        'the point is checking a pale prop against day and the same prop ' +
+        'against night, which one fixed sky cannot show you',
     );
     process.exit(1);
   }
@@ -344,11 +357,16 @@ async function main(): Promise<void> {
     console.error(`orientation must be one of ${ORIENTATIONS.join(', ')}`);
     process.exit(1);
   }
+  const sky = (args[3] ?? DEFAULT_SKY) as TimeOfDay;
+  if (!TIMES_OF_DAY.includes(sky)) {
+    console.error(`sky must be one of ${TIMES_OF_DAY.join(', ')}`);
+    process.exit(1);
+  }
   const frameDir = await resolveFrameDir(args[0]);
   const rasters = await decode(frameDir);
   const name = basename(frameDir);
   const pack = await loadPack(resolve(ROOT, 'packs/example'));
-  const panels = composePanels(rasters, { orientation, pack, name });
+  const panels = composePanels(rasters, { orientation, pack, name, time: sky });
   const plan = planFrames(panels, orientation);
   const { width, height } = panelSize(orientation);
   describe(name, { x: 0, y: 0, width, height }, plan);

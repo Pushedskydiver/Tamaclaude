@@ -39,7 +39,7 @@ Grill these specifically:
   everything on the host and nothing on the device. A spec that moves work
   onto the device needs to argue for it.
 - **Does this survive being handed to someone else?** The recipient is a
-  capable developer who will read this repo, but he will not have this
+  capable developer who will read this repo, but who will not have this
   conversation.
 
 Key disciplines:

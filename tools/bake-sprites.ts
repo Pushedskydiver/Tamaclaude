@@ -44,6 +44,7 @@ import { chromium } from 'playwright';
 
 import { encodeRect } from '@tamaclaude/protocol';
 
+import { fingerprint } from './art-fingerprint.ts';
 import { loadFrames } from './png-rgb565.ts';
 
 /** Where the generated modules go. Read by `packages/renderer/src/sprites`. */
@@ -99,6 +100,7 @@ function encodeMask(mask: Uint8Array): { mode: number; payload: Uint8Array } {
 
 type Baked = {
   readonly name: string;
+  readonly source: string;
   readonly width: number;
   readonly height: number;
   readonly pixels: readonly string[];
@@ -106,7 +108,7 @@ type Baked = {
 };
 
 function moduleSource(baked: Baked): string {
-  const { name, width, height, pixels, masks } = baked;
+  const { name, width, height, pixels, masks, source } = baked;
   const list = (items: readonly string[]): string =>
     items.map((item) => `  '${item}',`).join('\n');
   return `/**
@@ -119,7 +121,15 @@ function moduleSource(baked: Baked): string {
  * Each entry is base64 of one frame: a mode byte, then the payload, for the
  * codec in \`@tamaclaude/protocol\`. \`sprites/index.ts\` is what turns them back
  * into pixels; nothing else should read these strings.
+ *
+ * \`SOURCE\` is a hash of the SVG this was baked from, comments and whitespace
+ * excluded. \`tools/bake-sprites.test.ts\` fails when it stops matching, which is
+ * how a bake that does not match its source is caught. \`svg2frames\` writes the
+ * same hash beside the frames it renders, and \`bake-sprites.ts\` refuses to bake
+ * when the two disagree — so this stamp describes the pixels, not just the file
+ * that happened to be on disk at the time.
  */
+export const SOURCE = '${source}';
 export const WIDTH = ${String(width)};
 export const HEIGHT = ${String(height)};
 
@@ -144,6 +154,32 @@ async function bake(page: Page, name: string): Promise<void> {
       `no rasterised frames for ${name} — run \`node tools/svg2frames.ts assets/clawd/animations/${name}.svg out/${name}\` first`,
     );
   }
+  // **The frames have to prove which SVG they came from.** This function's
+  // pixel input is the PNGs in `dir`, and the SVG is only read below to hash
+  // it — so on its own the stamp says "these bytes were baked while that SVG
+  // was on disk", which is not the same claim and is the weaker one. A review
+  // recoloured Clawd bright green, re-baked without re-rendering, and got
+  // byte-identical pixels carrying the new SVG's hash: a stale bake with a
+  // green certificate, which is worse than no certificate.
+  //
+  // It is also how the original defect happened. `pnpm harness` renders only
+  // `typing thinking gym bouldering` into `out/<name>`, `pnpm measure` renders
+  // everything into `out/measure/<name>`, and the lookup above prefers
+  // `out/<name>` — so those four baked from whatever the last harness run left
+  // there, and they are exactly the four that shipped with holes for eyes.
+  const svg = await readFile(`assets/clawd/animations/${name}.svg`, 'utf8');
+  const want = fingerprint(svg);
+  const stamped = existsSync(`${dir}/source.fingerprint`)
+    ? await readFile(`${dir}/source.fingerprint`, 'utf8')
+    : undefined;
+  if (stamped !== want) {
+    throw new Error(
+      `${dir} was rendered from a different ${name}.svg than the one on disk` +
+        `${stamped === undefined ? ' (no source.fingerprint — rendered before this check existed)' : ''}` +
+        `\n  re-render it: node tools/svg2frames.ts assets/clawd/animations/${name}.svg ${dir}`,
+    );
+  }
+
   const frames = await loadFrames(page, dir);
   const first = frames[0];
   if (first === undefined) throw new Error(`no frames in ${dir}`);
@@ -163,7 +199,7 @@ async function bake(page: Page, name: string): Promise<void> {
   const path = resolve(OUT_DIR, `${name}.data.ts`);
   await writeFile(
     path,
-    moduleSource({ name, width, height, pixels, masks }),
+    moduleSource({ name, width, height, pixels, masks, source: want }),
     'utf8',
   );
   const bytes = (await readFile(path)).byteLength;
@@ -188,10 +224,18 @@ async function bake(page: Page, name: string): Promise<void> {
 async function writeTable(names: readonly string[]): Promise<void> {
   const path = resolve(OUT_DIR, 'index.ts');
   const source = await readFile(path, 'utf8');
+  // Quoted only where the name is not a bare identifier, which is what
+  // prettier's default `quoteProps: "as-needed"` also settles on — so the file
+  // this writes survives a format unchanged. `permission-sign` is the first
+  // name to need it: `checked()` below allows hyphens and anticipated the
+  // *space* in "permission sign", but an unquoted `permission-sign:` key is a
+  // syntax error and took the build down with six parse errors.
+  const key = (name: string): string =>
+    /^[A-Za-z_$][\w$]*$/.test(name) ? name : `'${name}'`;
   const table =
     'const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {\n' +
     names
-      .map((name) => `  ${name}: () => import('./${name}.data.js'),`)
+      .map((name) => `  ${key(name)}: () => import('./${name}.data.js'),`)
       .join('\n') +
     '\n};';
   const list =
@@ -218,9 +262,12 @@ async function writeTable(names: readonly string[]): Promise<void> {
  * hand-maintained file this tool edits rather than owns. Failing here costs a
  * rerun; failing there costs repairing a file the header says is maintained.
  *
- * It is also what lets the generated key stay unquoted, which matters because
- * prettier strips unnecessary quotes — a quoted key would be rewritten on the
- * next format and put the generator back out of step with the file it writes.
+ * It does not make every name a bare identifier, and `writeTable` above is
+ * where that is handled: a hyphen is allowed here because `permission-sign` is
+ * a reasonable filename, but it cannot be an unquoted object key. Prettier's
+ * default `quoteProps` is "as-needed", so quoting exactly the names that
+ * require it is also what a format would settle on, and the generator stays in
+ * step with the file it writes.
  */
 function checked(name: string): string {
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {

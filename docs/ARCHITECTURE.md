@@ -19,7 +19,7 @@ for a standalone product. It is the worse design here, for three reasons:
    duplicates the firmware so it can be developed without hardware. Under
    host-rendering, the "simulator" is the same renderer with a canvas sink.
    There is nothing to keep in sync.
-3. Jamie's device would need reflashing to receive a fix.
+3. The recipient's device would need reflashing to receive a fix.
 
 ### Why it fits down the wire — measured
 
@@ -186,12 +186,12 @@ and does not reason about sessions.
 
 ## Transports
 
-| Transport | Status            | Notes                                                                                                                                                               |
-| --------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| USB-CDC   | Primary           | One cable = power + data. No pairing, no Wi-Fi provisioning. Truly plug-and-play.                                                                                   |
-| Canvas    | Development       | Same renderer, browser sink. No hardware required.                                                                                                                  |
-| TCP       | Planned, cuttable | Lets a remote host (Jamie's Raspberry Pi Claude Code agent) push session events. Same protocol, different socket — cheap if designed in now, expensive to retrofit. |
-| BLE       | Not planned       | Upstream uses it. USB is simpler and we are tethered anyway.                                                                                                        |
+| Transport | Status            | Notes                                                                                                                                                                       |
+| --------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| USB-CDC   | Primary           | One cable = power + data. No pairing, no Wi-Fi provisioning. Truly plug-and-play.                                                                                           |
+| Canvas    | Development       | Same renderer, browser sink. No hardware required.                                                                                                                          |
+| TCP       | Planned, cuttable | Lets a remote host (the recipient's Raspberry Pi Claude Code agent) push session events. Same protocol, different socket — cheap if designed in now, expensive to retrofit. |
+| BLE       | Not planned       | Upstream uses it. USB is simpler and we are tethered anyway.                                                                                                                |
 
 The device sleeps when the Mac sleeps. Accepted as correct behaviour, not a
 defect.
@@ -207,9 +207,9 @@ swappable would double the art surface, and the calendar has no room for a
 second character. `assets/clawd/base.svg` and `docs/ANIMATION.md` own the
 character; packs own everything about how he's dressed.
 
-`packs/example/` is committed and documents the format. Real packs
-(`packs/alex/`, `packs/jamie/`) are gitignored — the repo is public and the
-personal content is not.
+`packs/example/` is committed and documents the format. Real packs are gitignored — one per person, named for
+whoever the panel belongs to — because the repo is public and the personal
+content is not.
 
 Quips have two tiers: **mapped** (fired on a specific state — a failure, a
 permission request) and **random idle** (surfaced rarely when nothing is

@@ -114,13 +114,22 @@ grown a lump. Three positions were rendered and judged at true size while
 building `thinking` — beside the head at (0,6), detached above it at (0,4), and
 on the shoulder at (2,4) — and all three failed identically.
 
-Rotation does not repeal this; it routes around it. A claw swung out to 45deg
-or 80deg clears the torso and reads, because it is _outside_ the silhouette and
-turned far enough to be its own shape. A claw rotated 10deg while still touching
-the body has the same problem it always had.
+Rotation gets it out of the silhouette. It does not, on its own, make it read.
+`thinking.svg` §Why neither claw rotates records the swing this section used to
+recommend: 45deg, mechanically clean, two poses and no staircasing — and it
+still read as "a spike rather than a hand", a fin flicking beside the body
+twice a cycle. A 2x2 block turned 45deg is an arrowhead, and an arrowhead hung
+off an 11x7 slab is not a limb.
 
-So: move a claw away from the torso, or turn it far. Do not park it against the
-edge.
+What makes a raised claw read is **length**. `gym` rotates to -73deg _and_
+`scaleX(2.85)`, extending the claw along its own axis until it is an arm rather
+than a lozenge; that puts the tip at (13.71, 4.26), 1.74 units above the head,
+which no rotation alone can reach. A 2x2 claw pivoting at the shoulder cannot
+get its top edge above y=7.76 — the pivot is at y=10 and the far corner is
+sqrt(5) away — so the torso top at y=6 is beyond it by 1.76 units, always.
+
+So: extend a claw as well as turning it, and give it something to hold. Do not
+park it against the edge, and do not expect rotation by itself to buy a pose.
 
 ## Safe area
 
@@ -134,11 +143,22 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost visible content: `gym` +2, `typing` -2.5, `thinking` -4.
-`thinking` sits exactly on the line with no margin, which is worth knowing
-before anything is added above that bubble. `bouldering`'s
-scroll pattern extends past the crop by design and loses nothing, since it
-repeats.
+Measured topmost drawn pixel, across every frame of all eight: `idle` +4.25,
+`gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
+`asleep` -3, `bouldering` -8.5. So the closest anything non-exempt comes to the
+-4 line is two units of margin, not none.
+
+**`bouldering`'s -8.5 is its wall, and the wall does not count.** It is inside
+`#fx-wall`, which carries `data-safe-area="ignore"` precisely so this rule skips
+it, and its scroll pattern extends past the crop by design and loses nothing
+because it repeats. `svg2frames`' own safe-area walk honours that attribute and
+reports +5.75 for `bouldering`; the figure above is the raw pixel extent. If you
+are checking whether an animation violates the crop, the tool's number is the
+one to read, and it warns on its own.
+
+An earlier version of this line read "`gym` +2, `typing` -2.5, `thinking` -4"
+and added that `thinking` "sits exactly on the line with no margin" — two of the
+three numbers were wrong and the warning drawn from them was wrong with them.
 
 Check it by asking what the topmost _visible_ element reaches — an element at
 zero opacity does not count, which is what gives `typing` its headroom.
@@ -378,7 +398,7 @@ from what it is given, so nothing else needs telling.
 The resting states run long. At a one-second loop a blink happens sixty times a
 minute and a breath is a pant. `idle` is sixteen seconds — long enough to hold
 several distinct beats, so the thing on screen most of the time is also the
-thing slowest to feel mechanical. `asleep` is four.
+thing slowest to feel mechanical. `asleep` is twelve; `bouldering` is the four.
 
 Longer loops are close to free on the wire, because most of the extra frames
 differ from their neighbour in a small rectangle or not at all, and the dirty
@@ -397,8 +417,10 @@ The advantage is structural rather than aesthetic. A pool needs the daemon to
 own a list, pick from it, and decide when to switch; beats need nothing at all
 outside the SVG. The variety lives in the animation.
 
-It is also the cheapest thing in the repo. `idle` measures 3,620 B/s against
-the 562.5 KB/s the link was measured at — 0.63%, the lowest of the six. The
+It is also among the cheapest things in the repo. `idle` measures 3,620 B/s
+against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
+the six until `permission-sign` (2,645) and `confused` (3,323) landed; the eight
+now run 2,645 / 3,323 / 3,620 / 3,905 / 6,332 / 9,966 / 14,545 / 19,992. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

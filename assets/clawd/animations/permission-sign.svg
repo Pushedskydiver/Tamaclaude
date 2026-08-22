@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="8">
+  <!--
+    Clawd: permission sign (NEEDS_PERMISSION)
+
+    Claude has asked for approval and cannot proceed without it. Clawd holds a
+    sign up and waits.
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates and colours; all motion is CSS applied by ID.
+
+    ── The arm, and why rotation alone could not do this ──────────────────
+
+    A 2x2 claw pivoting at the shoulder cannot lift its top edge above y=7.76.
+    The pivot is at y=10 and the furthest corner is sqrt(5) away, so the torso
+    top at y=6 is out of reach by 1.76 units, always — a sign held there would
+    overlap the body, which is the lump `docs/ANIMATION.md` §What a claw cannot
+    do exists to forbid, arriving via the plate instead of the claw.
+
+    So this uses `gym`'s mechanism rather than a rotation: rotate *and*
+    `scaleX`, extending the claw along its own axis until it is an arm rather
+    than a lozenge. That is what gets the tip clear of the head. §What a claw
+    cannot do carries the arithmetic; the short version is that rotation gets
+    a claw out of the silhouette and length is what makes it read.
+
+    ── The sign ───────────────────────────────────────────────────────────
+
+    Five units wide by seven tall, spanning y -2 to 5: one unit clear of the
+    torso top at y=6, and two units inside the landscape crop line at y=-4.
+    The extended claw crosses its lower edge, so the two overlap — §Props need
+    contact, an unheld prop reads as hovering and `gym`'s bar racked three
+    units clear read as a bar floating above a crab. The arm is drawn after
+    the plate so the claw is visibly in front of it, gripping.
+
+    The plate is #C9D1D9, which `thinking`'s bubble already proves readable
+    against both the day sky and the night one now that the rock pool is
+    behind him. The glyph is #000000 — the tone the eyes already declare, and
+    deliberately not a new near-black. See the note on the glyph below.
+
+    A `?` needs five rows: top bar, right descender, turn to the stem, a gap,
+    and the dot. At three the dot merges into the stem and it degenerates —
+    `asleep` records the same finding for the Z, which needs its diagonal to
+    cross two interior columns or it rasterises as an I. Five rows inside a
+    seven row plate leaves a whole unit of border top and bottom.
+
+    ── Why nothing raises it ──────────────────────────────────────────────
+
+    The sign is up on frame 0 and stays up. `frameAt` in
+    `packages/cli/src/daemon.ts` is wall-clock modulo the frame count, so a
+    state never begins its animation at frame 0 — the panel joins whatever
+    phase the clock is in. A raise at the top of a loop is therefore not an
+    entrance, it is a pump at loop frequency, forever, on a screen watched for
+    minutes while someone decides. `NEEDS_PERMISSION` persists until a human
+    answers it.
+
+    The sign does *not* breathe with him. It and the arm holding it sit
+    outside the breath group, so he holds it steady while his body moves
+    underneath — which is what a person does with a placard, and the only way
+    the plate stays on whole device pixels. See the note beside it below; an
+    earlier version of this paragraph argued the opposite and was describing
+    the version that fringed.
+  -->
+
+  <defs>
+    <style>
+      /* Whole art pixels throughout. One frame of the eight second loop is
+         1.5625%. */
+
+      /* `idle`'s breath: two seconds alternating, about the hips, so the body
+         settles onto planted legs rather than lifting off them. Four second
+         visual period, twice in the loop. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* The holding arm. Rotation to clear the silhouette, axial scale to
+         make it long enough to be an arm — `gym` uses the same pair, at the
+         same shoulder pivot. Static: this pose is the screen. */
+      #right-arm-joint {
+        transform-origin: 13px 10px;
+        transform: rotate(-73deg) scaleX(2.85);
+      }
+
+      /* Squashed about the eye line, never hidden — §Closing an eye. Linear,
+         because a lid that accelerates reads as a wince. */
+      #eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 8s infinite linear;
+      }
+
+      /* One blink. Every keyframe lands on a whole frame of the 64; measured,
+         frames 40 and 43 are fully open and 41-42 fully shut, so the travel
+         frames the percentages ask for do not survive the snap. It reads as a
+         250ms blink, which is what it is for. */
+      @keyframes blink {
+        0%, 62.5%      { transform: scaleY(1); }
+        64.0625%       { transform: scaleY(0.1); }
+        65.625%        { transform: scaleY(0.1); }
+        67.1875%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- ── base geometry: assets/clawd/base.svg, regrouped not redrawn ───── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <!-- Planted, and outside the breath: the foot line stays flat. -->
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+          <rect id="left-shoulder" x="2" y="9" width="2" height="2"/>
+        </g>
+
+        <!-- The shoulder rect stays *outside* the scaled group, and that is
+             not a detail. `thinking` puts one inside its joint because that
+             joint only rotates; scaled by 2.85 as well, the shoulder — which
+             lies on the far side of the pivot — is stretched to 5.7 units and
+             swung the opposite way, straight down through the torso and out
+             below the legs. Rendered, and it looked like a spear through him.
+             `gym` has no *shoulder* rect inside its scaled group — only the
+             claw itself — which is why its arm works. This one keeps a static shoulder to fill the pivot; it
+             sits inside the torso's own footprint, so it is never seen. -->
+        <rect id="right-shoulder" x="11" y="9" width="2" height="2"/>
+      </g>
+
+      <g id="eyes-color-group" fill="#000000">
+        <g id="eyes-blink">
+          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- ── the sign, and the arm holding it — outside the breath ───────── -->
+    <!-- Held steady while the body breathes underneath, which is both what a
+         person does with a placard and the only way this stays on whole device
+         pixels. Inside `#breathe` the scale(1.02, 0.98) put every edge of the
+         plate and the glyph on fractional pixels for most of the loop, and the
+         midpoint of #C9D1D9 over a dark glyph is nearer #DE886D than it is to
+         either — so every soft edge snapped to Clawd's own body colour and
+         drew an orange keyline round the sign and through the `?`. Up to 573
+         peach pixels on a frame, against a glyph of 417. It also cost 2.8x on
+         the wire. The same defect, from the same cause, as the boot splash's
+         wordmark before that was drawn as rects. -->
+    <rect id="fx-sign-plate" x="11" y="-2" width="5" height="7" fill="#C9D1D9"/>
+
+    <!-- `?`, three by five, inside the plate's one unit border.
+
+         #000000, not #0D1117. The dark tone here has to be one the document
+         already declares, and that one is the eyes. A new near-black is not
+         free: §Palette snapping warns that every declared colour becomes a
+         snap target for every other colour's edges, and #0D1117 sits *nearer*
+         a faint peach edge (21.4) than the background black does (41.8). The
+         snapper's transparency rule needs those edges to resolve to the
+         background so it can drop them; #0D1117 stole them, kept them opaque,
+         and stitched a black keyline round the arm, the torso and the legs on
+         every frame — invisible on a black stage, and a hard outline against
+         the rock pool. Up to 418 pixels a frame. -->
+    <g id="fx-sign-glyph" fill="#000000">
+      <rect x="12" y="-1" width="3" height="1"/>
+      <rect x="14" y="0" width="1" height="1"/>
+      <rect x="13" y="1" width="1" height="1"/>
+      <rect x="13" y="3" width="1" height="1"/>
+    </g>
+
+    <!-- Drawn last so the claw crosses the plate and reads as gripping.
+
+         The fill is declared here rather than inherited. `right-arm` sat
+         inside `#body-color-group` until it moved out of the breath, and that
+         group is where the peach came from — outside it the rect inherits from
+         `#master-group`, which is to say black. It rendered as a black bar
+         from the shoulder to the sign, and it took looking at a composed panel
+         to see it: on frames alone, against a black stage, a black arm is
+         simply absent rather than obviously wrong. -->
+    <g id="right-arm-joint" fill="#DE886D">
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+    </g>
+  </g>
+</svg>

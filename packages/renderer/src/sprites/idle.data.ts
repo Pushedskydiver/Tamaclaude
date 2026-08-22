@@ -8,7 +8,13 @@
  * Each entry is base64 of one frame: a mode byte, then the payload, for the
  * codec in `@tamaclaude/protocol`. `sprites/index.ts` is what turns them back
  * into pixels; nothing else should read these strings.
+ *
+ * `SOURCE` is a hash of the SVG this was baked from, comments and whitespace
+ * excluded. `tools/bake-sprites.test.ts` fails when it stops matching, which is
+ * how "edited the animation, forgot to re-bake" is caught. Four of the six were
+ * stale that way, carrying holes where Clawd's eyes are.
  */
+export const SOURCE = 'e4d893588b231288';
 export const WIDTH = 168;
 export const HEIGHT = 200;
 

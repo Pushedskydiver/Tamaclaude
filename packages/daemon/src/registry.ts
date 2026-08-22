@@ -9,7 +9,7 @@
  * fewer thing to reason about.
  *
  * The copying is O(sessions) per event, on a machine running single figures of
- * them. Alex and Jamie run two or three.
+ * them. In practice that is two or three.
  */
 
 import type { Session } from './session.js';
@@ -53,8 +53,8 @@ export function createRegistry(now: number): SessionRegistry {
  * hook events, because the hook gives up after 150ms — so the panel goes wrong
  * with nothing saying why.
  *
- * Sixty-four is far past any real use. The strip shows five chips; Alex and
- * Jamie run a handful of sessions each.
+ * Sixty-four is far past any real use. The strip shows five chips, and one
+ * person runs a handful of sessions at once.
  */
 const MAX_SESSIONS = 64;
 

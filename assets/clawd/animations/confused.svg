@@ -1,0 +1,241 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="12">
+  <!--
+    Clawd: confused (WAITING — 60s idle after a Notification)
+
+    Claude has stopped and is waiting for a human. Clawd looks straight at you
+    and a prompt caret blinks beside his head.
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates and colours; all motion is CSS applied by ID.
+
+    ── Why there is no tilt ───────────────────────────────────────────────
+
+    The plan for this screen originally called for a 6 degree body tilt to
+    carry the head-cock. `docs/ANIMATION.md` §Scale by size, not by taste
+    already recorded a 2.5 degree torso tilt being tried in `idle` and reading
+    as a corrupted sprite, and a review measured the 6: nine one-pixel steps
+    across the torso's top edge and eight times the antialiased pixels. The
+    torso is 88x56 device pixels. Shallow diagonals on slabs that size
+    staircase, every time.
+
+    So the cock is carried entirely by asymmetry, which is `gym`'s technique
+    (§Eyes, in its plan): the left eye rides a unit low and the right a unit
+    high, and each claw goes the same way as the eye on its side. All four
+    together approximate one rotation in whole units. Nothing rotates and
+    nothing translates by a fraction.
+
+    Not the opposite sense — that was tried first and rejected; see the note
+    beside the offsets below. Two cues pulling against each other do not
+    compose into a cocked head on a body with no neck, they cancel into a
+    shear.
+
+    ── Why a caret and not a question mark ────────────────────────────────
+
+    `NEEDS_PERMISSION` is the other attention state, it can also be the hero,
+    and it holds up a sign with a `?` on it. If this screen also showed a `?`
+    the two would be one picture at a glance, which is the failure mode the
+    spec's whole §1 exists to prevent — those are the two screens it is
+    written to serve.
+
+    A prompt caret says "type something" to anyone who has ever used a
+    terminal, and this is a device for a person who lives in one. It also
+    separates cleanly from `thinking`, whose 9x5 bubble with a tail and three
+    cyan dots is a completely different mass. That mass is what a glance
+    actually reads: eye direction is the supporting cue, not the separator,
+    because nobody can judge "eyes one art pixel lower than they were forty
+    seconds ago" against an 11x7 slab with no brow to reference.
+
+    ── Why it survives being stared at ────────────────────────────────────
+
+    This may be the most-seen screen on the device — the spec says it may be,
+    which is not a measurement, and no counting has been done on how often
+    `Notification` fires. Either way `WAITING` is a resting state, so this is
+    built like `idle` rather than like a beat: twelve seconds, one slow breath
+    cycle three times, two blinks well apart, and a caret that is the only
+    thing moving at any speed.
+
+    **26 of 96 frames are distinct, and that is correct.** Most animations here
+    measure 91-100% and this looks like a defect beside them, but the class is
+    not as clean as it sounds — `thinking` is 90.6% and `permission-sign`, which
+    shipped alongside this, is 34%. Both are resting screens too. The caret
+    runs 8 frames, the breath 32, their LCM is 32, and the loop is three
+    repeats of that plus two blinks. The check exists to catch a lost keyframe
+    block; nothing is lost, and 77 of the 96 frame transitions change pixels.
+
+    Worth knowing before anyone tries to raise it: an intermediate version of
+    this file did reach 34 distinct frames, and the extra motion was a keyline
+    flickering on and off with the breath — a defect, not animation. The number
+    is not a quality signal in either direction.
+  -->
+
+  <defs>
+    <style>
+      /* Whole art pixels throughout. Every value below lands on one of the 96
+         frames of the twelve second loop: one frame is 1.041667%. */
+
+      /* The caret. `steps(1)` because a caret is a discrete state, not a
+         motion — a fade would render as a grey block on the frames between,
+         and at 8fps a one-second cycle is four frames on, four off. */
+      #fx-caret {
+        animation: caret 1s infinite steps(1);
+      }
+
+      @keyframes caret {
+        0%   { opacity: 1; }
+        50%  { opacity: 0; }
+        100% { opacity: 1; }
+      }
+
+      /* `idle`'s breath exactly: two seconds alternating, about the hips, so
+         the body settles onto planted legs rather than lifting off them. A
+         four second visual period tiles three times in the twelve second loop
+         and the seam is clean.
+
+         The magnitude is idle's too, and it matters more than it looks. A
+         first draft used scale(1.012, 0.988) with no translate: on a torso 56
+         device pixels tall that is under one pixel of travel, so 76 of the 96
+         frames rasterised identically and the animation was 21% distinct
+         against 91-100% for every animation that ships. The translate is what
+         actually moves it. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* The head-cock: static offsets, not an animation. Every appendage
+         tilts the *same* way — left side down, right side up — so the offsets
+         compose into one rotation approximated in whole units.
+
+         The first version had the claws opposing the eyes, on the reasoning
+         that a counter-tilt would read as a cocked head against a level body.
+         It does not: Clawd's head and torso are a single 11x7 slab with no
+         neck to absorb an opposing shoulder line, so the two cues cancel into
+         a shear and it reads as a lopsided crab rather than a curious one.
+         Rendered both ways and compared at true size. */
+      #left-eye-cock  { transform: translateY(1px); }
+      #right-eye-cock { transform: translateY(-1px); }
+      #left-arm-joint  { transform: translateY(1px); }
+      #right-arm-joint { transform: translateY(-1px); }
+
+      /* Squashed about each eye's own line, never hidden — §Closing an eye.
+         Linear, because a lid that accelerates reads as a wince. The origins
+         are in each eye's own coordinates, so the cock above still applies. */
+      #left-eye-blink {
+        transform-origin: 4.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      #right-eye-blink {
+        transform-origin: 10.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      /* Two blinks, far enough apart that they never read as a pair. Every
+         keyframe lands on a whole frame of the 96. Measured, the eyes are open
+         on frames 24 and 66 and shut on 25-26 and 67-68: the travel frames the
+         percentages ask for do not survive the snap, because the breath is at
+         a different phase for each blink and multiplies the lid differently.
+         Both read as a 250ms blink, which is what matters. */
+      @keyframes blink {
+        0%, 25%              { transform: scaleY(1); }
+        26.041667%           { transform: scaleY(0.1); }
+        27.083333%           { transform: scaleY(0.1); }
+        28.125%              { transform: scaleY(1); }
+        68.75%               { transform: scaleY(1); }
+        69.791667%           { transform: scaleY(0.1); }
+        70.833333%           { transform: scaleY(0.1); }
+        71.875%, 100%        { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- ── the prompt caret, above and right of his head ─────────────────── -->
+  <!-- Five units by three, spanning y=2 to 5 — one unit clear of the torso
+       top at y=6 at rest, 1.63 at full breath, and six units inside the
+       landscape crop line at y=-4. It never touches him.
+
+       It is a block rather than the bare 3x1 bar it started as, and the block
+       is the part that works: a lone pale dash measured 1.31:1 against the day
+       sky, which is the path the daemon actually takes, so the one element
+       carrying this screen's meaning was invisible on it. Two tones fixes it
+       in both directions — the dark block reads against the three pale skies,
+       the pale core against the dark one.
+
+       The block is #000000, and that is not interchangeable with the near
+       black it started as. #0D1117 sits closer to a faint peach edge (21.4)
+       than the background black does (41.8), so declaring it hands those edge
+       pixels a snap target that is *not* the background — they stay opaque and
+       stitch a hard keyline round the torso and legs. Measured at 21,870
+       pixels across all 96 frames, on every frame. `permission-sign` shipped
+       exactly this defect in its `?` and had it removed; the fix here was
+       written an hour later and reintroduced it in the sibling file. §Palette
+       snapping is right: before adding a colour, ask what edge it now sits
+       between.
+
+       A `>` chevron was tried in front of it during authoring, to make the
+       terminal reading explicit. It does not survive this scale: a chevron
+       small enough to fit is a diagonal of single pixels touching only at
+       their corners, and it rasterises as three scattered dots rather than an
+       arrowhead. Rendered and rejected. The bare caret is cleaner, and the
+       blink is what carries the meaning anyway — static things do not blink,
+       cursors do. -->
+  <g id="fx-caret">
+    <rect x="10" y="2" width="5" height="3" fill="#000000"/>
+    <rect x="11" y="3" width="3" height="1" fill="#C9D1D9"/>
+  </g>
+
+  <!-- ── base geometry: assets/clawd/base.svg, regrouped not redrawn ───── -->
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <g id="master-group">
+    <!-- Planted, and outside the breath: the foot line stays flat. -->
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+
+        <!-- The claws tilt with the eyes, and they are also what stops this
+             being `idle` with a glyph over it — `asleep` needed the same thing
+             and solved it the same way, with claws hanging low.
+
+             No shoulder rects. `thinking` carries them because its joint
+             rotates and would open; these only translate a single unit and
+             never leave the torso's own rows (y=6..13), so a shoulder cannot
+             be exposed. Kept, they drew nothing but a one-pixel antialias
+             flicker at the torso's right edge on six frames of the loop. -->
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+
+        <g id="right-arm-joint">
+          <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+        </g>
+      </g>
+
+      <g id="eyes-color-group" fill="#000000">
+        <g id="left-eye-cock">
+          <g id="left-eye-blink">
+            <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+          </g>
+        </g>
+        <g id="right-eye-cock">
+          <g id="right-eye-blink">
+            <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

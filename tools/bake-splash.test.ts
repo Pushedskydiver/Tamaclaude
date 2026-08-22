@@ -4,8 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
 
+import { fingerprint } from './art-fingerprint.ts';
 import { paletteOf } from './frame-palette.ts';
-import { fingerprint, withWordmark } from './splash-source.ts';
+import { withWordmark } from './splash-source.ts';
 
 /**
  * The boot splash, against the header that is actually committed.
