@@ -83,7 +83,7 @@ the cogs never did.
 **Cut during review: the raised claw.** The plan called for one claw raised to
 the chin. Three positions were rendered and judged at true size and all three
 read as a lump on the torso rather than a limb — the finding is in
-`docs/ANIMATION.md` §What pose swapping cannot do, and it changes how
+`docs/ANIMATION.md` §What a claw cannot do, and it changes how
 `bouldering`, `sweeping` and `gym` must be planned. The bubble carries the read
 on its own, which is what "not wanted" lines are for: the plan said what the
 screen had to communicate, so dropping a mechanism that was not communicating
@@ -225,6 +225,142 @@ settled a pixel lower than idle. Two Zs at the spacing that avoided overlap
 left the loop looking empty, and three on staggered delays solve the overlap
 without it; the torso sits at the same y as idle, and the dropped claws carry
 the difference instead.
+
+---
+
+## Permission sign — `NEEDS_PERMISSION`
+
+Clawd holds up a sign, and waits for you to answer it.
+
+`data-loop-seconds="8"`. Tier A. **Fallback: a single static frame.** Nothing
+here moves except a breath and one blink, so one frame delivers the whole read,
+costs nothing on the wire after the first blit, and is an ordinary output of the
+existing pipeline. Decide to take it early rather than on 22 September.
+
+- **Action.** The sign is up on frame 0 and stays up for the entire loop. There
+  is no raise, because there is nowhere to put one: `frameAt` in
+  `packages/cli/src/daemon.ts` is wall-clock modulo the frame count, so a state
+  never starts its animation at frame 0 and a "raise" at the top of the loop is
+  a pump at loop frequency, forever, on a screen watched for minutes.
+- **Body mechanics.** Breathing only. A body that fidgets while asking reads as
+  agitation; the strip tint has already said how urgently.
+- **Eyes.** On the viewer, both open. One slow blink in the loop.
+- **Props.** The sign, and it is the whole screen.
+  - **The arm is `gym`'s mechanism, not a rotation.** A 2x2 claw pivoting at
+    the shoulder cannot lift its top edge above y=7.76 — the pivot is at y=10,
+    the far corner is sqrt(5) away — so the torso top at y=6 is permanently out
+    of reach and a sign held there overlaps the body. `gym` rotates to -73deg
+    _and_ `scaleX(2.85)`, which puts the claw tip at about (13.7, 4.3), 1.74
+    units clear of the head. Use that. `docs/ANIMATION.md` §What a claw cannot
+    do carries the arithmetic.
+  - **Plate 5 wide by 6 tall**, its bottom edge at the claw tip and therefore
+    around y = -1.7 to 4.3: clear of the torso top at y=6, and clear of the
+    -4 safe-area line. Fill `#C9D1D9`, which is the tone `thinking`'s bubble
+    already proves readable against both the day sky and the night one.
+  - **Glyph `?`, 3 wide by 5 tall**, fill `#0D1117`, with a real gap row
+    between stem and dot. Five rows is the minimum: at three the dot merges
+    into the stem and it degenerates, which is the same finding `asleep`
+    records for the Z at three rows.
+  - **The post overlaps the claw by a whole unit.** §Props need contact — an
+    unheld prop reads as hovering, and `gym`'s bar racked three units clear
+    read as a bar floating above a crab.
+- **Effects.** None. No shake, no glow, no colour cycling.
+
+**Not wanted:** a claw rotated but not extended — §What a claw cannot do, an
+arrowhead hung off an 11x7 slab reads as a spike, which is why `thinking` cut
+its 45deg swing. A plate whose bottom edge touches the torso: that is the lump
+the raised claw was rejected for, arriving via the sign instead. Anything above
+y = -4, outside the landscape crop. A glyph that cannot be read at true size —
+check it at 320x172, not zoomed. A sign that pumps: it turns a question into a
+demand, and see Action above for why it is not even expressible.
+
+**Why `?` here and a caret on `confused`.** Both screens are attention states,
+both can be the hero, and a viewer glancing at the panel must not see "crab,
+question mark" for both. This one is a question — it is literally asking
+permission — so it keeps the `?`, and it carries it on a held plate with real
+mass. `confused` gets something else entirely; see below.
+
+---
+
+## Confused — `WAITING`
+
+Clawd looks straight at you, waiting for an answer he has not been given.
+
+`data-loop-seconds="12"`. Tier A. **Fallback: two frames, the caret on and off.**
+
+`.claude/research/screens/spec.md` notes this **may** be the most-seen screen,
+since Claude Code asks for input constantly. That is worth knowing and it is not
+a measurement: the counting that exists covered tool calls, and says nothing
+about how often `Notification` fires. Do not spend budget on the strength of it.
+
+- **Action.** A held head-cock, and a blinking prompt caret. Nothing else.
+- **Body mechanics.** Breathing only. **No rotation.** A 2.5deg torso tilt was
+  tried in `idle` and read as a corrupted sprite; a 6deg one measured nine
+  one-pixel steps across the torso's top edge and eight times the antialiased
+  pixels. `docs/ANIMATION.md` §Scale by size, not by taste is explicit — lean by
+  translating against planted legs, and here do not lean at all.
+- **Eyes.** On the viewer for the whole loop, and **asymmetric in height** —
+  left one unit down, right one unit up. That is `gym`'s technique and it is
+  what carries the head-cock with no rotation anywhere. Two blinks per loop,
+  well apart.
+- **Props.** A prompt caret: a 3x1 rect above and to the right of his head,
+  `#C9D1D9`, blinking on a `steps(1)` track at roughly a one-second cycle. It
+  is the universal "type something" and this is a device for a person who
+  lives in a terminal. It is also nothing like `thinking`'s 9x5 bubble with a
+  tail and three cyan dots, which is the real separator: prop _mass_ and
+  silhouette are what a glance reads, not eye direction.
+- **Silhouette.** The asymmetric claws — one riding a unit high, one a unit low
+  — are what stop this being `idle` with a glyph. `asleep` needed the same
+  thing and solved it the same way, with claws hanging two art pixels low.
+- **Effects.** None.
+
+**Not wanted:** a thought bubble in any form, or any prop with a tail. Any
+rotation of the torso. A shrug, which needs shoulders he does not have. A
+caret that blinks faster than a 0.25s cycle — `docs/ANIMATION.md` §Timing gives
+0.125s as invisible at 8fps and 0.25s as the fastest perceivable. Eyes that
+drift off the viewer: at that point this is `thinking` with a different prop.
+
+---
+
+## Dizzy — `StopFailure`
+
+Clawd has taken a knock and is seeing stars.
+
+`data-loop-seconds="12"`. **Tier B**, behind the 6 Sep Tier A gate, and cut
+without regret if that gate slips — `packages/daemon/src/animation.ts` falls
+`FAILED` back to `thinking` and the panel stays honest about something being
+wrong. Deferred behind the two above deliberately, so review capacity goes to
+Tier A first.
+
+Twelve seconds, not four. `FAILED` does not decay: `effectiveState` promotes
+only from `IDLE`, so this stays on screen until another event arrives or the
+session is evicted at ten minutes. It is a resting screen and has to survive
+being stared at.
+
+- **Action.** A loose wobble with three stars orbiting above the head.
+- **Body mechanics.** **Translation, not rotation** — the body shifts against
+  planted legs, for the reason `confused` above does not tilt either.
+- **Eyes.** Crossed: each eye translated two units inward, left 4→6 and right
+  10→8. Whole art pixels, existing IDs, translation only. It is the cartoon
+  shorthand, it is free, and it cannot be mistaken for `asleep` — which is
+  exactly what a held `scaleY` squash would be, since `asleep` holds that same
+  squash for its entire loop.
+- **Props.** Three stars on one orbit, one art pixel each, phased by whole
+  frames. A 3s orbit period inside the 12s loop with delays 0 / -1s / -2s puts
+  them eight frames apart and lands every one on a whole frame; three stars on
+  a 4s loop cannot be evenly phased at all, because 32/3 is not an integer.
+  The path is whole-device-pixel steps or discrete `steps(1)` cells, never a
+  curve: a 1x1 prop is entirely edge, and a fractional position fringes it into
+  the body colour on every frame — the same fringing `thinking` documents for
+  its bubble.
+- **Effects.** None.
+
+**Not wanted:** stars that touch the body — a glyph crossing his face read as
+display corruption when it shipped that way in `asleep`. A wobble cycle faster
+than 0.25s, or any motion at 0.125s, which is invisible at 8fps. Rotation of
+the stars themselves; a rotating single pixel is a still pixel. Anything that
+reads as distress — this is a failed turn, not a catastrophe, and the strip
+tint carries severity.
 
 ---
 

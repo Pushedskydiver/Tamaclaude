@@ -58,10 +58,16 @@ table and rationale: `docs/ARCHITECTURE.md`.
   "enforced everywhere else" means production code in `hooks`, `daemon`,
   `device`, `cli` and `packs`, which is where it matters.
 - **Animations are code, not drawings.** They are CSS-animated SVG generated
-  against one canonical base geometry, and a generated animation may only add
-  transforms and keyframes to existing elements with existing IDs — never
-  redraw the character. This is what makes frames consistent. Breaking it
-  breaks the whole art pipeline.
+  against one canonical base geometry, and motion is CSS: transforms and
+  keyframes applied to elements by ID. New elements may be added for props and
+  effects, and a pose variant may be drawn where no transform reaches the pose
+  — give it its own id and keep the fill and rough scale of what it replaces.
+  What the contract protects is that every animation is recognisably the same
+  creature, which comes from the shared base, the palette and the silhouette.
+  `docs/ANIMATION.md` §The generation contract is the authority and this is its
+  summary; until 22 Aug this line instead said "never redraw the character",
+  which that section had already retired and which the repo already broke — the
+  shoulder rects in `thinking.svg` are in no base geometry.
 - **`.claude/research/` is untracked, so git is not backing it up.** Pulling
   the commit that untracked it deleted the working copies outright — git
   removes a file the pull deletes, ignored or not, and they came back only
