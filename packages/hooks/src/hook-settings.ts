@@ -85,7 +85,7 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
   {
     event: 'StopFailure',
     matcher: '*',
-    why: 'the FAILED quip — error_type says which',
+    why: 'the FAILED quip, and dizzy on the stage',
   },
   {
     event: 'Stop',

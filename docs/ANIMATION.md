@@ -162,11 +162,17 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost drawn pixel, across every frame of all eight: `idle` +4.25,
+Measured topmost drawn pixel, across every frame of all nine: `idle` +4.25,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
-`asleep` -3, `bouldering` -9. So the closest anything non-exempt comes to the
--4 line is `thinking` and `asleep` at -3, which is one unit of margin, not
-none.
+`asleep` -3, `dizzy` -3, `bouldering` -9. So the closest anything non-exempt
+comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
+unit of margin, not none.
+
+`dizzy` is the one to watch. Its body tops out at +6 and every bit of that -3
+is an orbiting star, so unlike the other two its headroom is spent by a prop
+that moves — a one-unit change of orbit radius is a one-unit change here, with
+no drawing edited. It is the first animation in the table whose figure a
+keyframe can move on its own.
 
 **`bouldering`'s -8.5 is its wall, and the wall does not count.** It is inside
 `#fx-wall`, which carries `data-safe-area="ignore"` precisely so this rule skips
@@ -460,8 +466,9 @@ outside the SVG. The variety lives in the animation.
 
 It is also among the cheapest things in the repo. `idle` measures 3,620 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
-the six until `permission-sign` (2,645) and `confused` (3,323) landed; the eight
-now run 2,645 / 3,323 / 3,620 / 3,905 / 6,332 / 9,966 / 14,545 / 22,568. The
+the six until `permission-sign` (2,645) and `confused` (3,323) landed; the nine
+now run 2,645 / 3,323 / 3,620 / 3,905 / 5,744 / 6,332 / 9,966 / 14,545 /
+22,568. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

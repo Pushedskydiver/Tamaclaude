@@ -43,8 +43,14 @@ export type HookEvent = {
   /**
    * `error_type` on `StopFailure`: `rate_limit`, `overloaded`,
    * `authentication_failed` and so on. More specific than the single failure
-   * state the plan assumed, and worth keeping — a rate limit and an auth
-   * failure deserve different quips.
+   * state the plan assumed.
+   *
+   * **Carried, not yet read.** `session.ts` stores it and nothing downstream
+   * branches on it: the quip is keyed on the state alone and `FAILED` shows
+   * `dizzy` whichever error arrived. It is kept because it arrives exactly
+   * once and cannot be recovered afterwards, so dropping it here would close
+   * the option — a rate limit and an auth failure could deserve different
+   * quips. Today they do not get them.
    */
   readonly errorType?: string;
 };

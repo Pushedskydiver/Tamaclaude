@@ -17,16 +17,19 @@
  * way, by `tools/make-font-atlas.ts`, for the same reason.
  *
  * **The format, and why it is two encodings rather than one.** Measured across
- * all six animations, in bytes so the units cannot drift: 24,192,000 bytes of
- * raw RGB565 becomes 570,508 through the repo's own RLE codec — pixel art is
+ * all nine animations, in bytes so the units cannot drift: 41,395,200 bytes of
+ * raw RGB565 becomes 946,840 through the repo's own RLE codec — pixel art is
  * nearly all flat runs. The mask is the awkward half. It carries one bit of
  * information per pixel and arrives as one *byte* per pixel, so exactly half
- * the pixel cost at 12,096,000 bytes, and still 1,512,000 merely packed to a
- * bit. Running the same codec over the packed bytes takes it to 558,428.
+ * the pixel cost at 20,697,600 bytes, and still 2,587,200 merely packed to a
+ * bit. Running the same codec over the packed bytes takes it to 873,832.
  *
- * So 1,128,216 bytes for six animations — 21.4:1 against the pixels alone, or
- * 32:1 if the mask's own raw cost is counted, which the sentence above says it
- * should be. Size is not what limits how many animations this device gets.
+ * So 1,820,672 bytes for nine animations — 22.7:1 against the pixels alone, or
+ * 34.1:1 if the mask's own raw cost is counted, which the sentence above says
+ * it should be. Size is not what limits how many animations this device gets.
+ * (These were six animations and 1,128,216 bytes until three more landed. Only
+ * a re-bake refreshes them, and nothing gates them, so they are as of the last
+ * one rather than as of the last edit to this file.)
  *
  * Each frame is one base64 string: a mode byte, then the payload. The mode is
  * the codec's own — `encodeRect` emits raw when RLE would be larger, and a

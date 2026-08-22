@@ -19,10 +19,14 @@
     ── Why nothing rotates ────────────────────────────────────────────────
 
     Not the body: `docs/ANIMATION.md` §Scale by size, not by taste records a
-    2.5deg torso tilt reading as a corrupted sprite, and a 6deg one measured
-    nine one-pixel steps across the top edge. The wobble is translation against
-    planted legs, half a unit each way — four whole device pixels, so no edge
-    lands on a fraction.
+    2.5deg torso tilt reading as a corrupted sprite. The 6deg measurement — nine
+    one-pixel steps across the top edge — is in `PLANS.md` §Confused and in
+    `confused.svg`, not in `ANIMATION.md`; an earlier version of this line put
+    both at the same citation and half of it is not there. The wobble is
+    translation against planted legs, on multiples of 0.25 units — two device
+    pixels — so no edge lands on a fraction. The range is -0.75 to +0.5 units,
+    which is -6 to +4 device pixels and not the symmetric half-unit this line
+    claimed before the stagger was rewritten; see §the deep lurch below.
 
     Not the stars either. A one-pixel prop is entirely edge, and rotating one
     is a still pixel with a fringe: at a fractional position the snap resolves
@@ -31,14 +35,27 @@
     twelve discrete cells on whole units, stepped with `steps(1)`.
 
     Twelve is the number that makes the phasing work. The orbit is 3s — 24
-    frames — so twelve cells is two frames each, and the three stars sit four
-    cells apart. They do not step in unison: -1s and -2s are a third and two
-    thirds of a 3s period, which no float represents exactly, so `steps(1)`
-    resolves them on different frames and the spacing alternates 4/4/4 and
-    3/4/5. That reads better than the alternative — one star advances per
-    frame rather than all three every other frame — but it is not the even
-    spacing an earlier version of this note claimed. Three on a four second loop cannot be evenly
-    phased at all, because 32/3 is not an integer.
+    frames — so twelve cells average two frames each, and the three stars are
+    authored four cells apart.
+
+    Neither of those is quite what renders, and the reason is worth writing
+    down because it is one edit away from being undone. **The dwell is 2, 3, 1
+    frames repeating, not two each**, and the spacing alternates 4/4/4 on odd
+    frames with a permutation of 3/4/5 on even ones. The cause is not the
+    negative delays: -1s and -2s are exact binary floats and a third of 3s is
+    exactly 1s, which an earlier version of this note had wrong. It is the
+    **six-decimal keyframe percentages** below. `8.333333%` of 3s is 249.99999ms
+    and lands just before frame 2's sample at 250ms, while `16.666667%` is
+    500.00001ms and lands just after frame 4's at 500ms — so a boundary falls
+    either side of a sample depending on which way that percentage rounded.
+    Adding a digit to those percentages would collapse the orbit back to an even
+    2/2/2 and take the animation with it.
+
+    It reads better this way. Measured over the loop: the gaps are 4/4/4 on
+    all 48 odd frames and 3/4/5 on all 48 even ones, and one or two of the three
+    stars change cell on every frame step — never none, never all three at once,
+    which is what an even 2/2/2 would have given. Three stars on a four second
+    loop cannot be evenly phased at all, because 32/3 is not an integer.
 
     ── The eyes ───────────────────────────────────────────────────────────
 
@@ -88,9 +105,12 @@
          times.
 
          **This is what earns the loop length.** With a 2s sway the file
-         rendered four seconds: three identical stars four cells apart on a
-         twelve-cell path are invariant under a four-cell rotation, so the
-         orbit's visual period is eight frames, and 32/16/8 all divide 32.
+         rendered four seconds: the star set at frame *f* depends only on *f*
+         mod 8 — measured off the bake, not derived — so the orbit's visual
+         period is eight frames, and 32/16/8 all divide 32. Three identical
+         stars a third of a lap apart is the reason, though not by a clean
+         four-cell rotation: they are four cells apart on odd frames only, and
+         3/4/5 apart on even ones. §Why nothing rotates has the cause.
          Frames 32-95 were byte-for-byte copies of 0-31 in a 402KB bake, while
          the comment above claimed a resting screen built like `idle`. `idle`
          earns sixteen seconds with blinks, two looks and a yawn; a stagger
@@ -107,12 +127,24 @@
          read as a lurch rather than as a sprite bolted on askew is that the
          offset *arrives*: eight frames of accelerating drift and ten of
          recovery, with all four legs staying under the torso throughout.
-         `idle` and `thinking` shipped the same number in otherwise still
-         animations, where the only available reading was an assembly error,
-         and it cost three passes and two critics to find. Taking this to 5
-         would leave the lurch one pixel deeper than an ordinary sway, which
-         flattens the beat that makes the twelve seconds honest — the wrong
-         side of the trade for one device pixel. Measured, judged, kept. */
+         The precedent is about dwell, not amplitude, and this file had it
+         wrong. `thinking` shipped six device pixels; `idle` shipped 0.95 units
+         — 7.6, and its own comment makes a point of that not being a whole
+         pixel. Two numbers, not "the same number".
+
+         What both files record as the defect is *sitting* at the extreme:
+         `thinking` held its lean for six frames and was near it on 34 of 64,
+         `idle` sat within a pixel of its own for fifteen. Here the stagger
+         track is within a pixel of -6 on 7 frames of 96, four of them at -6
+         itself. Those are the three files' own figures rather than one metric
+         applied to all three — the tracks are not comparable frame for frame,
+         and every attempt this branch made to compare them produced a
+         different percentage.
+
+         Taking this to 5 would leave the lurch one pixel deeper than an
+         ordinary sway, which flattens the beat that makes the twelve seconds
+         honest — the wrong side of the trade for one device pixel. Measured,
+         judged, kept. */
       #wobble {
         animation: stagger 12s infinite ease-in-out;
       }
@@ -134,7 +166,16 @@
       }
 
       /* `idle`'s breath, about the hips, so the body settles onto planted legs
-         rather than lifting off them. */
+         rather than lifting off them.
+
+         Not on every frame. On 5 of the 96 — 5, 27, 59, 69 and 91 — the breath
+         and the stagger's -0.25px together clear one device-pixel row between
+         the torso and all four feet. `idle` does the same on 14 of 128 and
+         shipped that way; `thinking`, `confused`, `permission-sign` and
+         `asleep` are at zero, and `thinking.svg` states its zero as a measured
+         property. So this is inherited rather than introduced, and at half
+         `idle`'s rate, but it is a gap and this file should not claim
+         otherwise. Fixing it belongs with `idle`, in one pass over both. */
       #breathe {
         transform-origin: 7.5px 13px;
         animation: breathe 2s infinite alternate ease-in-out;
@@ -153,13 +194,16 @@
          Linear, because a lid that accelerates reads as a wince.
 
          **This is also what makes the loop twelve seconds.** Without it the
-         file rendered four: three identical stars four cells apart on a
-         twelve-cell path are invariant under a four-cell rotation, so the
-         orbit's visual period is eight frames rather than twenty-four, and
-         frames 32-95 were byte-for-byte copies of 0-31 — a 402KB bake, two
-         thirds of it duplicate, claiming to be a resting screen built like
-         `idle`. A blink on a twelve-second track is the cheapest beat that
-         makes the length real, and every other awake animation has one. */
+         file rendered four: the star set repeats on an eight-frame period (see
+         §the wobble), so frames 32-95 were byte-for-byte copies of 0-31 — a
+         402KB bake, two thirds of it duplicate, claiming to be a resting screen
+         built like `idle`. A blink on a twelve-second track is the cheapest
+         beat that makes the length real, and most of the awake animations have
+         one. Not all: `bouldering` holds its eyes for the whole loop by a
+         recorded decision — a squashed eye there buys an expression at the
+         price of frames with an eye missing — and `gym`'s eyes squint under the
+         bar rather than blink. Both are animations where something crosses the
+         face, which is the distinction, not a rule that every screen blinks. */
       #left-eye-blink {
         transform-origin: 4.5px 9px;
         animation: blink 12s infinite linear;
@@ -170,8 +214,14 @@
         animation: blink 12s infinite linear;
       }
 
-      /* Two blinks, at frames 30 and 70 of 96, far enough apart that they
-         never read as a pair. Two frames shut, every value a whole frame. */
+      /* Two blinks of 96 frames, far enough apart that they never read as a
+         pair. Two frames shut, every value a whole frame.
+
+         Shut on frames 31-32 and 71-72. Frames 30 and 70 are the last fully
+         open ones — they are where the close begins, which is what an earlier
+         version of this comment called the blink. Off by one in the direction
+         that matters least, and still worth being right about: the numbers here
+         are what a reader checks a re-bake against. */
       @keyframes blink {
         0%, 31.25%       { transform: scaleY(1); }
         32.291667%       { transform: scaleY(0.1); }
@@ -197,6 +247,20 @@
        landed: the boot splash's wordmark, `confused`'s caret, and this. No one
        flat tone reads against both a pale sky and a dark one. The cross
        carries the pale skies and the pip carries night.
+
+       Measured on the composed panel, worst star over the whole loop, taking
+       each star's best-reading pixel against the sky right behind it: **dawn
+       3.75:1**, dusk 5.06:1, day 8.05:1, night 10.62:1. Dawn is the floor and
+       it is the number to quote. A commit message on this branch said "7.6:1
+       or better at all four", which was one sky band against black generalised
+       to four skies and every orbit position; the real floor is half that.
+
+       Which tone carries it is the part worth keeping. On dawn, dusk and day
+       the best-reading pixel is the **black cross** — the pale pip is the
+       weaker half there. On night it is the **pip**, and the cross alone reads
+       1.31:1: the same figure the single pale pixel had against day, in the
+       other direction. Neither tone reads on all four skies, which is why
+       there are two.
 
        Black, not a near-black: `permission-sign` records what happens when a
        new dark tone is declared — it captures the antialiased edges the
