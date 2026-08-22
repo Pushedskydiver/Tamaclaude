@@ -134,8 +134,10 @@ whose only hard cut lands on the loop seam.
 written when a soft edge was permanent. `tools/svg2frames.ts` now snaps every
 rasterised pixel back onto the declared palette, which is what upstream
 clawd-tank does, so a rotated or eased edge hardens after the fact instead of
-being forbidden up front. This plan is the first written against the new
-contract; the preamble and the other five plans still describe the old one.
+being forbidden up front. This plan was the first written against the new
+contract. Three more have been written against it since — permission sign,
+confused and dizzy — so of the nine, four are current and five describe the old
+one. The preamble said so too until dizzy's branch corrected it.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
 forbade it. Contact at chest height means the bar passes the face on its way

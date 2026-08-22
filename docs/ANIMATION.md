@@ -168,13 +168,17 @@ Measured topmost drawn pixel, across every frame of all nine: `idle` +4.25,
 comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
 unit of margin, not none.
 
-`dizzy` is the one to watch. Its body tops out at +6 and every bit of that -3
-is an orbiting star, so unlike the other two its headroom is spent by a prop
-that moves — a one-unit change of orbit radius is a one-unit change here, with
-no drawing edited. It is the first animation in the table whose figure a
-keyframe can move on its own.
+`dizzy` is the one to watch, though not for the reason a first draft of this
+paragraph gave. Its body tops out at +6, so every bit of that -3 is an orbiting
+star and a one-unit change of orbit radius changes the figure with no drawing
+edited. That is not new — `asleep`'s -3 is a rising Z on the same terms. What is
+different is how much of the loop is spent there: measured across the bakes,
+`thinking` sits at its -3 on all 64 frames but the value is static, `asleep`
+reaches -3 on 6 frames of 96, and `dizzy` on **72 of 96**. So it is the one
+animation that is both at the line for most of its loop and moved there by a
+keyframe.
 
-**`bouldering`'s -8.5 is its wall, and the wall does not count.** It is inside
+**`bouldering`'s -9 is its wall, and the wall does not count.** It is inside
 `#fx-wall`, which carries `data-safe-area="ignore"` precisely so this rule skips
 it, and its scroll pattern extends past the crop by design and loses nothing
 because it repeats. `svg2frames`' own safe-area walk honours that attribute and

@@ -215,8 +215,9 @@ async function bake(page: Page, name: string): Promise<void> {
  * Rewrite the `SOURCES` table in `sprites/index.ts` to match what is baked.
  *
  * A template-literal `import()` would need no table. `knip` is why one exists
- * anyway: it cannot follow one, so it reports all six generated modules as
- * unused files and fails the gate — measured, not assumed. Vite is *not* the
+ * anyway: it cannot follow one, so it reports every generated module as an
+ * unused file and fails the gate — measured, not assumed. (Counted rather than
+ * named, because it has been "six" and then "eight" inside a fortnight.) Vite is *not* the
  * reason, whatever an earlier version of this comment said: it accepts the
  * template literal and compiles it into a glob map of exactly this shape.
  *
@@ -259,8 +260,7 @@ async function writeTable(names: readonly string[]): Promise<void> {
 /**
  * Reject a name that cannot be a filename and a key.
  *
- * `permission sign` is one of the three animations `BUILD_PLAN.md` Stage 4
- * schedules, and interpolated raw it writes a file called
+ * `permission sign` is the reason: interpolated raw it writes a file called
  * `permission sign.data.ts` and an `index.ts` that does not parse — into a
  * hand-maintained file this tool edits rather than owns. Failing here costs a
  * rerun; failing there costs repairing a file the header says is maintained.

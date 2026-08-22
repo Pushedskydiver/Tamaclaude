@@ -53,8 +53,15 @@
     and lands just before frame 2's sample at 250ms, while `16.666667%` is
     500.00001ms and lands just after frame 4's at 500ms — so a boundary falls
     either side of a sample depending on which way that percentage rounded.
-    Adding a digit to those percentages would collapse the orbit back to an even
-    2/2/2 and take the animation with it.
+    **What would undo it is not the number of digits.** Seven or eight decimals
+    round the same way and change nothing, because the direction is a property
+    of the repeating digits rather than the precision. What collapses the orbit
+    to an even 2/2/2 — and takes the animation with it — is truncating instead
+    of rounding (`16.666666%` is 499.99998ms, the other side of the sample), or
+    writing enough digits that the boundary lands exactly on it: ten decimals
+    give 250.00000000 and 500.00000000. An earlier version of this note blamed
+    the digit count, which warns the next editor off a harmless change and
+    leaves the destructive one unnamed.
 
     It reads better this way. Measured over the loop: the gaps are 4/4/4 on
     all 48 odd frames and 3/4/5 on all 48 even ones, and one or two of the three
@@ -270,12 +277,19 @@
        or better at all four", which was one sky band against black generalised
        to four skies and every orbit position; the real floor is half that.
 
-       Which tone carries it is the part worth keeping. On dawn, dusk and day
-       the best-reading pixel is the **black cross** — the pale pip is the
-       weaker half there. On night it is the **pip**, and the cross alone reads
-       1.31:1: the same figure the single pale pixel had against day, in the
-       other direction. Neither tone reads on all four skies, which is why
-       there are two.
+       Which tone carries it is the part worth keeping, and the two swap over
+       the course of the day rather than dividing cleanly. Counting every star
+       instance across the loop — 288 a sky — the cross is the better-reading
+       half on 288 of 288 at day, 216 at dawn, 120 at dusk and 0 at night. So
+       dusk is already the pip's, not a pale sky the cross owns.
+
+       And each tone bottoms out somewhere. The worst single cross pixel over
+       the loop is 6.03 at day, 2.05 at dawn, 1.50 at dusk, 1.08 at night; the
+       worst pip pixel is 1.31 at day, 1.80 at dawn, 2.75 at dusk, 10.62 at
+       night. Both fall under 2:1 on some sky. What makes the glyph legible is
+       that a five-cell cross only needs one pixel to read, and on every sky one
+       of the two tones is well clear — which is the argument for two tones
+       rather than for a better single one.
 
        Black, not a near-black: `permission-sign` records what happens when a
        new dark tone is declared — it captures the antialiased edges the
