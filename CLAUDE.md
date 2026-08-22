@@ -75,10 +75,23 @@ table and rationale: `docs/ARCHITECTURE.md`.
   such safety net, and it is the design-freeze artefact. Copy it somewhere real
   before relying on it.
 - **`packs/` and `.claude/research/` are gitignored.** The repo is public and
-  the personal content is not: logos, pets, interests, the surprise date and
-  every in-joke live in ignored files. Tracked docs refer to them by role
-  ("the recipient's pack", "its mapped quip"), never by content. Adding a real
-  quip or a pet's name to a tracked file undoes this.
+  the personal content is not: logos, pets, interests and every in-joke live in
+  ignored files. Tracked docs refer to them by role ("the recipient's pack",
+  "its mapped quip"), never by content. Adding a real quip or a pet's name to a
+  tracked file undoes this.
+
+  **What is deliberately not protected: that this is a birthday gift, and its
+  date.** Both are stated four lines into this file and the date drives every
+  stage heading in `BUILD_PLAN.md`; a plan that cannot name its own deadline is
+  not a plan. An earlier version of this rule listed the date as protected
+  while the same file stated it, which is worse than either choice — a rule
+  nobody can follow gets ignored rather than fixed.
+
+  **What is protected is the recipient's identity.** Six occurrences of their
+  name reached three tracked files before a review caught it, one of them added
+  by the commit that first wrote this warning down. Names go in as roles: "the
+  recipient", not the person.
+
 - **AGENTS.md is a symlink to CLAUDE.md.** No generator, no drift, no CI gate
   needed. If the two ever need to differ, that's the moment to add a generator
   — not before.

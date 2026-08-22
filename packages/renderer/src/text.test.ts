@@ -128,9 +128,9 @@ const BAND_WIDTH = BAND_COLUMNS * GLYPH_WIDTH;
 
 describe('wrapText', () => {
   it('breaks at spaces and drops the space it broke on', () => {
-    expect(wrapText('Turrrby, Turrrby, Turrrby', BAND_WIDTH)).toEqual([
-      'Turrrby, Turrrby,',
-      'Turrrby',
+    expect(wrapText('Skitter, Skitter, Skitter', BAND_WIDTH)).toEqual([
+      'Skitter, Skitter,',
+      'Skitter',
     ]);
   });
 
@@ -214,9 +214,9 @@ describe('drawTextBlock', () => {
   it('stacks wrapped lines one line height apart', () => {
     const rect = { x: 0, y: 0, width: BAND_WIDTH, height: LINE_HEIGHT * 2 };
     const target = scratch(rect.width, rect.height);
-    drawTextBlock(target, 'Turrrby, Turrrby, Turrrby', { rect, colour: RED });
+    drawTextBlock(target, 'Skitter, Skitter, Skitter', { rect, colour: RED });
     expect(target.pixels).toEqual(
-      expected(['Turrrby, Turrrby,', 'Turrrby'], target).pixels,
+      expected(['Skitter, Skitter,', 'Skitter'], target).pixels,
     );
   });
 

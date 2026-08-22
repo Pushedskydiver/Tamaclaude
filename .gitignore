@@ -31,8 +31,8 @@ packs/*
 # Claude Code — reusable agent definitions only.
 #
 # `.claude/research/` was tracked and is not any more. The briefs and specs in
-# there carry the recipient's cat, his interests, the surprise date and every
-# in-joke verbatim, and this repository is public. The risk register in
+# there carry the recipient's pet, their interests and every in-joke verbatim,
+# and this repository is public. The risk register in
 # BUILD_PLAN.md claimed `packs/` being gitignored kept that material off the
 # internet; it never did, because the specs were never in `packs/`.
 .claude/*

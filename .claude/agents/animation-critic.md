@@ -34,7 +34,8 @@ that wrote them.
    the loop into a single PNG and `Read` it — `Read` renders images. Sampling
    frames without viewing them is not a review.
 5. Compare against the upstream reference for the same scene in
-   `/Users/alexclapperton/Desktop/clawd/` if one exists. That corpus is the
+   the local upstream clawd-tank checkout if one exists (see `CREDITS.md`;
+   it is outside this repo and its path differs per machine). That corpus is the
    quality bar, not the ceiling. Render it if it helps.
 
 **Write scratch files outside the repo.** Contact-sheet scripts, rendered
