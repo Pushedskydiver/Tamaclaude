@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { SOURCE as ASLEEP } from '../packages/renderer/src/sprites/asleep.data.ts';
 import { SOURCE as BOULDERING } from '../packages/renderer/src/sprites/bouldering.data.ts';
 import { SOURCE as CONFUSED } from '../packages/renderer/src/sprites/confused.data.ts';
+import { SOURCE as DIZZY } from '../packages/renderer/src/sprites/dizzy.data.ts';
 import { SOURCE as GYM } from '../packages/renderer/src/sprites/gym.data.ts';
 import { SOURCE as IDLE } from '../packages/renderer/src/sprites/idle.data.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
@@ -38,6 +39,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['asleep', ASLEEP],
   ['bouldering', BOULDERING],
   ['confused', CONFUSED],
+  ['dizzy', DIZZY],
   ['gym', GYM],
   ['idle', IDLE],
   ['permission-sign', PERMISSION_SIGN],

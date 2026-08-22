@@ -55,12 +55,15 @@ describe('animationFor', () => {
     expect(animationFor('NEEDS_PERMISSION')).not.toBe(animationFor('WAITING'));
   });
 
-  it('leaves FAILED on the fallback, deliberately', () => {
-    // `dizzy` is tiered below the other two and is cuttable. Until it exists
-    // `thinking` is the honest answer — "busy, unspecified" rather than a
-    // claim that nothing is happening, which is the direction the fallback
-    // rule exists to avoid being wrong in.
-    expect(animationFor('FAILED')).toBe('thinking');
+  it('gives FAILED its own art, so no state is on the fallback', () => {
+    // The last of the three. `FALLBACK` is now reached only by `WORKING` with
+    // an unmapped tool, which is the case it was written for — a panel that
+    // says "busy, unspecified" rather than claiming nothing is happening.
+    expect(animationFor('FAILED')).toBe('dizzy');
+    const fallenBack = SESSION_STATES.filter(
+      (state) => state !== 'WORKING' && animationFor(state) === 'thinking',
+    );
+    expect(fallenBack).toEqual(['THINKING']);
   });
 
   it('returns a built animation for every state', () => {

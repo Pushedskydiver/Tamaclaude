@@ -404,8 +404,15 @@ being stared at.
   shorthand, it is free, and it cannot be mistaken for `asleep` — which is
   exactly what a held `scaleY` squash would be, since `asleep` holds that same
   squash for its entire loop.
-- **Props.** Three stars on one orbit, one art pixel each, phased by whole
-  frames. A 3s orbit period inside the 12s loop with delays 0 / -1s / -2s puts
+- **Props.** Three stars on one orbit, phased by whole frames. Each is a pale
+  pip inside a dark cross, not the single art pixel this plan first asked for:
+  one flat tone measured 1.31:1 against the day sky and 1.80:1 against dawn,
+  which is invisible on the path the daemon takes. The cross carries the pale
+  skies and the pip carries night — the same two-tone fix `confused`'s caret
+  needed, and the third time this defect has landed after the boot splash's
+  wordmark. The orbit widened with them: a 3-unit prop needs more clearance
+  than a 1-unit one, and at the first radius two of the three stars read as a
+  single zigzag. A 3s orbit period inside the 12s loop with delays 0 / -1s / -2s puts
   them eight frames apart and lands every one on a whole frame; three stars on
   a 4s loop cannot be evenly phased at all, because 32/3 is not an integer.
   The path is whole-device-pixel steps or discrete `steps(1)` cells, never a
