@@ -10,10 +10,12 @@
  * the bake still matches its SVG, which is a property no consumer of the
  * pixels can see.
  *
- * **Loaded on demand, and that is the point.** All six animations together are
- * 1,128,216 bytes of encoded data and 1,515,153 of source — base64 is four
+ * **Loaded on demand, and that is the point.** All nine animations together are
+ * 1,820,336 bytes of encoded data and 2,447,556 of source — base64 is four
  * bytes for three, so the second number can only ever be about a third above
- * the first. Every consumer of `@tamaclaude/renderer` would pay to parse all of
+ * the first. (It read six, 1,128,216 and 1,515,153 until `permission-sign`,
+ * `confused` and `dizzy` landed; only a re-bake refreshes these, so treat them
+ * as of the last one.) Every consumer of `@tamaclaude/renderer` would pay to parse all of
  * it on import if the barrel pulled them in eagerly. A dynamic import means a
  * daemon showing `idle` parses `idle` and nothing else, and an animation nobody
  * reaches costs nothing at all.
@@ -49,6 +51,7 @@ export const SPRITE_NAMES = [
   'asleep',
   'bouldering',
   'confused',
+  'dizzy',
   'gym',
   'idle',
   'permission-sign',
@@ -76,6 +79,7 @@ const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {
   asleep: () => import('./asleep.data.js'),
   bouldering: () => import('./bouldering.data.js'),
   confused: () => import('./confused.data.js'),
+  dizzy: () => import('./dizzy.data.js'),
   gym: () => import('./gym.data.js'),
   idle: () => import('./idle.data.js'),
   'permission-sign': () => import('./permission-sign.data.js'),

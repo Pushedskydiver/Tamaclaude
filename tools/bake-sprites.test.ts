@@ -5,8 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { SOURCE as ASLEEP } from '../packages/renderer/src/sprites/asleep.data.ts';
 import { SOURCE as BOULDERING } from '../packages/renderer/src/sprites/bouldering.data.ts';
 import { SOURCE as CONFUSED } from '../packages/renderer/src/sprites/confused.data.ts';
+import { SOURCE as DIZZY } from '../packages/renderer/src/sprites/dizzy.data.ts';
 import { SOURCE as GYM } from '../packages/renderer/src/sprites/gym.data.ts';
 import { SOURCE as IDLE } from '../packages/renderer/src/sprites/idle.data.ts';
+import { loadSprite } from '../packages/renderer/src/sprites/index.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
@@ -28,7 +30,7 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and eight full renders into `pnpm test`. It would also be flaky —
+ * and nine full renders into `pnpm test`. It would also be flaky —
  * `svg2frames` is not bit-reproducible, and two runs of `confused` differ on
  * one frame of 96 at a claw edge that lands on a fractional pixel and snaps
  * either way.
@@ -38,12 +40,104 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['asleep', ASLEEP],
   ['bouldering', BOULDERING],
   ['confused', CONFUSED],
+  ['dizzy', DIZZY],
   ['gym', GYM],
   ['idle', IDLE],
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
 ];
+
+/**
+ * One star: a 3-unit cross at 8 device pixels a unit, so 5 cells of 64.
+ *
+ * A literal rather than a measurement, because the point of the assertion is
+ * that the number does not move. Redraw the star and this fails, which is the
+ * moment to re-derive the clearance rather than re-derive the constant.
+ */
+const STAR_PIXELS = 320;
+
+/**
+ * The eight neighbours of a pixel.
+ *
+ * Eight and not four: two crosses meeting at a corner are one glyph to the eye,
+ * and that is the defect this is here to catch, so a diagonal has to join them.
+ */
+const NEIGHBOURS = [
+  [-1, -1],
+  [0, -1],
+  [1, -1],
+  [-1, 0],
+  [1, 0],
+  [-1, 1],
+  [0, 1],
+  [1, 1],
+] as const;
+
+/** A mask being walked: its pixels, its width, and what has been counted. */
+type Walk = {
+  readonly mask: Uint8Array;
+  readonly seen: Uint8Array;
+  readonly width: number;
+};
+
+/** The size of the drawn run reachable from `start`, marking it seen. */
+function floodFrom(walk: Walk, start: number): number {
+  const { mask, seen, width } = walk;
+  const height = mask.length / width;
+  const stack = [start];
+  seen[start] = 1;
+  let size = 0;
+  while (stack.length > 0) {
+    const at = stack.pop() ?? 0;
+    size++;
+    const y = Math.floor(at / width);
+    const x = at % width;
+    for (const [dx, dy] of NEIGHBOURS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const next = ny * width + nx;
+      const inside = nx >= 0 && nx < width && ny >= 0 && ny < height;
+      if (inside && mask[next] === 1 && seen[next] === 0) {
+        seen[next] = 1;
+        stack.push(next);
+      }
+    }
+  }
+  return size;
+}
+
+/**
+ * Every 8-connected run of drawn pixels in a mask, by size.
+ *
+ * **What the star assertion below rests on.** The invariant no reader can see
+ * and no gate held: the stars orbit close enough to Clawd's head that a
+ * one-unit change of radius welds them to him, and it has gone wrong twice in
+ * one branch. The first version measured the *pip* for clearance and shipped a
+ * cross whose bottom arm sat flush against the torso on 33 of 96 frames; the
+ * fix for that chained two crosses corner-to-corner on 12 frames, which is the
+ * same defect moved one step round the loop. `asleep` shipped a glyph across
+ * the face once and it read as display corruption.
+ *
+ * Counted through the bake rather than read off the twelve orbit keyframes,
+ * because what matters is the composite: orbit, stagger and breath together
+ * decide the gap, and the keyframes only decide one of them. Touching the body
+ * merges a star into the body's run and touching another star merges the pair,
+ * so either defect shows up as fewer than three runs of `STAR_PIXELS`.
+ *
+ * The commit that fixed the chaining claimed the check "refuses to write the
+ * file". It did not exist; it was a throwaway script. This is it.
+ */
+function componentSizes(mask: Uint8Array, width: number): number[] {
+  const seen = new Uint8Array(mask.length);
+  const sizes: number[] = [];
+  for (let start = 0; start < mask.length; start++) {
+    if (mask[start] === 1 && seen[start] === 0) {
+      sizes.push(floodFrom({ mask, seen, width }, start));
+    }
+  }
+  return sizes;
+}
 
 /**
  * The first structural fault in an SVG, or `undefined`.
@@ -164,5 +258,24 @@ describe('the baked animations', () => {
       .map((file) => file.replace(/\.svg$/, ''))
       .sort();
     expect(onDisk).toEqual(named);
+  });
+});
+
+describe("dizzy's orbiting stars", () => {
+  it('stay clear of the body and of each other', async () => {
+    // See `componentSizes` for what this is and why it is counted from the
+    // bake. Three runs of 320 on every frame, or a star has merged with the
+    // body or with another star.
+    const frames = await loadSprite('dizzy');
+    // `toEqual` against a list derived from `frames` passes on an empty list,
+    // which is the shape a broken loader would hand back.
+    expect(frames.length).toBeGreaterThan(0);
+    const stars = frames.map(
+      (sprite) =>
+        componentSizes(sprite.mask, sprite.frame.width).filter(
+          (size) => size === STAR_PIXELS,
+        ).length,
+    );
+    expect(stars).toEqual(frames.map(() => 3));
   });
 });

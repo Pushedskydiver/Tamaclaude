@@ -260,20 +260,26 @@ function messageFor(
 /**
  * The frames for an animation, or none if it has not been baked.
  *
- * `animationFor` maps the seven session states and every `PreToolUse.tool_name`
- * onto the six names in `ANIMATIONS`, and all six are baked — so this guard
- * cannot fire today, and saying otherwise would be inventing a hazard.
+ * `animationFor` maps every session state and every `PreToolUse.tool_name` onto
+ * a name in `ANIMATIONS`, and every one of those is baked — so this guard
+ * cannot fire today, and saying otherwise would be inventing a hazard. It
+ * exists for the next animation rather than the current ones: `sweeping` and
+ * the Model 3 are `BUILD_PLAN.md` Stage 4, and the moment either is added to
+ * `ANIMATIONS` it is reachable here before its art is baked. An empty stage is
+ * the right answer to that; taking the panel down is not.
  *
- * Typed `AnimationName` rather than `string` on purpose: adding `dizzy` to
- * `ANIMATIONS` without baking it should be a compile error at
- * `SPRITE_NAMES.includes`, not a silently empty stage. A `string` here is how
+ * Typed `AnimationName` rather than `string` on purpose. A `string` here is how
  * "nothing in 360 tests notices a referenced animation going missing" happens
  * one layer up.
  *
- * It exists for the next animation rather than the current ones. `permission
- * sign`, `dizzy` and `confused` are `BUILD_PLAN.md` Stage 4, and the moment one
- * is added to `ANIMATIONS` it is reachable here before its art is baked. An
- * empty stage is the right answer to that; taking the panel down is not.
+ * **The `return []` is unreachable by construction, not merely unreachable
+ * today.** Planting an unbaked name in `ANIMATIONS` errors `tsc` twice in this
+ * function — at `SPRITE_NAMES.includes` and again at `loadSprite`, which
+ * rejects the widened union on its own — so no build that typechecks can enter
+ * the branch. Deleting the guard would not remove the compile error; the one
+ * path that reaches it is a `dist/` mismatch between packages built separately,
+ * which is why it stays. An earlier version of this comment justified it by a
+ * mid-frame throw that the type system already prevents.
  */
 export async function framesFor(
   name: AnimationName,
@@ -469,15 +475,18 @@ async function paintOnce(
   //
   // `framesFor` resolves an unbaked name to nothing rather than throwing, and
   // the empty check below is what that buys. Both are currently unreachable:
-  // `ANIMATIONS` and `SPRITE_NAMES` are the same eight names, so every name
-  // this can produce has data behind it. They are kept because the two lists
-  // are maintained in different packages by different tools — `animation.ts`
-  // by hand, `sprites/index.ts` by `bake-sprites.ts` — and the failure mode
-  // when they drift is a panel that throws mid-frame rather than one that
-  // shows an empty stage for a beat.
+  // `ANIMATIONS` and `SPRITE_NAMES` hold the same names, so every name this can
+  // produce has data behind it. They are kept because the two lists are
+  // maintained in different packages by different tools — `animation.ts` by
+  // hand, `sprites/index.ts` by `bake-sprites.ts` — and
+  // `animation.test.ts`'s "names only animations that have been baked" is what
+  // turns a drift into a red test rather than an empty stage. The counts used
+  // to be spelled out here and in two other files; they were "six" and then
+  // "eight" within a week, so they are not spelled out any more.
   //
-  // An earlier version of this comment said three states still fall back to
-  // `thinking`. One does: `FAILED`, until `dizzy` is drawn.
+  // Earlier versions of this comment said three states fall back to
+  // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
+  // reached only from `WORKING`, with an unmapped tool or with no tool.
   const wanted = animationFor(panel.state, panel.tool);
   const frames = await framesFor(wanted);
   const showing =

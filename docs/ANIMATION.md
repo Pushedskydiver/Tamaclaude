@@ -162,13 +162,24 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost drawn pixel, across every frame of all eight: `idle` +4.25,
+Measured topmost drawn pixel, across every frame of all nine: `idle` +4.25,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
-`asleep` -3, `bouldering` -9. So the closest anything non-exempt comes to the
--4 line is `thinking` and `asleep` at -3, which is one unit of margin, not
-none.
+`asleep` -3, `dizzy` -3, `bouldering` -9. So the closest anything non-exempt
+comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
+unit of margin, not none.
 
-**`bouldering`'s -8.5 is its wall, and the wall does not count.** It is inside
+`dizzy` is the one to watch, though not for the reason a first draft of this
+paragraph gave. Its body tops out at +5.875, so every bit of that -3 is an
+orbiting
+star and a one-unit change of orbit radius changes the figure with no drawing
+edited. That is not new — `asleep`'s -3 is a rising Z on the same terms. What is
+different is how much of the loop is spent there: measured across the bakes,
+`thinking` sits at its -3 on all 64 frames but the value is static, `asleep`
+reaches -3 on 6 frames of 96, and `dizzy` on **72 of 96**. So it is the one
+animation that is both at the line for most of its loop and moved there by a
+keyframe.
+
+**`bouldering`'s -9 is its wall, and the wall does not count.** It is inside
 `#fx-wall`, which carries `data-safe-area="ignore"` precisely so this rule skips
 it, and its scroll pattern extends past the crop by design and loses nothing
 because it repeats. `svg2frames`' own safe-area walk honours that attribute and
@@ -460,8 +471,9 @@ outside the SVG. The variety lives in the animation.
 
 It is also among the cheapest things in the repo. `idle` measures 3,620 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
-the six until `permission-sign` (2,645) and `confused` (3,323) landed; the eight
-now run 2,645 / 3,323 / 3,620 / 3,905 / 6,332 / 9,966 / 14,545 / 22,568. The
+the six until `permission-sign` (2,645) and `confused` (3,323) landed; the nine
+now run 2,645 / 3,323 / 3,620 / 3,905 / 5,836 / 6,332 / 9,966 / 14,545 /
+22,568. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

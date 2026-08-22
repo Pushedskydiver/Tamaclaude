@@ -4,9 +4,11 @@
  * Field names are ours, not Claude Code's: the wire carries `session_id`,
  * `hook_event_name` and `tool_name`. The intent is that `packages/hooks`
  * translates once at the boundary, so everything downstream speaks one shape
- * and an upstream payload change lands in one file — **but that translation is
- * not written yet**. `packages/hooks` currently reads nothing from stdin and
- * emits a hardcoded placeholder. This is the target shape, not a live one.
+ * and an upstream payload change lands in one file. That is now live:
+ * `translate()` in `packages/hooks/src/index.ts` reads stdin and maps
+ * `session_id`, `hook_event_name`, `tool_name`, `agent_id`, `agent_type` and
+ * `error_type` onto the fields below. This block said the translation was
+ * unwritten and the shape aspirational for as long as it has been neither.
  *
  * Verified against code.claude.com/docs/en/hooks.md rather than assumed —
  * `BUILD_PLAN.md` Stage 3 gated the state machine on exactly that, because a
@@ -43,8 +45,14 @@ export type HookEvent = {
   /**
    * `error_type` on `StopFailure`: `rate_limit`, `overloaded`,
    * `authentication_failed` and so on. More specific than the single failure
-   * state the plan assumed, and worth keeping — a rate limit and an auth
-   * failure deserve different quips.
+   * state the plan assumed.
+   *
+   * **Carried, not yet read.** `session.ts` stores it and nothing downstream
+   * branches on it: the quip is keyed on the state alone and `FAILED` shows
+   * `dizzy` whichever error arrived. It is kept because it arrives exactly
+   * once and cannot be recovered afterwards, so dropping it here would close
+   * the option — a rate limit and an auth failure could deserve different
+   * quips. Today they do not get them.
    */
   readonly errorType?: string;
 };

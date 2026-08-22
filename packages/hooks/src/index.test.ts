@@ -145,7 +145,7 @@ describe('tamaclaude-notify', () => {
       });
     });
 
-    it('carries error_type, which picks the quip', async () => {
+    it('carries error_type, which nothing reads yet', async () => {
       const daemon = listen(socket);
       await runHook(
         socket,

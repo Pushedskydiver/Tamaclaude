@@ -17,16 +17,19 @@
  * way, by `tools/make-font-atlas.ts`, for the same reason.
  *
  * **The format, and why it is two encodings rather than one.** Measured across
- * all six animations, in bytes so the units cannot drift: 24,192,000 bytes of
- * raw RGB565 becomes 570,508 through the repo's own RLE codec — pixel art is
+ * all nine animations, in bytes so the units cannot drift: 41,395,200 bytes of
+ * raw RGB565 becomes 946,864 through the repo's own RLE codec — pixel art is
  * nearly all flat runs. The mask is the awkward half. It carries one bit of
  * information per pixel and arrives as one *byte* per pixel, so exactly half
- * the pixel cost at 12,096,000 bytes, and still 1,512,000 merely packed to a
- * bit. Running the same codec over the packed bytes takes it to 558,428.
+ * the pixel cost at 20,697,600 bytes, and still 2,587,200 merely packed to a
+ * bit. Running the same codec over the packed bytes takes it to 873,472.
  *
- * So 1,128,216 bytes for six animations — 21.4:1 against the pixels alone, or
- * 32:1 if the mask's own raw cost is counted, which the sentence above says it
- * should be. Size is not what limits how many animations this device gets.
+ * So 1,820,336 bytes for nine animations — 22.7:1 against the pixels alone, or
+ * 34.1:1 if the mask's own raw cost is counted, which the sentence above says
+ * it should be. Size is not what limits how many animations this device gets.
+ * (These were six animations and 1,128,216 bytes until three more landed. Only
+ * a re-bake refreshes them, and nothing gates them, so they are as of the last
+ * one rather than as of the last edit to this file.)
  *
  * Each frame is one base64 string: a mode byte, then the payload. The mode is
  * the codec's own — `encodeRect` emits raw when RLE would be larger, and a
@@ -212,8 +215,9 @@ async function bake(page: Page, name: string): Promise<void> {
  * Rewrite the `SOURCES` table in `sprites/index.ts` to match what is baked.
  *
  * A template-literal `import()` would need no table. `knip` is why one exists
- * anyway: it cannot follow one, so it reports all six generated modules as
- * unused files and fails the gate — measured, not assumed. Vite is *not* the
+ * anyway: it cannot follow one, so it reports every generated module as an
+ * unused file and fails the gate — measured, not assumed. (Counted rather than
+ * named, because it has been "six" and then "eight" inside a fortnight.) Vite is *not* the
  * reason, whatever an earlier version of this comment said: it accepts the
  * template literal and compiles it into a glob map of exactly this shape.
  *
@@ -256,8 +260,7 @@ async function writeTable(names: readonly string[]): Promise<void> {
 /**
  * Reject a name that cannot be a filename and a key.
  *
- * `permission sign` is one of the three animations `BUILD_PLAN.md` Stage 4
- * schedules, and interpolated raw it writes a file called
+ * `permission sign` is the reason: interpolated raw it writes a file called
  * `permission sign.data.ts` and an `index.ts` that does not parse — into a
  * hand-maintained file this tool edits rather than owns. Failing here costs a
  * rerun; failing there costs repairing a file the header says is maintained.

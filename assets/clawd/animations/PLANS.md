@@ -14,10 +14,17 @@ wanted, so there was no way to tell a bug from a choice.
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
-Half the plans carry one; `gym` and `bouldering` file theirs under Effects,
-which is a distinction not worth enforcing. Two constraints apply to all of them, from
-`docs/ANIMATION.md`: no rotation, and every transform must land on a whole
-device pixel at the render scale.
+Eight of the nine carry one; `gym` alone has none, because its bar is described
+under Action rather than filed as a prop, which is a distinction not worth
+enforcing. Both constraints this paragraph used to name have since been repealed by
+`docs/ANIMATION.md`, and it took two passes to notice. Palette snapping
+retired the whole-device-pixel rule and the rotation ban together — §Render
+scale says so in as many words, "Rotation is now allowed" — and a correction
+that removed the first promoted the second to sole universal constraint.
+`gym`'s raised claw is built on a -73deg rotation. What is left is a
+judgement rather than a rule, and §What a claw cannot do is where it lives:
+a rotation has to buy a shape, which on a 2x2 block turned a few degrees it
+does not.
 
 ---
 
@@ -132,8 +139,10 @@ whose only hard cut lands on the loop seam.
 written when a soft edge was permanent. `tools/svg2frames.ts` now snaps every
 rasterised pixel back onto the declared palette, which is what upstream
 clawd-tank does, so a rotated or eased edge hardens after the fact instead of
-being forbidden up front. This plan is the first written against the new
-contract; the preamble and the other five plans still describe the old one.
+being forbidden up front. This plan was the first written against the new
+contract. Three more have been written against it since — permission sign,
+confused and dizzy — so of the nine, four are current and five describe the old
+one. The preamble said so too until dizzy's branch corrected it.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
 forbade it. Contact at chest height means the bar passes the face on its way
@@ -385,11 +394,16 @@ drift off the viewer: at that point this is `thinking` with a different prop.
 
 Clawd has taken a knock and is seeing stars.
 
-`data-loop-seconds="12"`. **Tier B**, behind the 6 Sep Tier A gate, and cut
-without regret if that gate slips — `packages/daemon/src/animation.ts` falls
-`FAILED` back to `thinking` and the panel stays honest about something being
-wrong. Deferred behind the two above deliberately, so review capacity goes to
-Tier A first.
+`data-loop-seconds="12"`. **Built**, ahead of `sweeping` and the Model 3 —
+`BUILD_PLAN.md` items 8 and 6. (An earlier line here said "ahead of the two Tier
+B entries above it"; the two plans above this one are both Tier A and both
+shipped first.) It was catalogued Tier B and cuttable, on the grounds
+that `packages/daemon/src/animation.ts` could fall `FAILED` back to `thinking`
+and stay honest about something being wrong. That reasoning was sound and it
+was pulled forward anyway: `FAILED` was the last state on the fallback, so a
+panel that draws it is Stage 3 correctness rather than Stage 4 art.
+`animation.ts` now maps `FAILED: 'dizzy'`, and this paragraph described the
+world before that for the whole of the branch that changed it.
 
 Twelve seconds, not four. `FAILED` does not decay: `effectiveState` promotes
 only from `IDLE`, so this stays on screen until another event arrives or the
@@ -404,20 +418,37 @@ being stared at.
   shorthand, it is free, and it cannot be mistaken for `asleep` — which is
   exactly what a held `scaleY` squash would be, since `asleep` holds that same
   squash for its entire loop.
-- **Props.** Three stars on one orbit, one art pixel each, phased by whole
-  frames. A 3s orbit period inside the 12s loop with delays 0 / -1s / -2s puts
-  them eight frames apart and lands every one on a whole frame; three stars on
-  a 4s loop cannot be evenly phased at all, because 32/3 is not an integer.
-  The path is whole-device-pixel steps or discrete `steps(1)` cells, never a
-  curve: a 1x1 prop is entirely edge, and a fractional position fringes it into
-  the body colour on every frame — the same fringing `thinking` documents for
-  its bubble.
+- **Props.** Three stars on one orbit, phased by whole frames. Each is a pale
+  pip inside a dark cross of three units, not the single art pixel this plan
+  first asked for:
+  one flat tone measured 1.31:1 against the day sky and 1.80:1 against dawn,
+  which is invisible on the path the daemon takes. The cross carries the pale
+  skies and the pip carries night — the same two-tone fix `confused`'s caret
+  needed, and the third time this defect has landed after the boot splash's
+  wordmark. The orbit's lowest cells were raised for them: a 3-unit prop
+  needs more clearance than a 1-unit one, and the clearance that was short
+  was vertical — the cross's bottom arm against the top of his head. The
+  horizontal cells have never moved, so "widened", which this line said
+  before, describes an orbit no version of the file ever had. A 3s orbit period inside the 12s loop with delays 0 / -1s /
+  -2s authors them eight frames apart and lands every delay on a whole frame;
+  three stars on a 4s loop cannot be evenly phased at all, because 32/3 is not
+  an integer. **Eight frames apart is what is authored, not what renders** —
+  the orbit's twelve keyframe percentages are written to six decimals, and at
+  8fps some of those boundaries land a fraction before a sample time and some a
+  fraction after, so the gaps come out 4/4/4 on odd frames and a permutation of
+  3/4/5 on even ones. `dizzy.svg` records the measurement; this sentence used
+  to claim the even spacing outright and the retraction was written only into
+  the SVG. The path is whole-device-pixel steps or discrete `steps(1)` cells,
+  never a curve: the cross's arms are one unit wide and so entirely edge, and a
+  fractional position fringes them into the body colour on every frame — the
+  same fringing `thinking` documents for its bubble.
 - **Effects.** None.
 
 **Not wanted:** stars that touch the body — a glyph crossing his face read as
 display corruption when it shipped that way in `asleep`. A wobble cycle faster
 than 0.25s, or any motion at 0.125s, which is invisible at 8fps. Rotation of
-the stars themselves; a rotating single pixel is a still pixel. Anything that
+the stars themselves; the cross is symmetric under a quarter turn and its arms
+are one unit wide, so a rotation is either invisible or a fringe. Anything that
 reads as distress — this is a failed turn, not a catastrophe, and the strip
 tint carries severity.
 

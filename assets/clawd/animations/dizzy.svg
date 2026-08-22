@@ -1,0 +1,434 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="12">
+  <!--
+    Clawd: dizzy (StopFailure)
+
+    A turn failed. Clawd has taken a knock and is seeing stars.
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates and colours; all motion is CSS applied by ID.
+
+    ── Twelve seconds, because FAILED does not decay ──────────────────────
+
+    `effectiveState` in packages/daemon/src/session.ts promotes only from
+    `IDLE`, so this stays on screen until another event arrives or the session
+    is evicted ten minutes later. It is a resting screen, not a beat, and it
+    has to survive being stared at — which is why the plan's first draft of a
+    four second loop was wrong, and why it is built like `idle` instead.
+
+    ── Why nothing rotates ────────────────────────────────────────────────
+
+    Not the body: `docs/ANIMATION.md` §Scale by size, not by taste records a
+    2.5deg torso tilt reading as a corrupted sprite. The 6deg measurement — nine
+    one-pixel steps across the top edge — is in `PLANS.md` §Confused and in
+    `confused.svg`, not in `ANIMATION.md`; an earlier version of this line put
+    both at the same citation and half of it is not there. The wobble is
+    translation against planted legs. Its keyframe values are eighths of a unit
+    — whole device pixels — but it is eased, so the track passes through
+    fractional positions between them and most frames land on one; what makes
+    that safe is the palette snap resolving the edge after the fact, per
+    `docs/ANIMATION.md` §Palette snapping, and not the values. The whole-pixel
+    rule an earlier version of this line invoked was repealed by §Ease, don't
+    step.
+
+    **Measured range: -5 to +4 device pixels**, the minimum on frames 63-64.
+    Which frames hold the maximum is not quoted, because the answer moves with
+    the neutral position you measure against and three passes produced three
+    different lists. Two earlier versions of this line said -6 to +4 and
+    quarter-unit keyframes, both true of the track before §the deep lurch below
+    was cut — so the file stated two different amplitudes for one animation, a
+    hundred lines apart. This is the paragraph to update when the stagger
+    changes; it has been missed twice.
+
+    Not the stars either. A one-pixel prop is entirely edge, and rotating one
+    is a still pixel with a fringe: at a fractional position the snap resolves
+    it toward the body colour, which is the defect `thinking` documents for its
+    bubble and the boot splash hit again in its wordmark. So the orbit is
+    twelve discrete cells on whole units, stepped with `steps(1)`.
+
+    Twelve is the number that makes the phasing work. The orbit is 3s — 24
+    frames — so twelve cells average two frames each, and the three stars are
+    authored four cells apart.
+
+    Neither of those is quite what renders, and the reason is worth writing
+    down because it is one edit away from being undone. **The dwell is 2, 3, 1
+    frames repeating, not two each**, and the spacing alternates 4/4/4 on odd
+    frames with a permutation of 3/4/5 on even ones. The cause is not the
+    negative delays: -1s and -2s are exact binary floats and a third of 3s is
+    exactly 1s, which an earlier version of this note had wrong. It is the
+    **six-decimal keyframe percentages** below. `8.333333%` of 3s is 249.99999ms
+    and lands just before frame 2's sample at 250ms, while `16.666667%` is
+    500.00001ms and lands just after frame 4's at 500ms — so a boundary falls
+    either side of a sample depending on which way that percentage rounded.
+    **What would undo it is not the number of digits.** Seven or eight decimals
+    round the same way and change nothing, because the direction is a property
+    of the repeating digits rather than the precision. What collapses the orbit
+    to an even 2/2/2 — and takes the animation with it — is truncating instead
+    of rounding: `16.666666%` is 499.99998ms, the other side of the sample.
+
+    So does enough precision. At sixteen significant digits
+    `8.333333333333334%` of 3s is 250.00000000000003ms — past the sample, not
+    before it — and rendering that variant gives a different animation: 92
+    distinct frames instead of 89, an identical adjacent pair, and even-frame
+    gaps that stop being uniformly 3/4/5. Ten decimals and fifteen significant
+    digits do not cross, and are byte-identical to what ships.
+
+    **Do not adjust these percentages at all.** Three versions of this note have
+    tried to state a rule about which edits are safe — any extra digit, then ten
+    decimals, then no terminating decimal at all — and all three were wrong,
+    each one written to correct the last. The behaviour depends on which side of
+    a sample time each of twelve rounded values falls, and that is not something
+    a rule of thumb gets right. If they have to change, re-render and diff the
+    frames.
+
+    It reads better this way. Measured over the loop: the gaps are 4/4/4 on
+    all 48 odd frames and 3/4/5 on all 48 even ones, and one or two of the three
+    stars change cell on every frame step — never none, never all three at once,
+    which is what an even 2/2/2 would have given. Three stars on a four second
+    loop cannot be evenly phased at all, because 32/3 is not an integer.
+
+    ── The eyes ───────────────────────────────────────────────────────────
+
+    Crossed, by moving each two units inward. Whole art pixels, existing IDs,
+    translation only. A held `scaleY` squash was the obvious alternative and is
+    exactly what `asleep` holds for its entire loop, so it would have made the
+    two screens one picture.
+
+    ── Not distress ───────────────────────────────────────────────────────
+
+    `StopFailure` is a failed turn, not a catastrophe, and the strip tint
+    already carries the severity. Nothing here flashes, shakes or reddens.
+  -->
+
+  <defs>
+    <style>
+      /* Whole art pixels throughout. One frame of the twelve second loop is
+         1.041667%; the 3s orbit inside it is 24 frames, and 12s / 3s is 4, so
+         it tiles exactly and the loop seam is clean. */
+
+      #fx-star-a {
+        animation: orbit 3s infinite steps(1);
+      }
+
+      /* Four cells apart, which is a third of the orbit. Negative delays start
+         each star already in position rather than waiting to enter. */
+      #fx-star-b { animation: orbit 3s -1s infinite steps(1); }
+      #fx-star-c { animation: orbit 3s -2s infinite steps(1); }
+
+      @keyframes orbit {
+        0.000000% { transform: translate(5px, 0px); }
+        8.333333% { transform: translate(4px, -2px); }
+        16.666667% { transform: translate(3px, -3px); }
+        25.000000% { transform: translate(0px, -3px); }
+        33.333333% { transform: translate(-2px, -3px); }
+        41.666667% { transform: translate(-4px, -2px); }
+        50.000000% { transform: translate(-5px, 0px); }
+        58.333333% { transform: translate(-4px, 2px); }
+        66.666667% { transform: translate(-3px, 2px); }
+        75.000000% { transform: translate(0px, 2px); }
+        83.333333% { transform: translate(3px, 2px); }
+        91.666667% { transform: translate(4px, 2px); }
+      }
+
+      /* The wobble: translation against planted legs, never rotation, and on
+         the full twelve seconds rather than a two second cycle repeated six
+         times.
+
+         **This is what earns the loop length.** With a 2s sway the file
+         rendered four seconds: the star set at frame *f* depends only on *f*
+         mod 8 — measured off the bake, not derived — so the orbit's visual
+         period is eight frames, and 32/16/8 all divide 32. Three identical
+         stars a third of a lap apart is the reason, though not by a clean
+         four-cell rotation: they are four cells apart on odd frames only, and
+         3/4/5 apart on even ones. §Why nothing rotates has the cause.
+         Frames 32-95 were byte-for-byte copies of 0-31 in a 402KB bake, while
+         the comment above claimed a resting screen built like `idle`. `idle`
+         earns sixteen seconds with blinks, two looks and a yawn; a stagger
+         that repeats every four is not a stagger, it is a metronome.
+
+         So the amplitude varies across the twelve: two ordinary sways, two
+         smaller ones, then a deeper lurch, a hard rebound and a slow settle.
+         The values are
+         whole device pixels at the keyframes — eighths of a unit — though the
+         eased track passes through fractions between them; the palette snap
+         resolves those, per `docs/ANIMATION.md` §Palette snapping.
+
+         **The deep lurch is 5 device pixels of body-over-feet offset, passed
+         through in two frames, and both halves of that are the fix.** It was 6,
+         held four, and `animation-critic` ruled it needs-work on a measurement
+         nobody had taken: not the offset, but how much torso is left outboard
+         of the outer leg.
+
+           minimum outer-leg inset, device pixels, measured at the torso's
+           bottom row against the four planted feet:
+
+             thinking   7    (never below)
+             idle       6    (never below)
+             dizzy      2    before this fix, on frames 63-66 at row 174 —
+                              63-67 taking each frame's own bottom row, the same
+                              sub-pixel corner case noted below
+             dizzy      3    after, on frames 63-64 at every torso row
+                              (frame 65 also reads 3 on its bottom row alone,
+                              where the sub-pixel edge drops one corner pixel)
+
+         At 2 the leg does not read as under the body — it reads as dropping
+         off the corner while the torso overhangs empty air on the other side.
+         And the deep pose was *held*: four frames at the extreme before the
+         fix, two after. That pair is the whole of what is worth quoting here.
+
+         Three drafts of this line tried to say more — "ten frames within 1.5
+         pixels", "the longest static run in the loop", "seven within 1.5
+         pixels" — and each was wrong in a different way: the count was eight
+         not ten, the superlative was false, and the seven mixed a whole-loop
+         tally into a sentence whose other half was contiguous. Near-miss
+         tallies depend on a tolerance and on where you put the neutral
+         position, and nothing in this file needs one. Frames at the extreme is
+         a count with no free parameters.
+
+         The precedent is `thinking.svg`, and it is exact rather than
+         approximate. That file chose three quarters of a unit — six device
+         pixels — on the grounds that "the outer leg still had a quarter unit of
+         body over it at that offset, so nothing was standing off the edge",
+         and then recorded that the reasoning was sound and the conclusion still
+         wrong. This file had reproduced that value *and* that argument, word
+         for word, in the comment defending it.
+
+         Two earlier versions of this paragraph made it worse by citing `idle`
+         and `thinking` as having shipped six device pixels themselves. Neither
+         did; their sway tracks are a quarter unit, and the 6 and 0.95 in those
+         files are the rejected values each records as a defect. A third version
+         compared torso-edge excursion across the three, which conflates a
+         scale with a displacement — `idle`'s wide frames are its yawn getting
+         broader, not its body leaving its feet.
+
+         What survives all of that is the arrival, which was always the good
+         part: the offset builds from frame 59 to its extreme at 63, legs under
+         the torso throughout.
+
+         **It does not return faster than it came — it rebounds hard and then
+         settles slowly**, which a draft of this note had backwards.
+
+         The rebound is the part that is safe to quote, because it needs no
+         neutral position: the two frames after the extreme cover 2 of the 5
+         device pixels, and the remaining 3 are spread over the frames after
+         that. How many depends entirely on how close to zero counts as back,
+         and successive drafts of this paragraph published nine-and-eleven and
+         then five-and-nine from the same bake by choosing differently. Both had
+         the return longer than the descent, which is the claim and is what was
+         backwards before. Neither pair belongs in a comment.
+
+         The constraint to hold on any future edit is the one the critic named:
+         **the outer leg keeps at least 3 device pixels of body outboard of it,
+         and the extreme is passed through in no more than two or three
+         frames.** Both are measurable from the bake; neither is a matter of
+         taste. */
+      #wobble {
+        animation: stagger 12s infinite ease-in-out;
+      }
+
+      @keyframes stagger {
+        0%        { transform: translate(-0.5px, 0); }
+        8.333333% { transform: translate(0, -0.25px); }
+        16.66667% { transform: translate(0.5px, 0); }
+        25%       { transform: translate(0, -0.25px); }
+        33.33333% { transform: translate(-0.25px, 0); }
+        41.66667% { transform: translate(0, 0); }
+        50%       { transform: translate(0.25px, 0); }
+        58.33333% { transform: translate(0, -0.25px); }
+        66.66667% { transform: translate(-0.625px, 0); }
+        69.79167% { transform: translate(-0.375px, -0.125px); }
+        75%       { transform: translate(-0.125px, -0.25px); }
+        83.33333% { transform: translate(0.5px, 0); }
+        91.66667% { transform: translate(0.25px, -0.25px); }
+        100%      { transform: translate(-0.5px, 0); }
+      }
+
+      /* `idle`'s breath, about the hips, so the body settles onto planted legs
+         rather than lifting off them.
+
+         Not on every frame. On 6 of the 96 — 5, 27, 59, 66, 67 and 91 — the
+         breath and the stagger's vertical component together clear **one**
+         device-pixel row between the torso and all four feet.
+
+         Worth the exact number, because a draft of this note said `idle` "does
+         the same on 14 of 128" and that understates `idle` by an order of
+         magnitude. Measured: `idle` opens 1 to **9** device pixels across
+         frames 81-94, eight or more of them for seven consecutive frames.
+         Dizzy's is one row, on isolated single frames. `thinking`, `confused`,
+         `permission-sign` and `asleep` are at zero, and so are `gym` and
+         `bouldering` — measured across all nine, dizzy and `idle` are the only
+         two with any gap at all. (`typing` looks like a third and is not: he is
+         seated, so his legs start eight device rows lower than everyone else's
+         with body drawn continuously above them.) `thinking.svg` states its
+         zero as a measured property.
+
+         So the corpus is inconsistent and this is its mildest instance, which
+         is why it is recorded rather than fixed. `docs/ANIMATION.md` §Animating
+         the whole sprite is not animating is on this side of it — "the gap that
+         opens between body and legs is what the eye reads as a breath" — and
+         `thinking.svg` takes the opposite line. That disagreement wants
+         settling in the doc before either animation is edited, and `idle` is
+         the one that would change. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* Crossed. Static offsets, not an animation. */
+      #left-eye-cross  { transform: translateX(2px); }
+      #right-eye-cross { transform: translateX(-2px); }
+
+      /* Squashed about each eye's own line, never hidden — §Closing an eye.
+         Linear, because a lid that accelerates reads as a wince.
+
+         **This is also what makes the loop twelve seconds.** Without it the
+         file rendered four: the star set repeats on an eight-frame period (see
+         §the wobble), so frames 32-95 were byte-for-byte copies of 0-31 — a
+         402KB bake, two thirds of it duplicate, claiming to be a resting screen
+         built like `idle`. A blink on a twelve-second track is the cheapest
+         beat that makes the length real, and most of the awake animations have
+         one. Not all: `bouldering` holds its eyes for the whole loop by a
+         recorded decision — a squashed eye there buys an expression at the
+         price of frames with an eye missing — and `gym`'s eyes squint under the
+         bar rather than blink. Both are animations where something crosses the
+         face, which is the distinction, not a rule that every screen blinks. */
+      #left-eye-blink {
+        transform-origin: 4.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      #right-eye-blink {
+        transform-origin: 10.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      /* Two blinks of 96 frames, far enough apart that they never read as a
+         pair. Two frames shut, every value a whole frame.
+
+         Shut on frames 31-32 and 71-72. Frames 30 and 70 are the last fully
+         open ones — they are where the close begins, which is what an earlier
+         version of this comment called the blink. Off by one in the direction
+         that matters least, and still worth being right about: the numbers here
+         are what a reader checks a re-bake against. */
+      @keyframes blink {
+        0%, 31.25%       { transform: scaleY(1); }
+        32.291667%       { transform: scaleY(0.1); }
+        33.333333%       { transform: scaleY(0.1); }
+        34.375%          { transform: scaleY(1); }
+        72.916667%       { transform: scaleY(1); }
+        73.958333%       { transform: scaleY(0.1); }
+        75.000000%       { transform: scaleY(0.1); }
+        76.041667%, 100% { transform: scaleY(1); }
+      }
+    </style>
+  </defs>
+
+  <!-- ── three stars, orbiting above the head ──────────────────────────── -->
+  <!-- A pale pip in a dark cross, drawn at the orbit's centre; the keyframes move
+       the group — the keyframes translate by (cell - centre), so the rects
+       have to sit at the centre and not at a cell, or every star is offset by
+       the difference and two of the three end up touching.
+
+       **Two tones, and it has to be.** A single pale pixel measured
+       1.31:1 against the day sky and 1.80:1 against dawn — invisible, on the
+       path the daemon takes — which is the third time this exact defect has
+       landed: the boot splash's wordmark, `confused`'s caret, and this. No one
+       flat tone reads against both a pale sky and a dark one. The cross
+       carries the pale skies and the pip carries night.
+
+       Measured on the composed panel, worst star over the whole loop, taking
+       each star's best-reading pixel against the sky right behind it: **dawn
+       3.75:1**, dusk 5.06:1, day 8.05:1, night 10.62:1. Dawn is the floor and
+       it is the number to quote. A commit message on this branch said "7.6:1
+       or better at all four", which was one sky band against black generalised
+       to four skies and every orbit position; the real floor is half that.
+
+       Which tone carries it is the part worth keeping, and the two swap over
+       the course of the day rather than dividing cleanly. Counting every star
+       instance across the loop — 288 a sky — the cross is the better-reading
+       half on 288 of 288 at day, 216 at dawn, 120 at dusk and 0 at night. So
+       dusk is already the pip's, not a pale sky the cross owns.
+
+       And each tone bottoms out somewhere. The worst single cross pixel over
+       the loop is 6.03 at day, 2.05 at dawn, 1.50 at dusk, 1.08 at night; the
+       worst pip pixel is 1.31 at day, 1.80 at dawn, 2.75 at dusk, 10.62 at
+       night. Both fall under 2:1 on some sky. What makes the glyph legible is
+       that a five-cell cross only needs one pixel to read, and on every sky one
+       of the two tones is well clear — which is the argument for two tones
+       rather than for a better single one.
+
+       Black, not a near-black: `permission-sign` records what happens when a
+       new dark tone is declared — it captures the antialiased edges the
+       transparency rule needs and stitches a keyline round the character.
+
+       The lowest cells are raised a unit so the cross's bottom arm clears the
+       torso. The first version measured the *pip* at y=4 against a torso
+       topping out at y=6 and concluded there was clearance; the arm is a unit
+       below the pip, so it sat flush against the torso on 33 of 96 frames —
+       a dark notch welded to the top of his head, which is on this plan's own
+       "Not wanted" list. `asleep` shipped a glyph crossing the face once and
+       it read as display corruption. Measure the prop, not its centre. -->
+  <g>
+    <g id="fx-star-a">
+      <rect x="7" y="0" width="1" height="1" fill="#000000"/>
+      <rect x="6" y="1" width="1" height="1" fill="#000000"/>
+      <rect x="8" y="1" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="2" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="1" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+    <g id="fx-star-b">
+      <rect x="7" y="0" width="1" height="1" fill="#000000"/>
+      <rect x="6" y="1" width="1" height="1" fill="#000000"/>
+      <rect x="8" y="1" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="2" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="1" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+    <g id="fx-star-c">
+      <rect x="7" y="0" width="1" height="1" fill="#000000"/>
+      <rect x="6" y="1" width="1" height="1" fill="#000000"/>
+      <rect x="8" y="1" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="2" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="1" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+  </g>
+
+  <!-- ── base geometry: assets/clawd/base.svg, less its shadow ─────────── -->
+  <g id="master-group">
+    <!-- Planted, and outside the wobble: the foot line stays flat while the
+         body moves over it. -->
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="wobble">
+      <g id="breathe">
+        <g id="body-color-group" fill="#DE886D">
+          <rect id="torso" x="2" y="6" width="11" height="7"/>
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+          <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+        </g>
+
+        <g id="eyes-color-group" fill="#000000">
+          <g id="left-eye-cross">
+            <g id="left-eye-blink">
+              <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+            </g>
+          </g>
+          <g id="right-eye-cross">
+            <g id="right-eye-blink">
+              <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -212,8 +212,12 @@ that is not waiting on the design freeze.
       built, baked and wired (`NEEDS_PERMISSION` in `packages/daemon/src/animation.ts`),
       and `WAITING` got `confused` in the same pass — both Tier A, both through
       `animation-critic`
-- [~] `StopFailure` → the state, `error_type` and the quip exist; **the
-  animation does not** — `dizzy` is unbuilt (Stage 4, item 9)
+- [x] `StopFailure` → the state, `error_type` and the quip exist, and `dizzy`
+      is built, baked and wired (`FAILED` in `packages/daemon/src/animation.ts`).
+      `error_type` is stored and still read by nothing: all three of
+      `rate_limit`, `overloaded` and `authentication_failed` show one picture.
+      That is the state/animation split working as designed, not a gap — the
+      field is kept because it arrives once and cannot be recovered
 - [ ] **Remote transport** — TCP + shared secret, so the recipient's Raspberry Pi agent appears on the
       display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
       from day one (cheap), but ship it only if Stage 4 is on schedule.
@@ -288,7 +292,12 @@ than partially. Eight good screens beat nine plus four rough ones.
      6deg body tilt against a 2.5deg one already recorded as reading like a
      corrupted sprite
   8. sweeping (PreCompact)
-  9. dizzy (StopFailure)
+  9. dizzy ✅ (StopFailure) — **taken out of order, ahead of 6 and 8.** It is
+     the last state that was on the fallback, so building it is Stage 3
+     correctness (the `[x]` in Stage 3) rather than Stage 4 art, and the 6 Sep
+     Tier A gate above governs what gets cut, not what gets pulled forward. Recorded here
+     because this list is what the 6 Sep decision is read off, and a plan that
+     calls a shipped item deferred will mislead exactly that decision
   10. wizard (WebSearch/WebFetch) — 5.5% of real tool calls
   11. board game (Agent/subagents) — 0.7%, the least-seen of the screens that
       have a measured trigger. Six catalogue entries fire on hook events or
