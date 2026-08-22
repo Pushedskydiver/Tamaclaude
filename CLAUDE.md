@@ -51,7 +51,14 @@ table and rationale: `docs/ARCHITECTURE.md`.
 
 - **`packages/hooks` must stay near-leaf.** It is the binary Claude Code
   executes on _every_ hook event. Its import graph is a latency budget, not a
-  style preference.
+  style preference — and the budget is now measured rather than asserted.
+  `tamaclaude-notify` costs **~42 ms per event**, of which **38 ms is Node
+  starting** and 3.2 ms is the hook's own graph. `dist/index.js` imports five
+  `node:` builtins and nothing else; the one workspace import is `type`-only and
+  erases. So the discipline is working and there is nothing left to win here:
+  if this ever needs to be faster, the lever is not spawning Node, not trimming
+  imports. `packages/hooks/src/index.test.ts` gates the graph rather than the
+  timing, because a timing assertion in CI measures the runner.
 - **`functional/no-let` and `immutable-data` are off in `protocol` and
   `renderer`.** You cannot write a framebuffer without mutation. Also off in
   `tools/` (all four functional rules) and in every package's test files — so

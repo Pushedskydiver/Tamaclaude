@@ -195,7 +195,11 @@ that is not waiting on the design freeze.
       existing "latency budget" framing rather than upgrading it. The generous
       timeout means events are not lost to slowness; it means every
       millisecond of `tamaclaude-notify`'s startup is paid by the user,
-      synchronously, many times per turn. (Note the docs also use "blocking" in
+      synchronously, many times per turn. **Measured on 22 Aug, once hooks were
+      installed on a real machine: ~42 ms an event, 38 ms of it bare Node
+      startup and 3.2 ms the hook's own module graph.** At four to ten events a
+      turn that is 0.2-0.4 s per turn, and essentially none of it is reachable
+      by the import discipline this line was written to justify. (Note the docs also use "blocking" in
       a second sense — whether a hook can _veto_ an action via exit code 2 —
       and by that sense `PermissionRequest` and `StopFailure` do not block. The
       two senses are unrelated.) Finally, `Stop` fires on every response rather

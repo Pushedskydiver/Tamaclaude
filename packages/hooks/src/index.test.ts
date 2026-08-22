@@ -316,10 +316,37 @@ describe('hooks stays near-leaf', () => {
 
   it('imports @tamaclaude/protocol only as a type', () => {
     // A type-only import erases under `verbatimModuleSyntax`, so the built
-    // binary loads two Node builtins and nothing else. A value import would
-    // pull the whole wire protocol — codec, geometry, dirty rects — into a
-    // process that starts on every tool call. It costs nothing to check.
+    // binary loads Node builtins and nothing else. A value import would pull
+    // the whole wire protocol — codec, geometry, dirty rects — into a process
+    // that starts on every tool call. It costs nothing to check.
     const built = readFileSync(BUILT, 'utf8');
     expect(built).not.toContain('@tamaclaude/protocol');
+  });
+
+  it('loads nothing at run time but Node builtins', () => {
+    // The exact list, not just "no workspace import". The two assertions above
+    // catch a dependency arriving through `package.json` or through
+    // `@tamaclaude/protocol`; neither catches `import { z } from 'zod'` typed
+    // straight into this file, because `zod` is hoisted to the workspace root
+    // and resolves fine at run time without ever appearing in this manifest.
+    //
+    // Pinned rather than merely filtered, because the number is the finding.
+    // Measured 22 Aug: the whole binary costs ~42 ms an event, of which 38 ms
+    // is bare `node -e ''` on the same machine and 3.2 ms is this graph. There
+    // is no import discipline left to buy — the remaining 90% is the runtime
+    // starting, and the only lever on it is not spawning one. A timing
+    // assertion here would measure the CI runner instead.
+    const built = readFileSync(BUILT, 'utf8');
+    const imports = [...built.matchAll(/^import[^;]*?from\s+'([^']+)'/gm)].map(
+      (match) => match[1],
+    );
+    expect(imports.filter((name) => !name.startsWith('node:'))).toEqual([]);
+    expect([...imports].sort()).toEqual([
+      'node:net',
+      'node:os',
+      'node:path',
+      'node:process',
+      'node:stream/consumers',
+    ]);
   });
 });
