@@ -42,12 +42,21 @@
 
     `#legs-sploot` is four 1x1 at y=9, in the same four columns as the standing
     legs (3, 5, 9, 11), so they read as his legs — splayed out above a body that
-    has spread beneath them. They sit directly on the torso's top edge, so there
-    is no transparent row anywhere in the figure and `hipGap` reads 0.
+    has spread beneath them. They sit directly on the torso's top edge:
+    the legs' bottom row is the torso's top row minus one on all 48 frames,
+    measured on isolated renders of each.
+
+    **`hipGap` reading 0 is not evidence of that.** That gate walks up from the
+    bottom-most drawn row *through the legs*; here the bottom-most row is the
+    torso and there is nothing below it, so the walk ends immediately and
+    returns 0 for any pose of this shape. It is vacuous for a sploot, and the
+    contiguity measured above is what actually holds.
 
     The eyes are 1x1 at y=12, in the standing columns, half the standing height.
-    Tired slits on a flat body. They are not carrying the separation from
-    `asleep` — the body is — so they only have to not contradict it.
+    Squares, not slits: upstream draws 2x0.4, and widening ours walks straight
+    at `asleep`'s `scale(2, 0.5)`, which is the shape this screen has to stay
+    away from. They are not carrying the separation from `asleep` — the body is
+    — so they only have to not contradict it.
 
     ── Why the fanning claw extends as well as turning ────────────────────
 
@@ -98,21 +107,32 @@
     ── Safe area ──────────────────────────────────────────────────────────
 
     The pose creates headroom rather than spending it. The topmost body pixel is
-    a splayed leg at y=9, against y=6 standing, and the steam tops out at y=2 —
-    six units inside the -4 line, where `dizzy` sits at -3 on 72 frames of 96.
+    a splayed leg at y=9, against y=6 standing, and the steam tops out at
+    **y=+1** — five units inside the -4 line, where `dizzy` sits at -3 on 72
+    frames of 96. (An earlier version of this line said y=2 and six units; both
+    were guessed from the keyframes rather than measured off the bake.)
   -->
   <defs>
     <style>
       /* One puff, drawn at the origin; the keyframes move the group. */
 
-      #fx-steam-a,
-      #fx-steam-b,
-      #fx-steam-c {
-        animation: rise 3s infinite steps(1);
-      }
+      /* Delays inside the shorthand, never as separate `animation-delay`
+         declarations. `docs/ANIMATION.md` §Carry the offset inside the
+         shorthand: the shorthand *resets* delay, so a longhand only survives
+         while it sits below. This file had the separate form and it worked
+         only by source order — moving the two delay rules above the shorthand,
+         which is a cosmetic tidy and nothing else, collapses all three puffs
+         onto one phase and they rise in lockstep.
+         `svg2frames` goes from "3 distinct delays" to "1".
 
-      #fx-steam-b { animation-delay: -1s; }
-      #fx-steam-c { animation-delay: -2s; }
+         Nothing else notices. The reordered version still renders 46 of 48
+         distinct frames with no adjacent identical pair, the same duplicate
+         offsets, the same byte cost, and passes every gate in the repo. Only
+         looking at it shows it. Every other animation here carries the delay
+         inline; this was the one that did not. */
+      #fx-steam-a { animation: rise 3s infinite steps(1); }
+      #fx-steam-b { animation: rise 3s -1s infinite steps(1); }
+      #fx-steam-c { animation: rise 3s -2s infinite steps(1); }
 
       /* Whole art pixels, and the last two cells are off rather than faded.
          3s is 24 frames, so each of the eight steps holds 3 frames. */
@@ -138,10 +158,18 @@
         animation: heave 6s infinite ease-in-out;
       }
 
-      /* Four breaths in the loop, and **no two the same**: deepening to the
-         third and settling on the fourth, which is what catching your breath
-         does. `asleep` does the same thing with three breaths in twelve seconds
-         and a sigh in the middle.
+      /* Four breaths in the loop, and no two the same: deepening to the
+         third and settling on the fourth. `asleep` does the same thing with
+         three breaths in twelve seconds and a sigh in the middle.
+
+         **Do not oversell that.** Measured on the bake, the torso goes 40 down
+         to 36, 35, 34 and 37 device pixels — so the breaths differ from one
+         another by one to three pixels, a second and a half apart, which is
+         under what a viewer reads as "catching your breath". What the varying
+         depth actually earns is frame distinctness, which is real and is the
+         paragraph below. The breath itself reads on its own terms: 6 device
+         pixels of squash at forty a minute is laboured, and that is the whole
+         of the claim.
 
          It is also what earns the full six seconds, and it took two goes.
          Written as `1.5s alternate` the track's period was 24 frames, the fan's
