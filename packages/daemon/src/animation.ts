@@ -37,8 +37,13 @@ export type AnimationName = (typeof ANIMATIONS)[number];
  * in precisely the direction the whole design is built to avoid. `thinking` is
  * the only built animation that reads as "busy, unspecified" without claiming
  * a particular activity, so it is the safe direction to be wrong in.
+ *
+ * Exported for the tests. A test that hard-codes `'thinking'` asserts the
+ * fallback's current value rather than which states reach it, so retargeting
+ * this line would leave "no state is on the fallback" passing while it stopped
+ * being true.
  */
-const FALLBACK: AnimationName = 'thinking';
+export const FALLBACK: AnimationName = 'thinking';
 
 /**
  * `PreToolUse.tool_name` to animation. An unlisted tool takes `FALLBACK`.
@@ -69,8 +74,12 @@ const TOOL_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
  *
  * **No state is on the fallback any more.** All three that were — the two
  * attention states and `FAILED` — now name their own art, so `FALLBACK` is
- * reached only by `WORKING` with a tool nobody has mapped, which is the case
- * it was written for.
+ * reached only from `WORKING`: with a tool nobody has mapped, or with no tool
+ * at all. Both are the case it was written for. `tool` is optional on the wire
+ * (`PreToolUse` in `packages/protocol/src/events.ts`) and `session.ts` writes
+ * it straight through, so the no-tool path is reachable rather than
+ * theoretical — `animation.test.ts` has covered it since before the art
+ * landed.
  *
  * They are deliberately different pictures. The permission sign holds up a `?`
  * on a plate, `confused` blinks a prompt caret, and `dizzy` crosses his eyes

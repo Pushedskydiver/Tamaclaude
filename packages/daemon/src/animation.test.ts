@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { animationFor, ANIMATIONS } from './animation.js';
+import { SPRITE_NAMES } from '@tamaclaude/renderer';
+
+import { animationFor, ANIMATIONS, FALLBACK } from './animation.js';
 import { SESSION_STATES, stateRank } from './state.js';
 
 describe('animationFor', () => {
@@ -56,23 +58,45 @@ describe('animationFor', () => {
   });
 
   it('gives FAILED its own art, so no state is on the fallback', () => {
-    // The last of the three. `FALLBACK` is now reached only by `WORKING` with
-    // an unmapped tool, which is the case it was written for — a panel that
-    // says "busy, unspecified" rather than claiming nothing is happening.
+    // The last of the three. `FALLBACK` is now reached only from `WORKING` —
+    // with an unmapped tool, or with no tool at all; the two tests above this
+    // one cover both — which is the case it was written for: a panel that says
+    // "busy, unspecified" rather than claiming nothing is happening.
     expect(animationFor('FAILED')).toBe('dizzy');
+    // Against `FALLBACK` rather than the literal `'thinking'`. The two are the
+    // same string today, and hard-coding it would mean retargeting the
+    // fallback left this passing while its own name stopped being true.
     const fallenBack = SESSION_STATES.filter(
-      (state) => state !== 'WORKING' && animationFor(state) === 'thinking',
+      (state) => state !== 'WORKING' && animationFor(state) === FALLBACK,
     );
     expect(fallenBack).toEqual(['THINKING']);
   });
 
-  it('returns a built animation for every state', () => {
-    // Asserts that no state returns a name with no SVG behind it. It caught
-    // nothing when the attention states shared the fallback; it is load-bearing
-    // now that two of them name their own art.
-    const unbuilt = SESSION_STATES.map((state) => animationFor(state)).filter(
-      (name) => !ANIMATIONS.includes(name),
-    );
+  it('names only animations that have been baked', () => {
+    // Against `SPRITE_NAMES` — the baked list — and not against `ANIMATIONS`.
+    // The previous version filtered `animationFor`'s output by `ANIMATIONS`,
+    // which is the tuple `AnimationName` is derived from, so it compared a
+    // value against the set that defines its own type and could not fail.
+    // Planting `'wizard'` in `ANIMATIONS` and mapping `WebSearch` to it — an
+    // animation with no SVG and no bake, reachable from a real tool name —
+    // left all 413 tests green. Only `tsc` caught it, in `packages/cli`.
+    //
+    // `ANIMATIONS` is still the daemon's own list and stays the type; this
+    // asserts the join to the renderer, which is the edge that can actually
+    // drift. `packages/daemon` already depends on `@tamaclaude/renderer`, and
+    // `SPRITE_NAMES` is a name list rather than the sprite data, so this costs
+    // no bake parsing.
+    //
+    // Widened to `string` on purpose. Left as its own literal union, an
+    // unbaked name makes this line a compile error instead of a red test, and
+    // a test that cannot go red is the thing being fixed here.
+    const baked: readonly string[] = SPRITE_NAMES;
+    expect(ANIMATIONS.filter((name) => !baked.includes(name))).toEqual([]);
+    const unbuilt = [
+      ...SESSION_STATES.map((state) => animationFor(state)),
+      animationFor('WORKING'),
+      animationFor('WORKING', 'Read'),
+    ].filter((name) => !baked.includes(name));
     expect(unbuilt).toEqual([]);
   });
 });
