@@ -454,68 +454,131 @@ tint carries severity.
 
 ---
 
-## Overheated — `StopFailure` with `error_type: rate_limit`
+## Overheated — `StopFailure` with `error_type: rate_limit` or `overloaded`
 
-Clawd has worked himself too hard and has to cool off before he can go again.
+Clawd has worked himself flat and is lying there fanning himself. He is not
+hurt and not asleep — he is spent, and he will be fine in a bit.
 
-`data-loop-seconds="12"`. **Proposed, not scheduled** — it is not one of the
+`data-loop-seconds="6"`. **Proposed, not scheduled** — it is not one of the
 eleven animations `BUILD_PLAN.md` Stage 4 catalogues, so adding it is a change
 to the plan and not work under it.
 
-**Why this state can carry its own picture at all.** `StopFailure` is the only
-event that arrives with a discriminator already attached: `error_type`, which
-the daemon has stored since Stage 3 and which nothing has ever read. The
-documented values are `rate_limit`, `overloaded`, `authentication_failed`,
-`oauth_org_not_allowed`, `billing_error`, `invalid_request`, `model_not_found`,
-`server_error`, `max_output_tokens` and `unknown` — verified against
-code.claude.com/docs/en/hooks.md, where `StopFailure` is defined as firing "when
-the turn ends due to an API error" and `error_type` is a matcher field. A plan
-limit reaching the client as a 429 is `rate_limit`, so this is the one value the
-recipient will actually see, and the one worth a screen.
+The scene is upstream's `clawd-working-overheated.svg` — _"sitting down
+(splooted), completely exhausted, fanning himself with one hand"_ — and none of
+its execution transfers. Its smoke fades from 0.6 opacity to 0 and scales x2,
+its tones are two new greys with rounded corners, its eyes are 0.4 units tall
+and its breath is 2.5s. Every one of those breaks something here. What we take
+is the pose, and the pose is the whole point of taking it.
 
-**The split proposed:** `rate_limit` shows `overheated`; every other
-`error_type` keeps `dizzy`. That refines `FAILED` by `errorType` exactly as
-`WORKING` is already refined by `tool` — same shape, same function, and the
-session's _state_ is unchanged, so nothing about priority or the strip tint
-moves. `overloaded` is the judgement call: it is the most literally
-"overheating" of the ten, but it describes the server being busy rather than
-this session having spent itself, and a screen that says "you have hit your
-limit" when the API merely blinked would be the panel lying in the direction the
-whole design forbids.
+**Why a pose and not a prop.** A first version of this plan kept the standing
+silhouette and separated the screen from `asleep` by eye state and rising heat.
+That fails twice over. `asleep`'s eyes are not shut — `@keyframes eyelid` holds
+`scale(2, 0.5)` for its entire loop, which is a half-height eye, so "half-closed
+versus shut" is not a distinction at all; and `dizzy.svg` already records
+rejecting a held `scaleY` squash on this same state because it "would have made
+the two screens one picture". Meanwhile something rising off a still Clawd _is_
+`asleep`. `PLANS.md` §Confused states what a glance actually reads: "prop mass
+and silhouette", not eye direction. So the silhouette has to change, and once it
+does the prop is free to be anything.
 
-- **Action.** Flat-out and cooling. He is not hurt and not asleep — he is
-  spent, and he will be fine in a bit.
-- **Body mechanics.** A pant: a breath faster and shallower than `idle`'s, on a
-  period that divides the loop evenly. This is the one animation where panting
-  is on-message — `dizzy`'s plan forbids it precisely because a knock should not
-  read as exhaustion, and the reverse holds here.
-- **Eyes.** Half-closed, squashed about their own line rather than hidden, the
-  technique `gym` uses under the bar. Not shut: shut is `asleep`, and the two
-  screens must not be confusable.
-- **Props.** Heat rising off him — discrete two-tone cells stepped with
-  `steps(1)`, on the pattern `dizzy`'s stars proved, never an opacity fade.
+`docs/ANIMATION.md` §The generation contract names this exact case — "a sploot
+for sleeping… give the variant its own id (`torso-sploot`)".
 
-**The collision to design against, and it is the whole risk.** Something rising
-off a resting Clawd is `asleep`, which already ships three Zs drifting up from a
-still body with closed eyes. Overheated must be legible as a different screen at
-a glance and at true size. Three things separate them and all three have to
-hold: the Zs are glyphs and heat is formless; `asleep`'s eyes are shut where
-these are half-open; `asleep` is still and slow where this pants. If a rendered
-frame of this could be mistaken for `asleep`, the plan has failed and the prop
-is what should change first.
+- **Action.** Splooted flat, fanning himself with the right claw, steam coming
+  off him. One pose, three speeds: a slow labouring breath, a fast fan, and
+  steam between the two.
+- **Body mechanics.** `#torso-sploot` replaces `#torso` at **x=2, y=10, 11x5**,
+  against the standing `x=2, y=6, 11x7`. Same x and same width on purpose: the
+  contact shadow is a fixed 9-unit band from unit 3 (`environment.ts`
+  `paintContactShadow`), so a wider body would overhang its own shadow, and at
+  this width the overhang is 1 unit each side exactly as when he stands. Nothing
+  in the renderer changes and `castsShadow` needs no new entry — he is on the
+  ground, more so than usual. The bottom edge stays on the ground line at y=15;
+  what changes is 2 units of height and a 4-unit drop.
+- **Legs.** `#legs-sploot`: four **1x1 at y=9**, at x=3, 5, 9, 11 — the same
+  four columns as the standing legs, so they read as his legs, now splayed out
+  above a body that has spread beneath them. Upstream's move exactly.
+- **Eyes.** `#left-eye-slit` / `#right-eye-slit`, **1x1 at y=12**, x=4 and x=10
+  — the standing columns, half the standing height. They are tired slits on a
+  flat body, and the body is what separates the screen; the eyes only have to
+  not contradict it.
+- **The fanning claw.** `#arm-fan` from `#right-arm`, and **it must extend as
+  well as rotate**. §What a claw cannot do is explicit: a 2x2 block turned is
+  "an arrowhead, and an arrowhead hung off an 11x7 slab is not a limb" — a
+  45deg swing was built, judged and rejected. What makes a claw read is length,
+  and `gym` is the proof: `rotate(-73deg) scaleX(2.843)` turns the same 2x2 into
+  an arm. So the fan sweeps _and_ extends, pivoting at its inner lower corner
+  (13, 13). Sweep angles and the `scaleX` factor are the two numbers to derive
+  at render time rather than assert here — the constraint they must satisfy is
+  that the tip clears the torso silhouette at both ends of the sweep, which is
+  the failure §What a claw cannot do describes.
+- **Props.** Steam, as 2x2 puffs — a `#000000` block with a `#C9D1D9` core,
+  the same two tones `dizzy`'s stars already carry, so the palette gains no
+  entry and no new snap target. Three puffs on one 3s track at delays 0, -1s and
+  -2s, which is `dizzy`'s phasing and lands each 8 frames apart. Opacity is only
+  ever 0 or 1, flipped hard at the top of the rise the way `asleep`'s Zs flip —
+  never a fade, because partial opacity composites over the background and snaps
+  to transparent in this pipeline.
 
-**Not wanted:** an opacity fade on the heat — `clawd-coffee-done.svg` upstream
-fades steam from 0.6 to 0, and partial opacity composites over the background
-and snaps to transparent in this pipeline; this is the defect the boot splash's
-wordmark, `confused`'s caret and `dizzy`'s stars each hit in turn. A new colour
-declared for the heat, unless it earns itself against both a pale sky and a dark
-one — declaring a colour makes it a snap target for every other colour's edges.
-Drooping arms: upstream's `clawd-error.svg` droops them ±30deg and
-`docs/ANIMATION.md` §What a claw cannot do argues a shallow rotation on a 2x2
-block with nothing to hold does not buy a pose. Sweat drops as upstream draws
-them, for the colour reason above. Anything that reads as distress or as
-illness — the recipient hitting a usage limit is an ordinary Tuesday, and the
-joke is that Clawd is having a lie-down about it.
+**Timing, and every period checked against the loop.** 6s is 48 frames at 8fps.
+An `alternate` track must run an even number of times (`docs/ANIMATION.md`), so:
+the breath at **1.5s alternate** is 12 frames each way and 4 alternations;
+the fan at **0.5s alternate** is 4 frames each way and 12 alternations; the
+steam at **3s** runs twice. All three land on whole frames. The breath is
+faster than `idle`'s 2s, which is what makes it a labouring one.
+
+**Six seconds, not twelve.** `dizzy` needed twelve because `FAILED` does not
+decay and it had to survive being stared at, and it earned them with a blink on
+a 12s track. This has three tracks at three speeds and no beat that wants a
+twelfth second, and `dizzy.svg` records what happens when a loop is longer than
+its content: frames 32-95 were byte-for-byte copies of 0-31 in a 402KB bake.
+48 frames should bake to roughly half of `dizzy`'s 401KB.
+
+**Safe area.** The pose creates headroom rather than spending it. The topmost
+body pixel is a splayed leg at y=9, against y=6 standing, so the steam has 13
+units before the -4 line — where `dizzy` sits at -3 on 72 frames of 96 and is
+the one `docs/ANIMATION.md` singles out to watch. Steam topping out at y=2
+leaves six units of margin.
+
+**Which errors get it.** `rate_limit` and `overloaded`. An earlier version of
+this plan split them — `overloaded` is the server being busy rather than this
+session spending itself — and that is true and beside the point: both tell the
+viewer the same thing, which is _wait and come back_, and that is what the
+picture says. Splitting them would show a knock-on-the-head for a condition
+that is not a knock. The other eight keep `dizzy`.
+
+**The quip should move too, and it is not optional.** `messageFor` keys on state
+alone, so `overheated` and `dizzy` would share the `FAILED` line, the strip
+tint and the priority — leaving the picture as the only difference. Keying
+`quips.mapped` on a compound `FAILED:rate_limit` falling back to the bare state
+costs one lookup, needs no schema change (`z.record(z.string(), z.string())`
+already accepts it) and generalises to all ten error types, which is what
+`events.ts` records the field was kept open for. `packs/example` is **tracked**,
+so its line stays deliberately flat; the real one belongs in the ignored pack.
+
+**Not wanted:** an opacity fade on the steam. A new colour for it. A claw that
+rotates without extending. A silhouette that could be mistaken for `asleep` or
+`idle` — if a rendered frame at true size could be, the pose is what changes,
+not the prop. Anything that reads as distress or illness: hitting a limit is
+ordinary, and the joke is that Clawd is having a lie-down about it.
+
+**Measured, because this list is ordered by measured frequency and an earlier
+version of this entry was inserted without one.** Across 1,030 local transcripts
+outside this project, a usage limit was actually hit in **one session** —
+roughly 0.1%. For scale, `board game` fires on `Agent` at 0.7% of tool calls and
+`BUILD_PLAN.md` calls that "the least-seen of the screens that have a measured
+trigger". This is an order of magnitude rarer than the rarest thing catalogued.
+
+That is not automatically an argument against it. `permission sign` and
+`confused` were built because they are the screens the whole design principle
+exists to serve — the panel says _when to look_, and a limit is exactly a
+stop-waiting moment. But it is the argument that has to be made explicitly,
+because "it will be seen often" is not available.
+
+**Sequence: art first, wiring last.** The wiring lands in `packages/daemon`,
+which Stage 3 marks done. If the art is cut at the 6 Sep gate, wiring built
+first is either reverted in shipped code a fortnight before the date, or left as
+a dead branch pointing at `dizzy` with a test asserting it does nothing.
 
 ---
 
