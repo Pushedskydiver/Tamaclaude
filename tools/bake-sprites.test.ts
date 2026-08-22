@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
@@ -28,7 +28,10 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and six full renders into `pnpm test`.
+ * and eight full renders into `pnpm test`. It would also be flaky —
+ * `svg2frames` is not bit-reproducible, and two runs of `confused` differ on
+ * one frame of 96 at a claw edge that lands on a fractional pixel and snaps
+ * either way.
  */
 
 const BAKED: ReadonlyArray<readonly [string, string]> = [
@@ -55,18 +58,20 @@ describe('the baked animations', () => {
   });
 
   it('covers every animation that has an SVG', () => {
-    // A new animation whose SVG lands without a bake would otherwise be
-    // checked by nothing here — the list above is hand-maintained, and the
-    // failure mode of a hand-maintained list is omission.
-    const named = new Set(BAKED.map(([name]) => name));
-    const onDisk = readFileSync(
-      'packages/renderer/src/sprites/index.ts',
-      'utf8',
-    )
-      .match(/export const SPRITE_NAMES = \[([\s\S]*?)\] as const;/)?.[1]
-      ?.match(/'([a-z0-9-]+)'/g)
-      ?.map((quoted) => quoted.slice(1, -1));
-    expect(onDisk).toBeDefined();
-    expect([...(onDisk ?? [])].sort()).toEqual([...named].sort());
+    // Against the assets directory, which is what the name promises. An
+    // earlier version read `SPRITE_NAMES` out of `sprites/index.ts` — a list
+    // `bake-sprites.ts` writes itself — so a new SVG that had never been baked
+    // matched a table that had never heard of it, and a review dropped a spare
+    // SVG into the directory with both assertions staying green.
+    //
+    // The list above is hand-maintained and the failure mode of a
+    // hand-maintained list is omission, so it has to be checked against the
+    // thing an author actually adds: a file.
+    const named = [...new Set(BAKED.map(([name]) => name))].sort();
+    const onDisk = readdirSync('assets/clawd/animations')
+      .filter((file) => file.endsWith('.svg'))
+      .map((file) => file.replace(/\.svg$/, ''))
+      .sort();
+    expect(onDisk).toEqual(named);
   });
 });

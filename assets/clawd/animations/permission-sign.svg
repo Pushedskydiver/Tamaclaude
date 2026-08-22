@@ -134,8 +134,8 @@
              lies on the far side of the pivot — is stretched to 5.7 units and
              swung the opposite way, straight down through the torso and out
              below the legs. Rendered, and it looked like a spear through him.
-             `gym` has no rect inside its scaled group at all, which is why its
-             arm works. This one keeps a static shoulder to fill the pivot; it
+             `gym` has no *shoulder* rect inside its scaled group — only the
+             claw itself — which is why its arm works. This one keeps a static shoulder to fill the pivot; it
              sits inside the torso's own footprint, so it is never seen. -->
         <rect id="right-shoulder" x="11" y="9" width="2" height="2"/>
       </g>

@@ -55,8 +55,10 @@
     cycle three times, two blinks well apart, and a caret that is the only
     thing moving at any speed.
 
-    **26 of 96 frames are distinct, and that is correct.** Every animation that
-    ships measures 91-100%, so this looks like a defect and is not: the caret
+    **26 of 96 frames are distinct, and that is correct.** Most animations here
+    measure 91-100% and this looks like a defect beside them, but the class is
+    not as clean as it sounds — `thinking` is 90.6% and `permission-sign`, which
+    shipped alongside this, is 34%. Both are resting screens too. The caret
     runs 8 frames, the breath 32, their LCM is 32, and the loop is three
     repeats of that plus two blinks. The check exists to catch a lost keyframe
     block; nothing is lost, and 77 of the 96 frame transitions change pixels.

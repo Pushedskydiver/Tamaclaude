@@ -10,14 +10,6 @@
  * expanded the wordmark's two colours are `data-ink` and `data-accent`, which
  * no `fill` names.
  *
- * `fingerprint` is what ties the committed header to the committed artwork. A
- * review moved Clawd 190 pixels across the panel without re-baking and every
- * assertion in that gate still passed, because they all read the header and
- * the header had not changed. Nothing there rasterises — doing so would put
- * Playwright in `pnpm test` for one assertion. Recording the source's hash in
- * the generated file costs nothing and fails loudly instead: the firmware is
- * flashed once, so "edited the art, forgot to re-bake" ships the old picture
- * permanently.
  */
 import {
   FIRST_CODE_POINT,
@@ -25,7 +17,6 @@ import {
   GLYPH_ROWS,
   GLYPH_WIDTH,
 } from '../packages/renderer/src/font-data.ts';
-import { fingerprint } from './art-fingerprint.ts';
 
 /** Where the placeholder says the wordmark goes, and in what colours. */
 type Wordmark = {
@@ -119,5 +110,3 @@ export function withWordmark(svg: string): string {
     .join('');
   return svg.replace(tag, `<g id="wordmark">${drawn}</g>`);
 }
-
-export { fingerprint };

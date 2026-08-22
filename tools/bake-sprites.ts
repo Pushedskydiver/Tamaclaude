@@ -124,8 +124,10 @@ function moduleSource(baked: Baked): string {
  *
  * \`SOURCE\` is a hash of the SVG this was baked from, comments and whitespace
  * excluded. \`tools/bake-sprites.test.ts\` fails when it stops matching, which is
- * how "edited the animation, forgot to re-bake" is caught. Four of the six were
- * stale that way, carrying holes where Clawd's eyes are.
+ * how a bake that does not match its source is caught. \`svg2frames\` writes the
+ * same hash beside the frames it renders, and \`bake-sprites.ts\` refuses to bake
+ * when the two disagree — so this stamp describes the pixels, not just the file
+ * that happened to be on disk at the time.
  */
 export const SOURCE = '${source}';
 export const WIDTH = ${String(width)};
@@ -152,6 +154,32 @@ async function bake(page: Page, name: string): Promise<void> {
       `no rasterised frames for ${name} — run \`node tools/svg2frames.ts assets/clawd/animations/${name}.svg out/${name}\` first`,
     );
   }
+  // **The frames have to prove which SVG they came from.** This function's
+  // pixel input is the PNGs in `dir`, and the SVG is only read below to hash
+  // it — so on its own the stamp says "these bytes were baked while that SVG
+  // was on disk", which is not the same claim and is the weaker one. A review
+  // recoloured Clawd bright green, re-baked without re-rendering, and got
+  // byte-identical pixels carrying the new SVG's hash: a stale bake with a
+  // green certificate, which is worse than no certificate.
+  //
+  // It is also how the original defect happened. `pnpm harness` renders only
+  // `typing thinking gym bouldering` into `out/<name>`, `pnpm measure` renders
+  // everything into `out/measure/<name>`, and the lookup above prefers
+  // `out/<name>` — so those four baked from whatever the last harness run left
+  // there, and they are exactly the four that shipped with holes for eyes.
+  const svg = await readFile(`assets/clawd/animations/${name}.svg`, 'utf8');
+  const want = fingerprint(svg);
+  const stamped = existsSync(`${dir}/source.fingerprint`)
+    ? await readFile(`${dir}/source.fingerprint`, 'utf8')
+    : undefined;
+  if (stamped !== want) {
+    throw new Error(
+      `${dir} was rendered from a different ${name}.svg than the one on disk` +
+        `${stamped === undefined ? ' (no source.fingerprint — rendered before this check existed)' : ''}` +
+        `\n  re-render it: node tools/svg2frames.ts assets/clawd/animations/${name}.svg ${dir}`,
+    );
+  }
+
   const frames = await loadFrames(page, dir);
   const first = frames[0];
   if (first === undefined) throw new Error(`no frames in ${dir}`);
@@ -169,17 +197,9 @@ async function bake(page: Page, name: string): Promise<void> {
 
   await mkdir(OUT_DIR, { recursive: true });
   const path = resolve(OUT_DIR, `${name}.data.ts`);
-  const svg = await readFile(`assets/clawd/animations/${name}.svg`, 'utf8');
   await writeFile(
     path,
-    moduleSource({
-      name,
-      width,
-      height,
-      pixels,
-      masks,
-      source: fingerprint(svg),
-    }),
+    moduleSource({ name, width, height, pixels, masks, source: want }),
     'utf8',
   );
   const bytes = (await readFile(path)).byteLength;

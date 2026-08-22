@@ -331,8 +331,12 @@ about how often `Notification` fires. Do not spend budget on the strength of it.
   the day sky and 1.80:1 against dawn — invisible, on the path the daemon
   actually takes. `thinking`'s bubble survives the same colour only because it
   is a 9x5 mass spanning three sky bands with a cyan dot inside it. So the
-  caret is a `#0D1117` block with a `#C9D1D9` core: the block carries the pale
-  skies, the core the dark one, and it reads 8:1 or better at all four.
+  caret is a `#000000` block with a `#C9D1D9` core: the block carries the pale
+  skies, the core the dark one, and it reads 5:1 or better at all four, worst
+  at dusk. Black rather than a near-black for the reason the permission sign
+  records — a new dark tone captures the antialiased edges the transparency
+  rule needs to resolve to the background, and stitches a keyline round the
+  whole character.
 
 - **Silhouette.** The asymmetric claws — one riding a unit high, one a unit low
   — are what stop this being `idle` with a glyph. `asleep` needed the same

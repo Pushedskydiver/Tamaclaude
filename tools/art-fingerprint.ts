@@ -1,8 +1,9 @@
 /**
  * A hash of a piece of artwork, for tying generated output back to its source.
  *
- * Every baker in this repo turns an SVG into generated code that is committed
- * beside it, and nothing in the six gates compares the two. `sprites/index.test.ts`
+ * The bakers here turn art into generated code committed beside it, and until
+ * recently nothing compared the two. `tools/bake-splash.test.ts` was the first
+ * to, using this hash; the sprites had no equivalent. `sprites/index.test.ts`
  * proves the baked sprites decode and re-encode to the bytes they were given —
  * which is internal consistency, not currency. Four of the six shipped with
  * data baked from an older SVG, and the difference was holes where Clawd's eyes

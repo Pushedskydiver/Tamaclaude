@@ -53,8 +53,9 @@ import { chromium } from 'playwright';
 
 import { encodeRect } from '@tamaclaude/protocol';
 
+import { fingerprint } from './art-fingerprint.ts';
 import { BACKGROUND, paletteOf, snapToPalette } from './frame-palette.ts';
-import { fingerprint, withWordmark } from './splash-source.ts';
+import { withWordmark } from './splash-source.ts';
 
 const SVG_PATH = 'assets/clawd/splash.svg';
 const OUT_PATH = 'packages/device/firmware/blitter/main/splash-data.h';

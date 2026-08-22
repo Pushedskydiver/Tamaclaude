@@ -143,15 +143,22 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost visible content, across every frame of all six: `idle` +4.25,
-`gym` +2, `typing` -0.5, `thinking` -3, `asleep` -3, `bouldering` -8.5. So the
-closest anything comes to the -4 line is a whole unit of margin, not none.
+Measured topmost drawn pixel, across every frame of all eight: `idle` +4.25,
+`gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
+`asleep` -3, `bouldering` -8.5. So the closest anything non-exempt comes to the
+-4 line is two units of margin, not none.
+
+**`bouldering`'s -8.5 is its wall, and the wall does not count.** It is inside
+`#fx-wall`, which carries `data-safe-area="ignore"` precisely so this rule skips
+it, and its scroll pattern extends past the crop by design and loses nothing
+because it repeats. `svg2frames`' own safe-area walk honours that attribute and
+reports +5.75 for `bouldering`; the figure above is the raw pixel extent. If you
+are checking whether an animation violates the crop, the tool's number is the
+one to read, and it warns on its own.
 
 An earlier version of this line read "`gym` +2, `typing` -2.5, `thinking` -4"
-and added that `thinking` "sits exactly on the line with no margin" — two of
-the three numbers were wrong and the warning drawn from them was wrong with
-them. `bouldering`'s scroll pattern extends past the crop by design and loses
-nothing, since it repeats.
+and added that `thinking` "sits exactly on the line with no margin" — two of the
+three numbers were wrong and the warning drawn from them was wrong with them.
 
 Check it by asking what the topmost _visible_ element reaches — an element at
 zero opacity does not count, which is what gives `typing` its headroom.
@@ -410,8 +417,10 @@ The advantage is structural rather than aesthetic. A pool needs the daemon to
 own a list, pick from it, and decide when to switch; beats need nothing at all
 outside the SVG. The variety lives in the animation.
 
-It is also the cheapest thing in the repo. `idle` measures 3,620 B/s against
-the 562.5 KB/s the link was measured at — 0.63%, the lowest of the six. The
+It is also among the cheapest things in the repo. `idle` measures 3,620 B/s
+against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
+the six until `permission-sign` (2,645) and `confused` (3,323) landed; the eight
+now run 2,645 / 3,323 / 3,620 / 3,905 / 6,332 / 9,966 / 14,545 / 19,992. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

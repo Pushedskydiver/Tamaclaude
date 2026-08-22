@@ -208,8 +208,10 @@ that is not waiting on the design freeze.
 - [x] Subagent lifecycle counted in the registry, and the badge is fed from it
       — `subagentText` in `packages/cli/src/daemon.ts` sums `subagents` across live
       sessions
-- [~] `PermissionRequest` → the state and the quip exist; **the animation does
-  not** — `permission sign` is unbuilt (Stage 4, item 7)
+- [x] `PermissionRequest` → state, quip and animation. `permission-sign` is
+      built, baked and wired (`NEEDS_PERMISSION` in `packages/daemon/src/animation.ts`),
+      and `WAITING` got `confused` in the same pass — both Tier A, both through
+      `animation-critic`
 - [~] `StopFailure` → the state, `error_type` and the quip exist; **the
   animation does not** — `dizzy` is unbuilt (Stage 4, item 9)
 - [ ] **Remote transport** — TCP + shared secret, so Jamie's Raspberry Pi agent appears on the
@@ -227,7 +229,11 @@ that is not waiting on the design freeze.
 
 The long pole. Runs in parallel with Stage 3 from week two.
 
-- [ ] **The environment: a rock pool, through the day.** Plan in
+- [x] **The environment: a rock pool, through the day.** Built, and wired into
+      `sceneFor` on 22 Aug — it was reachable from nothing before that, which
+      is how four animations shipped with holes for eyes that only a
+      non-black stage could reveal. The extent is a constant (`panel`); a pack
+      field for it is Stage 5 below. Plan in
       `assets/clawd/animations/PLANS.md`. A renderer layer behind every
       animation (`docs/ANIMATION.md` §Clawd lives somewhere) — one place, with
       the sky carrying dawn/day/dusk/night as a palette swap. He is currently
@@ -256,7 +262,12 @@ than partially. Eight good screens beat nine plus four rough ones.
 - [x] `assets/clawd/base.svg` — canonical geometry, stable element IDs (upstream's file, see `CREDITS.md`)
 - [x] `PLANS.md` — prose spec per animation (action / body mechanics / eyes / effects)
 - [ ] TS generator: base SVG + example + plan → LLM → animated SVG, under the
-      constraint that it may only add transforms and keyframes to existing IDs
+      generation contract in `docs/ANIMATION.md` §The generation contract —
+      motion is CSS by ID, props and effects may add elements, and a pose
+      variant may be drawn where no transform reaches the pose. This line
+      previously said "may only add transforms and keyframes to existing IDs",
+      which is the ban that section retired; `CLAUDE.md` carried the same
+      wording and was corrected on 22 Aug, and this was the third copy
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
@@ -269,9 +280,13 @@ than partially. Eight good screens beat nine plus four rough ones.
      a static red-car frame with Clawd beside it and the quip, which is 90% of
      the joke at 10% of the risk. "Do not cut" previously disarmed the only
      mitigation this plan names for its own top art risk.
-  7. Permission sign, and confused — Tier A per the screen spec; both were
+  7. Permission sign, and confused ✅ — Tier A per the screen spec; both were
      missing from every tier in its first draft despite being the two screens
-     the whole design principle exists to serve
+     the whole design principle exists to serve. A `spec-grill` found both
+     plans unbuildable before any code moved: the sign wanted a rotated claw to
+     reach above the head, which the geometry forbids, and `confused` wanted a
+     6deg body tilt against a 2.5deg one already recorded as reading like a
+     corrupted sprite
   8. sweeping (PreCompact)
   9. dizzy (StopFailure)
   10. wizard (WebSearch/WebFetch) — 5.5% of real tool calls
@@ -324,6 +339,12 @@ period after the last event, which the daemon can see and a hook cannot.
       header left stale after an edit can pass — both of which an earlier
       version of it did.
 
+- [ ] Environment as a pack field — extent (`stage` or `panel`) and eventually
+      the schemes. `docs/ANIMATION.md` gives "a pack can change it" as one of
+      the four reasons scenery is a renderer layer, and today a pack can change
+      nothing about it: `ENVIRONMENT_EXTENT` is a constant in
+      `packages/cli/src/daemon.ts`. Deferred there deliberately rather than
+      taken in the same pass as wiring the scenery on at all
 - [ ] `packs/alex/` — proves the pack swap works
 
 ## Stage 6 — Hardening + gift prep (Mon 14 – Sat 19 Sep)

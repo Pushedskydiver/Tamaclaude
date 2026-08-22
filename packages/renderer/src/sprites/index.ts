@@ -4,7 +4,11 @@
  * `tools/svg2frames.ts` rasterises an animation into `out/<name>` and
  * `tools/bake-sprites.ts` turns that into a generated module beside this one.
  * This is the other end: it turns those strings back into the `StageSprite` a
- * scene wants. Nothing outside this directory should read the generated data.
+ * scene wants. Nothing outside this directory should
+ * read the generated data, with one recorded exception:
+ * `tools/bake-sprites.test.ts` imports each module's `SOURCE` stamp to check
+ * the bake still matches its SVG, which is a property no consumer of the
+ * pixels can see.
  *
  * **Loaded on demand, and that is the point.** All six animations together are
  * 1,128,216 bytes of encoded data and 1,515,153 of source — base64 is four
@@ -15,8 +19,8 @@
  * reaches costs nothing at all.
  *
  * The imports are a table of thunks rather than one template literal because
- * `knip` cannot follow one: with a template literal it reports all six
- * generated modules as unused files and fails the gate. Measured. Vite is not
+ * `knip` cannot follow one: with a template literal it reports every
+ * generated module as an unused file and fails the gate. Measured. Vite is not
  * the reason — an earlier version of this comment said it rejects the template
  * literal outright, and it does not; it compiles it into a glob map of exactly
  * this shape. `tools/bake-sprites.ts` writes this table along with the data, so

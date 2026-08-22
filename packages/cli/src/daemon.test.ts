@@ -298,11 +298,18 @@ describe('what the panel says', () => {
     expect(skyAt(18)).toBe('dusk');
     expect(skyAt(23)).toBe('night');
     expect(skyAt(3)).toBe('night');
-    // The boundaries themselves, which is where an off-by-one lives.
+    // Both edges of every band, which is where an off-by-one lives. Opening
+    // edges alone are not enough: a review changed `hour < 8` to `hour < 7`
+    // and every assertion here still passed, with 07:00 falling through to a
+    // star field in broad daylight.
     expect(skyAt(5)).toBe('dawn');
+    expect(skyAt(7)).toBe('dawn');
     expect(skyAt(8)).toBe('day');
+    expect(skyAt(16)).toBe('day');
     expect(skyAt(17)).toBe('dusk');
+    expect(skyAt(19)).toBe('dusk');
     expect(skyAt(20)).toBe('night');
+    expect(skyAt(4)).toBe('night');
   });
 
   it('gives a session that needs a human the attention tone', () => {

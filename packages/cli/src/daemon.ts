@@ -90,9 +90,9 @@ const ORIENTATION = 'landscape';
  * built (`ENVIRONMENT_EXTENTS` in the renderer); this picks one, the way
  * `ORIENTATION` above picks one.
  *
- * A constant rather than a pack field for now. Alex asked for a switch so that
- * he or Jamie could change it later, and a pack manifest entry is where that
- * belongs — the pack is the personalisation layer. That is deferred, not
+ * A constant rather than a pack field for now. A switch was asked for so the
+ * owner or the recipient could change it later, and a pack manifest entry is
+ * where that belongs — the pack is the personalisation layer. That is deferred, not
  * forgotten: it is a schema change to `@tamaclaude/packs` plus a migration for
  * a manifest that already exists, and it was explicitly not taken in the same
  * pass as wiring the scenery on at all.
@@ -132,15 +132,21 @@ export type RunningDaemon = {
  * Which sky the panel is wearing.
  *
  * Here rather than in the renderer for the same reason `clockText` is here:
- * turning an instant into a local hour needs a timezone, and
- * `packages/renderer` is kept runtime-neutral so `BUILD_PLAN.md` Stage 1's open
- * exit — bundling it for the browser so both ends call one function — stays
- * available. The renderer takes the answer, not the clock.
+ * the renderer takes the answer, not the clock. `packages/renderer/src` reads
+ * a `Date` nowhere at all, and keeping it that way is what makes a frame a
+ * function of its inputs.
+ *
+ * An earlier version of this argued runtime-neutrality — that a timezone lookup
+ * would block `BUILD_PLAN.md` Stage 1's browser-bundle exit. That reasoning was
+ * borrowed from `sprites/index.ts`, where it is about `node:buffer` and is
+ * true; `Date#getHours` is standard ECMAScript and runs in a browser fine.
  *
  * The boundaries are the ones a person would name looking out of a window,
  * not civil twilight: this is a desk toy, and a rock pool that turns golden at
- * six in the evening is the point. `dusk` gets three hours because it is the
- * one most likely to be seen — it covers the end of a working day.
+ * six in the evening is the point. `dawn` and `dusk` get three hours each and
+ * `day` gets nine, because the two transitions are what make the panel look
+ * like a place rather than a picture, and a nine-hour midday is one flat sky
+ * nobody watches change.
  */
 function timeOfDay(now: number): TimeOfDay {
   const hour = new Date(now).getHours();
@@ -445,10 +451,19 @@ async function paintOnce(
   const at = now();
   const registry = listener.snapshot();
   const panel = resolvePanel(registry, at);
-  // The animation for the state, and the frame of it the clock is on. An
-  // unbaked animation resolves to nothing rather than throwing: three states
-  // still fall back to `thinking` and `BUILD_PLAN.md` Stage 4 has the rest,
-  // so a name with no data is expected for now and shows an empty stage.
+  // The animation for the state, and the frame of it the clock is on.
+  //
+  // `framesFor` resolves an unbaked name to nothing rather than throwing, and
+  // the empty check below is what that buys. Both are currently unreachable:
+  // `ANIMATIONS` and `SPRITE_NAMES` are the same eight names, so every name
+  // this can produce has data behind it. They are kept because the two lists
+  // are maintained in different packages by different tools — `animation.ts`
+  // by hand, `sprites/index.ts` by `bake-sprites.ts` — and the failure mode
+  // when they drift is a panel that throws mid-frame rather than one that
+  // shows an empty stage for a beat.
+  //
+  // An earlier version of this comment said three states still fall back to
+  // `thinking`. One does: `FAILED`, until `dizzy` is drawn.
   const wanted = animationFor(panel.state, panel.tool);
   const frames = await framesFor(wanted);
   const showing =

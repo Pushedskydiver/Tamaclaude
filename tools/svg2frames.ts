@@ -48,6 +48,7 @@ import { chromium } from 'playwright';
 // to the doc AST that `tools/detached-docs.test.ts` walks.
 import { SCREEN_WIDTH as PANEL_WIDTH } from '@tamaclaude/protocol';
 
+import { fingerprint } from './art-fingerprint.ts';
 import {
   BACKGROUND,
   paletteOf,
@@ -349,6 +350,14 @@ async function renderFrames(
       await page.evaluate(topmostVisibleUnit, options.scale),
     );
   }
+
+  // The fingerprint travels *with* the frames, and that is the whole point.
+  // `bake-sprites.ts` reads PNGs from this directory and the SVG separately,
+  // so nothing tied the two together: a review recoloured Clawd bright green,
+  // re-baked without re-rendering, and got byte-identical pixels stamped with
+  // the new SVG's hash — a stale bake carrying a green certificate. Writing it
+  // here means the hash describes the input the pixels actually came from.
+  await writeFile(`${outDir}/source.fingerprint`, fingerprint(svg), 'utf8');
 
   reportSafeArea(highest, viewBoxTop);
   reportMotion(written.length, distinct.size);
