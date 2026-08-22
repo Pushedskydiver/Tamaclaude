@@ -21,8 +21,14 @@
 
     So the cock is carried entirely by asymmetry, which is `gym`'s technique
     (§Eyes, in its plan): the left eye rides a unit low and the right a unit
-    high, and the claws do the same in the opposite sense. Nothing rotates and
+    high, and each claw goes the same way as the eye on its side. All four
+    together approximate one rotation in whole units. Nothing rotates and
     nothing translates by a fraction.
+
+    Not the opposite sense — that was tried first and rejected; see the note
+    beside the offsets below. Two cues pulling against each other do not
+    compose into a cocked head on a body with no neck, they cancel into a
+    shear.
 
     ── Why a caret and not a question mark ────────────────────────────────
 
@@ -48,6 +54,17 @@
     built like `idle` rather than like a beat: twelve seconds, one slow breath
     cycle three times, two blinks well apart, and a caret that is the only
     thing moving at any speed.
+
+    **26 of 96 frames are distinct, and that is correct.** Every animation that
+    ships measures 91-100%, so this looks like a defect and is not: the caret
+    runs 8 frames, the breath 32, their LCM is 32, and the loop is three
+    repeats of that plus two blinks. The check exists to catch a lost keyframe
+    block; nothing is lost, and 77 of the 96 frame transitions change pixels.
+
+    Worth knowing before anyone tries to raise it: an intermediate version of
+    this file did reach 34 distinct frames, and the extra motion was a keyline
+    flickering on and off with the breath — a defect, not animation. The number
+    is not a quality signal in either direction.
   -->
 
   <defs>
@@ -137,8 +154,16 @@
   </defs>
 
   <!-- ── the prompt caret, above and right of his head ─────────────────── -->
-  <!-- Three units by one, at y=3: three units clear of the torso top at y=6,
-       and nowhere near the landscape crop line at y=-4.
+  <!-- Five units by three, spanning y=2 to 5 — one unit clear of the torso
+       top at y=6 at rest, 1.63 at full breath, and six units inside the
+       landscape crop line at y=-4. It never touches him.
+
+       It is a block rather than the bare 3x1 bar it started as, and the block
+       is the part that works: a lone pale dash measured 1.31:1 against the day
+       sky, which is the path the daemon actually takes, so the one element
+       carrying this screen's meaning was invisible on it. Two tones fixes it
+       in both directions — the dark block reads against the three pale skies,
+       the pale core against the dark one.
 
        The block is #000000, and that is not interchangeable with the near
        black it started as. #0D1117 sits closer to a faint peach edge (21.4)
