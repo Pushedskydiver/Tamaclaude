@@ -57,6 +57,26 @@ describe('the baked animations', () => {
     expect(stale).toEqual([]);
   });
 
+  it('is well-formed XML, every one of them', () => {
+    // Two malformed SVGs shipped in a single session and neither was noticed:
+    // an unterminated `<!--` in `asleep`, and an unclosed `<g>` in
+    // `bouldering`. Both rendered correctly, because the rasteriser is a
+    // browser and browsers recover from broken markup — so `svg2frames` was
+    // silent, the frames were right, and every gate stayed green. Nothing else
+    // here reads these files as XML.
+    const broken = readdirSync('assets/clawd/animations')
+      .filter((file) => file.endsWith('.svg'))
+      .filter((file) => {
+        const svg = readFileSync(`assets/clawd/animations/${file}`, 'utf8');
+        const stripped = svg.replaceAll(/<!--[\s\S]*?-->/g, '');
+        // Unbalanced groups, and any `<!--` the strip could not pair.
+        const opens = (stripped.match(/<g[\s>]/g) ?? []).length;
+        const closes = (stripped.match(/<\/g>/g) ?? []).length;
+        return opens !== closes || stripped.includes('<!--');
+      });
+    expect(broken).toEqual([]);
+  });
+
   it('covers every animation that has an SVG', () => {
     // Against the assets directory, which is what the name promises. An
     // earlier version read `SPRITE_NAMES` out of `sprites/index.ts` — a list

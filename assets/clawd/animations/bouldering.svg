@@ -127,13 +127,30 @@
     The joints are also what stop the holds reading as falling confetti —
     without a surface he is a character in empty space with blocks going past.
 
-    Drawn on black rather than on a filled face, which is a look decision that
-    was measured rather than guessed: a filled slate face costs 22235 B/s
-    against this file's 21792, so it was always affordable. It was dropped
-    because at 172px a slate field flattens the scene — the joints sit close
-    enough to the face colour to disappear and the holds stop popping — and
-    every other screen in the set is on black, so one filled background reads
-    as the odd one out in rotation.
+    **Drawn on a filled rock face, which reverses an earlier decision.** That
+    decision was measured rather than guessed — a filled slate face cost
+    22,235 B/s against 21,792 for none, so it was always affordable — and it
+    was dropped because at 172px a slate field flattened the scene and because
+    every other screen was on black, so one filled background read as the odd
+    one out.
+
+    Both halves of that stopped being true. No screen is on black any more:
+    `packages/renderer/src/environment.ts` puts a rock pool behind every
+    animation, and unfilled, this one let the sky through its joints — it read
+    as wires strung across the horizon with purple notes pegged to them, with
+    Clawd on sand below the sea line. And the face is not slate now but the
+    sand's own family, which is what stops it flattening: it reads as a sea
+    cliff at the edge of the beach he lives on rather than a gym wall pasted
+    over it. Cost is 22,568 B/s, 4% of the measured link.
+
+    The prediction that a filled face mutes the joints half came true, and the
+    joint tone stays anyway. Measured after the RGB565 round trip the face is
+    (74,65,58) and the joint (49,53,58): only a 5% luminance step, but the
+    per-channel delta is +25R/+12G/0B, so it is a cool line on a warm field and
+    hue carries what luminance does not. Muted is also right now — they read as
+    bedding planes in rock, which is the scene, rather than as ply seams, which
+    was the gym. A darker, warmer joint would cost a new palette entry, and
+    §Palette snapping has caught this file twice already.
 
     **The scroll must tile.** Each hold column repeats every 8 units, the joint
     stagger every 8, and the wall travels exactly 8 units a loop, so the last
@@ -169,9 +186,13 @@
     repeats. The marker sits on the clip path as well as on the group, since
     `topmostVisibleUnit` walks every `rect` in the document including the one
     inside `<clipPath>`, and an unmarked clip rect reports a bounding box at
-    the origin and trips the check. That clip is also what keeps the wall off
-    the frame edge — 2 device pixels clear each side, 4 top and bottom — so no
-    joint scrolling in ever lands in row 0.
+    the origin and trips the check. That clip used to inset the wall
+    from the frame — 2 device pixels each side, 4 top and bottom — so no joint
+    scrolling in ever landed in row 0. It runs to the frame edge now, and the
+    inset would be a defect rather than a guard: against a black stage a joint
+    reaching row 0 was a bar ending in nothing, and against a full-bleed rock
+    it is the wall continuing past the frame, which is what a cliff does. What
+    keeps a joint from ending in air is `#rock-face`, not this.
 
     Every element below carries exactly one `animation` declaration in exactly
     one rule. The shorthand replaces rather than merges, and an earlier idle
@@ -191,7 +212,37 @@
     <!-- Marked ignore for the same reason the group is: this rect is real to
          `querySelectorAll('rect')` even though it never paints. -->
     <clipPath id="wall-crop" data-safe-area="ignore">
-      <rect x="-2.75" y="-8.5" width="20.5" height="24.25"/>
+      <rect x="-3" y="-9" width="21" height="25"/>
+    </clipPath>
+
+    <!-- The rock's own silhouette. Applied to the texture group
+         *inside* the scroll, so it travels with it and the joints
+         and holds can never leave the rock. -->
+    <clipPath id="rock-face" data-safe-area="ignore">
+        <rect x="-4" y="-17" width="22" height="2"/>
+        <rect x="-4" y="-15" width="21" height="2"/>
+        <rect x="-4" y="-13" width="22" height="3"/>
+        <rect x="-4" y="-10" width="21" height="1"/>
+        <rect x="-4" y="-9" width="22" height="2"/>
+        <rect x="-4" y="-7" width="21" height="2"/>
+        <rect x="-4" y="-5" width="22" height="3"/>
+        <rect x="-4" y="-2" width="21" height="1"/>
+        <rect x="-4" y="-1" width="22" height="2"/>
+        <rect x="-4" y="1" width="21" height="2"/>
+        <rect x="-4" y="3" width="22" height="3"/>
+        <rect x="-4" y="6" width="21" height="1"/>
+        <rect x="-4" y="7" width="22" height="2"/>
+        <rect x="-4" y="9" width="21" height="2"/>
+        <rect x="-4" y="11" width="22" height="3"/>
+        <rect x="-4" y="14" width="21" height="1"/>
+        <rect x="-4" y="15" width="22" height="2"/>
+        <rect x="-4" y="17" width="21" height="2"/>
+        <rect x="-4" y="19" width="22" height="3"/>
+        <rect x="-4" y="22" width="21" height="1"/>
+        <rect x="-4" y="23" width="22" height="2"/>
+        <rect x="-4" y="25" width="21" height="2"/>
+        <rect x="-4" y="27" width="22" height="3"/>
+        <rect x="-4" y="30" width="21" height="1"/>
     </clipPath>
 
     <style>
@@ -375,70 +426,134 @@
        up. Both patterns repeat every 8 units — the scroll distance.
        ──────────────────────────────────────────────────────────────────── -->
   <g id="fx-wall" clip-path="url(#wall-crop)" data-safe-area="ignore">
+    <!-- The rock this is a face of.
+
+         Without it the wall is joints and holds over whatever is behind, and
+         once the rock pool was wired on that was the sky: it read as wires
+         strung across the horizon with purple notes pegged to them, and Clawd
+         standing on sand below the sea line. Two places at once, which
+         `docs/ANIMATION.md` §Clawd lives somewhere warns about — a sky makes
+         sense without the character and a climbing wall does not.
+
+         An opaque face makes it one place. The tone is the sand's family
+         rather than a gym's slate, so it reads as a sea cliff at the edge of
+         the beach he lives on rather than an indoor wall pasted over it, and
+         a crab climbing a rock in his own rock pool is the better joke anyway.
+         Judged composed, against all four skies; suppressing the environment
+         for this animation was the alternative and left half the panel empty.
+
+         The right edge steps because a flat one reads as a box. That is
+         `paintRock`'s own trick in `packages/renderer/src/environment.ts` —
+         "a stepped silhouette, so a rock reads as rock rather than as a box" —
+         and the steps are whole units so none of them fringes against the sky.
+
+         Three things a first version got wrong, all the same mistake — it was
+         an opaque backdrop where it needed to be the wall's silhouette. The
+         joints and holds were clipped to the stage rather than to the rock, so
+         up to 1,576 joint pixels and 128 hold pixels a frame still painted on
+         the sky: the defect this exists to remove, shrunk rather than gone.
+         The face sat outside `#fx-wall-scroll`, so its edge was nailed to the
+         screen while the texture slid past it, which reads as a window and not
+         as rock. And the crop's two-pixel inset — a virtue on black, where it
+         kept joints out of row 0 — left a strip of sky down the left and
+         across the top, so the rock could not run off the frame the way a
+         cliff must.
+
+         So: the face lives inside the scroll, the texture is clipped to the
+         face's own silhouette, and the crop runs to the frame edge. The
+         silhouette repeats every 8 units because that is the scroll distance,
+         and spans y -17 to 31 so the travel never reveals an end. -->
     <g id="fx-wall-scroll">
-      <!-- Panel courses. Each joint is broken by the vertical seam between two
-           sheets of ply, and the seam alternates side every course, so the
-           stagger repeats every 8 units — the scroll distance. -->
-      <g id="fx-wall-joints" fill="#30363D">
-        <rect x="-3" y="-14" width="8.5" height="0.5"/>
-        <rect x="6.5" y="-14" width="11.5" height="0.5"/>
-        <rect x="-3" y="-10" width="13.5" height="0.5"/>
-        <rect x="11.5" y="-10" width="6.5" height="0.5"/>
-        <rect x="-3" y="-6" width="8.5" height="0.5"/>
-        <rect x="6.5" y="-6" width="11.5" height="0.5"/>
-        <rect x="-3" y="-2" width="13.5" height="0.5"/>
-        <rect x="11.5" y="-2" width="6.5" height="0.5"/>
-        <rect x="-3" y="2" width="8.5" height="0.5"/>
-        <rect x="6.5" y="2" width="11.5" height="0.5"/>
-        <rect x="-3" y="6" width="13.5" height="0.5"/>
-        <rect x="11.5" y="6" width="6.5" height="0.5"/>
-        <rect x="-3" y="10" width="8.5" height="0.5"/>
-        <rect x="6.5" y="10" width="11.5" height="0.5"/>
-        <rect x="-3" y="14" width="13.5" height="0.5"/>
-        <rect x="11.5" y="14" width="6.5" height="0.5"/>
+      <g id="fx-wall-face" fill="#4A4038">
+        <rect x="-4" y="-17" width="22" height="2"/>
+        <rect x="-4" y="-15" width="21" height="2"/>
+        <rect x="-4" y="-13" width="22" height="3"/>
+        <rect x="-4" y="-10" width="21" height="1"/>
+        <rect x="-4" y="-9" width="22" height="2"/>
+        <rect x="-4" y="-7" width="21" height="2"/>
+        <rect x="-4" y="-5" width="22" height="3"/>
+        <rect x="-4" y="-2" width="21" height="1"/>
+        <rect x="-4" y="-1" width="22" height="2"/>
+        <rect x="-4" y="1" width="21" height="2"/>
+        <rect x="-4" y="3" width="22" height="3"/>
+        <rect x="-4" y="6" width="21" height="1"/>
+        <rect x="-4" y="7" width="22" height="2"/>
+        <rect x="-4" y="9" width="21" height="2"/>
+        <rect x="-4" y="11" width="22" height="3"/>
+        <rect x="-4" y="14" width="21" height="1"/>
+        <rect x="-4" y="15" width="22" height="2"/>
+        <rect x="-4" y="17" width="21" height="2"/>
+        <rect x="-4" y="19" width="22" height="3"/>
+        <rect x="-4" y="22" width="21" height="1"/>
+        <rect x="-4" y="23" width="22" height="2"/>
+        <rect x="-4" y="25" width="21" height="2"/>
+        <rect x="-4" y="27" width="22" height="3"/>
+        <rect x="-4" y="30" width="21" height="1"/>
       </g>
-
-      <!-- The route is solved from the claws rather than the other way round.
-           The left claw's lower corner is at y=9.01 when it grabs at t=0 with
-           the wall at offset 0, so a hold band opens at 8.5 to catch it; the
-           right grabs at t=1s with the wall at offset 2, so its band opens at
-           6.5 in wall coordinates. Everything else is those two positions every
-           4 units, alternating a 2x1 jug with a 1.5x0.75 crimp — which makes
-           each column repeat every 8, and gives each hand a jug one cycle and
-           a crimp the next. -->
-      <g id="fx-wall-holds">
-        <!-- The holds were originally drawn with a shaded underside in
-             #4C3475, to read as bolted proud of the wall rather than painted
-             on it. It was removed, and the reason generalises: every colour a
-             file declares becomes a snap target for every *other* colour's
-             antialiased edges. #4C3475 sits between peach and black, so a
-             torso edge pixel at 55-65% coverage landed nearer to it than to
-             the wall grey, and painted a one-pixel violet line across 80 of
-             the torso's 88 pixels for 250ms, twice a loop. Flat holds are a
-             cheaper price than a violet rim on his head — and removing it also
-             took the animation from 21792 B/s to 19992. -->
-        <g fill="#A371F7">
-          <rect x="-0.5" y="-15.5" width="2" height="1"/>
-          <rect x="-0.5" y="-7.5" width="2" height="1"/>
-          <rect x="-0.5" y="0.5" width="2" height="1"/>
-          <rect x="-0.5" y="8.5" width="2" height="1"/>
-
-          <rect x="0" y="-11.5" width="1.5" height="0.75"/>
-          <rect x="0" y="-3.5" width="1.5" height="0.75"/>
-          <rect x="0" y="4.5" width="1.5" height="0.75"/>
-          <rect x="0" y="12.5" width="1.5" height="0.75"/>
-
-          <rect x="13.5" y="-13.5" width="2" height="1"/>
-          <rect x="13.5" y="-5.5" width="2" height="1"/>
-          <rect x="13.5" y="2.5" width="2" height="1"/>
-          <rect x="13.5" y="10.5" width="2" height="1"/>
-
-          <rect x="13.5" y="-9.5" width="1.5" height="0.75"/>
-          <rect x="13.5" y="-1.5" width="1.5" height="0.75"/>
-          <rect x="13.5" y="6.5" width="1.5" height="0.75"/>
-          <rect x="13.5" y="14.5" width="1.5" height="0.75"/>
+      <g id="fx-wall-texture" clip-path="url(#rock-face)">
+        <!-- Panel courses. Each joint is broken by the vertical seam between two
+             sheets of ply, and the seam alternates side every course, so the
+             stagger repeats every 8 units — the scroll distance. -->
+        <g id="fx-wall-joints" fill="#30363D">
+          <rect x="-3" y="-14" width="8.5" height="0.5"/>
+          <rect x="6.5" y="-14" width="11.5" height="0.5"/>
+          <rect x="-3" y="-10" width="13.5" height="0.5"/>
+          <rect x="11.5" y="-10" width="6.5" height="0.5"/>
+          <rect x="-3" y="-6" width="8.5" height="0.5"/>
+          <rect x="6.5" y="-6" width="11.5" height="0.5"/>
+          <rect x="-3" y="-2" width="13.5" height="0.5"/>
+          <rect x="11.5" y="-2" width="6.5" height="0.5"/>
+          <rect x="-3" y="2" width="8.5" height="0.5"/>
+          <rect x="6.5" y="2" width="11.5" height="0.5"/>
+          <rect x="-3" y="6" width="13.5" height="0.5"/>
+          <rect x="11.5" y="6" width="6.5" height="0.5"/>
+          <rect x="-3" y="10" width="8.5" height="0.5"/>
+          <rect x="6.5" y="10" width="11.5" height="0.5"/>
+          <rect x="-3" y="14" width="13.5" height="0.5"/>
+          <rect x="11.5" y="14" width="6.5" height="0.5"/>
         </g>
 
+        <!-- The route is solved from the claws rather than the other way round.
+             The left claw's lower corner is at y=9.01 when it grabs at t=0 with
+             the wall at offset 0, so a hold band opens at 8.5 to catch it; the
+             right grabs at t=1s with the wall at offset 2, so its band opens at
+             6.5 in wall coordinates. Everything else is those two positions every
+             4 units, alternating a 2x1 jug with a 1.5x0.75 crimp — which makes
+             each column repeat every 8, and gives each hand a jug one cycle and
+             a crimp the next. -->
+        <g id="fx-wall-holds">
+          <!-- The holds were originally drawn with a shaded underside in
+               #4C3475, to read as bolted proud of the wall rather than painted
+               on it. It was removed, and the reason generalises: every colour a
+               file declares becomes a snap target for every *other* colour's
+               antialiased edges. #4C3475 sits between peach and black, so a
+               torso edge pixel at 55-65% coverage landed nearer to it than to
+               the wall grey, and painted a one-pixel violet line across 80 of
+               the torso's 88 pixels for 250ms, twice a loop. Flat holds are a
+               cheaper price than a violet rim on his head — and removing it also
+               took the animation from 21792 B/s to 19992. -->
+          <g fill="#A371F7">
+            <rect x="-0.5" y="-15.5" width="2" height="1"/>
+            <rect x="-0.5" y="-7.5" width="2" height="1"/>
+            <rect x="-0.5" y="0.5" width="2" height="1"/>
+            <rect x="-0.5" y="8.5" width="2" height="1"/>
+
+            <rect x="0" y="-11.5" width="1.5" height="0.75"/>
+            <rect x="0" y="-3.5" width="1.5" height="0.75"/>
+            <rect x="0" y="4.5" width="1.5" height="0.75"/>
+            <rect x="0" y="12.5" width="1.5" height="0.75"/>
+
+            <rect x="13.5" y="-13.5" width="2" height="1"/>
+            <rect x="13.5" y="-5.5" width="2" height="1"/>
+            <rect x="13.5" y="2.5" width="2" height="1"/>
+            <rect x="13.5" y="10.5" width="2" height="1"/>
+
+            <rect x="13.5" y="-9.5" width="1.5" height="0.75"/>
+            <rect x="13.5" y="-1.5" width="1.5" height="0.75"/>
+            <rect x="13.5" y="6.5" width="1.5" height="0.75"/>
+            <rect x="13.5" y="14.5" width="1.5" height="0.75"/>
+          </g>
+        </g>
       </g>
     </g>
   </g>
