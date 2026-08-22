@@ -73,10 +73,13 @@
     into its own feet — not the whole sprite moving, which would shift a rigid
     block and deform nothing. These are upstream's numbers unchanged, because
     the sign is what matters: a breath that lifted the torso instead left the
-    legs behind as four floating stubs for most of the loop. The shadow
-    narrows and pales as he rises and spreads as he drops; on the black stage
-    that composites away to nothing, but a pack that sets a lighter stage gets
-    it for free.
+    legs behind as four floating stubs for most of the loop.
+
+    This used to describe a shadow narrowing and paling with the breath, kept
+    on the theory that a pack setting a lighter stage would get it for free.
+    That never could arrive: the bake is taken against black and the tone is
+    dropped there, so a lighter stage at runtime has nothing left to reveal.
+    The renderer draws the shadow now — see `paintContactShadow`.
 
     Arms hang off shoulder pivots at (2,10) and (13,10), each with its own
     slow sway nested inside the yawn throw, half a period apart so the claws
@@ -118,10 +121,6 @@
     <style>
       /* One animation per element, one element per rule. See the header. */
 
-      #ground-shadow {
-        transform-origin: 7.5px 15.5px;
-        animation: shadow-action 16s infinite ease-in-out;
-      }
 
       #fx-lean {
         animation: lean-look 16s infinite ease-in-out;
@@ -235,23 +234,6 @@
         83.59375%, 100% { transform: scale(1, 1) translate(0, 0); }
       }
 
-      /* Tracks the body: narrow and pale as he lifts off it, broad and dark
-         under the landing. */
-      @keyframes shadow-action {
-        0%, 12.5%       { transform: translateX(0) scaleX(1); opacity: 0.5; }
-        18.75%          { transform: translateX(0.5px) scaleX(1); opacity: 0.5; }
-        31.25%          { transform: translateX(0.62px) scaleX(1); opacity: 0.5; }
-        37.5%           { transform: translateX(0) scaleX(1); opacity: 0.5; }
-        43.75%          { transform: translateX(-0.5px) scaleX(1); opacity: 0.5; }
-        53.125%         { transform: translateX(-0.62px) scaleX(1); opacity: 0.5; }
-        59.375%         { transform: translateX(0) scaleX(1); opacity: 0.5; }
-        62.5%           { transform: translateX(0) scaleX(0.94); opacity: 0.44; }
-        66.40625%       { transform: translateX(0) scaleX(0.86); opacity: 0.36; }
-        71.875%         { transform: translateX(0) scaleX(0.88); opacity: 0.38; }
-        75%             { transform: translateX(0) scaleX(1.12); opacity: 0.62; }
-        79.6875%        { transform: translateX(0) scaleX(0.98); opacity: 0.48; }
-        83.59375%, 100% { transform: translateX(0) scaleX(1); opacity: 0.5; }
-      }
 
       /* Up to 45deg, where a 2x2 claw renders as a diamond and reads as a
          shape rather than as a square that has moved. Then it flops the same
@@ -372,7 +354,6 @@
   </defs>
 
   <!-- ── base geometry: assets/clawd/base.svg ───────────────────────────── -->
-  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
     <!-- Planted. Outside every moving group on purpose — see the header. -->

@@ -49,6 +49,26 @@ type Scheme = {
   readonly sand: number;
   readonly pool: number;
   readonly rock: number;
+  /**
+   * The ground where Clawd is standing on it.
+   *
+   * Per scheme rather than a fixed darkening of `sand`, so each ground gets a
+   * separation tuned to it rather than the same ratio applied to four very
+   * different starting points.
+   *
+   * **Night is inherently the weakest, and the limit is the sand rather than
+   * the format.** Rec.709 relative luminance, linear-light, x100, against each
+   * sand as the panel receives it after `rgb565` truncation: day 19.1, dawn
+   * 9.4, dusk 6.5, night 2.6. The first draft's night tone gave 2.1.
+   *
+   * Going darker still buys very little: pure black would reach 3.3, because
+   * night's sand is itself at 3.3 and that is the entire budget. RGB565 has
+   * plenty of darker codes — the constraint is not colour depth. Real shadows
+   * after dark are faint too, so this is the right kind of wrong, but a review
+   * looking at a true-size strip could not find it at night, and that wants
+   * checking on glass: `node tools/blit.ts idle <port> landscape night`.
+   */
+  readonly shadow: number;
   readonly stars: boolean;
   /**
    * Text colour that reads on this sky.
@@ -72,6 +92,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(70, 84, 118),
     sand: rgb565(126, 108, 96),
+    shadow: rgb565(84, 70, 64),
     pool: rgb565(92, 106, 126),
     rock: rgb565(72, 64, 68),
     stars: false,
@@ -86,6 +107,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(58, 110, 150),
     sand: rgb565(178, 156, 128),
+    shadow: rgb565(126, 108, 88),
     pool: rgb565(96, 154, 168),
     rock: rgb565(96, 88, 84),
     stars: false,
@@ -100,6 +122,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(56, 54, 92),
     sand: rgb565(112, 88, 82),
+    shadow: rgb565(74, 56, 56),
     pool: rgb565(84, 78, 104),
     rock: rgb565(58, 50, 56),
     stars: false,
@@ -114,6 +137,7 @@ const SCHEMES: Readonly<Record<TimeOfDay, Scheme>> = {
     ],
     sea: rgb565(16, 26, 52),
     sand: rgb565(52, 50, 58),
+    shadow: rgb565(16, 14, 20),
     pool: rgb565(34, 44, 70),
     rock: rgb565(26, 26, 34),
     stars: true,
@@ -269,6 +293,92 @@ function paintGround(target: Framebuffer, layer: Layer): void {
   paintRock(target, { x: stage.x + 6, base: horizon + sea + 6 }, scheme.rock);
 }
 
+/**
+ * The ground darkening under Clawd's feet.
+ *
+ * Every animation used to draw its own, as `#ground-shadow` inherited from
+ * `assets/clawd/base.svg` — black at `opacity="0.5"`. None of them ever
+ * rendered it. `svg2frames` captures with `omitBackground` and `snapToPalette`
+ * drops a pixel that snaps to the background and arrives part-transparent,
+ * which is exactly what a half-opacity black over nothing does. Eight
+ * animations declared a shadow and eight drew zero pixels of it, invisible for
+ * as long as the stage behind him was black.
+ *
+ * Drawing it here fixes the mechanism and the medium at once. A per-animation
+ * flat colour could survive the snap but could not know what it is falling on,
+ * and this panel has four grounds; the renderer does know. It is also one
+ * definition rather than eight, which `docs/ANIMATION.md` §Clawd lives
+ * somewhere gives as the reason the scenery is a renderer layer at all.
+ *
+ * The geometry is base.svg's own shadow rect — units 3 to 12 of the character,
+ * on the line its feet stand on — so it lands where every animation already
+ * expected it. The height is a quarter of a unit rather than the rect's whole one — two
+ * device pixels at `hero`'s scale of 8, one at `twoUp`'s 4 — because a contact
+ * shadow is a line where he meets the ground and a full unit reads as a plinth
+ * he is standing on.
+ *
+ * **Not drawn for `bouldering`**, via `contact: false`. A first version drew it
+ * for everything, on the grounds that its feet sit on the same line as every
+ * other animation's. That premise is true — his lowest *body* pixel is unit
+ * 14.875 on the frames he is down, exactly like the other seven — and it was
+ * argued from a number that did not show it: "unit 15.13" is the lowest *drawn*
+ * pixel of frame 0, which is a wall hold, and the loop maximum of 15.625 is the
+ * wall's joint band. Both measure the scenery.
+ *
+ * What actually rules it out is motion and occlusion. His legs leave the ground
+ * line on 24 frames of 32, by up to six device pixels — a static mark under
+ * feet that are climbing reads as neither contact nor climbing. And the wall's
+ * joint band scrolls through the shadow row and covers 89% of it on four frames
+ * of every thirty-two, so it blinked twice a loop. `PLANS.md` had already ruled
+ * on this — "a shadow on the floor beneath a climber is worse than no shadow" —
+ * and `bouldering.svg` records an earlier version overriding it too.
+ */
+function paintContactShadow(
+  target: Framebuffer,
+  at: { readonly layout: StageLayout; readonly orientation: Orientation },
+  colour: number,
+): void {
+  const slot = spriteSlots(at.layout, at.orientation)[0];
+  if (slot === undefined) return;
+  const scale = stageScale(at.layout);
+  const row = groundRow(at.layout, at.orientation);
+  // base.svg: `ground-shadow` is x=3 width=9 on a canvas whose left edge is
+  // unit -3, so it starts six units into the raster.
+  fillRect(
+    target,
+    {
+      x: slot.x + Math.round(6 * scale),
+      y: row,
+      width: Math.round(9 * scale),
+      height: Math.max(1, Math.round(scale / 4)),
+    },
+    colour,
+  );
+}
+
+/**
+ * Animations where Clawd is not standing on the ground.
+ *
+ * `bouldering` puts him on a wall. Its plan says so — "a shadow on the floor
+ * beneath a climber is worse than no shadow" — and its own SVG records an
+ * earlier version overriding that, so this is the second time it has needed
+ * defending.
+ *
+ * Here rather than beside the scene composition in `packages/cli`, because
+ * `tools/` composes panels too and `eslint.config.ts` grants it only `tools`,
+ * `renderer`, `packs` and `protocol` — so a rule kept in `cli` would have to be
+ * duplicated to be applied while judging, which is how the first override
+ * happened. Keyed on the name because the
+ * environment is painted before any sprite exists — nothing else at that point
+ * knows what is about to stand in front of it.
+ */
+const UNGROUNDED: ReadonlySet<string> = new Set(['bouldering']);
+
+/** Whether the ground should be darkened under this animation. */
+export function castsShadow(name: string): boolean {
+  return !UNGROUNDED.has(name);
+}
+
 /** How far the scenery reaches. See `Scene.environment`. */
 export const ENVIRONMENT_EXTENTS = ['stage', 'panel'] as const;
 
@@ -287,6 +397,8 @@ export function paintEnvironment(
     readonly layout: StageLayout;
     readonly orientation: Orientation;
     readonly time: TimeOfDay;
+    /** False where Clawd is not on the ground. See `Scene.environment`. */
+    readonly contact?: boolean;
   },
 ): void {
   const scheme = SCHEMES[at.time];
@@ -299,4 +411,5 @@ export function paintEnvironment(
   const layer: Layer = { into: region.into, horizon, scheme };
   paintSky(target, layer);
   paintGround(target, layer);
+  if (at.contact !== false) paintContactShadow(target, at, scheme.shadow);
 }

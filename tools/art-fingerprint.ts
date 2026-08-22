@@ -10,15 +10,23 @@
  * are: invisible for as long as the stage behind him was black, and windows
  * showing the sky through his face the moment the rock pool was wired on.
  *
- * Comments are stripped so rewording an explanation does not demand a re-bake
- * that would not change a pixel, and whitespace is collapsed so a reformat does
- * not either. Everything that can move a pixel is inside the hash.
+ * Comments are stripped — XML and CSS both — so rewording an explanation does
+ * not demand a re-bake that could not change a pixel, and whitespace is
+ * collapsed so a reformat does not either. Everything that can move a pixel is
+ * inside the hash.
  */
 import { createHash } from 'node:crypto';
 
 export function fingerprint(svg: string): string {
   const meaningful = svg
     .replaceAll(/<!--[\s\S]*?-->/g, '')
+    // CSS comments too. These sit inside `<style>`, so the XML strip above
+    // does not reach them, and an animation's motion is explained almost
+    // entirely in them — every keyframe block in this repo carries a paragraph
+    // saying why its numbers are what they are. Leaving them in meant that
+    // rewording one demanded a re-bake that could not change a pixel, which is
+    // exactly the false alarm the comment strip exists to avoid.
+    .replaceAll(/\/\*[\s\S]*?\*\//g, '')
     .replaceAll(/\s+/g, ' ')
     .trim();
   return createHash('sha256').update(meaningful).digest('hex').slice(0, 16);

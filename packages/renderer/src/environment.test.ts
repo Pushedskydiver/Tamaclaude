@@ -13,6 +13,7 @@ import type { Framebuffer } from './framebuffer.js';
 import { describe, expect, it } from 'vitest';
 
 import {
+  castsShadow,
   ENVIRONMENT_EXTENTS,
   groundRow,
   paintEnvironment,
@@ -97,6 +98,80 @@ describe('paintEnvironment', () => {
       expect(outside === 0).toBe(extent === 'stage');
     });
   }
+
+  it('darkens the ground where Clawd is standing on it', () => {
+    // Every animation used to declare its own `#ground-shadow`, inherited from
+    // base.svg as black at half opacity — and every one of the eight drew zero
+    // pixels of it, because that is exactly what `snapToPalette` drops. It was
+    // invisible for as long as the stage behind him was black. Drawn here, it
+    // cannot be dropped and it can know which ground it is falling on.
+    const target = paint('landscape', 'panel');
+    const row = groundRow('hero', 'landscape');
+    const slot = spriteSlots('hero', 'landscape')[0];
+    expect(slot).toBeDefined();
+    const scale = stageScale('hero');
+    const at = (unit: number): number | undefined =>
+      target.pixels[
+        row * target.width + Math.round((slot?.x ?? 0) + unit * scale)
+      ];
+    // base.svg puts the shadow at units 3..12 of a canvas starting at -3, so
+    // it spans 6..15 of the raster. Sample inside it, and beside it.
+    const beneath = at(10);
+    const beside = at(2);
+    expect(beneath).toBeDefined();
+    expect(beside).toBeDefined();
+    expect(beneath).not.toBe(beside);
+    // and it is a band, not a stray pixel
+    expect(at(7)).toBe(beneath);
+    expect(at(13)).toBe(beneath);
+  });
+
+  it('darkens the ground at every time of day, not just the bright ones', () => {
+    // An earlier version of this test sampled the four shadow pixels and
+    // asserted they were distinct. That passed with the shadow deleted, because
+    // the four *sands* are already distinct — it was re-testing the sky check
+    // above. It also could not fail under the design it claimed to rule out: a
+    // uniform 30% multiply of each sand gives four distinct values too.
+    //
+    // What matters is that the shadow is visible against its own ground at
+    // every sky, which is exactly what a multiply loses at night.
+    const row = groundRow('hero', 'landscape');
+    const slot = spriteSlots('hero', 'landscape')[0];
+    expect(slot).toBeDefined();
+    const scale = stageScale('hero');
+    TIMES_OF_DAY.forEach((time) => {
+      const target = paint('landscape', 'panel', time);
+      const at = (unit: number): number | undefined =>
+        target.pixels[
+          row * target.width + Math.round((slot?.x ?? 0) + unit * scale)
+        ];
+      expect(at(10), `no shadow at ${time}`).not.toBe(at(2));
+    });
+  });
+
+  it('draws no shadow under an animation that is not on the ground', () => {
+    // `bouldering` is on a wall. The plan says a floor shadow under a climber
+    // is worse than none, and the file records two separate versions
+    // overriding that — the second being the one that moved the shadow here.
+    expect(castsShadow('idle')).toBe(true);
+    expect(castsShadow('bouldering')).toBe(false);
+
+    const stage = panelBands('landscape').stage;
+    const target = createFramebuffer('landscape');
+    paintEnvironment(
+      target,
+      { into: { x: 0, y: 0, ...panelSize('landscape') }, stage },
+      { layout: 'hero', orientation: 'landscape', time: 'day', contact: false },
+    );
+    const row = groundRow('hero', 'landscape');
+    const slot = spriteSlots('hero', 'landscape')[0];
+    const scale = stageScale('hero');
+    const at = (unit: number): number | undefined =>
+      target.pixels[
+        row * target.width + Math.round((slot?.x ?? 0) + unit * scale)
+      ];
+    expect(at(10)).toBe(at(2));
+  });
 
   it('draws a continuous sky across the whole panel', () => {
     // The first comparison of this was composited from two separate renders

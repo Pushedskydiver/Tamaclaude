@@ -155,16 +155,6 @@
         animation: press-bar-strain 3s infinite linear;
       }
 
-      /* On the default stage this draws nothing, and that is not a bug being
-         tolerated. The stage band is black; `paletteOf()` composites
-         `#000000` at 0.5 over black, gets black, and the snap resolves black
-         to the background — alpha zero. The element and its track are here
-         because a pack that sets a lighter stage gets a real shadow out of
-         them for free. Nothing in the read of this animation rests on it. */
-      #ground-shadow {
-        transform-origin: 7.5px 15.5px;
-        animation: press-shadow 3s infinite linear;
-      }
 
       /* ── the face ────────────────────────────────────────────────────────
          Two tracks, not one, and they are not just squinting by different
@@ -425,21 +415,6 @@
         66.666667%, 100% { transform: translateY(0px); }
       }
 
-      /* Wide and dark while the weight is going through him into the floor,
-         narrow and faint at lockout when he is tall. Invisible on the default
-         black stage — see the note on the rule above. */
-      @keyframes press-shadow {
-        0%         { transform: scaleX(1.005); opacity: 0.51; }
-        12.5%      { transform: scaleX(1.13); opacity: 0.7; }
-        16.666667% { transform: scaleX(1.095); opacity: 0.65; }
-        33.333333% { transform: scaleX(1.002); opacity: 0.5; }
-        50%        { transform: scaleX(0.982); opacity: 0.47; }
-        62.5%      { transform: scaleX(0.991); opacity: 0.49; }
-        75%        { transform: scaleX(1.005); opacity: 0.51; }
-        87.5%      { transform: scaleX(1.135); opacity: 0.71; }
-        100%       { transform: scaleX(1.005); opacity: 0.51; }
-      }
-
       @keyframes press-grimace {
         0%, 20.833333% { opacity: 0; transform: scaleX(0.6); }
         25%            { opacity: 1; transform: scaleX(1); }
@@ -475,7 +450,6 @@
   </defs>
 
   <!-- ── base geometry: assets/clawd/base.svg, regrouped, never redrawn ─── -->
-  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
     <!-- Planted. Out of the body group on purpose: these fold about the feet

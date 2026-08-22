@@ -40,6 +40,7 @@ import { resolve } from 'node:path';
 import { parsePackManifest } from '@tamaclaude/packs';
 import { frame } from '@tamaclaude/protocol';
 import {
+  castsShadow,
   render,
   safeAreaCropUnits,
   spriteSlots,
@@ -145,6 +146,8 @@ export function composePanels(
       environment: {
         time: options.time ?? 'day',
         extent: options.extent ?? 'panel',
+        // Same rule the daemon applies: `bouldering` is on a wall.
+        contact: castsShadow(options.name),
       },
     });
     return frame(panel.pixels, panel.width);

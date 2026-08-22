@@ -91,18 +91,6 @@
   -->
   <defs>
     <style>
-      /* ── the desk track ──────────────────────────────────────────────
-         The shadow reacts to the body it belongs to, tightening on each
-         strike. On the black stage it composites to black and is invisible,
-         exactly as `ground-shadow` already is — this is for a pack that sets a
-         lighter stage, where a shadow that ignored the body would be the one
-         thing on screen not moving. Its opacity is fixed: animating it would
-         manufacture composited tones the document never declares, which is the
-         same mistake the logo swap below exists to avoid. */
-      #ground-shadow {
-        transform-origin: 7.5px 15.5px;
-        animation: shadow-press 0.5s infinite linear;
-      }
 
       /* ── the body tracks, slow outside fast ──────────────────────────
          #fx-hunch is the slow one: over the loop he settles one device pixel
@@ -235,17 +223,11 @@
 
       /* ── keyframes ───────────────────────────────────────────────────
          Every value below is a multiple of 0.125px — one device pixel at the
-         8x render scale — and every hold spans at least one sample point. The
-         scale factors are the exception and they are chosen the same way:
-         the shadow rect is 9 units wide about a centre pivot, so 0.944444 and
-         0.972222 move each edge exactly 2 and 1 device pixels inward. */
+         8x render scale — and every hold spans at least one sample point. There
+         used to be two scale factors here as the exception, belonging to the
+         shadow rect; that rect and its track are gone, so the rule holds
+         without exception now. */
 
-      @keyframes shadow-press {
-        0%, 100% { transform: scaleX(1); }
-        25%      { transform: scaleX(0.944444); }
-        50%      { transform: scaleX(1); }
-        75%      { transform: scaleX(0.972222); }
-      }
 
       /* Down one pixel for frames 3..12, level either side of that. Sampled at
          multiples of 6.25%, so the holds are written to straddle those. */
@@ -338,7 +320,6 @@
   </defs>
 
   <!-- ── base geometry: assets/clawd/base.svg, wrapped but not moved ──── -->
-  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
 
   <g id="master-group">
     <g id="body-color-group" fill="#DE886D">
