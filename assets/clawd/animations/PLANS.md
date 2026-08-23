@@ -243,17 +243,22 @@ interesting on the first. No incident more often than once every few seconds.
 - **Props.** Three Zs on one keyframe track with delays two seconds apart, each
   glyph cell a whole art pixel, starting above the head and only ever rising.
 
-**Measured, unfixed, and the obvious fix has been tried and rejected.**
-Composed on the real panel in the production config — landscape,
-`extent: 'panel'` — the worst Z's best-reading pixel is 3.94:1 at dawn,
-**1.83:1 at day**, 5.91 dusk, 12.89 night. Day is the sky the daemon shows for
-nine hours and 1.83 is below the 2:1 the two-tone rule exists to clear, so for a
-third of the clock these are close to invisible against the sky behind them.
+**Two-tone, on the second attempt.** Composed on the real panel in the
+production config — landscape, `extent: 'panel'` — the worst Z's best-reading
+pixel was 3.94:1 at dawn, **1.83:1 at day**, 5.91 dusk, 12.89 night. Day is the
+sky the daemon shows for nine hours and 1.83 is below the 2:1 the two-tone rule
+exists to clear, so for a third of the clock the Zs were close to invisible.
 
-The two-tone treatment that fixes it elsewhere does not transfer, and it took
-building it to find out. A black copy of each Z offset one unit below took day
-from 1.83 to 10.64 and dawn to 7.76 — and broke the glyph. `animation-critic`
-called it, and both failures are geometric rather than aesthetic:
+Now dawn 7.20, day 8.05, dusk 5.91, night 12.89 — the floor moves from 1.83 to
+5.91 and no sky regresses. Two black cells per glyph, extending the top bar one
+to the right and the bottom bar one to the left, following the direction the
+diagonal travels. The pitch widens from 5 units to 6 to keep a clear column
+between glyphs.
+
+**The obvious version was tried first and is wrong**, which is why the black
+goes beside the letter rather than behind it. A black copy offset one unit below
+took day to 10.64 — and broke the glyph. `animation-critic` called it, and both
+failures are geometric rather than aesthetic:
 
 - **It fills the counter.** A Z is legible because of the wedges of background
   above and below its diagonal. A full-width bar one unit down lands exactly in
@@ -266,18 +271,18 @@ called it, and both failures are geometric rather than aesthetic:
   columns of contact on frames 0, 32 and 64. Zs that touch the body are on this
   plan's own Not-wanted list.
 
-**Why `dizzy` and `overheated` are not precedent.** Their props are a black
+**Why `dizzy` and `overheated` were not precedent.** Their props are a black
 cross with a pale pip and a 2x2 block with a pale corner — solid marks with no
-counters to fill. A Z is a letterform. At 4x4 with a one-unit gap between
-glyphs, there is no room for a second tone: filling the counters destroys the
-letter, growing downward hits the torso, and growing upward spends the last unit
-of safe-area margin, since the topmost drawn pixel is already -3 against a -4
-line.
+counters to fill. A Z is a letterform, so the second tone has to go outside it:
+not into the counters, not below (the torso), and not above (the topmost drawn
+pixel is already -3 against a -4 line). Sideways is the only free direction, and
+it is free because the columns are geometry rather than animation — widening the
+pitch keeps nothing out of sync.
 
-So the fix is a design pass, not a patch: a smaller glyph with room around it, a
-wider pitch, or a different prop. Whatever is tried, check the **count** of
-connected components and not their sizes — a Z that merges with the body stops
-being a separate component, so a size check cannot see it.
+Whatever is tried here next, check the **count** of connected components and not
+their sizes. A Z that merges with the body stops being a separate component and
+is absorbed into the one a size check excludes, so the sizes stay perfect while
+the glyph is welded on. That is how the first attempt passed its own check.
 
 **Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
 his face reads as display corruption, and it shipped that way once. A

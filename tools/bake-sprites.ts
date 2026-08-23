@@ -22,9 +22,9 @@
  * nearly all flat runs. The mask is the awkward half. It carries one bit of
  * information per pixel and arrives as one *byte* per pixel, so exactly half
  * the pixel cost at 22,310,400 bytes, and still 2,788,800 merely packed to a
- * bit. Running the same codec over the packed bytes takes it to 929,908.
+ * bit. Running the same codec over the packed bytes takes it to 927,732.
  *
- * So 1,918,964 bytes for ten animations — 23.3:1 against the pixels alone, or
+ * So 1,916,788 bytes for ten animations — 23.3:1 against the pixels alone, or
  * 34.9:1 if the mask's own raw cost is counted, which the sentence above says
  * it should be. Size is not what limits how many animations this device gets.
  * (These were six animations and 1,128,216 bytes until three more landed. Only
