@@ -243,15 +243,27 @@ interesting on the first. No incident more often than once every few seconds.
 - **Props.** Three Zs on one keyframe track with delays two seconds apart, each
   glyph cell a whole art pixel, starting above the head and only ever rising.
 
-**Measured, and a defect this plan does not yet fix.** Composed on the real
-panel in the production config — landscape, `extent: 'panel'` — the worst Z's
-best-reading pixel is 3.94:1 at dawn, **1.83:1 at day**, 5.91 at dusk and 12.89
-at night. Day is the sky the daemon shows for nine hours and 1.83 is below the
-2:1 that the two-tone rule exists to clear, so for a third of the clock these
-are close to invisible against the sky behind them. `dizzy`'s stars and
-`overheated`'s steam both solve this with a pale core inside a dark surround,
-because no one flat tone reads against both a pale sky and a dark one. The Zs
-are still one flat tone.
+**Two-tone, because one flat tone was invisible for a third of the clock.**
+Measured on the real panel in the production config — landscape,
+`extent: 'panel'` — the worst Z's best-reading pixel was 3.94:1 at dawn,
+**1.83:1 at day**, 5.91 dusk, 12.89 night. Day is the sky the daemon shows for
+nine hours, and 1.83 is below the 2:1 the two-tone rule exists to clear.
+
+Each Z now carries a black copy of itself one unit below, drawn behind it. The
+pale glyph still carries the dark skies; the shadow carries the pale ones:
+
+before 3.94 dawn 1.83 day 5.91 dusk 12.89 night
+after 7.76 dawn 10.64 day 5.91 dusk 12.89 night
+
+The offset is vertical and not diagonal because the three Zs sit one art unit
+apart when they share rows, so a sideways shadow would close that gap and they
+would touch — which this plan's own Not-wanted list forbids. They never share
+columns, so downward is free. `#000000` is already in the palette, so no new
+tone becomes a snap target for every other colour's edges.
+
+The shadow costs nothing on the wire: 792 B mean and 6,332 B/s, unchanged,
+because `svg2frames` writes black into transparent pixels already and only the
+mask grew.
 
 **Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
 his face reads as display corruption, and it shipped that way once. A
