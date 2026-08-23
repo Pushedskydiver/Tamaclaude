@@ -472,7 +472,7 @@ outside the SVG. The variety lives in the animation.
 It is also among the cheapest things in the repo. `idle` measures 3,609 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
 the six until `permission-sign` (2,645) and `confused` (3,323) landed; the ten
-now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,163 / 6,484 / 9,966 /
+now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,163 / 6,332 / 9,966 /
 14,545 / 22,568. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette

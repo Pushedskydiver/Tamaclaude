@@ -189,77 +189,24 @@
        all three. The diagonal crosses two interior columns, which is what
        separates a Z from an I; at three rows the single interior cell sits on
        the centre line and the glyph rasterises as an I instead. -->
-  <!-- **Two tones, on the second attempt, and the first one is why this comment
-       is long.** A single flat `#CFD8DC` reads 1.83:1 against the day sky —
-       below the 2:1 the two-tone rule exists to clear, on the sky the daemon
-       shows for nine hours. Now: dawn 3.94 -> 7.20, day 1.83 -> 8.05, dusk and
-       night unchanged at 5.91 and 12.89, so the floor moves from 1.83 to 5.91
-       and nothing regresses. Measured landscape with `extent: 'panel'`, which
-       is what `daemon.ts` ships — state the orientation with any contrast
-       figure, because landscape crops 32 raster rows and slides a prop a whole
-       sky band.
-
-       **The black may not go inside the glyph.** The first attempt was an
-       offset duplicate one unit below, which is the classic pixel-art drop
-       shadow and is wrong here: a Z is legible because of the counters, the
-       wedges of background above and below its diagonal, and a full-width bar
-       one unit down lands exactly in the upper one. It rendered
-       `PPPP / BBPB / .PB. / PPPP / BBBB`, which reads as a small skull rather
-       than a letter. `animation-critic` called it, and this file already
-       records the same failure reached another way at the top: "the diagonal
-       degenerates and a Z becomes an I".
-
-       **Nor may it grow the glyph vertically.** That same attempt put a bar one
-       unit below the bottom bar, which at `float`'s low keyframe landed on the
-       torso — 16, 32 and 24 device columns of contact on frames 0, 32 and 64.
-       Growing upward is no better: the topmost drawn pixel is already -3.00
-       against a -4 line, so a unit up spends the last of the margin.
-
-       So the black goes sideways, two cells per glyph: the top bar extended one
-       right, the bottom bar extended one left. That follows the direction the
-       diagonal travels, adds nothing to either counter, and leaves the bbox the
-       same height — so the float track, the safe area and the torso clearance
-       are all exactly as they were. The pitch widens from 5 to 6 units to keep
-       the glyphs a clear column apart; the columns are geometry rather than
-       animation, so nothing had to stay in sync.
-
-       `#000000` is already in the palette — the eyes are black — so no new tone
-       becomes a snap target for every other colour's antialiased edges.
-
-       The black sits inside each `z-N` group rather than as a fourth sibling,
-       so it inherits the float track and the `opacity: 0` resting state without
-       a second `animation` declaration, and being a grandchild of `#fx-zs` the
-       `#fx-zs > g` rule above does not match it. -->
   <g id="fx-zs" fill="#CFD8DC">
     <g id="z-1">
-      <g fill="#000000">
-        <rect x="5" y="0" width="1" height="1"/>
-        <rect x="0" y="3" width="1" height="1"/>
-      </g>
-      <rect x="1" y="0" width="4" height="1"/>
-      <rect x="3" y="1" width="1" height="1"/>
-      <rect x="2" y="2" width="1" height="1"/>
-      <rect x="1" y="3" width="4" height="1"/>
+      <rect x="0" y="0" width="4" height="1"/>
+      <rect x="2" y="1" width="1" height="1"/>
+      <rect x="1" y="2" width="1" height="1"/>
+      <rect x="0" y="3" width="4" height="1"/>
     </g>
     <g id="z-2">
-      <g fill="#000000">
-        <rect x="11" y="0" width="1" height="1"/>
-        <rect x="6" y="3" width="1" height="1"/>
-      </g>
-      <rect x="7" y="0" width="4" height="1"/>
-      <rect x="9" y="1" width="1" height="1"/>
-      <rect x="8" y="2" width="1" height="1"/>
-      <rect x="7" y="3" width="4" height="1"/>
+      <rect x="5" y="0" width="4" height="1"/>
+      <rect x="7" y="1" width="1" height="1"/>
+      <rect x="6" y="2" width="1" height="1"/>
+      <rect x="5" y="3" width="4" height="1"/>
     </g>
     <g id="z-3">
-      <g fill="#000000">
-        <rect x="16" y="0" width="1" height="1"/>
-        <rect x="11" y="3" width="1" height="1"/>
-      </g>
-      <rect x="12" y="0" width="4" height="1"/>
-      <rect x="14" y="1" width="1" height="1"/>
-      <rect x="13" y="2" width="1" height="1"/>
-      <rect x="12" y="3" width="4" height="1"/>
+      <rect x="10" y="0" width="4" height="1"/>
+      <rect x="12" y="1" width="1" height="1"/>
+      <rect x="11" y="2" width="1" height="1"/>
+      <rect x="10" y="3" width="4" height="1"/>
     </g>
   </g>
 </svg>

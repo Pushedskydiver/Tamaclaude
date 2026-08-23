@@ -243,46 +243,51 @@ interesting on the first. No incident more often than once every few seconds.
 - **Props.** Three Zs on one keyframe track with delays two seconds apart, each
   glyph cell a whole art pixel, starting above the head and only ever rising.
 
-**Two-tone, on the second attempt.** Composed on the real panel in the
-production config — landscape, `extent: 'panel'` — the worst Z's best-reading
-pixel was 3.94:1 at dawn, **1.83:1 at day**, 5.91 dusk, 12.89 night. Day is the
-sky the daemon shows for nine hours and 1.83 is below the 2:1 the two-tone rule
-exists to clear, so for a third of the clock the Zs were close to invisible.
+**Measured, unfixed, and two attempts have failed.** Composed on the real panel
+in the production config — landscape, `extent: 'panel'` — the worst Z's
+best-reading pixel is 3.94:1 at dawn, **1.83:1 at day**, 5.91 dusk, 12.89 night.
+Day is the sky the daemon shows for nine hours, and 1.83 is below the 2:1 the
+two-tone rule exists to clear, so for a third of the clock these are close to
+invisible. It is a real defect and it is still here.
 
-Now dawn 7.20, day 8.05, dusk 5.91, night 12.89 — the floor moves from 1.83 to
-5.91 and no sky regresses. Two black cells per glyph, extending the top bar one
-to the right and the bottom bar one to the left, following the direction the
-diagonal travels. The pitch widens from 5 units to 6 to keep a clear column
-between glyphs.
+**Attempt 1 — a black copy of each Z offset one unit below.** Took day to 10.64
+and broke the glyph two ways. It filled the counter: a Z is legible because of
+the wedges of background above and below its diagonal, and a full-width bar one
+unit down lands in the upper one, rendering `PPPP / BBPB / .PB. / PPPP / BBBB`,
+a small skull rather than a letter. And its bottom bar landed on the torso — 16,
+32 and 24 device columns of contact on frames 0, 32 and 64.
 
-**The obvious version was tried first and is wrong**, which is why the black
-goes beside the letter rather than behind it. A black copy offset one unit below
-took day to 10.64 — and broke the glyph. `animation-critic` called it, and both
-failures are geometric rather than aesthetic:
+**Attempt 2 — two black cells extending the bars sideways.** Took day to 8.05
+with no sky regressing, no torso contact, and no change to the float track, the
+safe area or the bbox height. It failed for the reason that matters most: at day
+the pale drops to 1.05-2.45, so **all that survives is two cells at diagonally
+opposite corners of a twelve-cell glyph.** Two dots five units apart do not
+trace a letter, and being a different tone the eye segments them off from the
+faint strokes rather than reading one mark. It would not lay out either — three
+glyphs with a tick each side either collide (z-2's top tick and z-3's bottom
+tick share a column and fuse into a solid block on 34 of 96 frames) or the last
+reaches raster column 167.
 
-- **It fills the counter.** A Z is legible because of the wedges of background
-  above and below its diagonal. A full-width bar one unit down lands exactly in
-  the upper wedge, leaving the two diagonal cells as isolated specks. The
-  rendered cells read `PPPP / BBPB / .PB. / PPPP / BBBB`, which at 2x is a small
-  skull rather than a letter. `asleep.svg` already records the same failure
-  reached another way — "the diagonal degenerates and a Z becomes an I".
-- **It touches the body.** The shadow's bottom bar extends one unit lower, and
-  at `float`'s low keyframe that lands it on the torso: 16, 32 and 24 device
-  columns of contact on frames 0, 32 and 64. Zs that touch the body are on this
-  plan's own Not-wanted list.
+**Both attempts got the same thing wrong: which tone carries the shape.**
+`dizzy`'s star works because the _dark_ draws the cross and the pale is a pip
+inside it, so the shape survives on every sky and only the highlight changes.
+Here the pale draws the letter and the dark decorates it, so on the pale skies
+the letter is what goes. Inverting is not available: a dark Z with a pale pip is
+a readable star and an unreadable letter, and a true outline needs a unit right
+and a unit down, which are the panel edge and the torso.
 
-**Why `dizzy` and `overheated` were not precedent.** Their props are a black
-cross with a pale pip and a 2x2 block with a pale corner — solid marks with no
-counters to fill. A Z is a letterform, so the second tone has to go outside it:
-not into the counters, not below (the torso), and not above (the topmost drawn
-pixel is already -3 against a -4 line). Sideways is the only free direction, and
-it is free because the columns are geometry rather than animation — widening the
-pitch keeps nothing out of sync.
+**The tractable direction is size, not contrast.** Upstream's
+`clawd-sleeping.svg` scales each Z from 0.4 to 1.2 as it rises rather than
+fighting the sky with a second tone. That is a redesign of the prop, and it
+deserves its own pass — not a patch, and not inside a PR about another
+animation.
 
-Whatever is tried here next, check the **count** of connected components and not
-their sizes. A Z that merges with the body stops being a separate component and
-is absorbed into the one a size check excludes, so the sizes stay perfect while
-the glyph is welded on. That is how the first attempt passed its own check.
+Whatever is tried next, check the **count** of connected components, not their
+sizes. A Z that merges with the body stops being a separate component and is
+absorbed into the one a size check excludes, so the sizes stay perfect while the
+glyph is welded on; that is how attempt 1 passed its own check. There is no
+`asleep` equivalent of the `dizzy` clearance test in `tools/bake-sprites.test.ts`,
+which is why nothing caught either failure except a critic looking at frames.
 
 **Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
 his face reads as display corruption, and it shipped that way once. A
