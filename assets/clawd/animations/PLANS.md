@@ -14,7 +14,7 @@ wanted, so there was no way to tell a bug from a choice.
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
-Eight of the nine carry one; `gym` alone has none, because its bar is described
+Nine of the ten carry one; `gym` alone has none, because its bar is described
 under Action rather than filed as a prop, which is a distinction not worth
 enforcing. Both constraints this paragraph used to name have since been repealed by
 `docs/ANIMATION.md`, and it took two passes to notice. Palette snapping
@@ -140,9 +140,9 @@ written when a soft edge was permanent. `tools/svg2frames.ts` now snaps every
 rasterised pixel back onto the declared palette, which is what upstream
 clawd-tank does, so a rotated or eased edge hardens after the fact instead of
 being forbidden up front. This plan was the first written against the new
-contract. Three more have been written against it since — permission sign,
-confused and dizzy — so of the nine, four are current and five describe the old
-one. The preamble said so too until dizzy's branch corrected it.
+contract. Four more have been written against it since — permission sign,
+confused, dizzy and overheated — so of the ten, five are current and five
+describe the old one. The preamble said so too until dizzy's branch corrected it.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
 forbade it. Contact at chest height means the bar passes the face on its way
@@ -242,6 +242,16 @@ interesting on the first. No incident more often than once every few seconds.
 - **Eyes.** Closed — the open eye squashed to a dash about its outer edge.
 - **Props.** Three Zs on one keyframe track with delays two seconds apart, each
   glyph cell a whole art pixel, starting above the head and only ever rising.
+
+**Measured, and a defect this plan does not yet fix.** Composed on the real
+panel in the production config — landscape, `extent: 'panel'` — the worst Z's
+best-reading pixel is 3.94:1 at dawn, **1.83:1 at day**, 5.91 at dusk and 12.89
+at night. Day is the sky the daemon shows for nine hours and 1.83 is below the
+2:1 that the two-tone rule exists to clear, so for a third of the clock these
+are close to invisible against the sky behind them. `dizzy`'s stars and
+`overheated`'s steam both solve this with a pale core inside a dark surround,
+because no one flat tone reads against both a pale sky and a dark one. The Zs
+are still one flat tone.
 
 **Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
 his face reads as display corruption, and it shipped that way once. A
@@ -459,9 +469,11 @@ tint carries severity.
 Clawd has worked himself flat and is lying there fanning himself. He is not
 hurt and not asleep — he is spent, and he will be fine in a bit.
 
-`data-loop-seconds="6"`. **Proposed, not scheduled** — it is not one of the
-animations `BUILD_PLAN.md` Stage 4 catalogues, so adding it is a change
-to the plan and not work under it.
+`data-loop-seconds="6"`. **Proposed, then scheduled.** It was not in Stage 4's original
+catalogue, so adding it was a change to the plan rather than work under it;
+`BUILD_PLAN.md` carries it as item 12 now. This line read "is not one of the
+animations Stage 4 catalogues" in the present tense, which the commit that
+wrote it made false.
 
 The scene is upstream's `clawd-working-overheated.svg` — _"sitting down
 (splooted), completely exhausted, fanning himself with one hand"_ — and none of
@@ -473,7 +485,7 @@ is the pose, and the pose is the whole point of taking it.
 **Why a pose and not a prop.** A first version of this plan kept the standing
 silhouette and separated the screen from `asleep` by eye state and rising heat.
 That fails twice over. `asleep`'s eyes are not shut — `@keyframes eyelid` holds
-`scale(2, 0.5)` for its entire loop, which is a half-height eye, so "half-closed
+a `scaleY` of 0.5 for its entire loop, which is a half-height eye, so "half-closed
 versus shut" is not a distinction at all; and `dizzy.svg` already records
 rejecting a held `scaleY` squash on this same state because it "would have made
 the two screens one picture". Meanwhile something rising off a still Clawd _is_
@@ -498,8 +510,10 @@ for sleeping… give the variant its own id (`torso-sploot`)".
 - **Legs.** `#legs-sploot`, a group of four **1x1 rects at y=9**, at x=3, 5, 9, 11 — the same
   four columns as the standing legs, so they read as his legs, now splayed out
   above a body that has spread beneath them. Upstream's move exactly.
-- **Eyes.** `#left-eye-slit` / `#right-eye-slit`, **1x1 at y=12**, x=4 and x=10
-  — the standing columns, half the standing height. They are tired slits on a
+- **Eyes.** `#left-eye-squint` / `#right-eye-squint`, **1x1 at y=12**, x=4 and
+  x=10 — the standing columns, half the standing height. Squares, not slits: an
+  earlier version of this line called them slits and the ids were minted to
+  match, so the identifier asserted a shape the geometry denies. They sit on a
   flat body, and the body is what separates the screen; the eyes only have to
   not contradict it.
 - **The fanning claw.** `#arm-fan` from `#right-arm`, and **it must extend as
@@ -533,16 +547,20 @@ faster than `idle`'s 2s, which is what makes it a labouring one.
 decay and it had to survive being stared at, and it earned them with a blink on
 a 12s track. This has three tracks at three speeds and no beat that wants a
 twelfth second, and `dizzy.svg` records what happens when a loop is longer than
-its content: frames 32-95 were byte-for-byte copies of 0-31 in a 402KB bake.
+its content: frames 32-95 were byte-for-byte copies of 0-31.
 48 frames baked to 136,683 B against `dizzy`'s 401,428 — about a third, where
 this line forecast a half.
 
-**Safe area.** The pose creates headroom rather than spending it. The topmost
-body pixel is a splayed leg at y=9, against y=6 standing, so the steam has 13
-units before the -4 line — where `dizzy` sits at -3 on 72 frames of 96 and is
-the one `docs/ANIMATION.md` singles out to watch. Steam tops out at y=+1, five units of margin, and the
-topmost _body_ pixel is the fanning claw at y=8.25 rather than a leg at y=9 —
-both measured off the bake after this plan guessed them from the keyframes.
+**Safe area.** The pose creates headroom rather than spending it. Measured off
+the bake: the topmost body pixel is the fanning claw at **y=8.25**, so the steam
+has 12.25 units before the -4 line, and the steam itself tops out at **y=+1** —
+five units of margin, against `dizzy` sitting at -3 on 72 frames of 96, which is
+the one `docs/ANIMATION.md` singles out to watch.
+
+Both figures were guessed from the keyframes first and both were wrong: y=2 and
+six units for the steam, and a splayed leg at y=9 for the body. An earlier
+correction appended the right numbers and left the wrong ones standing, so the
+paragraph asserted both.
 
 **Which errors get it.** `rate_limit` and `overloaded`. An earlier version of
 this plan split them — `overloaded` is the server being busy rather than this

@@ -55,9 +55,12 @@
     contiguity measured above is what actually holds.
 
     The eyes are 1x1 at y=12, in the standing columns, half the standing height.
-    Squares, not slits: upstream draws 2x0.4, and widening ours walks straight
-    at `asleep`'s `scale(2, 0.5)`, which is the shape this screen has to stay
-    away from. They are not carrying the separation from `asleep` — the body is
+    Squares, not slits — hence `#left-eye-squint` and `#right-eye-squint`, which
+    is also the id the generation contract uses as its example. An earlier
+    version called them slits in the prose and then minted `-slit` ids for them,
+    so the identifier asserted the shape the paragraph beside it denied.
+    Upstream draws 2x0.4; widening ours walks straight at `asleep`'s
+    `scale(2, 0.5)`, which is the shape this screen has to stay away from. They are not carrying the separation from `asleep` — the body is
     — so they only have to not contradict it.
 
     ── Why the fanning claw extends as well as turning ────────────────────
@@ -124,11 +127,14 @@
 
     **State the orientation with any contrast figure.** Landscape crops 32 raster
     rows off the top, which slides the sprite a whole sky band relative to
-    `paintSky`, so the same art measured portrait gives different numbers on
-    three of the four skies. Two harnesses disagreed on this animation and
-    agreed exactly on dusk — dusk being the one sky where the band shift cannot
-    change which cell wins, so the single matching number was hiding the error
-    rather than corroborating the method. A bare ratio with no config is not
+    `paintSky`, so the same art measured portrait moves on three of the four
+    skies — and *which* sky survives depends on the prop. Measured both ways:
+    this steam is invariant on **night** (8.96 either way), `dizzy`'s stars on
+    **dusk** (5.06 either way). Two harnesses disagreed over `dizzy` and matched
+    only on its invariant sky, so the single agreeing number was hiding a
+    systematic error rather than corroborating a method. An earlier version of
+    this paragraph reported that dusk-agreement as though it were a property of
+    *this* animation; it is not. A bare ratio with no config is not
     reproducible. Declaring a colour makes it a snap target for every
     other colour's edges, which is the defect the boot splash's wordmark,
     `confused`'s caret and `dizzy`'s stars each hit in turn.
@@ -142,7 +148,8 @@
 
     The pose creates headroom rather than spending it. Measured on the bake, the
     topmost body-coloured pixel over the loop is at **unit y=8.25** — the fanning
-    claw at its -58deg extreme on frame 12, not a leg. The legs cannot be it:
+    claw at its -58deg extreme on frames 12 and 36 — a duplicate pair, not one
+    frame — and not a leg. The legs cannot be it:
     they sit at y=9 and `heave` scales about y=15 with `scaleY` never above 1,
     so they only ever move down. The steam tops out at **y=+1**, five units
     inside the -4 line, where `dizzy` sits at -3 on 72 frames of 96.
@@ -157,9 +164,9 @@
       /* One puff, drawn at the origin; the keyframes move the group. */
 
       /* Delays inside the shorthand, never as separate `animation-delay`
-         declarations. `docs/ANIMATION.md` §Carry the offset inside the
-         shorthand: the shorthand *resets* delay, so a longhand only survives
-         while it sits below. This file had the separate form and it worked
+         declarations. `docs/ANIMATION.md` §Timing, on carrying the offset inside
+         the shorthand: it *resets* delay, so a longhand only survives while it
+         sits below. This file had the separate form and it worked
          only by source order — moving the two delay rules above the shorthand,
          which is a cosmetic tidy and nothing else, collapses all three puffs
          onto one phase and they rise in lockstep.
@@ -292,17 +299,21 @@
           <rect id="outer-right-leg-sploot" x="11" y="9" width="1" height="1"/>
         </g>
         <!-- Flat on the ground beside him, doing nothing. Base geometry is
-             2x2 at y=9; this is the same rect dropped, so it keeps its id. -->
-        <rect id="left-arm" x="0" y="13" width="2" height="2"/>
+             2x2 at y=9 and this sits at y=13, so it is a variant and takes a
+             variant id like the rest. An earlier version kept the base id on
+             the grounds that a dropped rect is "the same rect" — but the base
+             ids are what a reader diffs a pose against, and 4 units is not the
+             same rect. `#right-arm` had the identical problem, undisclosed. -->
+        <rect id="left-arm-sploot" x="0" y="13" width="2" height="2"/>
       </g>
 
       <g id="arm-fan" fill="#DE886D">
-        <rect id="right-arm" x="13" y="11" width="2" height="2"/>
+        <rect id="right-arm-fan" x="13" y="11" width="2" height="2"/>
       </g>
 
       <g id="eyes-color-group" fill="#000000">
-        <rect id="left-eye-slit" x="4" y="12" width="1" height="1"/>
-        <rect id="right-eye-slit" x="10" y="12" width="1" height="1"/>
+        <rect id="left-eye-squint" x="4" y="12" width="1" height="1"/>
+        <rect id="right-eye-squint" x="10" y="12" width="1" height="1"/>
       </g>
     </g>
   </g>
