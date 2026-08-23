@@ -189,63 +189,20 @@
        all three. The diagonal crosses two interior columns, which is what
        separates a Z from an I; at three rows the single interior cell sits on
        the centre line and the glyph rasterises as an I instead. -->
-  <!-- **Two tones, and it took a measurement to find out why.** The glyph was a
-       single flat `#CFD8DC`, which composed on the real panel reads 1.83:1
-       against the day sky — below the 2:1 the two-tone rule exists to clear, on
-       the sky the daemon shows for nine hours. Each Z now carries a black copy
-       of itself one unit below, drawn behind it, so the pale carries the dark
-       skies and the shadow carries the pale ones: dawn 3.94 -> 7.76, day
-       1.83 -> 10.64, dusk and night unchanged at 5.91 and 12.89.
-
-       Measured landscape with `extent: 'panel'`, which is what `daemon.ts`
-       ships. State the orientation with any contrast figure: landscape crops 32
-       raster rows, which slides a prop a whole sky band, and the same art
-       measured portrait gives different answers on three of the four skies.
-
-       **The offset is vertical because sideways would make them touch.** The
-       three Zs sit one art unit apart when they share rows; they never share
-       columns. So down is the only free direction, and `PLANS.md` §Asleep puts
-       Zs that touch on its Not-wanted list.
-
-       `#000000` is already in the palette — the eyes are black — so nothing new
-       becomes a snap target for every other colour's antialiased edges.
-
-       The shadow is inside each `z-N` group rather than a fourth sibling, so it
-       inherits the float track and the `opacity: 0` resting state without a
-       second animation declaration. It is a grandchild of `#fx-zs`, so the
-       `#fx-zs > g` rule above does not match it. -->
   <g id="fx-zs" fill="#CFD8DC">
     <g id="z-1">
-      <g fill="#000000">
-        <rect x="0" y="1" width="4" height="1"/>
-        <rect x="2" y="2" width="1" height="1"/>
-        <rect x="1" y="3" width="1" height="1"/>
-        <rect x="0" y="4" width="4" height="1"/>
-      </g>
       <rect x="0" y="0" width="4" height="1"/>
       <rect x="2" y="1" width="1" height="1"/>
       <rect x="1" y="2" width="1" height="1"/>
       <rect x="0" y="3" width="4" height="1"/>
     </g>
     <g id="z-2">
-      <g fill="#000000">
-        <rect x="5" y="1" width="4" height="1"/>
-        <rect x="7" y="2" width="1" height="1"/>
-        <rect x="6" y="3" width="1" height="1"/>
-        <rect x="5" y="4" width="4" height="1"/>
-      </g>
       <rect x="5" y="0" width="4" height="1"/>
       <rect x="7" y="1" width="1" height="1"/>
       <rect x="6" y="2" width="1" height="1"/>
       <rect x="5" y="3" width="4" height="1"/>
     </g>
     <g id="z-3">
-      <g fill="#000000">
-        <rect x="10" y="1" width="4" height="1"/>
-        <rect x="12" y="2" width="1" height="1"/>
-        <rect x="11" y="3" width="1" height="1"/>
-        <rect x="10" y="4" width="4" height="1"/>
-      </g>
       <rect x="10" y="0" width="4" height="1"/>
       <rect x="12" y="1" width="1" height="1"/>
       <rect x="11" y="2" width="1" height="1"/>

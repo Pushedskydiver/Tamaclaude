@@ -243,27 +243,41 @@ interesting on the first. No incident more often than once every few seconds.
 - **Props.** Three Zs on one keyframe track with delays two seconds apart, each
   glyph cell a whole art pixel, starting above the head and only ever rising.
 
-**Two-tone, because one flat tone was invisible for a third of the clock.**
-Measured on the real panel in the production config — landscape,
-`extent: 'panel'` — the worst Z's best-reading pixel was 3.94:1 at dawn,
+**Measured, unfixed, and the obvious fix has been tried and rejected.**
+Composed on the real panel in the production config — landscape,
+`extent: 'panel'` — the worst Z's best-reading pixel is 3.94:1 at dawn,
 **1.83:1 at day**, 5.91 dusk, 12.89 night. Day is the sky the daemon shows for
-nine hours, and 1.83 is below the 2:1 the two-tone rule exists to clear.
+nine hours and 1.83 is below the 2:1 the two-tone rule exists to clear, so for a
+third of the clock these are close to invisible against the sky behind them.
 
-Each Z now carries a black copy of itself one unit below, drawn behind it. The
-pale glyph still carries the dark skies; the shadow carries the pale ones:
+The two-tone treatment that fixes it elsewhere does not transfer, and it took
+building it to find out. A black copy of each Z offset one unit below took day
+from 1.83 to 10.64 and dawn to 7.76 — and broke the glyph. `animation-critic`
+called it, and both failures are geometric rather than aesthetic:
 
-before 3.94 dawn 1.83 day 5.91 dusk 12.89 night
-after 7.76 dawn 10.64 day 5.91 dusk 12.89 night
+- **It fills the counter.** A Z is legible because of the wedges of background
+  above and below its diagonal. A full-width bar one unit down lands exactly in
+  the upper wedge, leaving the two diagonal cells as isolated specks. The
+  rendered cells read `PPPP / BBPB / .PB. / PPPP / BBBB`, which at 2x is a small
+  skull rather than a letter. `asleep.svg` already records the same failure
+  reached another way — "the diagonal degenerates and a Z becomes an I".
+- **It touches the body.** The shadow's bottom bar extends one unit lower, and
+  at `float`'s low keyframe that lands it on the torso: 16, 32 and 24 device
+  columns of contact on frames 0, 32 and 64. Zs that touch the body are on this
+  plan's own Not-wanted list.
 
-The offset is vertical and not diagonal because the three Zs sit one art unit
-apart when they share rows, so a sideways shadow would close that gap and they
-would touch — which this plan's own Not-wanted list forbids. They never share
-columns, so downward is free. `#000000` is already in the palette, so no new
-tone becomes a snap target for every other colour's edges.
+**Why `dizzy` and `overheated` are not precedent.** Their props are a black
+cross with a pale pip and a 2x2 block with a pale corner — solid marks with no
+counters to fill. A Z is a letterform. At 4x4 with a one-unit gap between
+glyphs, there is no room for a second tone: filling the counters destroys the
+letter, growing downward hits the torso, and growing upward spends the last unit
+of safe-area margin, since the topmost drawn pixel is already -3 against a -4
+line.
 
-The shadow costs nothing on the wire: 792 B mean and 6,332 B/s, unchanged,
-because `svg2frames` writes black into transparent pixels already and only the
-mask grew.
+So the fix is a design pass, not a patch: a smaller glyph with room around it, a
+wider pitch, or a different prop. Whatever is tried, check the **count** of
+connected components and not their sizes — a Z that merges with the body stops
+being a separate component, so a size check cannot see it.
 
 **Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
 his face reads as display corruption, and it shipped that way once. A
