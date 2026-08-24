@@ -279,42 +279,53 @@ describe('the baked animations', () => {
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
- * **The bound is an escape, and what takes it is a prop rather than a pose.**
- * Measured on 24 Aug by planting the defect this exists to catch — `idle`'s
- * torso lifted two units clear of its legs, re-baked:
+ * **The bound fires on every correct pose, so the 0 is vacuous — and that is
+ * not the problem.** Measured across all eleven bakes: the contiguous band
+ * from the feet is 42 to 200 rows, well over the bound, so the walk never
+ * looks for a gap. The exception proves the mechanism rather than the rule —
+ * `dizzy` drops to 16 on the six frames where an orbiting star is the
+ * bottom-most thing, and there the walk does run and returns 1.
  *
- * - Plain poses are covered. `hipGap` reports 15 on the lifted `idle`, because
- *   with a real gap the band from the feet is the legs alone, 16 device rows,
- *   which is inside the bound. The 0 it returns on a *correct* pose is the
- *   right answer arrived at cheaply, not a vacuous one.
- * - **A prop that bridges the body and the ground defeats it.** The same lift
- *   planted in `payoff`, whose vehicle spans the rows beside his legs, reports
- *   0. So does `overheated`, splooted with no legs at all.
+ * None of that matters while nothing is wrong. What matters is the behaviour
+ * under a defect, and there the bound is the whole story. Planting a two-unit
+ * torso lift and re-baking:
  *
- * **A connectivity check would work, and the first attempt at one was
- * abandoned for a reason that was measurably wrong.** Recorded in detail
- * because a wrong reason not to build something forecloses it more thoroughly
- * than never having tried.
+ * - **`idle` is caught.** With a real gap the band collapses to the legs
+ *   alone, inside the bound, so the walk runs and reports a gap.
+ * - **`payoff` is not.** Its vehicle spans the rows beside his legs, so the
+ *   band stays deep and the early return fires exactly as it does on a correct
+ *   pose. A prop that bridges the body and the ground blinds this gate to the
+ *   one defect it exists for.
+ * - **`overheated` is not either**, and not for want of legs — it has four, in
+ *   `legs-sploot`. They sit *above* the torso, so a walk from the bottom-most
+ *   row never reaches them.
  *
- * Asking whether the bottom-most pixel in the legs' columns belongs to the
- * largest component catches the plain `idle` lift, and it catches the
- * `payoff` lift that this gate misses. With the torso lifted two units the
- * components are 5,440 for the torso, 1,008 for the vehicle and 128 for each
- * of the four legs — the vehicle does **not** hold the body together, because
- * it touches the torso and not the legs: at row 176 it ends at device column
- * 39 and the first leg starts at 48, an eight-pixel gap on every leg row.
+ * Two earlier versions of this paragraph got it wrong in opposite directions:
+ * one said the gate had never gated anything, the other that the 0 on a
+ * correct pose was cheap rather than vacuous. It is vacuous, and harmless
+ * until a prop makes it vacuous when it should not be.
  *
- * The first attempt discarded a component below 1,000 pixels, to keep
- * `dizzy`'s orbiting stars from being mistaken for a body part. At that
- * threshold the legs are discarded too, so the scan found nothing in their
- * columns and passed vacuously — 0 frames flagged. At 100 it flags all 64. A
- * review caught the arithmetic and the earlier version of this comment, which
- * asserted the miss as a property of the formulation.
+ * **A connectivity check would work, and the first attempt was abandoned on
+ * arithmetic that was wrong.** Asking whether the bottom-most pixel in the
+ * legs' columns belongs to the largest component catches the `idle` lift and
+ * the `payoff` lift both. With the torso lifted the components are 5,440 for
+ * the torso, 1,008 for the vehicle and 128 for each leg — the vehicle does not
+ * hold the body together, because it touches the torso and not the legs. At
+ * row 176 it ends at device column 39 and the first leg starts at 48; lower
+ * down, where only its wheels are drawn, the gap is wider still.
  *
- * What is genuinely unsolved is smaller than that: a star is 320 pixels and a
- * leg is 128, so size alone cannot tell them apart, and the discriminator has
- * to be something else — the legs stand on the ground row and the stars do
- * not. That is the design work left, and it is worth doing.
+ * The attempt discarded components under 1,000 pixels, to stop `dizzy`'s stars
+ * being read as body parts. That discards the legs too, so the scan found
+ * nothing in their columns and passed vacuously — 0 frames flagged, where 100
+ * flags all 64. A threshold artefact, published as a property of the
+ * formulation, and recorded here because a wrong reason not to build something
+ * forecloses it more thoroughly than never trying.
+ *
+ * What is genuinely unsolved is narrow: a star is 320 pixels and a leg is 128,
+ * so no *minimum* size threshold can drop the stars while keeping the legs —
+ * the stars are the larger. Size can separate them; a floor cannot. The
+ * discriminator that does work is that the legs stand on the ground row and
+ * the stars never get near it.
  */
 const LEG_BAND = 24;
 

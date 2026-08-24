@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { contrast, luminance, parseHex } from './contrast.js';
+import { contrast, luminance, panelRounded, parseHex } from './contrast.js';
 
 describe('contrast', () => {
   it('gives the two ratios everyone knows', () => {
@@ -30,9 +30,11 @@ describe('contrast', () => {
     // A mid-saturated body on dusk sand: flat invisible, and why the plan's
     // "measure against the sky" was the wrong pair — a ground-level prop is
     // never against sky.
+    // **Raw triples, deliberately.** The CLI rounds its inputs the way the
+    // panel does before comparing; these call `contrast` directly, so they pin
+    // the formula rather than the rounding. A review found the two drifting
+    // apart when the rounding landed and the header was not updated with it.
     expect(contrast([178, 34, 34], [112, 88, 82])).toBeCloseTo(1.02, 2);
-    // And the fact that stops this being a gate: Clawd's own peach is 1.01:1
-    // against day sand and reads perfectly well on the panel.
     expect(contrast([222, 136, 109], [178, 156, 128])).toBeCloseTo(1.01, 2);
   });
 
@@ -41,6 +43,17 @@ describe('contrast', () => {
     // would leave every number plausible and every number wrong.
     expect(luminance([0, 255, 0])).toBeGreaterThan(luminance([255, 0, 0]));
     expect(luminance([255, 0, 0])).toBeGreaterThan(luminance([0, 0, 255]));
+  });
+
+  it('rounds to what the panel shows, which moves the answer', () => {
+    // `environment.ts` truncates every colour to 5/6/5 and says its own
+    // figures are post-truncation, so the CLI compares rounded values. The
+    // shift is small and real: Clawd on day sand is 1.01 raw and 1.03 as the
+    // panel receives it. Pinned so the two bases cannot silently diverge again.
+    expect(contrast([222, 136, 109], [178, 156, 128])).toBeCloseTo(1.01, 2);
+    expect(
+      contrast(panelRounded([222, 136, 109]), panelRounded([178, 156, 128])),
+    ).toBeCloseTo(1.03, 2);
   });
 
   it('reads a hex with or without its hash, and refuses anything else', () => {

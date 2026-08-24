@@ -645,8 +645,14 @@ a dead branch pointing at `dizzy` with a test asserting it does nothing.
 
 ## The payoff screen — a task actually finished
 
-The vehicle from the recipient's pack is parked beside Clawd, and he reacts to
-it. **Named by role throughout.** The vehicle is on the interests list in the
+A vehicle is parked beside Clawd and he rests a claw on it.
+
+**Not "the vehicle from the recipient's pack", which is how this line read
+until 25 Aug and which was wrong twice over.** The pack cannot supply it —
+sprites bake fixed pixels — and leaving the sentence standing tied the prop to
+the recipient while the tracked art names a colour, which is the link
+`CLAUDE.md` forbids. The section below identified the error and this line was
+not corrected with it. **Named by role throughout.** The vehicle is on the interests list in the
 gitignored brief, this repo is public, and `CLAUDE.md` says tracked docs name
 personal content by role and never by content — it read as a make and colour in
 ten places across five tracked files — two docs and three source files — until
@@ -760,7 +766,7 @@ touching `Session` is a reopening rather than finishing.
   arguing.
 
   **The right gap is water.** `environment.ts` puts the rock pool at units
-  x 11.38 to 17.63 for its full height above the ground line, so anything
+  x 11.25 to 17.50 for its full height above the ground line, so anything
   parked on that flank is parked in the pool. The rock on the left is at
   y 6.6-8.75 — mid-distance, well above a ground-level prop — so **the left
   flank is the only one clear at ground level.**
@@ -807,7 +813,12 @@ one rather than a formality:
 3. **Let the pack ship its own sprite.** Bigger than 2 — pack-supplied art has
    no loader, no schema and no bake path.
 
-**The body colour is otherwise the pack's, and is named nowhere in this repo.**
+**The body colour is a legibility choice, and it is named in tracked files —
+in the art, and in the contrast tool's examples.** It has to be: whatever the
+SVG draws is what every install shows. What is not tracked, and must not be, is
+any sentence connecting that colour to the recipient's own vehicle. An earlier
+version of this line claimed the colour was "named nowhere in this repo", which
+stopped being true the moment the art landed in the same branch.
 `CLAUDE.md` records the vehicle leaking into five tracked files by make _and
 colour_ until 24 Aug. An earlier version of this section put the colour back
 the same day, in words four times over and as a signature paint hex — the same
@@ -854,8 +865,11 @@ there is.
 vehicle is never against the sky: `environment.ts` puts the horizon at 62% with
 sea 6% below it, so sand runs from roughly unit y 8 to 16 and a vehicle at y
 12-15 sits entirely on it. Every candidate measured under 2:1 against at least
-two times of day, and the worst was 1.02:1 on dusk sand — flat invisible, and
-worse than the 1.31:1 and 1.80:1 that got `confused` and `dizzy` rebuilt.
+two times of day, and the worst was flat invisible on dusk sand. Note that the
+1.31:1 and 1.80:1 that got `confused` and `dizzy` rebuilt were measured against
+_sky_, so they are not a benchmark for a sand figure — an earlier version of
+this paragraph compared the two directly, four lines after insisting on the
+distinction.
 **That moves the colour decision, so it belongs before the art rather than
 before the ship.** Stated as a caveat rather than a conclusion: the same metric
 puts the character's own peach at 1.01:1 against day sand, so either a
@@ -869,15 +883,19 @@ quoted in `dizzy.svg` and elsewhere came from throwaway scripts, and
 as refusing to write a file, which had never existed. Measured against all four
 sands and pools:
 
-| colour                     | dawn |      day |     dusk |    night |
-| -------------------------- | ---: | -------: | -------: | -------: |
-| Clawd's own peach          | 1.87 | **1.01** |     2.45 |     4.72 |
-| a mid saturated candidate  | 1.34 |     2.53 | **1.02** |     1.89 |
-| a darker one               | 2.00 |     3.79 |     1.53 | **1.26** |
-| the sign plate's `#C9D1D9` | 3.24 |     1.71 |     4.24 |     8.18 |
+| colour, against sand       | dawn |      day |     dusk | night |
+| -------------------------- | ---: | -------: | -------: | ----: |
+| Clawd's own peach          | 1.89 | **1.03** |     2.43 |  4.93 |
+| the vehicle's              | 1.32 |     2.56 | **1.03** |  1.98 |
+| the sign plate's `#C9D1D9` | 3.32 |     1.71 |     4.27 |  8.68 |
+
+Reproduce with `node tools/contrast.ts '#RRGGBB'`. These are on the rounded
+basis the panel shows; an earlier version of this table was on the authoring
+triples, which shifted every cell by a hundredth or two and put it on a
+different footing from figures already written down elsewhere.
 
 **No saturated colour clears 2:1 on all four grounds, and neither does the
-character.** Clawd measures 1.01:1 against day sand and is perfectly readable
+character.** Clawd measures 1.03:1 against day sand and is perfectly readable
 on the panel, so hue separation, the contact shadow and the silhouette are
 carrying weight that a luminance ratio does not model. The tool says so in its
 own header: this is a screen for the obviously-invisible, not a gate. What it
@@ -895,11 +913,16 @@ be the same tone family as the sign plate and the thought bubble, which are
 `Clawd`'s own props. Recorded because a plan that concludes one thing while the
 art beside it does another is worse than either.
 
-**`hipGap` will pass vacuously.** That gate walks up from the bottom-most drawn
-row and returns 0 once the contiguous bottom band exceeds 24 device pixels; a
-vehicle three units tall standing on the ground makes the whole band contiguous.
-It has already gone vacuous once, for `overheated`. Something else has to assert
-the body is on its feet here.
+**`hipGap` will pass vacuously, and it was already doing so everywhere.** That
+gate walks up from the bottom-most drawn row and returns 0 once the contiguous
+bottom band exceeds 24 device pixels. Measured after the art landed: every one
+of the eleven bakes exceeds it on a correct pose, so the walk never runs
+anywhere — the interesting failure is under a _defect_, where a plain lift
+collapses the band to the legs and is caught, and a lift behind a
+ground-bridging prop like this vehicle is not. `overheated` is the other miss,
+and not for want of legs: it has four, sitting above the torso.
+Something else has to assert the body is on its feet here, and
+`tools/bake-sprites.test.ts` records what that something should be.
 
 **Not wanted:** a number plate, badge, or any mark identifying a specific
 vehicle. A prop drawn so large that Clawd stops being the subject. A vehicle

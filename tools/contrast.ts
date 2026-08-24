@@ -23,7 +23,7 @@
  * ## What this does not tell you
  *
  * **A luminance ratio is not legibility.** Clawd's own `#DE886D` measures
- * 1.01:1 against day sand and is perfectly readable on the panel — hue
+ * 1.03:1 against day sand and is perfectly readable on the panel — hue
  * separation, the contact shadow and the silhouette all carry weight that
  * WCAG's formula, designed for text, does not model. So this is a screen for
  * the obviously-invisible rather than a gate: a low number means look at it,
@@ -36,11 +36,17 @@ import { fileURLToPath } from 'node:url';
 /**
  * What the environment paints, as authored in `environment.ts`.
  *
- * Eight grounds and four skies. The sky entry is each gradient's topmost band
- * — its palest, and so the hardest for a light prop. A raised prop is judged
- * against a band this does not name, because `environment.ts` paints four per
- * sky and which one a pixel meets depends on its height; treat the sky figures
- * as one sample rather than the answer.
+ * Eight grounds, and both ends of each sky.
+ *
+ * **The first version of this table invented three of its four sky values**,
+ * and described band 0 as the palest when `paintSky` draws it at the top of
+ * the stage and it is the darkest of the four. A review caught it. These are
+ * copied from `environment.ts` and checked against it.
+ *
+ * Two bands per sky rather than four, because the extremes bracket what a
+ * raised prop can meet and the middle two cannot be worse than both. Which
+ * band a given pixel actually meets depends on its height, so treat a sky
+ * figure as a bound rather than as the answer.
  */
 const AGAINST: Readonly<Record<string, readonly [number, number, number]>> = {
   'dawn sand': [126, 108, 96],
@@ -51,10 +57,17 @@ const AGAINST: Readonly<Record<string, readonly [number, number, number]>> = {
   'day pool': [96, 154, 168],
   'dusk pool': [84, 78, 104],
   'night pool': [34, 44, 70],
-  'dawn sky': [92, 96, 132],
-  'day sky': [184, 214, 236],
-  'dusk sky': [188, 116, 96],
-  'night sky': [30, 34, 56],
+  // Band 0 of each gradient: the topmost strip, and the darkest of the four.
+  // `paintSky` draws index 0 at `stage.y`.
+  'dawn sky top': [58, 62, 104],
+  'day sky top': [74, 140, 200],
+  'dusk sky top': [46, 40, 78],
+  'night sky top': [8, 12, 30],
+  // Band 3: the strip meeting the horizon, and the palest.
+  'dawn sky low': [244, 190, 150],
+  'day sky low': [184, 214, 236],
+  'dusk sky low': [236, 148, 92],
+  'night sky low': [32, 46, 84],
 };
 
 /**
@@ -74,11 +87,11 @@ const AGAINST: Readonly<Record<string, readonly [number, number, number]>> = {
  * one. Two figures agreeing to two decimal places is not evidence they are the
  * same measurement.
  */
-function panelRounded([red, green, blue]: readonly [number, number, number]): [
+export function panelRounded([red, green, blue]: readonly [
   number,
   number,
   number,
-] {
+]): [number, number, number] {
   const five = (v: number): number => (v & 0xf8) | ((v & 0xf8) >> 5);
   const six = (v: number): number => (v & 0xfc) | ((v & 0xfc) >> 6);
   return [five(red), six(green), five(blue)];

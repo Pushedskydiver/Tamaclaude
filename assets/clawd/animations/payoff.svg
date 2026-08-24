@@ -6,8 +6,12 @@
     A task actually finished. The vehicle is parked beside him and he rests a
     claw on it. Plan: assets/clawd/animations/PLANS.md §The payoff screen.
 
-    Generated against assets/clawd/base.svg. Every base element appears below
-    at its original coordinates and colours; all motion is CSS applied by ID.
+    Generated against assets/clawd/base.svg, with two departures from the
+    boilerplate the other files carry: `ground-shadow` is not here, because
+    §Clawd lives somewhere forbids carrying it and the renderer draws one; and
+    the eyes are one unit left of their base coordinates, looking at the
+    vehicle. Everything else is at its original coordinates and colours, and
+    all motion is CSS applied by ID.
 
     ── Where the vehicle goes, and why it is not where the plan said ──────
 
@@ -18,13 +22,15 @@
     block with two dots.
 
     The right flank is water — `environment.ts` puts the rock pool at units
-    x 11.38 to 17.63 — so anything parked there is parked in it. The left rock
+    x 11.25 to 17.50, in both orientations — so anything parked there is
+    parked in it. The left rock
     sits at y 6.6-8.75, well clear of the ground, so the left flank is the
     only one free.
 
     And he cannot move: docs/ANIMATION.md says "Keep the character's own
-    coordinates untouched. Grow the stage instead", the stage is already at
-    the panel's 21.5-unit ceiling, and `environment.ts` draws the contact
+    coordinates untouched. Grow the stage instead", and there is nowhere to
+    grow it to: the stage is 21 units and the panel's ceiling is 21.5 at 8px a
+    unit, so the half unit of slack is the 2px margin each side, and `environment.ts` draws the contact
     shadow at a hard-wired offset from the slot — shift him and he floats.
 
     ── The brown, and the trap the plan named ────────────────────────────
@@ -35,13 +41,17 @@
     version of this file fell into a worse form of it, writing the hex in
     prose where the regex could never see it.
 
-    What that cost, measured: without the brown, an antialiased torso edge at
-    37-73% coverage snaps to the body colour instead, and 59 of 64 frames
+    What that cost, measured: without the brown, an antialiased torso edge
+    between 36% and 71% coverage snaps to the *vehicle's* colour — 36 of the
+    101 steps — because that is then the nearest thing in the document's
+    palette. "Body colour" would mean Clawd's peach here, which is the id
+    `base.svg` gives it. And 59 of 64 frames
     carried red outside the vehicle — a line across the whole torso top, both
     flanks, boxes around each eye, and a stripe severing the right arm from
     the body. It is the `bouldering` violet-line defect at four times the
-    scale. #6F4436 is exactly half of the peach, so it takes the mid-coverage
-    band and reads as shading, which is why `typing.svg` declares it too.
+    scale. #6F4436 is half of the peach in red and green exactly and within a
+    half-step in blue, so it takes the mid-coverage band and reads as shading,
+    which is why `typing.svg` declares it too.
 
     **And it does land on him — say so, because the fix is not "no rim".**
     56 of 64 frames carry #6F4436 outside the vehicle, up to 311 pixels, along
