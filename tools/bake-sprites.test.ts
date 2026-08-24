@@ -16,6 +16,7 @@ import { SOURCE as PAYOFF } from '../packages/renderer/src/sprites/payoff.data.t
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
+import { SOURCE as WIZARD } from '../packages/renderer/src/sprites/wizard.data.ts';
 import { fingerprint } from './art-fingerprint.ts';
 
 /**
@@ -52,6 +53,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
+  ['wizard', WIZARD],
 ];
 
 /**

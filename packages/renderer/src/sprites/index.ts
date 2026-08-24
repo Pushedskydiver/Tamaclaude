@@ -59,6 +59,7 @@ export const SPRITE_NAMES = [
   'permission-sign',
   'thinking',
   'typing',
+  'wizard',
 ] as const;
 
 export type SpriteName = (typeof SPRITE_NAMES)[number];
@@ -89,6 +90,7 @@ const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {
   'permission-sign': () => import('./permission-sign.data.js'),
   thinking: () => import('./thinking.data.js'),
   typing: () => import('./typing.data.js'),
+  wizard: () => import('./wizard.data.js'),
 };
 
 const loaded = new Map<SpriteName, readonly Sprite[]>();

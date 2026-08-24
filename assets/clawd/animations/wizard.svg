@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="12">
+  <!--
+    Clawd: wizard (WebSearch, WebFetch)
+
+    Something is being called in from somewhere else, and it is arriving. Plan:
+    assets/clawd/animations/PLANS.md §Wizard.
+
+    Generated against assets/clawd/base.svg. Every base element appears below at
+    its original coordinates and colours except `ground-shadow`, which
+    §Clawd lives somewhere forbids carrying; all motion is CSS applied by ID.
+
+    ── Twelve seconds, and why not eight ─────────────────────────────────
+
+    Three evenly phased motes need 3 to divide the frame count. At 8 seconds
+    that is 64/3, which is not an integer — the arithmetic that moved `dizzy`
+    to 12. Here the motes ride a 3s track with inline -1s and -2s delays, which
+    is `dizzy`'s idiom exactly: 3 divides 12, so the phase offsets are 8 whole
+    frames and the loop seams nowhere.
+
+    The delays are inline in the `animation` shorthand rather than separate
+    `animation-delay` longhands. `overheated` found that ordering trap — a
+    longhand below the shorthand is overridden, and the three effects collapse
+    onto one phase while every gate stays green.
+
+    ── No new colour, deliberately ───────────────────────────────────────
+
+    The hat and the motes are #000000 and #C9D1D9, both already in the corpus.
+    `paletteOf` is per-document and every declared colour becomes a snap target
+    for every other colour's antialiased edges, so a fifth entry here would put
+    a new tone in the peach-to-black ramp and buy an edge fringe of the kind
+    the payoff screen shipped and had to fix.
+
+    ── Two tones, because one is invisible at some hour ──────────────────
+
+    Measured with `tools/contrast.ts`, against the sky band a thing at head
+    height actually sits in: the corpus pale #C9D1D9 is 1.01:1 against day and
+    #000000 is 1.55:1 against night. Whichever single tone you pick it
+    disappears at one time of day. So the hat is a dark mass with a pale band
+    and each mote is a dark cross with a pale core — `dizzy`'s construction,
+    arrived at there for exactly this reason and the fifth time this defect has
+    been caught.
+
+    ── The claw holds something ──────────────────────────────────────────
+
+    §What a claw cannot do wants a claw rotated *and* extended, pivoted at the
+    shoulder, and adds a third clause: give it something to hold. Every
+    extended claw in the corpus holds a prop or moves — `gym` a bar,
+    `permission-sign` a plate, the payoff a vehicle. An empty raised claw is
+    the half of that precedent that does not work on its own, so the orb is
+    load-bearing rather than decoration, and the motes arrive at it rather than
+    drifting near him. Drifting is `dizzy`'s screen.
+
+    Rotating +40 degrees about the shoulder at (2,10) and extending 1.7 puts
+    the claw tip near (-0.6, 7.8) — outside the torso, which spans x 2 to 13,
+    so the limb reads as a limb rather than a lump on the ribs.
+
+    ── The hat is stepped rects, not a polygon ───────────────────────────
+
+    Every SVG in the corpus is rects only, and `svg2frames`'s safe-area walk is
+    `querySelectorAll('rect')` — a `<polygon>` would be invisible to the one
+    gate that checks the -4 crop line, which is the line a hat is most likely
+    to cross. `paintRock` in the renderer is the worked example of a stepped
+    silhouette. A long diagonal also antialiases down its whole length, which
+    is how `typing` ended up with a cold rim across the top of his head.
+
+    The apex sits at y 1, five units clear of the crop line.
+  -->
+  <defs>
+    <style>
+      /* One frame of the twelve second loop is 1.0416667%. */
+
+      /* `idle`'s breath, about the hips. The legs are a sibling of this group
+         so they stay planted — inside it the whole sprite bobs and the feet
+         sink into their own contact shadow. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* The summoning arm. Rotation clears the silhouette, axial scale makes
+         it long enough to be an arm — the pair `gym` established. Static: this
+         pose is the screen, and `frameAt` is wall-clock modulo so a raise at
+         the top of the loop would be a pump at loop frequency forever. */
+      #left-arm-joint {
+        transform-origin: 2px 10px;
+        transform: rotate(40deg) scaleX(1.7);
+      }
+
+      /* Squashed about the eye line, never hidden — §Closing an eye. Linear,
+         because a lid that accelerates reads as a wince. */
+      #eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      @keyframes blink {
+        0%, 79.166667%          { transform: scaleY(1); }
+        80.208333%              { transform: scaleY(0.1); }
+        81.250000%              { transform: scaleY(0.1); }
+        82.291667%, 100%        { transform: scaleY(1); }
+      }
+
+      /* Three motes on one 3s track, phased by inline delays. `steps(1)` so
+         each frame is a whole art pixel — §Render on the pixel grid. */
+      #fx-mote-a { animation: arrive 3s infinite steps(1); }
+      #fx-mote-b { animation: arrive 3s -1s infinite steps(1); }
+      #fx-mote-c { animation: arrive 3s -2s infinite steps(1); }
+
+      /* Out of the far left and in to the claw. The last keyframe puts it on
+         the orb rather than past it, so a mote is absorbed rather than
+         overshooting — eight whole frames a step at 8fps. */
+      @keyframes arrive {
+        0.000000%   { transform: translate(-4px, -4px); opacity: 0; }
+        12.500000%  { transform: translate(-3px, -3px); opacity: 1; }
+        37.500000%  { transform: translate(-2px, -2px); opacity: 1; }
+        62.500000%  { transform: translate(-1px, -1px); opacity: 1; }
+        87.500000%  { transform: translate(0px, 0px); opacity: 1; }
+        100.000000% { transform: translate(0px, 0px); opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <g id="master-group">
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+
+      <g id="eyes-blink">
+        <g id="eyes-color-group" fill="#000000">
+          <!-- One art pixel left, toward the arriving motes. -->
+          <rect id="left-eye" x="3" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="9" y="8" width="1" height="2"/>
+        </g>
+      </g>
+
+      <!-- The hat, stepped. Drawn after the body so it sits on the skull
+           rather than behind it. -->
+      <g id="fx-hat">
+        <rect id="fx-hat-brim" x="3" y="5" width="9" height="1" fill="#000000"/>
+        <rect id="fx-hat-band" x="4" y="4" width="7" height="1" fill="#C9D1D9"/>
+        <rect id="fx-hat-lower" x="5" y="3" width="5" height="1" fill="#000000"/>
+        <rect id="fx-hat-upper" x="6" y="2" width="3" height="1" fill="#000000"/>
+        <rect id="fx-hat-tip" x="7" y="1" width="1" height="1" fill="#000000"/>
+      </g>
+    </g>
+
+    <!-- What the claw holds. A dark rim with a pale core, so it survives both
+         a pale sky and a dark one. -->
+    <g id="fx-orb">
+      <rect x="-2" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="0" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="-1" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="-1" y="8" width="1" height="1" fill="#000000"/>
+      <rect x="-1" y="7" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+
+    <!-- Three motes, same construction, arriving at the orb. -->
+    <g id="fx-mote-a">
+      <rect x="-1" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="-2" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="-1" y="7" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+    <g id="fx-mote-b">
+      <rect x="-1" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="-2" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="-1" y="7" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+    <g id="fx-mote-c">
+      <rect x="-1" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="-2" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="-1" y="7" width="1" height="1" fill="#C9D1D9"/>
+    </g>
+  </g>
+</svg>

@@ -31,6 +31,7 @@ export const ANIMATIONS = [
   'dizzy',
   'overheated',
   'payoff',
+  'wizard',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -74,6 +75,11 @@ const TOOL_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
   ['NotebookEdit', 'typing'],
   ['Bash', 'gym'],
   ['Read', 'bouldering'],
+  // Both reach outside the machine for something, which is the reading the
+  // screen carries. They were the largest unmapped share of measured tool
+  // calls and fell through to `thinking` until now.
+  ['WebSearch', 'wizard'],
+  ['WebFetch', 'wizard'],
 ]);
 
 /**
