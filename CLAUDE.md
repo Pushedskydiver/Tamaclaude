@@ -82,10 +82,28 @@ table and rationale: `docs/ARCHITECTURE.md`.
   such safety net, and it is the design-freeze artefact. Copy it somewhere real
   before relying on it.
 - **`packs/` and `.claude/research/` are gitignored.** The repo is public and
-  the personal content is not: logos, pets, interests and every in-joke live in
-  ignored files. Tracked docs refer to them by role ("the recipient's pack",
-  "its mapped quip"), never by content. Adding a real quip or a pet's name to a
-  tracked file undoes this.
+  the personal content is not: logos, quips, pet and every in-joke live in
+  ignored files. Tracked docs refer to those by role ("the recipient's pack",
+  "its mapped quip"), never by content.
+
+  **The test is whether a detail narrows the field to a person**, given that the
+  author is public and the recipient is findable from him. That is the line,
+  not category membership. An activity does not narrow anything — the animation
+  catalogue is _built_ from what the recipient enjoys, and `gym` and
+  `bouldering` are animation names, SVG filenames, `ANIMATIONS` entries and a
+  `package.json` script across 26 and 18 tracked files. A make and colour
+  together does narrow it, which is why the payoff screen's vehicle was renamed
+  to its role on 24 Aug after reaching ten places across five tracked files. So
+  do a pet's name, an employer, a street, and anything carrying a serial.
+
+  This used to read "interests… live in ignored files", which condemned those
+  110 occurrences while the same document called the animations the point of the
+  project. Measured when a review pressed on it: the recipient's name, their
+  pet's name and two franchises appear in **zero** tracked files, and the
+  activities appear everywhere. The practice was already identifiability; the
+  wording was the thing out of step, and `a rule nobody can follow gets ignored
+rather than fixed` is written four paragraphs below about the previous time
+  this happened.
 
   **What is deliberately not protected: that this is a birthday gift, and its
   date.** Both are stated four lines into this file and the date drives every
