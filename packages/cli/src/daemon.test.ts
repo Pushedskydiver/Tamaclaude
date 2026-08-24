@@ -255,6 +255,61 @@ describe('what the panel says', () => {
     ).toBe(3);
   });
 
+  it('never shows the tool of a session that died running it', () => {
+    // The defect `messageFor` was written to prevent, reachable again through
+    // the pack. `StopFailure` does not clear `tool`, so a session that died on
+    // a rate limit still carries `Bash` — and the tool line had no state
+    // filter, so the only thing keeping it off the glass was the example pack
+    // happening to define `quips.mapped.FAILED`.
+    //
+    // Packs are hand-edited and Zod-validated, i.e. a trust boundary, and the
+    // recipient's pack is written in Stage 5. A pack that omits that one key
+    // rendered the word `Bash` for a dead session — pixel-for-pixel identical
+    // to one happily running Bash, which is exactly what this function's own
+    // doc says it exists to stop.
+    //
+    // Measured rather than assumed: `FAILED` is the *only* state that reaches
+    // the tool line with a stale tool. `Stop` clears it, so `DONE`, `IDLE`,
+    // `ASLEEP` and `WAITING` have none; `THINKING` is cleared by `RESUMED`.
+    // A review guessed `DONE` carried one too, and it does not.
+    const bare = parsePackManifest({
+      ...pack,
+      quips: { ...pack.quips, mapped: {} },
+    });
+    const died = observe(
+      observe(
+        createRegistry(NOW),
+        { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+        NOW,
+      ),
+      { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
+      NOW,
+    );
+    expect(resolvePanel(died, NOW).tool).toBe('Bash');
+    expect(sceneFor({ registry: died, pack: bare, now: NOW }).message).not.toBe(
+      'Bash',
+    );
+
+    // And the two states where the tool *is* the interesting fact still show
+    // it — so this is a filter, not a removal.
+    const working = observe(
+      createRegistry(NOW),
+      { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+      NOW,
+    );
+    expect(sceneFor({ registry: working, pack: bare, now: NOW }).message).toBe(
+      'Bash',
+    );
+    const asking = observe(
+      working,
+      { sessionId: 's', kind: 'PermissionRequest', tool: 'Write' },
+      NOW,
+    );
+    expect(sceneFor({ registry: asking, pack: bare, now: NOW }).message).toBe(
+      'Write',
+    );
+  });
+
   it('says happy birthday all day, without hiding anything that needs a human', () => {
     // **This is not the rule `DONE` is ranked by, and an earlier version of
     // this comment said it was.** `DONE` loses to `WORKING` and `THINKING`

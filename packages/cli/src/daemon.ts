@@ -295,6 +295,21 @@ function refinedFailureLine(
 }
 
 /**
+ * The states where the tool is the interesting fact, rather than a leftover.
+ *
+ * A whitelist, not a blacklist on `FAILED`. `StopFailure` is the only handler
+ * that leaves `tool` set today — measured, not assumed: `Stop` clears it, so
+ * `DONE`, `IDLE`, `ASLEEP` and `WAITING` carry none, and `RESUMED` clears it
+ * for `THINKING`. But a blacklist puts a new state on the wrong side of the
+ * default, and the failure it lands in is the one this whole function exists
+ * to prevent.
+ */
+const TOOL_STATES: ReadonlySet<SessionState> = new Set([
+  'WORKING',
+  'NEEDS_PERMISSION',
+]);
+
+/**
  * What the message band says, in words a person can act on.
  *
  * **The state comes first, and that is the whole point.** This used to be
@@ -309,10 +324,14 @@ function refinedFailureLine(
  * the repo read it: the example pack has "may I?" and "well, that happened"
  * sitting unused while the panel showed enum names. So a mapped quip beats the
  * tool, then an idle quip, and a lower-cased state name only as a last resort.
- * It no longer wins outright — see the two lookups below — and it is not
- * filtered by state: `panel.tool` is returned whenever it is set, which for
- * `FAILED` means the stale tool this paragraph was written to stop showing.
- * The mapped `FAILED` key is what keeps that unreachable, not a state check.
+ * It no longer wins outright — see the two lookups below — and the tool line
+ * *is* filtered by state now. It was not, for as long as this paragraph has
+ * claimed it: `panel.tool` was returned whenever it was set, and `FAILED`
+ * carries the tool the session died running. The only thing keeping the
+ * original defect off the glass was the example pack happening to define
+ * `quips.mapped.FAILED` — so a hand-written pack that omitted one key got
+ * `Bash` for a dead session, which is what the paragraph above says this
+ * function exists to stop. A review found it; `TOOL_STATES` closes it.
  *
  * The idle quip is chosen by the clock rather than at random, because a desk
  * toy that reshuffles its own text every 125ms is a fidget, not a pet — and
@@ -344,7 +363,9 @@ function messageFor(
   if (refined !== undefined) return refined;
   const mapped = pack.quips.mapped[panel.state];
   if (mapped !== undefined) return mapped;
-  if (panel.tool !== undefined) return panel.tool;
+  if (TOOL_STATES.has(panel.state) && panel.tool !== undefined) {
+    return panel.tool;
+  }
   if (panel.state === 'IDLE' && pack.quips.idle.length > 0) {
     // One quip a minute, so it changes at a human pace and the diff stays quiet.
     const minute = Math.floor(now / 60_000);
