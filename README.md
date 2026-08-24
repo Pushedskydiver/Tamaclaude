@@ -45,8 +45,13 @@ there is one base geometry and one animation set to maintain.
 
 `packs/example/` is the reference and the only pack in version control.
 Everything else under `packs/` is gitignored, so personal packs sit in your
-working tree without reaching the public repo. Point the config at one and
-every screen changes without a rebuild.
+working tree without reaching the public repo. Point `TAMACLAUDE_PACK` at one,
+or put it in `~/.tamaclaude/pack/`, and every screen changes without a rebuild.
+
+There is no bundled default: with no pack configured the daemon refuses to
+start rather than falling back to the example, because a fallback would turn
+"you forgot to point at your pack" into a panel that looks entirely correct.
+`tamaclaude pack` says which one is loaded and when its birthday fires.
 
 ## Development
 
@@ -58,7 +63,8 @@ pnpm build && pnpm test && pnpm lint && pnpm typecheck && pnpm format:check && p
 `pnpm dev` builds the panel harness and tells you where to open it — an
 interactive page that animates at 8fps and switches orientation, layout and
 animation live, with no hardware needed. It is driven by rendered frames rather
-than by live Claude Code sessions; that arrives in Stage 3.
+than by live Claude Code sessions. Stage 3 has landed for the daemon and the
+panel; the harness's own event injection is a separate unchecked Stage 1 line.
 
 To render an animation to frames and review it at true panel size:
 
