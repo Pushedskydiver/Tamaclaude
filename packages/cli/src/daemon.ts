@@ -169,15 +169,18 @@ function clockText(now: number): string {
  *
  * A total `Record` rather than a chain of ternaries, because the chain ended in
  * a default: any state added to `SESSION_STATES` compiled clean and silently
- * became an ordinary working chip. `state.ts` says `DONE` and `COMPACTING` are
+ * became an ordinary working chip. `state.ts` says `COMPACTING` is
  * expected back, and a future `FAILED`-class state arriving as "nothing to see"
  * would lose exactly the signal the strip exists for. Now it will not build.
  *
  * The *decision* to collapse lives in `packages/renderer/src/strip.ts`: a pack
  * carries a handful of colours, so spec §5's ten states cannot each have a
  * tint, and the renderer collapsed them to three tones — fewer even than §4's
- * five tiers, which the three map onto cleanly: attention is tier 2, active is
- * tiers 3 and 4, resting is tier 5. The collapse itself is this table, and it
+ * five tiers, which the three mapped onto cleanly while every state was one of
+ * §4's tiers: attention is tier 2, active tiers 3 and 4, resting tier 5.
+ * `DONE` broke that — the spec puts it in tier 1 and this daemon ranks it with
+ * the resting states, so it is the first row whose tone is chosen rather than
+ * derived. The collapse itself is this table, and it
  * had to land somewhere the moment something fed the strip — `strip.ts` says as
  * much, that "the day the daemon wants to name one in a state-to-tone table,
  * `export` is the whole change".
@@ -186,6 +189,12 @@ const TONE: Readonly<Record<SessionState, SessionChip['tone']>> = {
   NEEDS_PERMISSION: 'attention',
   FAILED: 'attention',
   WAITING: 'attention',
+  // Resting, because that is the tier this daemon ranks it in. `strip.ts` is
+  // clear the tint carries §4's tier rather than anything else, and "needs a
+  // human" would not separate `DONE` from `WORKING` or `THINKING`, which need
+  // one just as little and are `active`. An earlier version of this comment
+  // gave that reason, and it would have justified making `WORKING` resting.
+  DONE: 'resting',
   WORKING: 'active',
   THINKING: 'active',
   IDLE: 'resting',

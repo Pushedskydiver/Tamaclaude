@@ -209,7 +209,7 @@ that is not waiting on the design freeze.
       two senses are unrelated.) Finally, `Stop` fires on every response rather
       than at task completion and `StopFailure` ignores exit code and output
       entirely, so "the turn finished" is not observable the way Stage 4's
-      the payoff screen assumes.
+      payoff screen assumes.
 
 - [x] Tool → state mapping (`PreToolUse.tool_name`)
 - [x] Multi-session compositing — resolution ranks by state, hero plus chips
@@ -288,12 +288,12 @@ than partially. Eight good screens beat nine plus four rough ones.
   3. typing ✅ (Edit/Write)
   4. bouldering ✅ (Read)
   5. gym ✅ (Bash)
-  6. **The payoff screen (Stop)** — the vehicle from the recipient's pack
+  6. **The payoff screen** — the vehicle from the recipient's pack
      pulls up. Named by role rather than by make and colour: this repo is
      public, the vehicle is on the interests list in the gitignored brief, and
      `CLAUDE.md` says tracked docs name personal content by role, never by
-     content. It read as the make and colour in four tracked files until
-     24 Aug. Fallback if it is not landing: a static frame with the vehicle
+     content. It read as the make and colour in ten places across five
+     tracked files until 24 Aug. Fallback if it is not landing: a static frame with the vehicle
      parked and Clawd beside it and the quip, which is 90% of the joke at 10%
      of the risk. "Do not cut" previously disarmed the only
      mitigation this plan names for its own top art risk.
@@ -344,8 +344,10 @@ than partially. Eight good screens beat nine plus four rough ones.
 
 **`Stop` does not mean "the turn finished".** Confirmed against live docs in
 Stage 3: it fires on every response. So the payoff screen above cannot be
-keyed on it as written, and needs a different trigger — most likely a quiet
-period after the last event, which the daemon can see and a hook cannot.
+keyed on it as written. **It has a different trigger now, and this is no longer
+speculation:** a quiet period after the last event, which the daemon can see and
+a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, landed
+24 Aug with the `DONE` state.
 
 ## Stage 5 — Personalisation (Sun 6 – Sun 13 Sep)
 

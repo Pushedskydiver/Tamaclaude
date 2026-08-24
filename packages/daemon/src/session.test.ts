@@ -11,7 +11,13 @@ import {
   isLive,
   newSession,
 } from './session.js';
-import { ASLEEP_AFTER_MS, EVICT_AFTER_MS, WAITING_AFTER_MS } from './state.js';
+import {
+  ASLEEP_AFTER_MS,
+  DONE_AFTER_MS,
+  DONE_SHOWN_MS,
+  EVICT_AFTER_MS,
+  WAITING_AFTER_MS,
+} from './state.js';
 
 /** t=0 is the session's first sight; every test counts from there. */
 const T0 = 1_000_000;
@@ -29,6 +35,100 @@ function foldAt(kinds: readonly string[], now: number) {
     start,
   );
 }
+
+describe('the payoff window', () => {
+  it('shows DONE once a session that did work has been quiet long enough', () => {
+    // The screen `BUILD_PLAN.md` item 6 calls the payoff. Its trigger cannot be
+    // `Stop` — that fires on every response, confirmed against live
+    // documentation in Stage 3 and then on real events, nine times in one
+    // session across three hours. So it is a quiet period the daemon times
+    // rather than an event it receives, which is what `state.ts` has been
+    // holding tier 1 open for.
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const idle = applyEvent(worked, event('Stop'), T0);
+    expect(effectiveState(idle, T0 + DONE_AFTER_MS)).toBe('DONE');
+  });
+
+  it('closes the window again, so the payoff is a beat and not a screen', () => {
+    // Two bounds, not one. A single `>=` would hold from 45s to the
+    // five-minute sleep, which is a resting screen — and `idle` is already
+    // that. Crossing the upper bound *is* the expiry, which is why no timer is
+    // stored anywhere and nothing has to be tidied up.
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const idle = applyEvent(worked, event('Stop'), T0);
+    const at = (ms: number) => effectiveState(idle, T0 + ms);
+    expect(at(DONE_AFTER_MS - 1)).toBe('IDLE');
+    expect(at(DONE_AFTER_MS + DONE_SHOWN_MS - 1)).toBe('DONE');
+    expect(at(DONE_AFTER_MS + DONE_SHOWN_MS)).toBe('IDLE');
+  });
+
+  it('hands straight over to WAITING, with no gap and no overlap', () => {
+    // `DONE_AFTER_MS + DONE_SHOWN_MS === WAITING_AFTER_MS` is chosen, not
+    // coincidence: the payoff ends exactly as Clawd starts staring at you. If
+    // someone moves one threshold without the other this test says so, because
+    // a gap here is a second where the panel goes quiet mid-sequence.
+    expect(DONE_AFTER_MS + DONE_SHOWN_MS).toBe(WAITING_AFTER_MS);
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const notified = applyEvent(worked, event('Notification'), T0);
+    const idle = applyEvent(notified, event('Stop'), T0);
+    expect(effectiveState(idle, T0 + WAITING_AFTER_MS - 1)).toBe('DONE');
+    expect(effectiveState(idle, T0 + WAITING_AFTER_MS)).toBe('WAITING');
+  });
+
+  it('is truncated by a notification that is not the last event', () => {
+    // The two windows have different anchors: this one runs from
+    // `lastEventAt`, `WAITING` from `notifiedAt`, and `WAITING` is checked
+    // first. So "no gap and no overlap" holds only when they coincide — which
+    // is the one case the test above builds. Here the notification lands five
+    // seconds before the work ends, and the payoff loses those five seconds.
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const notified = applyEvent(worked, event('Notification'), T0);
+    const idle = applyEvent(notified, event('Stop'), T0 + 5_000);
+    const at = (ms: number) => effectiveState(idle, T0 + ms);
+    expect(at(5_000 + DONE_AFTER_MS)).toBe('DONE');
+    expect(at(WAITING_AFTER_MS)).toBe('WAITING');
+  });
+
+  it('re-arms after another event, because the clock is lastEventAt', () => {
+    // Not a leak, and worth pinning because a comment once claimed the
+    // opposite. Any event refreshes `lastEventAt`, so a session that goes
+    // quiet again gets another window off the same `workedAt` — only
+    // `UserPromptSubmit` and `SessionStart` spend it.
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const idle = applyEvent(worked, event('Stop'), T0);
+    expect(effectiveState(idle, T0 + DONE_AFTER_MS)).toBe('DONE');
+    const alive = applyEvent(idle, event('PostToolUse'), T0 + 90_000);
+    expect(effectiveState(alive, T0 + 90_000 + DONE_AFTER_MS)).toBe('DONE');
+  });
+
+  it('spends the payoff on SessionStart, so a clear does not celebrate', () => {
+    // `SessionStart` fires on startup, resume, clear and compact. In three of
+    // those four the work it would celebrate belongs to a session the user has
+    // walked away from.
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const cleared = applyEvent(worked, event('SessionStart'), T0 + 10_000);
+    expect(effectiveState(cleared, T0 + 10_000 + DONE_AFTER_MS)).toBe('IDLE');
+  });
+
+  it('needs work done since the last prompt, not merely a reply', () => {
+    // The distinction the whole field exists for. `Stop` fires on every
+    // response, so a session that only answered a question must not get the
+    // payoff — that is the defect the trigger replaces, not a variant of it.
+    const replied = applyEvent(
+      applyEvent(start, event('UserPromptSubmit'), T0),
+      event('Stop'),
+      T0,
+    );
+    expect(effectiveState(replied, T0 + DONE_AFTER_MS)).toBe('IDLE');
+  });
+
+  it('spends the payoff, so a new prompt has to earn the next one', () => {
+    const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
+    const asked = applyEvent(worked, event('UserPromptSubmit'), T0);
+    const idle = applyEvent(asked, event('Stop'), T0);
+    expect(effectiveState(idle, T0 + DONE_AFTER_MS)).toBe('IDLE');
+  });
+});
 
 describe('applyEvent', () => {
   it('takes the state from the last meaningful event', () => {

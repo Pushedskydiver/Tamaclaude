@@ -121,4 +121,26 @@ describe('stateRank', () => {
     expect(stateRank('WORKING')).toBeLessThan(stateRank('THINKING'));
     expect(stateRank('IDLE')).toBeLessThan(stateRank('ASLEEP'));
   });
+
+  it('puts the payoff below everything active and above idle', () => {
+    // A deliberate departure from the screen spec, which gives `DONE` tier 1
+    // and lets it seize the stage from everything — settled for a two-second
+    // oneshot, where a fifteen-second window is a different cost.
+    //
+    // The first version of this test asserted the opposite for `WORKING`, and
+    // that ranking was a live defect: with `DONE` borrowing the `idle` art, a
+    // finished session took the stage from a working one and showed a Clawd
+    // doing nothing while a tool ran. Lower must win against resting states
+    // only.
+    for (const active of [
+      'NEEDS_PERMISSION',
+      'FAILED',
+      'WAITING',
+      'WORKING',
+      'THINKING',
+    ] as const) {
+      expect(stateRank('DONE')).toBeGreaterThan(stateRank(active));
+    }
+    expect(stateRank('DONE')).toBeLessThan(stateRank('IDLE'));
+  });
 });

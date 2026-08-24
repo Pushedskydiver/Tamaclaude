@@ -6,7 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { animationFor } from './animation.js';
 import { createRegistry, observe } from './registry.js';
 import { resolvePanel } from './resolve.js';
-import { ASLEEP_AFTER_MS, EVICT_AFTER_MS, WAITING_AFTER_MS } from './state.js';
+import {
+  ASLEEP_AFTER_MS,
+  DONE_AFTER_MS,
+  EVICT_AFTER_MS,
+  WAITING_AFTER_MS,
+} from './state.js';
 
 const T0 = 1_000_000;
 const MINUTE = 60_000;
@@ -179,5 +184,39 @@ describe('order under disorder', () => {
     ]);
     expect(ids(registry, T0 + ASLEEP_AFTER_MS)).toEqual(['awake', 'sleeper']);
     expect(resolvePanel(registry, T0 + ASLEEP_AFTER_MS).state).toBe('IDLE');
+  });
+});
+
+describe('the payoff against other sessions', () => {
+  it('never takes the stage from a session that is still working', () => {
+    // The defect this pins was live: `DONE` ranked above `WORKING` while
+    // borrowing the `idle` art, so a finished session put a Clawd doing
+    // nothing on the panel for fifteen seconds while another ran a tool —
+    // which is exactly what `animation.ts` forbids, and what the rank's own
+    // comment had cited as its justification. Ranks alone would not have
+    // caught it; this asserts the thing the viewer sees.
+    let registry = createRegistry(T0);
+    for (const event of [
+      { sessionId: 'busy', kind: 'PreToolUse', tool: 'Bash' },
+      { sessionId: 'finished', kind: 'PreToolUse', tool: 'Bash' },
+    ] satisfies HookEvent[]) {
+      registry = observe(registry, event, T0);
+    }
+    registry = observe(registry, { sessionId: 'finished', kind: 'Stop' }, T0);
+    const panel = resolvePanel(registry, T0 + DONE_AFTER_MS);
+    expect(panel.state).toBe('WORKING');
+    expect(animationFor(panel.state, panel.tool)).toBe('gym');
+  });
+
+  it('does take the stage from a resting one', () => {
+    let registry = createRegistry(T0);
+    registry = observe(
+      registry,
+      { sessionId: 'finished', kind: 'PreToolUse', tool: 'Bash' },
+      T0,
+    );
+    registry = observe(registry, { sessionId: 'finished', kind: 'Stop' }, T0);
+    registry = observe(registry, { sessionId: 'resting', kind: 'Stop' }, T0);
+    expect(resolvePanel(registry, T0 + DONE_AFTER_MS).state).toBe('DONE');
   });
 });

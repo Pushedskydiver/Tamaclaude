@@ -649,7 +649,8 @@ The vehicle from the recipient's pack is parked beside Clawd, and he reacts to
 it. **Named by role throughout.** The vehicle is on the interests list in the
 gitignored brief, this repo is public, and `CLAUDE.md` says tracked docs name
 personal content by role and never by content — it read as a make and colour in
-four tracked files and two source files until 24 Aug.
+ten places across five tracked files — two docs and three source files — until
+24 Aug.
 
 `BUILD_PLAN.md` Stage 4 item 6, the entry that plan calls "the payoff" and the
 only one carrying its own written fallback.
@@ -657,8 +658,9 @@ only one carrying its own written fallback.
 ### Parked, not arriving — and that is not a compromise
 
 `frameAt` in `packages/cli/src/daemon.ts` is `Math.floor(now / FRAME_MS) %
-frames`, wall-clock modulo, so **no animation in this architecture ever starts
-at frame 0**. `permission-sign` found this and wrote it down: "there is no
+frames`, wall-clock modulo, so **a state never starts its animation at
+frame 0** — the loop passes through frame 0 constantly, which is precisely why
+an arrival would re-arrive. `permission-sign` found this and wrote it down: "there is no
 raise, because there is nowhere to put one … a raise at the top of the loop is a
 pump at loop frequency, forever."
 
@@ -674,16 +676,24 @@ response — nine times in one session across three hours, on real events. A qui
 period after work fires once per _task_. Measured over 1,105 local transcripts
 with timestamped events:
 
-| quiet threshold | fires per session | sessions with at least one | share of session time on screen |
-| --------------- | ----------------: | -------------------------: | ------------------------------: |
-| 30 s            |              4.93 |                      78.7% |                            5.6% |
-| **45 s**        |          **2.85** |                  **61.8%** |                        **4.6%** |
-| 60 s            |              2.03 |                      50.7% |                            3.9% |
-| 90 s            |              1.32 |                      33.8% |                            3.0% |
+| quiet threshold | fires per transcript | transcripts with at least one |
+| --------------- | -------------------: | ----------------------------: |
+| 30 s            |                 4.93 |                         78.7% |
+| **45 s**        |             **2.85** |                     **61.8%** |
+| 60 s            |                 2.03 |                         50.7% |
+| 90 s            |                 1.32 |                         33.9% |
 
-Against `Stop`'s ~26 turn boundaries a session, a 45-60s trigger is a **10-13x
-reduction**. That is a reward you notice rather than wallpaper — and it means
-**the payoff is the trigger, not the animation**. Whether the crab stands beside
+Both columns reproduced independently to three significant figures. A fourth
+column, "share of session time on screen", is withdrawn: three plausible
+definitions gave 0.7%, 3.1% and 4.0% against a published 4.6%, and nothing
+depends on it.
+
+**No ratio against `Stop` is quoted.** An earlier version claimed "10-13x",
+dividing a per-session-id figure by a per-transcript one — 36 distinct ids
+against 1,187 files, because subagent sidechains get a file and not an id, and
+the daemon keys on the id. Even at face value the quotient was 9.1. What the
+table does support is that this is a reward you notice rather than wallpaper,
+and that **the payoff is the trigger, not the animation**. Whether the crab stands beside
 a moving vehicle or a parked one is a second-order improvement on a screen seen
 once or twice a session.
 
@@ -706,14 +716,23 @@ without any one-shot machinery:
   from "replied": `state` is `IDLE` either way, `Stop` clears `tool`, and
   `lastEventAt > startedAt` is true after any reply.
 
-**Tier 1, and this reverses nothing by accident.** The screen spec settles the
+**Tier 1 stays empty, and that is a departure worth stating.** The screen spec settles the
 payoff as a pre-emptive one-shot that takes the stage regardless of what else is
 live, and `state.ts` records tier 1 as deliberately empty _because_ `Stop` could
 not drive it — "it lands with the quiet-period trigger that has to replace
-`Stop`". This is that trigger, so tier 1 fills here. Without it the screen is
-lost to a concurrently working session: **65.1% of live minutes have more than
-one session, and 53% of quiet gaps overlap another session's events** during the
-exact window this would be up. At `IDLE`'s rank that halves the payoff.
+`Stop`". This is that trigger — but tier 1 pre-empts _everything_, and that
+was settled for a two-second oneshot. At fifteen seconds it would cover a
+session blocked on a human, which breaks the panel's one promise. It ranks with
+the resting states instead: above `IDLE`, below anything active.
+
+An earlier version of this section argued the opposite, that it must outrank
+`WORKING` or be lost to concurrent sessions. Two reviews measured that and got
+**15% and 66% for the same quantity**, because it turns entirely on what counts
+as a session being live. A figure that moves by a factor of four with its
+definition cannot carry a design decision, and the ranking it argued for turned
+out to be a live defect: with the payoff borrowing `idle` until its art exists,
+it put a Clawd doing nothing on the panel for fifteen seconds while another
+session ran a tool.
 
 **Do the trigger before 31 Aug.** Stage 3's window closes then; after that,
 touching `Session` is a reopening rather than finishing.
@@ -733,7 +752,8 @@ touching `Session` is a reopening rather than finishing.
 - **Effects.** None.
 
 **This is the first prop in the corpus that needs floor space.** `gym`'s barbell
-is 17 units wide but one thick and crosses the torso, which is what makes it
+is 17 units wide with a one-thick shaft — its plates are four — and it crosses
+the torso, which is what makes it
 read; `bouldering`'s wall is a backdrop behind him, exempted from the safe area.
 Ink is not the constraint here, plan area is, and the stage has six units of it.
 The landscape crop is not the risk — a ground-level prop is nowhere near the -4
@@ -770,7 +790,8 @@ test above.
 
 `BUILD_PLAN.md` prices it as "90% of the joke at 10% of the risk". That is true
 of the art and false of the item: **a parked frame with no trigger has nowhere
-to be shown**, so the six-file daemon change is paid on both branches. The
+to be shown**, so the daemon change — eight files, five excluding tests — is paid on both
+branches. The
 `overheated` precedent of "art first, wiring last" does not transfer here, and
 the wiring is not cuttable with the art.
 

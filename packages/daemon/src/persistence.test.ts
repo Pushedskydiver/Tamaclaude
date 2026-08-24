@@ -32,6 +32,20 @@ function twoSessions(now: number) {
 }
 
 describe('encodeRegistry / decodeRegistry', () => {
+  it('carries workedAt across a restart, or the payoff is lost on reload', () => {
+    // `workedAt` is what tells "a task finished" from "a reply ended". Dropping
+    // it on restart would silently cost every live session its payoff, and the
+    // round-trip test below only catches that because it compares whole
+    // sessions — a schema that quietly omits a field would otherwise pass.
+    const registry = observe(
+      createRegistry(NOW),
+      { sessionId: 'w', kind: 'PreToolUse', tool: 'Bash' },
+      NOW,
+    );
+    const back = decodeRegistry(encodeRegistry(registry), NOW);
+    expect(back?.sessions.get('w')?.workedAt).toBe(NOW);
+  });
+
   it('round-trips a registry through the file format', () => {
     const registry = twoSessions(NOW);
     expect(decodeRegistry(encodeRegistry(registry), NOW + 20)).toEqual(

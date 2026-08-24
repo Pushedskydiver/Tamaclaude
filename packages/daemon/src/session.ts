@@ -11,11 +11,17 @@
 import type { SessionState } from './state.js';
 import type { HookEvent } from '@tamaclaude/protocol';
 
-import { ASLEEP_AFTER_MS, EVICT_AFTER_MS, WAITING_AFTER_MS } from './state.js';
+import {
+  ASLEEP_AFTER_MS,
+  DONE_AFTER_MS,
+  DONE_SHOWN_MS,
+  EVICT_AFTER_MS,
+  WAITING_AFTER_MS,
+} from './state.js';
 
 /**
  * A session as the daemon tracks it. Spec §3's record, with two of its fields
- * missing and two added.
+ * missing and four added.
  *
  * `origin` (local, or the host a remote session came from) is knowledge the
  * transport that accepted the event has and the event itself does not, so it
@@ -23,8 +29,11 @@ import { ASLEEP_AFTER_MS, EVICT_AFTER_MS, WAITING_AFTER_MS } from './state.js';
  * never fill would be worse than its absence. `oneshotUntil` goes with the
  * tier it exists for — see `STATE_RANK`.
  *
- * `errorType` and `notifiedAt` are the additions: both carry information that
- * arrives on exactly one event and is unrecoverable afterwards.
+ * `errorType`, `notifiedAt`, `endedAt` and `workedAt` are the additions. The
+ * first three carry information that arrives on exactly one event and is
+ * unrecoverable afterwards; `workedAt` is a fact about the session that no
+ * single event states. This sentence said "two" and named two while the type
+ * carried four, which is why it now counts them.
  */
 export type Session = {
   readonly id: string;
@@ -48,6 +57,18 @@ export type Session = {
    * mean one exists.
    */
   readonly errorType?: string;
+  /**
+   * When this session last started doing work, if it has since the last prompt.
+   *
+   * The payoff screen needs to tell "a task finished" from "a reply ended", and
+   * nothing already on the record does: `state` is `IDLE` either way, `Stop`
+   * clears `tool`, and `lastEventAt` is no help — it moves on any reply, and
+   * on the mid-session restart below it equals `startedAt` even after work. Set
+   * on `PreToolUse` and cleared on `UserPromptSubmit`, so it means "there has
+   * been work since you last asked for something" — which is the thing worth
+   * congratulating.
+   */
+  readonly workedAt?: number;
   /** First sight of this session. Spec §4's tie-break within "needs you". */
   readonly startedAt: number;
   /** Last proof of life, of any kind. Drives sleep and eviction. */
@@ -116,11 +137,27 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
   string,
   Transition
 >([
-  ['SessionStart', () => ({ ...RESUMED, state: 'IDLE' })],
-  ['UserPromptSubmit', () => ({ ...RESUMED, state: 'THINKING' })],
+  // Clears `workedAt` with everything else. `SessionStart` fires on startup,
+  // resume, clear and compact, and in three of those four the work it would be
+  // celebrating belongs to a session the user has just walked away from. A
+  // payoff fifty seconds after a `/clear` is for something that no longer
+  // exists. `compact` is the arguable case and it is not worth a special case:
+  // the next tool call re-arms it within seconds.
+  ['SessionStart', () => ({ ...RESUMED, state: 'IDLE', workedAt: undefined })],
+  [
+    'UserPromptSubmit',
+    // Clears `workedAt`: a new prompt means whatever was finished has been
+    // acknowledged, so the next payoff has to be earned again.
+    () => ({ ...RESUMED, state: 'THINKING', workedAt: undefined }),
+  ],
   [
     'PreToolUse',
-    (event) => ({ ...RESUMED, state: 'WORKING', tool: event.tool }),
+    (event, now) => ({
+      ...RESUMED,
+      state: 'WORKING',
+      tool: event.tool,
+      workedAt: now,
+    }),
   ],
   [
     'PermissionRequest',
@@ -206,6 +243,25 @@ export function effectiveState(session: Session, now: number): SessionState {
     now - session.notifiedAt >= WAITING_AFTER_MS
   ) {
     return 'WAITING';
+  }
+  // The payoff window: **two bounds, not one.** A single `>=` would hold from
+  // 45s all the way to the five-minute sleep, which is a resting screen and not
+  // a payoff. Crossing the upper bound is the expiry, so there is no stored
+  // timer and nothing to tidy up.
+  //
+  // **It can re-arm, and that is the behaviour rather than a leak.** Any event
+  // refreshes `lastEventAt`, so a session that goes quiet again after a
+  // `PostToolUse` or a `SubagentStop` gets another window off the same
+  // `workedAt`. An earlier version of this comment claimed a repeat "cannot
+  // re-trigger, because there is no trigger" — the arithmetic is on the one
+  // field every event resets. Only `UserPromptSubmit` and `SessionStart` spend
+  // it, which is right: asking for something new is what acknowledges the last
+  // thing, and either way the payoff needs a fresh quiet period to appear.
+  if (session.workedAt !== undefined) {
+    const quiet = now - session.lastEventAt;
+    if (quiet >= DONE_AFTER_MS && quiet < DONE_AFTER_MS + DONE_SHOWN_MS) {
+      return 'DONE';
+    }
   }
   if (now - session.lastEventAt >= ASLEEP_AFTER_MS) return 'ASLEEP';
   return 'IDLE';

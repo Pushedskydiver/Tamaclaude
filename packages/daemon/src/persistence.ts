@@ -73,6 +73,7 @@ const sessionSchema = z.object({
   errorType: identifier.optional(),
   startedAt: timestamp,
   lastEventAt: timestamp,
+  workedAt: timestamp.optional(),
   notifiedAt: timestamp.optional(),
   endedAt: timestamp.optional(),
   subagents: z.number().int().min(0),
@@ -115,6 +116,8 @@ function restore(record: z.infer<typeof sessionSchema>, now: number): Session {
     ...record,
     startedAt: clamp(record.startedAt, now),
     lastEventAt: clamp(record.lastEventAt, now),
+    workedAt:
+      record.workedAt === undefined ? undefined : clamp(record.workedAt, now),
     notifiedAt:
       record.notifiedAt === undefined
         ? undefined
