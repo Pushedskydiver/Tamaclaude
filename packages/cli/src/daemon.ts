@@ -255,6 +255,23 @@ function messageFor(
   pack: PackManifest,
   now: number,
 ): string {
+  // A compound key first, then the bare state. `FAILED:rate_limit` lets a pack
+  // say something different when the limit is the reason, which is what
+  // `events.ts` records `error_type` as having been kept open for — and it
+  // matters now that two `FAILED` values draw different pictures, because
+  // otherwise `overheated` and `dizzy` share a message band and the picture is
+  // the only difference between them. No schema change: `quips.mapped` is
+  // already `z.record(z.string(), z.string())`, so any key validates.
+  //
+  // Read off the hero rather than through `resolvePanel`, which returns state
+  // and tool but not `errorType`. `sessions[0]` is the hero and is a whole
+  // `Session`, so the value is already here.
+  const errorType = panel.sessions.at(0)?.errorType;
+  const refined =
+    panel.state === 'FAILED' && errorType !== undefined
+      ? pack.quips.mapped[`${panel.state}:${errorType}`]
+      : undefined;
+  if (refined !== undefined) return refined;
   const mapped = pack.quips.mapped[panel.state];
   if (mapped !== undefined) return mapped;
   if (panel.tool !== undefined) return panel.tool;
@@ -497,7 +514,10 @@ async function paintOnce(
   // Earlier versions of this comment said three states fall back to
   // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
   // reached only from `WORKING`, with an unmapped tool or with no tool.
-  const wanted = animationFor(panel.state, panel.tool);
+  const wanted = animationFor(panel.state, {
+    tool: panel.tool,
+    errorType: panel.sessions.at(0)?.errorType,
+  });
   const frames = await framesFor(wanted);
   const showing =
     frames.length > 0

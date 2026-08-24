@@ -249,6 +249,32 @@ describe('what the panel says', () => {
     ).toBe(3);
   });
 
+  it('gives a rate limit its own quip, so it is not just a different picture', () => {
+    // `overheated` and `dizzy` are both `FAILED`, so without a compound key
+    // they would share the message band and the picture would be the only
+    // difference between them. The key falls back to the bare state, which is
+    // what every other `error_type` gets.
+    const limited = sceneFor({
+      registry: after(
+        { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+        { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
+      ),
+      pack,
+      now: NOW,
+    });
+    const other = sceneFor({
+      registry: after(
+        { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+        { sessionId: 's', kind: 'StopFailure', errorType: 'server_error' },
+      ),
+      pack,
+      now: NOW,
+    });
+    expect(limited.message).toBe(pack.quips.mapped['FAILED:rate_limit']);
+    expect(other.message).toBe(pack.quips.mapped.FAILED);
+    expect(limited.message).not.toBe(other.message);
+  });
+
   it('never puts a raw state name on the glass', () => {
     // `state.ts` says these are SCREAMING_SNAKE *because a state name is also a
     // quip key*. One reaching the panel means the pack was not consulted.

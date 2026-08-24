@@ -111,7 +111,7 @@ function smoke(): void {
   const panel = resolvePanel(sessions, now);
   process.stdout.write(
     `pack=${state.pack.name} state=${panel.state} ` +
-      `animation=${animationFor(panel.state, panel.tool)}\n`,
+      `animation=${animationFor(panel.state, { tool: panel.tool })}\n`,
   );
 }
 

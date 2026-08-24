@@ -13,9 +13,9 @@ import type { SessionState } from './state.js';
  * The animations this daemon can ask for. `assets/clawd/animations/PLANS.md`
  * is the authority for what exists — not the fifteen the screen spec
  * catalogues — and this list is what is both built *and wired*, which is not
- * the same thing. `overheated` is built and baked and deliberately absent
- * here: art lands before wiring, so that cutting the art at the Stage 4 gate
- * does not mean reverting shipped daemon code. `SPRITE_NAMES` is the built
+ * the same thing — `overheated` was built and baked one PR before it was wired,
+ * which is the order `BUILD_PLAN.md` item 12 asks for: art lands first, so
+ * cutting it at the Stage 4 gate never means reverting shipped daemon code. `SPRITE_NAMES` is the built
  * list, this is a subset of it, and `animation.test.ts` enforces that
  * direction. A name here that has no SVG renders as nothing.
  */
@@ -29,6 +29,7 @@ export const ANIMATIONS = [
   'confused',
   'permission-sign',
   'dizzy',
+  'overheated',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -111,6 +112,41 @@ const STATE_ANIMATIONS: Readonly<
 };
 
 /**
+ * `StopFailure`'s `error_type` to animation, for the values that earn their own
+ * picture. Anything unlisted keeps whatever `STATE_ANIMATIONS` gives `FAILED`.
+ *
+ * `rate_limit` and `overloaded` share one, because they tell the viewer the same
+ * thing — wait and come back — and that is what the picture says. Splitting them
+ * would show a knock on the head for a condition that is not a knock. The other
+ * eight documented values keep `dizzy`.
+ *
+ * A `Map` rather than an object literal, for the reason `TOOL_ANIMATIONS` gives:
+ * this key is untrusted input that has crossed a process boundary, and
+ * `TABLE['constructor']` on an object literal hands back something that is not
+ * an animation at all, with no type error to show for it.
+ */
+const ERROR_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
+  string,
+  AnimationName
+>([
+  ['rate_limit', 'overheated'],
+  ['overloaded', 'overheated'],
+]);
+
+/**
+ * What narrows a state to a picture, when the state alone is not enough.
+ *
+ * One object rather than two optional positional strings. `animationFor(state,
+ * tool, errorType)` typechecks with the two swapped and returns the wrong
+ * picture silently, and there are two production call sites and twenty in
+ * tests — exactly the shape of mistake nothing would catch.
+ *
+ * Each field refines a different state and they never both apply: `tool` is
+ * only read for `WORKING`, `errorType` only for `FAILED`.
+ */
+type Refinement = { readonly tool?: string; readonly errorType?: string };
+
+/**
  * The animation for a resolved state, with the hero's tool when it has one.
  *
  * Total by construction: there is no input that throws and none that returns
@@ -120,9 +156,12 @@ const STATE_ANIMATIONS: Readonly<
  */
 export function animationFor(
   state: SessionState,
-  tool?: string,
+  refine: Refinement = {},
 ): AnimationName {
+  if (state === 'FAILED' && refine.errorType !== undefined) {
+    return ERROR_ANIMATIONS.get(refine.errorType) ?? STATE_ANIMATIONS.FAILED;
+  }
   if (state !== 'WORKING') return STATE_ANIMATIONS[state];
-  if (tool === undefined) return FALLBACK;
-  return TOOL_ANIMATIONS.get(tool) ?? FALLBACK;
+  if (refine.tool === undefined) return FALLBACK;
+  return TOOL_ANIMATIONS.get(refine.tool) ?? FALLBACK;
 }
