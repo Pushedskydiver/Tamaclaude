@@ -56,9 +56,13 @@ describe('agentPlist', () => {
     const xml = agentPlist(options);
     expect(xml).toContain('<string>/opt/node/bin/node</string>');
     expect(xml).toContain('<string>/opt/tamaclaude/dist/index.js</string>');
-    // And `daemon` with no device: the panel is found by descriptor, so a
-    // hardcoded path would break the moment it moved USB port.
+    // And `daemon --supervised` with no device: the panel is found by
+    // descriptor, so a hardcoded path would break the moment it moved USB
+    // port — and `--supervised` is what tells the daemon something will
+    // restart it, so giving up on a dead path is rediscovery rather than
+    // surrender.
     expect(xml).toContain('<string>daemon</string>');
+    expect(xml).toContain('<string>--supervised</string>');
     expect(xml).not.toContain('/dev/cu.');
   });
 

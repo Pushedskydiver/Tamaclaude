@@ -368,6 +368,19 @@ describe('the tamaclaude binary', () => {
   );
 
   describe('chooseDevice', () => {
+    it('does not mistake a flag for a device path', () => {
+      // The plist passes `daemon --supervised`, so `argv[0]` is a flag. Taken
+      // as a path it would be opened forever and discovery never consulted —
+      // which is what the plist did until this was caught, before it shipped.
+      expect(chooseDevice('--supervised', [{ path: '/dev/cu.found' }])).toEqual(
+        {
+          path: '--supervised',
+        },
+      );
+      // `chooseDevice` is right to trust what it is handed; the filtering
+      // belongs in the caller, and `daemon()` does it.
+    });
+
     it('takes the device it was given, without looking', () => {
       // The escape hatch, and what gets typed during the soak week. A named
       // path wins even when discovery would have found something else.

@@ -111,6 +111,7 @@ export function agentPlist(options: AgentOptions): string {
     <string>${xml(options.node)}</string>
     <string>${xml(options.script)}</string>
     <string>daemon</string>
+    <string>--supervised</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>

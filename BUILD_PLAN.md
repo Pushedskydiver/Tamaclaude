@@ -300,10 +300,17 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   with `RunAtLoad` comes back at every login and the only way off otherwise is
   `launchctl bootout` typed correctly by someone who knows it exists — which is
   not the person this is a gift for.
-  **Still open:** the daemon resolves the device once at startup, so a
-  panel moved to a different USB port while it runs leaves it retrying a
-  dead path. Discovery belongs inside the reconnect loop in
-  `packages/device/src/panel.ts`, whose `path` is a `string` today.
+  **The moved-port case is closed, and not the way this line first proposed.**
+  macOS derives `/dev/cu.usbmodem1101` from the USB port, so moving the panel
+  one socket along changes its path and the reconnect loop would retry the old
+  one forever — glass holding its last frame, `tamaclaude pack` still correct,
+  nothing red, on every desk move. The recorded fix was to thread discovery
+  into `packages/device/src/panel.ts`. A review argued for a cheaper one that
+  reuses what this item already installs: bound the consecutive failures,
+  exit non-zero, and let `KeepAlive` restart the process, which runs discovery
+  again from scratch. `openPanel` takes `giveUpAfter`; the plist passes
+  `daemon --supervised`; a hand-typed daemon still retries forever, because a
+  person watching a terminal does not want it exiting under them.
   **If this slips, the agreed fallback is not "add a default pack" but
   "fall back and say so on the glass"** — the message band already exists
   and `describePack` already composes the line. A review made the case:

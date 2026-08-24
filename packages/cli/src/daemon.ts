@@ -114,6 +114,15 @@ export type DaemonOptions = {
   readonly refreshMs?: number;
   readonly retryMs?: number;
   /**
+   * Consecutive failed opens before the panel stops trying. See `panel.ts`.
+   *
+   * Set only when something will restart this process, because giving up is
+   * only useful if somebody picks it back up. `tamaclaude daemon` typed by
+   * hand leaves it unset and retries forever.
+   */
+  readonly giveUpAfter?: number;
+  readonly onGiveUp?: () => void;
+  /**
    * Told what the link is doing, in words.
    *
    * Defaults to stderr rather than to nothing. `link.ts` composes a specific,
@@ -599,6 +608,8 @@ function openReporting(
     serial: options.serial,
     refreshMs: options.refreshMs,
     retryMs: options.retryMs,
+    giveUpAfter: options.giveUpAfter,
+    onGiveUp: options.onGiveUp,
   });
 }
 

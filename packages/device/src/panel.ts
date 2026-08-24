@@ -119,6 +119,27 @@ export type PanelOptions = {
   readonly serial?: SerialSystem;
   readonly retryMs?: number;
   readonly refreshMs?: number;
+  /**
+   * Consecutive failed opens before this stops trying. Unbounded by default.
+   *
+   * **For the moved-port case, which is otherwise silent forever.** macOS
+   * derives `/dev/cu.usbmodem1101` from the USB port, so plugging the panel
+   * into the socket next to the old one changes its path. This loop would
+   * retry the dead path once a second for as long as the process lived, the
+   * glass would hold the last frame it was sent, and nothing anywhere would be
+   * red. A desk move produces it.
+   *
+   * The answer is not rediscovery in here — that would mean this package
+   * choosing which port to open, which is the caller's job and a design
+   * change. It is to give up, so the caller can exit and be restarted by
+   * whatever supervises it, and start again with a fresh look at the bus.
+   *
+   * Unbounded remains the default because `tamaclaude daemon` typed by hand
+   * should not exit under a person watching the terminal.
+   */
+  readonly giveUpAfter?: number;
+  /** Called once when `giveUpAfter` consecutive opens have failed. */
+  readonly onGiveUp?: () => void;
 };
 
 type Runtime = {
@@ -135,12 +156,16 @@ type Runtime = {
   readonly queue: Promise<void>;
   readonly retry?: NodeJS.Timeout;
   readonly stopped: boolean;
+  /** Consecutive failed opens. Reset by a successful one, not accumulated. */
+  readonly failures: number;
 };
 
 type Ctx = {
   readonly path: string;
   readonly serial: SerialSystem;
   readonly retryMs: number;
+  readonly giveUpAfter?: number;
+  readonly onGiveUp?: () => void;
   readonly announce: (status: LinkStatus) => void;
   readonly state: Cell<Runtime>;
 };
@@ -193,6 +218,12 @@ function scheduleRetry(ctx: Ctx): void {
   // and the next open finds the same one. Retrying would be the re-priming
   // into the void that the refusal exists to end.
   if (now.stopped || now.retry || now.link.phase === 'refused') return;
+  // Given up: the path is not coming back, and something above us is better
+  // placed to work out what changed than this loop is.
+  if (ctx.giveUpAfter !== undefined && now.failures >= ctx.giveUpAfter) {
+    ctx.onGiveUp?.();
+    return;
+  }
   const retry = setTimeout(() => {
     ctx.state.write({ ...ctx.state.read(), retry: undefined });
     void attempt(ctx);
@@ -235,12 +266,14 @@ async function attempt(ctx: Ctx): Promise<void> {
       await port.close().catch(() => undefined);
       return;
     }
-    ctx.state.write({ ...ctx.state.read(), port });
+    ctx.state.write({ ...ctx.state.read(), port, failures: 0 });
     commit(ctx, afterOpen(ctx.state.read().link));
   } catch {
     // Absent is an ordinary state for a desk toy, not an error. The reason is
     // deliberately not logged: it would be the same line once a second for as
     // long as the panel is unplugged.
+    const failed = ctx.state.read();
+    ctx.state.write({ ...failed, failures: failed.failures + 1 });
     scheduleRetry(ctx);
   }
 }
@@ -414,11 +447,14 @@ export function openPanel(options: PanelOptions): Transport {
     path: options.path,
     serial: options.serial ?? nodeSerial(),
     retryMs: options.retryMs ?? RETRY_MS,
+    giveUpAfter: options.giveUpAfter,
+    onGiveUp: options.onGiveUp,
     announce: options.onChange ?? (() => undefined),
     state: cell<Runtime>({
       link: newLink(options.panel),
       queue: Promise.resolve(),
       stopped: false,
+      failures: 0,
     }),
   };
   const refresh = setInterval(() => {

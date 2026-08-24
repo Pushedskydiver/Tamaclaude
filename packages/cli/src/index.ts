@@ -332,6 +332,16 @@ function status(): void {
   );
 }
 
+/**
+ * Failed opens before a supervised daemon exits to be restarted.
+ *
+ * Sixty, at the one-second retry, so a minute of a genuinely absent panel.
+ * Long enough that unplugging to move a monitor does not churn the process,
+ * short enough that a moved port is answered while somebody is still at the
+ * desk to notice.
+ */
+const GIVE_UP_AFTER = 60;
+
 /** Printed for a missing device, an unknown command, and anything help-shaped. */
 const USAGE =
   'usage: tamaclaude daemon [device]\n' +
@@ -370,14 +380,47 @@ async function devicePathFor(argv: readonly string[]): Promise<string> {
  * `tamaclaude daemon` — listen, render, and drive the panel until killed.
  */
 async function daemon(argv: readonly string[]): Promise<void> {
-  const devicePath = await devicePathFor(argv);
+  // **Flags are not device paths.** Adding `--supervised` to the plist made
+  // `argv[0]` a flag, which `chooseDevice` cheerfully accepted as the device
+  // to open — so the agent would have spent forever retrying a port called
+  // `--supervised` while discovery, right there, was never consulted. Caught
+  // before it shipped, and it is the same shape as the finding a review made
+  // one commit earlier about discovery running when a device was named.
+  const devicePath = await devicePathFor(
+    argv.filter((argument) => !argument.startsWith('--')),
+  );
   // Resolved before the socket is opened, so a bad pack fails without leaving
   // a listener behind.
   const resolved = resolvePack();
+  // **`--supervised` is how the daemon learns it will be restarted.**
+  //
+  // Without it the reconnect loop retries the same path forever, which is
+  // right for a person watching a terminal and wrong under an agent: macOS
+  // derives `/dev/cu.usbmodem1101` from the USB *port*, so moving the panel to
+  // the socket next to it changes the path, and the daemon would retry the old
+  // one until the machine was rebooted while the glass held its last frame.
+  // Nothing red, `tamaclaude pack` still correct, and it recurs on every desk
+  // move.
+  //
+  // With it, the loop gives up after a minute and this process exits non-zero.
+  // `KeepAlive` starts it again, `chooseDevice` runs discovery afresh, and the
+  // panel is found wherever it now is. The supervisor this branch installs is
+  // the rediscovery mechanism; teaching `panel.ts` to rediscover would mean
+  // the device package choosing its own port, which is the caller's job.
+  const supervised = argv.includes('--supervised');
   const running = await runDaemon({
     socketPath: defaultSocketPath(),
     devicePath,
     pack: resolved.manifest,
+    giveUpAfter: supervised ? GIVE_UP_AFTER : undefined,
+    onGiveUp: supervised
+      ? (): void => {
+          process.stderr.write(
+            `no panel at ${devicePath} after ${String(GIVE_UP_AFTER)} tries; exiting so the agent can look again\n`,
+          );
+          process.exit(1);
+        }
+      : undefined,
   });
   // The pack is named on the startup line, not just the socket. The failure
   // this whole file is arranged against is a *valid* pack that is the wrong
