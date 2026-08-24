@@ -241,10 +241,11 @@ function subagentText(sessions: readonly Session[]): string {
  *
  * **This is not the rule `DONE` is ranked by**, and the first version of this
  * comment claimed it was — twice, here and in `BUILD_PLAN.md`. `DONE` sits at
- * rank 5, below `WORKING` and `THINKING`, and `state.ts` puts the reason in
- * bold: "a payoff belongs on a quiet desk". The birthday line covers both. Two
+ * rank 5, below `WORKING` and `THINKING`, and `state.ts` gives the reason as
+ * "A payoff belongs on a quiet desk". The birthday line covers both. Two
  * independent reviews caught the same sentence, one of them noting that the
- * paragraph cited as support argues the opposite.
+ * paragraph cited as support argues the opposite — and a third caught the
+ * correction claiming that sentence was bold, which it is not.
  *
  * They share one half — neither covers an attention state — and differ on the
  * other for two reasons. `STATE_RANK` decides which session owns the *stage*,
@@ -322,8 +323,10 @@ function refinedFailureLine(
  * are ahead of it for different reasons, and an earlier version of this
  * paragraph gave one reason for both. `refinedFailureLine` genuinely would be
  * pre-empted by the bare `FAILED` key. `birthdayLine` would not — it fires
- * only on states that have no mapped entry in any pack written so far, so what
- * it actually steps in front of is `panel.tool` and the idle rotation.
+ * only on states that have no mapped entry in the one pack written so far, so
+ * what it actually steps in front of is everything below: `panel.tool` for
+ * `WORKING` and `DONE`, the idle rotation for `IDLE`, and the last-resort
+ * lowercased state name for `THINKING` and `ASLEEP`, which reach neither.
  *
  * That distinction is not academic: `BUILD_PLAN.md` schedules mapped quips for
  * more states in Stage 5, and on the day the birthday will take precedence

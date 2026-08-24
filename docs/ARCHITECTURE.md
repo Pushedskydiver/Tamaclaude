@@ -170,15 +170,15 @@ protocol <- device <- daemon
 protocol <- hooks
 ```
 
-| Package    | Owns                                                        | May import                                |
-| ---------- | ----------------------------------------------------------- | ----------------------------------------- |
-| `protocol` | Wire format, RLE RGB565 codec, dirty-rect diffing           | —                                         |
-| `packs`    | Pack manifest schema + loader, palettes, quips              | `protocol`                                |
-| `renderer` | Virtual 172×320 screen, scene graph, sprite playback, fonts | `packs`, `protocol`                       |
-| `device`   | USB-CDC transport; firmware source lives here               | `protocol`                                |
-| `daemon`   | Session state machine, tool→state mapping, transports       | `renderer`, `packs`, `device`, `protocol` |
-| `hooks`    | The binary Claude Code executes on hook events              | `protocol`                                |
-| `cli`      | `tamaclaude status\|pack\|dev`                              | everything                                |
+| Package    | Owns                                                          | May import                                |
+| ---------- | ------------------------------------------------------------- | ----------------------------------------- |
+| `protocol` | Wire format, RLE RGB565 codec, dirty-rect diffing             | —                                         |
+| `packs`    | Pack manifest schema, palettes, quips (no loader — see below) | `protocol`                                |
+| `renderer` | Virtual 172×320 screen, scene graph, sprite playback, fonts   | `packs`, `protocol`                       |
+| `device`   | USB-CDC transport; firmware source lives here                 | `protocol`                                |
+| `daemon`   | Session state machine, tool→state mapping, transports         | `renderer`, `packs`, `device`, `protocol` |
+| `hooks`    | The binary Claude Code executes on hook events                | `protocol`                                |
+| `cli`      | `tamaclaude status\|pack\|dev`                                | everything                                |
 
 Enforced by `eslint-plugin-boundaries`. Adding an edge means editing
 `eslint.config.ts` deliberately, which is the point.
@@ -203,7 +203,12 @@ defect.
 ## Packs
 
 A pack is the customisation surface: a palette, a quip table, an optional
-birthday, props and an optional logo. Config selects one; nothing else changes.
+birthday, props and an optional logo.
+
+**Config does not select one yet.** The CLI reads `packs/example` by a
+repo-relative path and `packages/packs` has no loader at all — it validates a
+manifest someone else read. `BUILD_PLAN.md`'s Stage 3 packaging item is where
+that changes; until then a pack swap is an edit to the example.
 
 **The character is not per-pack.** Clawd is shared — one base geometry, one
 animation set, recoloured and re-dressed per pack. Making the character

@@ -4,8 +4,10 @@ The reference pack. Deliberately generic — this is the one pack committed to a
 public repo, so it demonstrates the format and nothing else.
 
 A pack is the customisation surface: a palette, a quip table, an optional
-birthday, props and an optional logo. Point the config at a different pack and every screen changes,
-with no rebuild and no reflash.
+birthday, props and an optional logo. Pointing at a different pack is meant to
+change every screen with no rebuild and no reflash — **but the selection
+mechanism is not built.** The CLI reads this directory by a repo-relative path,
+so today a pack swap means editing these files.
 
 The character is **not** in the pack. Clawd is shared and recoloured via the
 two colour groups in `assets/clawd/base.svg` — making him swappable would mean

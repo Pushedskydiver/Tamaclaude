@@ -225,10 +225,15 @@ describe('the payoff against other sessions', () => {
 describe('needsAttention', () => {
   it('is exactly the three states that ask for a human', () => {
     // Pinned by extension rather than by rank, because the whole point of the
-    // predicate is that callers stop knowing the rank. Written against
-    // `SESSION_STATES` so a new state cannot be added without landing on one
-    // side of this or the other — an omission here would be a state the
-    // message band silently decides is safe to cover.
+    // predicate is that callers stop knowing the rank.
+    //
+    // What forces a *new* state to be considered is not this test — a new
+    // non-attention state leaves `asking` unchanged and this stays green. It
+    // is `STATE_RANK` being a total `Record<SessionState, number>`, which
+    // fails `tsc` until the state is ranked. This pins the extension so that
+    // ranking it into the attention tier is a visible change rather than a
+    // silent one; an earlier version of this comment credited the test with
+    // the type system's work.
     const asking = SESSION_STATES.filter((state) => needsAttention(state));
     expect([...asking]).toEqual(['NEEDS_PERMISSION', 'FAILED', 'WAITING']);
   });

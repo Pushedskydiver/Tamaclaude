@@ -274,81 +274,127 @@ describe('what the panel says', () => {
     // feature exists to prevent.
     const birthdayPack = parsePackManifest({
       ...pack,
+      // A mapped quip on a *non-attention* state, which the example pack has
+      // none of — its three keys are all attention states. Without one, moving
+      // the birthday lookup to sit after the mapped lookup left the whole
+      // suite green, so the precedence this function exists to establish was
+      // asserted nowhere.
+      quips: {
+        ...pack.quips,
+        mapped: { ...pack.quips.mapped, IDLE: 'nothing doing' },
+      },
       birthday: { date: '09-23', quip: 'happy birthday' },
     });
     const onTheDay = new Date(2026, 8, 23, 10, 0, 0).getTime();
     const dayBefore = new Date(2026, 8, 22, 10, 0, 0).getTime();
 
-    // Built at the instant they are resolved at, not at the file's `NOW` —
-    // which is 14 Nov 2023, two years and ten months before the birthday under
-    // test. The first version of this test used the `after(...)` helper above,
-    // so every session was long past `EVICT_AFTER_MS` by the time the scene
+    // Built at the instant it is resolved at, not at the file's `NOW` — which
+    // is 14 Nov 2023, two years and ten months before the birthday under test.
+    // The first version of this test used the `after(...)` helper above, so
+    // every session was long past `EVICT_AFTER_MS` by the time the scene
     // rendered and the "blocked" panel it asserted against was an empty desk.
-    // It passed, and it was checking nothing.
     const at = (events: readonly HookEvent[], when: number): Registry =>
       events.reduce<Registry>(
         (registry, event) => observe(registry, event, when),
         createRegistry(when),
       );
-    const say = (events: readonly HookEvent[], when: number, at_ = when) =>
-      sceneFor({ registry: at(events, at_), pack: birthdayPack, now: when })
-        .message;
 
-    // Every state, and whether the birthday may cover it. Written as a table
-    // over all eight because two mutants survived the previous version: a
-    // guard narrowed to `state === 'NEEDS_PERMISSION'` (dropping `FAILED` and
-    // `WAITING` in silence) and one widened to `state !== 'IDLE'`. Neither
-    // could be seen by a test that only exercised `IDLE` and one attention
-    // state.
-    const covered: readonly (readonly [string, readonly HookEvent[]])[] = [
-      ['THINKING', [{ sessionId: 's', kind: 'UserPromptSubmit' }]],
-      ['WORKING', [{ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }]],
-      ['IDLE', [{ sessionId: 's', kind: 'Stop' }]],
-      ['ASLEEP', [{ sessionId: 's', kind: 'SessionEnd' }]],
-    ];
-    for (const [state, events] of covered) {
-      expect(say(events, onTheDay), state).toBe('happy birthday');
-    }
+    /**
+     * One row: assert the events really produce `state`, then assert whether
+     * the birthday covers it.
+     *
+     * **The state assertion is the point.** The previous version of this table
+     * asserted only the message, and two of its rows silently did not produce
+     * the state they named: `SessionEnd` sets `endedAt`, so the session is not
+     * live and the panel is an empty desk resolving to `IDLE` with no sessions
+     * — the exact failure the comment above says the version before it fell
+     * into, four lines further down — and `PreToolUse` alone never promotes to
+     * `DONE`, because `effectiveState` returns early for any stored state that
+     * is not `IDLE`. The table claimed eight states and covered six, and a
+     * mutant that made the birthday step aside for `DONE` and `ASLEEP` survived
+     * the entire suite. A message-only assertion cannot see a mislabelled row.
+     */
+    const check = (row: {
+      readonly state: string;
+      readonly events: readonly HookEvent[];
+      readonly celebrates: boolean;
+      readonly builtAt?: number;
+    }): void => {
+      const { state, events, celebrates, builtAt = onTheDay } = row;
+      const registry = at(events, builtAt);
+      expect(resolvePanel(registry, onTheDay).state, `${state} setup`).toBe(
+        state,
+      );
+      const { message } = sceneFor({
+        registry,
+        pack: birthdayPack,
+        now: onTheDay,
+      });
+      if (celebrates) expect(message, state).toBe('happy birthday');
+      else expect(message, state).not.toBe('happy birthday');
+    };
 
-    const guarded: readonly (readonly [string, readonly HookEvent[]])[] = [
-      ['NEEDS_PERMISSION', [{ sessionId: 's', kind: 'PermissionRequest' }]],
-      ['FAILED', [{ sessionId: 's', kind: 'StopFailure' }]],
-      [
-        'FAILED:rate_limit',
-        [{ sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' }],
+    // Covered: the birthday replaces the line. `IDLE` also carries a mapped
+    // quip, so this is what pins the lookup order.
+    const P = { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' } as const;
+    check({
+      state: 'THINKING',
+      events: [{ sessionId: 's', kind: 'UserPromptSubmit' }],
+      celebrates: true,
+    });
+    check({ state: 'WORKING', events: [P], celebrates: true });
+    check({
+      state: 'IDLE',
+      events: [{ sessionId: 's', kind: 'Stop' }],
+      celebrates: true,
+    });
+    check({
+      state: 'ASLEEP',
+      events: [{ sessionId: 's', kind: 'Stop' }],
+      celebrates: true,
+      builtAt: onTheDay - 300_000,
+    });
+    check({
+      state: 'DONE',
+      events: [P, { sessionId: 's', kind: 'Stop' }],
+      celebrates: true,
+      builtAt: onTheDay - 45_000,
+    });
+
+    // Guarded: something is asking for a human, so it still says so.
+    check({
+      state: 'NEEDS_PERMISSION',
+      events: [{ sessionId: 's', kind: 'PermissionRequest' }],
+      celebrates: false,
+    });
+    check({
+      state: 'FAILED',
+      events: [{ sessionId: 's', kind: 'StopFailure' }],
+      celebrates: false,
+    });
+    check({
+      state: 'FAILED',
+      events: [
+        { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
       ],
-    ];
-    for (const [state, events] of guarded) {
-      expect(say(events, onTheDay), state).not.toBe('happy birthday');
-    }
+      celebrates: false,
+    });
+    check({
+      state: 'WAITING',
+      events: [{ sessionId: 's', kind: 'Notification' }],
+      celebrates: false,
+      builtAt: onTheDay - 60_000,
+    });
 
-    // `WAITING` needs the clock to move, so the notification lands a minute
-    // earlier — still the same local day, which is the point.
+    // And on any other day the mapped quip wins, which is the same assertion
+    // read backwards: the birthday is the only reason it ever loses.
     expect(
-      say(
-        [{ sessionId: 's', kind: 'Notification' }],
-        onTheDay,
-        onTheDay - 60_000,
-      ),
-      'WAITING',
-    ).not.toBe('happy birthday');
-
-    // `DONE` is covered, and is the case worth naming: it is a payoff, so it
-    // reads like something the birthday should defer to. It is not an
-    // attention state, and its own art is untouched either way.
-    expect(
-      say(
-        [{ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }],
-        onTheDay,
-        onTheDay - 45_000,
-      ),
-      'DONE',
-    ).toBe('happy birthday');
-
-    // And not on any other day: the idle rotation, not the quip.
-    expect(say([{ sessionId: 's', kind: 'Stop' }], dayBefore)).not.toBe(
-      'happy birthday',
-    );
+      sceneFor({
+        registry: at([{ sessionId: 's', kind: 'Stop' }], dayBefore),
+        pack: birthdayPack,
+        now: dayBefore,
+      }).message,
+    ).toBe('nothing doing');
   });
 
   it('picks overheated for a rate limit on the path the panel actually uses', () => {

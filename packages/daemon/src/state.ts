@@ -103,7 +103,7 @@ export function stateRank(state: SessionState): number {
  * which is what the message band first reached across the boundary for. Two
  * exports let the caller open-code the comparison, and a review demonstrated
  * the cost: replacing the caller's guard with `state === 'NEEDS_PERMISSION'`
- * left 21 tests green, silently dropping `FAILED` and `WAITING`. With the
+ * silently dropped `FAILED` and `WAITING` with nothing red anywhere. With the
  * comparison beside the table it reads, that mutant cannot be written.
  *
  * The extension is pinned by a test, because the hazard the old shape carried

@@ -1,7 +1,8 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table, props and an optional logo. The character
+ * A pack is a palette, a quip table, an optional birthday, props and an
+ * optional logo. The character
  * is deliberately not part of it — Clawd is shared across packs and recoloured,
  * so there is one base geometry and one animation set. Swapping the pack
  * changes every screen without a rebuild or a reflash.
@@ -117,8 +118,9 @@ export function packPalette(manifest: PackManifest): readonly number[] {
  * celebrate is the day the person next to it is having, not UTC's. `new Date`
  * `getMonth`/`getDate` are host-local — `new Date(ms)` is not, it names an
  * absolute instant — so this lands on local midnight boundaries without any
- * timezone arithmetic. The suite pins a non-UTC zone in `vitest.config.ts`,
- * because CI runs UTC and a local-vs-UTC test under UTC is a tautology.
+ * timezone arithmetic. `vitest.config.ts` pins a zone that is off UTC for the
+ * dates the tests use, because CI runs UTC and a local-vs-UTC test under UTC
+ * is a tautology.
  *
  * A pack with no `birthday` is never a birthday, so the whole feature is opt-in
  * and the default pack behaves exactly as it did.

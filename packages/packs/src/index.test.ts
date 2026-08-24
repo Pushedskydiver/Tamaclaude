@@ -89,7 +89,7 @@ describe('the birthday', () => {
     // comment claimed the opposite — that building from local components made
     // it hold "in any timezone the suite runs in, including CI" — which was
     // true and worthless: CI is `ubuntu-latest` with no `TZ`. A review planted
-    // `getUTCMonth`/`getUTCDate` and all 11 tests here stayed green.
+    // `getUTCMonth`/`getUTCDate` and every test in this file stayed green.
     //
     // `vitest.config.ts` now pins Europe/London. The offset assertion is the
     // point: it fails loudly if that pin is lost, or if these dates ever move
@@ -157,8 +157,24 @@ describe('the birthday', () => {
         parsePackManifest({ ...valid, birthday: { date, quip: 'x' } }),
       ).toThrow();
     }
-    // The legal end-of-month days still pass, so this is not just stricter.
-    for (const date of ['01-31', '04-30', '02-29', '12-31']) {
+    // All twelve legal end-of-month days still pass, so this is not merely
+    // stricter. The first version of this loop tested four of the twelve and
+    // called them "the legal end-of-month days" — the sample was the thing
+    // that was wrong, not the behaviour, which is the harder kind to notice.
+    for (const date of [
+      '01-31',
+      '02-29',
+      '03-31',
+      '04-30',
+      '05-31',
+      '06-30',
+      '07-31',
+      '08-31',
+      '09-30',
+      '10-31',
+      '11-30',
+      '12-31',
+    ]) {
       expect(() =>
         parsePackManifest({ ...valid, birthday: { date, quip: 'x' } }),
       ).not.toThrow();
