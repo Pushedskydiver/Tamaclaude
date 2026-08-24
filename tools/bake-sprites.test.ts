@@ -279,25 +279,29 @@ describe('the baked animations', () => {
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
- * **The bound is an escape that every bake takes, and this gate has never
- * gated anything.** Measured on 24 Aug across all eleven animations: the
- * contiguous bottom band exceeds `LEG_BAND` in every one, so `hipGap` returns
- * 0 through the early return without ever looking for a gap. Windowing the row
- * test to the legs' own columns does not change it.
+ * **The bound is an escape, and what takes it is a prop rather than a pose.**
+ * Measured on 24 Aug by planting the defect this exists to catch — `idle`'s
+ * torso lifted two units clear of its legs, re-baked:
  *
- * The cause is structural rather than per-animation. The walk assumes it can
- * pass up through the legs and out the other side, and in `base.svg` the legs
- * are flush against the torso — legs at y13-15, torso at y6-13 — so the band
- * from the feet runs through the whole body, seventy-odd rows, and trips the
- * bound every time. An earlier version of this comment said one bake took the
- * escape and named `overheated`; that was true and far too narrow.
+ * - Plain poses are covered. `hipGap` reports 15 on the lifted `idle`, because
+ *   with a real gap the band from the feet is the legs alone, 16 device rows,
+ *   which is inside the bound. The 0 it returns on a *correct* pose is the
+ *   right answer arrived at cheaply, not a vacuous one.
+ * - **A prop that bridges the body and the ground defeats it.** The same lift
+ *   planted in `payoff`, whose vehicle spans the rows beside his legs, reports
+ *   0. So does `overheated`, splooted with no legs at all.
  *
- * **So this assertion is currently decoration.** It is left in place, failing
- * nothing and claiming nothing, because deleting it would lose the one written
- * account of what it was for. What would actually detect a body lifted off its
- * legs is a connectivity check — a single body component per frame — which
- * `componentSizes` below already computes for the star clearance and which
- * nothing yet applies here.
+ * A connectivity check was built to replace this and reverted, which is worth
+ * recording so nobody builds it twice. Asking whether the bottom-most solid
+ * pixel in the legs' columns belongs to the largest component catches the
+ * plain lift exactly as this does — and misses the same `payoff` case, because
+ * the vehicle touches both his arm and his legs, so a lifted torso is still
+ * one component. It is also strictly worse for a single detached leg, which
+ * falls below any sensible solidity threshold and stops being considered.
+ *
+ * So the honest statement is that **`payoff` is unprotected here** and no
+ * cheap mask-level test changes that. What would is knowing which pixels are
+ * the character and which are the prop, which a mask does not carry.
  */
 const LEG_BAND = 24;
 
