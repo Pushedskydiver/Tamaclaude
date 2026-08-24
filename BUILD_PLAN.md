@@ -269,7 +269,7 @@ that is not waiting on the design freeze.
       fallback this design originally had, on the grounds that it _was_ the
       silent-wrong-pack failure rather than a guard against it.
 - [~] **launchd agent built; `brew` tap deliberately not.** `tamaclaude
-  install-agent` writes `~/Library/LaunchAgents/com.tamaclaude.daemon.plist`
+install-agent` writes `~/Library/LaunchAgents/com.tamaclaude.daemon.plist`
   — dry run by default, `--apply` to install, modelled on
   `tamaclaude-install-hooks`. It resolves the pack _before_ writing, because
   an agent installed where no pack exists would exit 2 on every start and
@@ -278,7 +278,7 @@ that is not waiting on the design freeze.
   opens. `bootout` precedes `bootstrap` so a second install cannot leave
   the first agent running with stale arguments.
   **The plist runs `process.execPath`, not the shebang.** `#!/usr/bin/env
-  node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
+node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   on any machine using a version manager, which is this one — silently,
   every ten seconds, forever.
   **No brew tap.** A second repo, a formula, a versioned tarball and
