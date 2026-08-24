@@ -9,7 +9,12 @@
  */
 import type { ResolvedPack } from './pack.js';
 
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 import {
   animationFor,
@@ -22,6 +27,12 @@ import {
 import { findPanels, nodeUsb } from '@tamaclaude/device';
 import { isBirthday } from '@tamaclaude/packs';
 
+import {
+  AGENT_LABEL,
+  agentPlist,
+  agentPlistPath,
+  describeAgentInstall,
+} from './agent.js';
 import { runDaemon } from './daemon.js';
 import { chooseDevice } from './device.js';
 import { resolvePack } from './pack.js';
@@ -85,6 +96,74 @@ function pack(): void {
   );
 }
 
+/**
+ * `tamaclaude install-agent` — start the daemon at login, and keep it started.
+ *
+ * **Dry run by default**, exactly like `tamaclaude-install-hooks`, and for the
+ * same reason: it writes into somebody's `~/Library/LaunchAgents` and loads
+ * something that will run without them watching.
+ *
+ * `--apply` resolves the pack *before* writing anything. That ordering is the
+ * point rather than tidiness: an agent installed on a Mac with no pack exits 2
+ * on every start, and `KeepAlive` cannot tell exit 2 from exit 1 — launchd
+ * only sees zero versus non-zero — so it would restart forever, writing `no
+ * pack configured` into a log nobody opens while the panel showed whatever it
+ * last showed. Refusing to install is the only place that loop can be stopped.
+ *
+ * `bootout` before `bootstrap`, always. A plist already loaded keeps running
+ * with its old arguments no matter what is written to disk, so a second
+ * `--apply` would look like it succeeded while the first agent carried on —
+ * and the second `--apply` is exactly what happens on the day somebody fixes
+ * a path.
+ */
+async function installAgent(argv: readonly string[]): Promise<void> {
+  const apply = argv.includes('--apply');
+  const home = homedir();
+  const plistPath = agentPlistPath(home);
+  // Resolved first, so `--apply` cannot install an agent that cannot start.
+  // The error is `pack.ts`'s, which names the path and the reason.
+  const resolved = resolvePack();
+  const options = {
+    node: process.execPath,
+    script: fileURLToPath(import.meta.url),
+    pack: resolved.directory,
+    socket: defaultSocketPath(),
+    log: join(home, '.tamaclaude', 'daemon.log'),
+  };
+  process.stdout.write(
+    describeAgentInstall(options, plistPath, existsSync(plistPath)),
+  );
+
+  const panels = await findPanels(nodeUsb());
+  process.stdout.write(
+    `panel      ${panels[0]?.path ?? 'none found right now — the agent will look again each start'}\n`,
+  );
+
+  if (!apply) {
+    process.stdout.write(
+      'Dry run: nothing was written. Re-run with --apply to install.\n',
+    );
+    return;
+  }
+  mkdirSync(dirname(plistPath), { recursive: true });
+  mkdirSync(join(home, '.tamaclaude'), { recursive: true });
+  writeFileSync(plistPath, agentPlist(options));
+  const domain = `gui/${String(process.getuid?.() ?? 0)}`;
+  // Unloading something that is not loaded is not an error worth stopping for,
+  // so its failure is ignored and `bootstrap`'s is not.
+  try {
+    execFileSync('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`], {
+      stdio: 'ignore',
+    });
+  } catch {
+    // Not loaded. Fine.
+  }
+  execFileSync('launchctl', ['bootstrap', domain, plistPath], {
+    stdio: 'inherit',
+  });
+  process.stdout.write(`Installed and started. Logs go to ${options.log}\n`);
+}
+
 /** Printed for a missing device, an unknown command, and anything help-shaped. */
 const USAGE =
   'usage: tamaclaude daemon [device]\n' +
@@ -93,7 +172,9 @@ const USAGE =
   '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n' +
   '  the pack comes from $TAMACLAUDE_PACK, else ~/.tamaclaude/pack/\n' +
   '  `tamaclaude pack` says which one, and when its birthday fires\n' +
-  '  with no command, prints one line of smoke-test output\n';
+  '  with no command, prints one line of smoke-test output\n' +
+  '       tamaclaude install-agent [--apply]\n' +
+  '  starts the daemon at login; dry run unless --apply\n';
 
 async function devicePathFor(argv: readonly string[]): Promise<string> {
   const chosen = chooseDevice(argv[0], await findPanels(nodeUsb()));
@@ -190,6 +271,8 @@ try {
     await daemon(rest);
   } else if (command === 'pack') {
     pack();
+  } else if (command === 'install-agent') {
+    await installAgent(rest);
   } else if (command === undefined) {
     smoke();
   } else {

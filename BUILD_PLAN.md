@@ -268,21 +268,37 @@ that is not waiting on the design freeze.
       example pack's generic quips and no birthday. A spec review killed the
       fallback this design originally had, on the grounds that it _was_ the
       silent-wrong-pack failure rather than a guard against it.
-- [ ] launchd agent; `brew` tap formula. **The assumption the pack resolver
-      now rests on is that something sets `TAMACLAUDE_PACK` in production, and
-      nothing does yet** — this item is where the plist that sets it gets
-      written. Until then the daemon is started by hand and the variable is
-      typed by hand. Failure is loud rather than silent, which is the point,
-      but loud on the day is still on the day. Nothing in the repo tests an
-      installed layout.
-      **If this slips, the agreed fallback is not "add a default pack" but
-      "fall back and say so on the glass"** — the message band already exists
-      and `describePack` already composes the line. A review made the case:
-      after 23 Sep the asymmetry inverts, since a missing birthday costs one
-      day a year and a panel that will not start costs every day, and a
-      crash-looping launchd agent writing to a log nobody reads is not louder
-      than a fallback, only differently silent. Recorded now so the argument
-      does not have to happen in the last week.
+- [~] **launchd agent built; `brew` tap deliberately not.** `tamaclaude
+  install-agent` writes `~/Library/LaunchAgents/com.tamaclaude.daemon.plist`
+  — dry run by default, `--apply` to install, modelled on
+  `tamaclaude-install-hooks`. It resolves the pack _before_ writing, because
+  an agent installed where no pack exists would exit 2 on every start and
+  `KeepAlive` cannot tell exit 2 from exit 1 (launchd sees zero versus
+  non-zero only), so it would restart forever writing into a log nobody
+  opens. `bootout` precedes `bootstrap` so a second install cannot leave
+  the first agent running with stale arguments.
+  **The plist runs `process.execPath`, not the shebang.** `#!/usr/bin/env
+  node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
+  on any machine using a version manager, which is this one — silently,
+  every ten seconds, forever.
+  **No brew tap.** A second repo, a formula, a versioned tarball and
+  un-privating the package, for one Mac. `git clone && pnpm install` is not
+  a one-line install either: it needs Xcode CLT, node and pnpm first. The
+  decision is to install it in person and let the printed card be a
+  keepsake carrying something true — the repo QR and "if it ever stops,
+  open Terminal and run `tamaclaude pack`".
+  **Still open:** the daemon resolves the device once at startup, so a
+  panel moved to a different USB port while it runs leaves it retrying a
+  dead path. Discovery belongs inside the reconnect loop in
+  `packages/device/src/panel.ts`, whose `path` is a `string` today.
+  **If this slips, the agreed fallback is not "add a default pack" but
+  "fall back and say so on the glass"** — the message band already exists
+  and `describePack` already composes the line. A review made the case:
+  after 23 Sep the asymmetry inverts, since a missing birthday costs one
+  day a year and a panel that will not start costs every day, and a
+  crash-looping launchd agent writing to a log nobody reads is not louder
+  than a fallback, only differently silent. Recorded now so the argument
+  does not have to happen in the last week.
 
 **Exit:** real Claude Code sessions drive the panel, placeholder art.
 
@@ -482,7 +498,12 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 - [ ] Run it on Alex's desk all week. Fix what irritates. No new features.
 - [ ] Assemble board in printed case
-- [ ] Dry-run the full install on a clean macOS user account
+- [ ] Dry-run the full install on a clean macOS user account. **Bring this
+      forward — it is the highest-information hour left in the plan.** The
+      untested assumption under everything else is that a Mac which is not this
+      one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
+      full `tsc -b`. Finding out on 19 Sep leaves four days, and the recovery
+      for "no toolchain" is a packaging project rather than a bug fix.
 - [ ] Printed card: QR to repo + one-line install
 - [ ] Flash the gift board (not the dev board) with the splash
 
