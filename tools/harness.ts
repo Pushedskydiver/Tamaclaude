@@ -22,8 +22,10 @@
  * **Text layout within a band is this page's approximation, and the gap is now
  * the other way round from what this comment used to say.** It claimed "the
  * renderer draws none of it yet". The renderer draws all of it — the status
- * band, the clock, the session chips, the subagent badge and the message band,
- * seen on the real panel on 21 Aug — while this page still reimplements the
+ * band, the clock, the session chips, the subagent badge and the message band.
+ * The 21 Aug hardware record names the clock, the chips and the message band;
+ * the badge is wired and was not in that session — while this page still
+ * reimplements the
  * layout in browser JavaScript. So the two agree by inspection, which is
  * exactly what Stage 2's exit criterion ("browser and panel show the same
  * thing") is written to rule out, and the gap has widened rather than closed:
@@ -34,7 +36,8 @@
  * here, because it is not the glyph positioning the device performs.
  *
  * It is driven by rendered frames, not by Claude Code. Injecting synthetic
- * events is a separate unchecked Stage 1 line; Stage 3 itself has landed.
+ * events is a separate unchecked Stage 1 line; Stage 3 has landed for the
+ * daemon and the panel, with remote transport still open.
  */
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
@@ -289,14 +292,16 @@ ${controls(animations)}
   <div><div>zoomed</div><div id="zoomed"></div></div>
 </div>
 <p class="note">
-  Driven by rendered frames, not by Claude Code &mdash; wiring it to real
-  session events is Stage 3. Band geometry, sprite slots, scales and the
-  landscape crop all come from <code>@tamaclaude/renderer</code>, and the panel
-  text renders in Departure Mono, the typeface the panel will use. What is
-  <em>not</em> yet what gets built: the renderer draws none of this today, so
-  text positioning within a band is this page's approximation rather than the
-  real thing. Judge band heights and sprite scale here; judge glyph-level
-  layout once the canvas sink exists.
+  Driven by rendered frames, not by Claude Code &mdash; injecting synthetic
+  events is a separate Stage 1 line. Band geometry, sprite slots, scales and
+  the landscape crop all come from <code>@tamaclaude/renderer</code>, and the
+  panel text renders in Departure Mono, the typeface the panel will use.
+  What is <em>not</em> what gets built: <strong>this page draws the bands
+  itself</strong>. The renderer draws all of them &mdash; and draws 2&times;
+  bitmap status text no browser view renders at all &mdash; so the two agree
+  only by inspection, which is what Stage 2's exit criterion exists to rule
+  out. Judge band heights and sprite scale here; do not judge glyph
+  positioning here, because it is not the positioning the device performs.
   <code>mcp__linear__create_issue</code> is included because a long MCP tool
   name is the case the message band has to survive.
 </p>

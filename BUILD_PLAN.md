@@ -287,6 +287,15 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   decision is to install it in person and let the printed card be a
   keepsake carrying something true — the repo QR and "if it ever stops,
   open Terminal and run `tamaclaude pack`".
+  `tamaclaude status` asks launchd whether it is actually running, and says so
+  when the node it was installed with has been upgraded away — the failure a
+  version-pinned `process.execPath` creates, and the one `tamaclaude pack`
+  cannot see because it runs under the shell's node. `install-agent --apply`
+  runs the same check rather than claiming success: `bootstrap` exiting 0 means
+  _loaded_, not running, and the likeliest install-day failure is a daemon
+  already running by hand, which makes the agent die on `already listening` and
+  restart every thirty seconds while the installer says it worked. Reproduced
+  and fixed.
   `tamaclaude uninstall-agent` stops it and deletes the plist, because an agent
   with `RunAtLoad` comes back at every login and the only way off otherwise is
   `launchctl bootout` typed correctly by someone who knows it exists — which is

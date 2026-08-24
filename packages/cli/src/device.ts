@@ -26,9 +26,9 @@
  * drive the wrong panel while reporting itself online — a failure that
  * survives a whole soak week.
  *
- * Separated from the `process.exit` below so the decision can be tested
- * without a board — the refusal branches are the ones worth testing and the
- * ones no CI machine can reach by having hardware plugged in.
+ * Separated from the `process.exit` in `index.ts`'s caller so the decision can
+ * be tested without a board — the refusal branches are the ones worth testing
+ * and the ones no CI machine can reach by having hardware plugged in.
  */
 export function chooseDevice(
   given: string | undefined,

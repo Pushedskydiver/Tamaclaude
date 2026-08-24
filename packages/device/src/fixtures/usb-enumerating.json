@@ -23,18 +23,6 @@
         "idVendor": 12346
       },
       {
-        "IORegistryEntryChildren": [
-          {
-            "IORegistryEntryChildren": [
-              {
-                "IOObjectClass": "IOSerialBSDClient"
-              }
-            ],
-            "IOObjectClass": "AppleUSBACMData",
-            "idProduct": 4097,
-            "idVendor": 12346
-          }
-        ],
         "IOObjectClass": "IOUSBHostInterface",
         "idProduct": 4097,
         "USB Product Name": "USB JTAG/serial debug unit",

@@ -3,10 +3,12 @@
  *
  * ## Why this is not the guessing the CLI forbids
  *
- * `packages/cli/src/index.ts` has argued from the start that "guessing which
- * `/dev/cu.*` is the panel is a worse failure than being told: the wrong guess
- * writes packets at somebody's modem." That objection is right, and it retires
- * two of the three obvious designs rather than this one.
+ * `packages/cli/src/device.ts` carries the objection, added on 21 Aug when the
+ * daemon first drove real hardware: "guessing which `/dev/cu.*` is the panel is
+ * a worse failure than being told: the wrong guess writes packets at somebody's
+ * modem." It is right, and it retires two of the three obvious designs rather
+ * than this one. (It lived in `index.ts` until the commit that added this file
+ * moved it.)
  *
  * **Probing by opening ports is disproved, not merely risky.** There is no
  * handshake to listen for: `report.ts` says "a device that has received
@@ -15,9 +17,11 @@
  * and the only way to make a device speak is to write at it — which is the
  * forbidden thing, exactly. Opening is destructive before any byte is written
  * besides: `serial.ts` runs `stty` on the path, rewriting the line discipline
- * of whatever is on the other end, and then toggles DTR/RTS, which is the
- * mechanism esptool uses to reboot an ESP32 and which drops an Arduino into
- * its bootloader.
+ * of whatever is on the other end, and then opens it — and `link.ts` records
+ * that "opening the port toggles DTR/RTS and the USB-Serial/JTAG peripheral
+ * reboots the chip", which is the mechanism esptool uses. Nothing in this repo
+ * establishes what that does to somebody else's board; the point is only that
+ * it is not nothing, and that this reads descriptors instead of finding out.
  *
  * This asks the IORegistry what is plugged in. Nothing is opened, nothing is
  * written, nothing is reset, and no port belonging to anyone else is touched.
@@ -201,10 +205,11 @@ async function toJson(xml: string): Promise<string> {
  * is world-readable and triggers no TCC prompt.
  *
  * `-a` for XML rather than the indented text tree, deliberately. In the text
- * form the hierarchy is carried by indentation and `IOCalloutDevice` sits four
- * levels below `idVendor`, so a line-oriented read pairs the wrong ones as
- * soon as a second USB device appears — which is precisely the case this
- * exists to get right.
+ * form the hierarchy is carried by indentation and the callout sits three
+ * nodes below the device — interface, `AppleUSBACMData`, `IOSerialBSDClient` —
+ * so a line-oriented read pairs the wrong `idVendor` with the wrong callout as
+ * soon as a second USB device appears, which is precisely the case this exists
+ * to get right.
  */
 export function nodeUsb(): UsbSystem {
   return {

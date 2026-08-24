@@ -32,6 +32,8 @@ import {
   agentPlist,
   agentPlistPath,
   describeAgentInstall,
+  describeAgentStatus,
+  parseAgentStatus,
 } from './agent.js';
 import { runDaemon } from './daemon.js';
 import { chooseDevice } from './device.js';
@@ -148,21 +150,79 @@ async function installAgent(argv: readonly string[]): Promise<void> {
   mkdirSync(dirname(plistPath), { recursive: true });
   mkdirSync(join(home, '.tamaclaude'), { recursive: true });
   writeFileSync(plistPath, agentPlist(options));
-  const domain = `gui/${String(process.getuid?.() ?? 0)}`;
+  const domain = launchdDomain();
   // Unloading something that is not loaded is not an error worth stopping for,
   // so its failure is ignored and `bootstrap`'s is not.
-  try {
-    execFileSync('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`], {
-      stdio: 'ignore',
-    });
-  } catch {
-    // Not loaded. Fine.
-  }
+  bootOut(domain, 'install');
   await waitUntilUnloaded(domain);
   execFileSync('launchctl', ['bootstrap', domain, plistPath], {
     stdio: 'inherit',
   });
-  process.stdout.write(`Installed and started. Logs go to ${options.log}\n`);
+  // **Bootstrap exiting 0 means loaded, not running.** Checked rather than
+  // claimed, after a pause long enough for a start failure to have happened —
+  // the likeliest one being a `tamaclaude daemon` already running by hand,
+  // which makes the agent exit 1 on `already listening` and restart forever
+  // while the install says it worked.
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const started = parseAgentStatus(agentListing());
+  process.stdout.write(
+    `${describeAgentStatus(started, existsSync(options.node))}\n`,
+  );
+  process.stdout.write(
+    started.pid === undefined
+      ? `It is not running. The log is at ${options.log}\n`
+      : `Installed and running. Logs go to ${options.log}\n`,
+  );
+}
+
+/**
+ * The launchd domain this user's agents live in.
+ *
+ * `getuid` is always present on Darwin, so the missing case is unreachable —
+ * but `gui/0` is not a domain that exists, and this repo's habit is that "I
+ * cannot tell" refuses rather than picks. A default of 0 produced a wrong
+ * answer where a stop belonged.
+ */
+function launchdDomain(): string {
+  const uid = process.getuid?.();
+  if (uid === undefined) {
+    throw new Error('cannot determine the launchd domain: no uid on this host');
+  }
+  return `gui/${String(uid)}`;
+}
+
+/**
+ * Unload the agent, telling "was not loaded" apart from "could not unload".
+ *
+ * **Measured exit codes on this Mac**: `launchctl bootout` on a label that is
+ * not loaded exits 3; `launchctl print` on one exits 113; `print` against a
+ * domain that does not exist exits 112.
+ *
+ * The first version caught every failure and called it "not loaded", so a real
+ * problem — a teardown still in progress, a job in another domain, a
+ * permissions error — was discarded, and the only symptom arrived ten seconds
+ * later from `waitUntilUnloaded` telling the user to run by hand the exact
+ * command that had already failed in silence.
+ *
+ * Returns whether it was running, because `uninstall-agent` says so out loud.
+ */
+function bootOut(domain: string, when: 'install' | 'uninstall'): boolean {
+  try {
+    execFileSync('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`], {
+      stdio: 'pipe',
+    });
+    return true;
+  } catch (cause) {
+    const status = (cause as { readonly status?: number }).status;
+    // 3 is launchd's "no such service", which is the ordinary case on a first
+    // install and on a second uninstall. Anything else is a real failure and
+    // saying so now beats a misleading timeout later.
+    if (status === 3) return false;
+    throw new Error(
+      `could not unload ${AGENT_LABEL} (launchctl exit ${String(status ?? -1)}) while trying to ${when}`,
+      { cause },
+    );
+  }
 }
 
 /**
@@ -220,17 +280,12 @@ async function waitUntilUnloaded(domain: string): Promise<void> {
  */
 function uninstallAgent(): void {
   const plistPath = agentPlistPath(homedir());
-  const domain = `gui/${String(process.getuid?.() ?? 0)}`;
-  try {
-    execFileSync('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`], {
-      stdio: 'ignore',
-    });
-    process.stdout.write(`Stopped ${AGENT_LABEL}\n`);
-  } catch {
-    // Not loaded. That is one of the two ways to already be uninstalled, and
-    // it is not a failure — the other half of the job may still need doing.
-    process.stdout.write(`${AGENT_LABEL} was not running\n`);
-  }
+  const domain = launchdDomain();
+  process.stdout.write(
+    bootOut(domain, 'uninstall')
+      ? `Stopped ${AGENT_LABEL}\n`
+      : `${AGENT_LABEL} was not running\n`,
+  );
   if (existsSync(plistPath)) {
     rmSync(plistPath);
     process.stdout.write(`Removed ${plistPath}\n`);
@@ -239,6 +294,41 @@ function uninstallAgent(): void {
   }
   process.stdout.write(
     'The pack, the socket and the log are left alone; nothing else was touched.\n',
+  );
+}
+
+/** What `launchctl list` says about our label, or undefined if it says nothing. */
+function agentListing(): string | undefined {
+  try {
+    return execFileSync('launchctl', ['list', AGENT_LABEL], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return undefined; // Not loaded.
+  }
+}
+
+/**
+ * `tamaclaude status` — is it actually working?
+ *
+ * **The command the printed card should name.** `tamaclaude pack` answers
+ * "which pack", which is the question a schema cannot answer — but it runs in
+ * the terminal's environment and under the terminal's node, so it answers
+ * cheerfully while a launchd agent is failing to spawn every thirty seconds.
+ * This asks launchd instead.
+ */
+function status(): void {
+  const listing = agentListing();
+  const parsed = parseAgentStatus(listing);
+  const node =
+    /"ProgramArguments"\s*=\s*\(\s*"([^"]+)"/u.exec(listing ?? '')?.[1] ??
+    process.execPath;
+  process.stdout.write(`${describeAgentStatus(parsed, existsSync(node))}\n`);
+  const resolved = resolvePack();
+  process.stdout.write(`pack      ${describePack(resolved)}\n`);
+  process.stdout.write(
+    `log       ${join(homedir(), '.tamaclaude', 'daemon.log')}\n`,
   );
 }
 
@@ -254,10 +344,21 @@ const USAGE =
   '       tamaclaude install-agent [--apply]\n' +
   '  starts the daemon at login; dry run unless --apply\n' +
   '       tamaclaude uninstall-agent\n' +
-  '  stops it and stops it coming back\n';
+  '  stops it and stops it coming back\n' +
+  '       tamaclaude status\n' +
+  '  asks launchd whether it is actually running\n';
 
 async function devicePathFor(argv: readonly string[]): Promise<string> {
-  const chosen = chooseDevice(argv[0], await findPanels(nodeUsb()));
+  // **Discovery runs only when nothing was named.** It used to run first and
+  // unconditionally, so `tamaclaude daemon /dev/cu.usbmodem1101` — the escape
+  // hatch, and what gets typed during the soak week — still shelled to `ioreg`
+  // and `plutil` and died if either did. An override whose whole value is
+  // working when discovery does not must not be built on discovery.
+  const given = argv[0];
+  const chosen = chooseDevice(
+    given,
+    given === undefined ? await findPanels(nodeUsb()) : [],
+  );
   if ('refusal' in chosen) {
     process.stderr.write(`${chosen.refusal}\n${USAGE}`);
     process.exit(2);
@@ -355,6 +456,8 @@ try {
     await installAgent(rest);
   } else if (command === 'uninstall-agent') {
     uninstallAgent();
+  } else if (command === 'status') {
+    status();
   } else if (command === undefined) {
     smoke();
   } else {

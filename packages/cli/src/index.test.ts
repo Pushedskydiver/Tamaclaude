@@ -310,23 +310,62 @@ describe('the tamaclaude binary', () => {
     expect(status).toBe(0);
   });
 
-  it('uninstalls cleanly when nothing is installed', () => {
-    // The path that must never fail: someone runs it twice, or runs it on a
-    // machine where the agent was never installed. An uninstall that errors
-    // when there is nothing to remove teaches people to ignore its output.
-    //
-    // `launchctl bootout` genuinely fails here — the label is not loaded — and
-    // that is the expected half of the answer rather than an error.
-    const { out, status } = run(['uninstall-agent'], {
-      TAMACLAUDE_PACK: EXAMPLE,
-    });
-    expect(out).toContain('was not running');
-    expect(out).toContain('No plist at');
-    // It says what it did *not* touch, because a person running an uninstall
-    // wants to know whether their pack survived it.
-    expect(out).toContain('left alone');
-    expect(status).toBe(0);
-  });
+  /**
+   * **Skipped when the agent is actually installed, and that is not caution.**
+   * `run()` sandboxes `HOME`, which scopes the plist path — but launchd
+   * domains are per-uid, and `uninstall-agent` addresses `gui/$(id -u)`. On a
+   * machine where the agent is running, this test would boot out the real one,
+   * print `Stopped …`, and fail on an assertion about a machine it had just
+   * changed. That is the soak week, and the 19 Sep dry run, and Alex's own
+   * desk after `install-agent --apply`.
+   *
+   * A review found it. The same file already documents an inherited-`HOME` bug
+   * of exactly this shape, which is what makes the second instance worth
+   * naming rather than quietly guarding.
+   */
+  const agentIsInstalled = ((): boolean => {
+    try {
+      spawnSync(
+        'launchctl',
+        [
+          'print',
+          `gui/${String(process.getuid?.() ?? 0)}/com.tamaclaude.daemon`,
+        ],
+        {
+          stdio: 'ignore',
+        },
+      );
+      return (
+        spawnSync('launchctl', [
+          'print',
+          `gui/${String(process.getuid?.() ?? 0)}/com.tamaclaude.daemon`,
+        ]).status === 0
+      );
+    } catch {
+      return false;
+    }
+  })();
+
+  it.skipIf(agentIsInstalled)(
+    'uninstalls cleanly when nothing is installed',
+    () => {
+      // The path that must never fail: someone runs it twice, or runs it on a
+      // machine where the agent was never installed. An uninstall that errors
+      // when there is nothing to remove teaches people to ignore its output.
+      //
+      // `launchctl bootout` genuinely fails here — the label is not loaded — and
+      // that is the expected half of the answer rather than an error.
+      const { out, status } = run(['uninstall-agent'], {
+        TAMACLAUDE_PACK: EXAMPLE,
+      });
+      expect(out).toContain('was not running');
+      expect(out).toContain('No plist at');
+      // It says what it did *not* touch, because a person running an uninstall
+      // wants to know whether their pack survived it.
+      expect(out).toContain('left alone');
+      expect(status).toBe(0);
+    },
+  );
 
   describe('chooseDevice', () => {
     it('takes the device it was given, without looking', () => {

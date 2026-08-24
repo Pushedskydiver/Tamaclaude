@@ -1,0 +1,72 @@
+[
+  {
+    "IOObjectClass": "IOUSBHostDevice",
+    "USB Vendor Name": "Generic",
+    "USB Product Name": "USB2.0 Hub",
+    "idVendor": 1507,
+    "idProduct": 1552,
+    "IORegistryEntryChildren": [
+      {
+        "IOObjectClass": "IOUSBHostInterface",
+        "IORegistryEntryChildren": [
+          {
+            "kUSBSerialNumberString": "00:11:22:33:44:55",
+            "IOObjectClass": "IOUSBHostDevice",
+            "USB Vendor Name": "Espressif",
+            "USB Product Name": "USB JTAG_serial debug unit",
+            "idProduct": 4097,
+            "idVendor": 12346,
+            "IORegistryEntryChildren": [
+              {
+                "IOObjectClass": "AppleUSBCDCCompositeDevice"
+              },
+              {
+                "IORegistryEntryChildren": [
+                  {
+                    "IOObjectClass": "AppleUSBACMControl"
+                  }
+                ],
+                "IOObjectClass": "IOUSBHostInterface",
+                "idProduct": 4097,
+                "USB Product Name": "USB JTAG/serial debug unit",
+                "USB Vendor Name": "Espressif",
+                "idVendor": 12346
+              },
+              {
+                "IORegistryEntryChildren": [
+                  {
+                    "IORegistryEntryChildren": [
+                      {
+                        "IOCalloutDevice": "/dev/cu.usbmodem1101",
+                        "IOObjectClass": "IOSerialBSDClient",
+                        "IODialinDevice": "/dev/tty.usbmodem1101"
+                      }
+                    ],
+                    "IOObjectClass": "AppleUSBACMData",
+                    "idProduct": 4097,
+                    "idVendor": 12346
+                  }
+                ],
+                "IOObjectClass": "IOUSBHostInterface",
+                "idProduct": 4097,
+                "USB Product Name": "USB JTAG/serial debug unit",
+                "USB Vendor Name": "Espressif",
+                "idVendor": 12346
+              },
+              {
+                "IOObjectClass": "IOUSBHostInterface",
+                "idProduct": 4097,
+                "USB Product Name": "USB JTAG/serial debug unit",
+                "USB Vendor Name": "Espressif",
+                "idVendor": 12346
+              },
+              {
+                "IOObjectClass": "AppleUSBHostDeviceUserClient"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

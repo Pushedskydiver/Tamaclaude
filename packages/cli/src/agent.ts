@@ -83,11 +83,21 @@ export function agentPlistPath(home: string): string {
  * `LaunchAgents`, and so `plutil -lint` — the same parse launchd performs —
  * can be run over the result in a test rather than discovered on 19 September.
  *
- * `ThrottleInterval` is 30 rather than the default 10. It does not fix a
- * crash-loop, and this file's job is to make loops unreachable rather than
- * survivable — but a loop that got as far as opening the port resets the board
- * on every respawn, so the panel would flash its boot splash every ten
- * seconds. Thirty makes that visibly a fault rather than a flicker.
+ * `ThrottleInterval` is 30 rather than the default 10, and the reason is that
+ * **one restart loop is deliberate**.
+ *
+ * The table above says this file makes loops unreachable, and that is true of
+ * the ones that mean something is wrong — a missing pack, a node that will not
+ * spawn. It is not true of an unplugged panel: `chooseDevice` exits 2 when it
+ * finds none, `KeepAlive` restarts, and discovery runs again. That restart
+ * *is* the hotplug mechanism. A review pointed out the file claimed otherwise
+ * while relying on it, which is worse than either choice on its own.
+ *
+ * So the interval is a pace rather than a fix. Thirty seconds is slow enough
+ * that a genuine fault reads as a fault, and fast enough that plugging the
+ * panel back in is answered within half a minute. It also matters that a loop
+ * which got as far as opening the port resets the board on every respawn: at
+ * the default ten the panel would flash its boot splash continually.
  */
 export function agentPlist(options: AgentOptions): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -150,4 +160,73 @@ export function describeAgentInstall(
     `socket     ${options.socket}\n` +
     `log        ${options.log}\n`
   );
+}
+
+export type AgentStatus = {
+  readonly loaded: boolean;
+  readonly pid?: number;
+  readonly lastExit?: number;
+};
+
+/**
+ * What `launchctl list <label>` says, as something to reason about.
+ *
+ * **A job can be loaded and still not be running.** `launchctl bootstrap`
+ * exits 0 once the job is *loaded*, which says nothing about whether it stayed
+ * up — so `install-agent` printing "Installed and started" was a claim it had
+ * not checked. The most likely install-day sequence is precisely the one it
+ * would have hidden: a `tamaclaude daemon` already running by hand from the
+ * soak week, the agent starting, `socket-path.ts` finding a live listener,
+ * `already listening`, exit 1, and a restart every thirty seconds forever
+ * while stdout said it was fine.
+ *
+ * A pure function over the text so the parse is testable without launchd. The
+ * shape is `launchctl list`'s dictionary: `"PID" = 1234;` while running, and
+ * `"LastExitStatus" = 256;` for the previous run.
+ */
+export function parseAgentStatus(text: string | undefined): AgentStatus {
+  if (text === undefined) return { loaded: false };
+  const pid = /"PID"\s*=\s*(\d+);/u.exec(text)?.[1];
+  const exit = /"LastExitStatus"\s*=\s*(-?\d+);/u.exec(text)?.[1];
+  return {
+    loaded: true,
+    pid: pid === undefined ? undefined : Number(pid),
+    lastExit: exit === undefined ? undefined : Number(exit),
+  };
+}
+
+/**
+ * One line a person can act on, given a status and whether node still exists.
+ *
+ * The `nodeExists` half is the one nobody would think to check.
+ * `ProgramArguments[0]` is `process.execPath`, which on every version manager
+ * — mise, nvm, asdf, Homebrew — contains the version number. The day node is
+ * upgraded and the old version pruned, launchd fails to spawn, retries
+ * forever, and the panel holds the last frame it was sent. `tamaclaude pack`
+ * run from a terminal answers perfectly, because it runs under the *shell's*
+ * node. This is the only thing that would say otherwise.
+ */
+export function describeAgentStatus(
+  status: AgentStatus,
+  nodeExists: boolean,
+): string {
+  if (!status.loaded) return 'agent     not installed';
+  if (!nodeExists) {
+    return (
+      'agent     loaded, but the node it was installed with is gone\n' +
+      '          re-run `tamaclaude install-agent --apply` to point it at the current one'
+    );
+  }
+  if (status.pid !== undefined) {
+    return `agent     running (pid ${String(status.pid)})`;
+  }
+  const exit = status.lastExit;
+  if (exit === undefined || exit === 0) return 'agent     loaded, not running';
+  // `LastExitStatus` is a raw `wait(2)` status, not an exit code: exit 1 comes
+  // back as 256. Printing it undecoded made the one number a person needs into
+  // a number they would have to look up.
+  const signal = exit & 0x7f;
+  const detail =
+    signal === 0 ? `exit ${String(exit >> 8)}` : `signal ${String(signal)}`;
+  return `agent     loaded but not running; last ${detail} — see the log`;
 }

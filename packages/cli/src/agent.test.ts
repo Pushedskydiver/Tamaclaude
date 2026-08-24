@@ -5,7 +5,29 @@ import { join } from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { AGENT_LABEL, agentPlist } from './agent.js';
+import {
+  AGENT_LABEL,
+  agentPlist,
+  describeAgentStatus,
+  parseAgentStatus,
+} from './agent.js';
+
+/**
+ * The value element following a `<key>` in the generated plist.
+ *
+ * A regex rather than a parser, and text rather than `plutil`, because **CI
+ * runs `ubuntu-latest` and `plutil` is macOS-only** — a review found this file
+ * would have turned CI red the moment it was pushed. The document is generated
+ * by a template in this repo, so its shape is known; parsing it properly to
+ * assert on a string we wrote would be ceremony.
+ */
+function plistValue(xml: string, key: string): string {
+  const match = new RegExp(
+    `<key>${key}</key>\\s*(<[a-z]+/>|<[a-z]+>[^<]*</[a-z]+>)`,
+    'u',
+  ).exec(xml);
+  return match?.[1] ?? '(missing)';
+}
 
 describe('agentPlist', () => {
   const made: string[] = [];
@@ -40,33 +62,87 @@ describe('agentPlist', () => {
     expect(xml).not.toContain('/dev/cu.');
   });
 
-  it('escapes a path that would otherwise corrupt the XML', () => {
-    // A home directory or a repo checkout containing `&` or `<` is ordinary,
-    // and JSON did not have this problem so `install-hooks` never met it.
-    const dir = mkdtempSync(join(tmpdir(), 'tamaclaude-agent-'));
-    made.push(dir);
+  // `plutil` is macOS-only and CI is `ubuntu-latest`, so this one is skipped
+  // there — **and skipped means not gated, not "fine"**. The escaping itself is
+  // asserted on the text above, which runs everywhere; what only Darwin can
+  // check is that launchd's own parser accepts the result, which is the part
+  // no amount of string comparison substitutes for.
+  it.skipIf(process.platform !== 'darwin')(
+    'escapes a path that would otherwise corrupt the XML',
+    () => {
+      // A home directory or a repo checkout containing `&` or `<` is ordinary,
+      // and JSON did not have this problem so `install-hooks` never met it.
+      const dir = mkdtempSync(join(tmpdir(), 'tamaclaude-agent-'));
+      made.push(dir);
+      const xml = agentPlist({
+        ...options,
+        pack: "/Users/a & b/<pack>/it's here",
+      });
+      expect(xml).toContain('&amp;');
+      expect(xml).not.toContain('& b');
+      // Proven by the parser rather than by inspection: `plutil -lint` is the
+      // same check launchd applies, and it is free.
+      const file = join(dir, 'test.plist');
+      writeFileSync(file, xml);
+      expect(() => execFileSync('plutil', ['-lint', file])).not.toThrow();
+      // And it round-trips: the value comes back exactly as it went in.
+      const back = execFileSync(
+        'plutil',
+        ['-convert', 'json', '-o', '-', file],
+        {
+          encoding: 'utf8',
+        },
+      );
+      expect(
+        (
+          JSON.parse(back) as {
+            EnvironmentVariables: { TAMACLAUDE_PACK: string };
+          }
+        ).EnvironmentVariables.TAMACLAUDE_PACK,
+      ).toBe("/Users/a & b/<pack>/it's here");
+    },
+  );
+
+  it('escapes a path that would otherwise corrupt the XML, on any platform', () => {
+    // The text half of the escaping check, which CI can actually run. The
+    // `plutil` half below proves launchd's parser agrees, and only on a Mac.
     const xml = agentPlist({
       ...options,
       pack: "/Users/a & b/<pack>/it's here",
     });
     expect(xml).toContain('&amp;');
+    expect(xml).toContain('&lt;pack&gt;');
     expect(xml).not.toContain('& b');
-    // Proven by the parser rather than by inspection: `plutil -lint` is the
-    // same check launchd applies, and it is free.
-    const file = join(dir, 'test.plist');
-    writeFileSync(file, xml);
-    expect(() => execFileSync('plutil', ['-lint', file])).not.toThrow();
-    // And it round-trips: the value comes back exactly as it went in.
-    const back = execFileSync('plutil', ['-convert', 'json', '-o', '-', file], {
-      encoding: 'utf8',
-    });
-    expect(
-      (
-        JSON.parse(back) as {
-          EnvironmentVariables: { TAMACLAUDE_PACK: string };
-        }
-      ).EnvironmentVariables.TAMACLAUDE_PACK,
-    ).toBe("/Users/a & b/<pack>/it's here");
+    expect(xml).not.toContain('<pack>');
+  });
+
+  it('carries every key that makes it an agent rather than a file', () => {
+    // **Each of these survived deletion until a review planted them.** The
+    // suite asserted three strings and the escaping, so removing `RunAtLoad`
+    // — the one thing the plist exists for — left it green, as did dropping
+    // the log paths, flipping `SuccessfulExit`, swapping node for the script,
+    // and emptying the socket. The round trip on real hardware proved the file
+    // works today; it does not stop the next edit breaking it.
+    const xml = agentPlist(options);
+    expect(plistValue(xml, 'RunAtLoad')).toBe('<true/>');
+    // False, so launchd restarts it on a non-zero exit and leaves a clean one
+    // alone. `man 5 launchd.plist`: "restarted in the inverse condition".
+    expect(plistValue(xml, 'SuccessfulExit')).toBe('<false/>');
+    expect(plistValue(xml, 'ThrottleInterval')).toBe('<integer>30</integer>');
+    expect(plistValue(xml, 'StandardOutPath')).toBe(
+      `<string>${options.log}</string>`,
+    );
+    expect(plistValue(xml, 'StandardErrorPath')).toBe(
+      `<string>${options.log}</string>`,
+    );
+    expect(plistValue(xml, 'TAMACLAUDE_PACK')).toBe(
+      `<string>${options.pack}</string>`,
+    );
+    expect(plistValue(xml, 'TAMACLAUDE_SOCKET')).toBe(
+      `<string>${options.socket}</string>`,
+    );
+    // Order matters: node runs the script, not the other way round.
+    expect(xml.indexOf(options.node)).toBeLessThan(xml.indexOf(options.script));
   });
 
   it('names the pack and the socket, so the agent and a terminal agree', () => {
@@ -79,5 +155,65 @@ describe('agentPlist', () => {
     expect(xml).toContain('TAMACLAUDE_PACK');
     expect(xml).toContain('TAMACLAUDE_SOCKET');
     expect(xml).toContain(AGENT_LABEL);
+  });
+});
+
+describe('parseAgentStatus', () => {
+  // Real `launchctl list com.tamaclaude.daemon` output, trimmed.
+  const running = `{
+	"StandardOutPath" = "/Users/someone/.tamaclaude/daemon.log";
+	"Label" = "com.tamaclaude.daemon";
+	"LastExitStatus" = 0;
+	"PID" = 29979;
+}`;
+  const crashed = `{
+	"Label" = "com.tamaclaude.daemon";
+	"LastExitStatus" = 256;
+}`;
+
+  it('reads a running agent', () => {
+    expect(parseAgentStatus(running)).toEqual({
+      loaded: true,
+      pid: 29979,
+      lastExit: 0,
+    });
+    expect(describeAgentStatus(parseAgentStatus(running), true)).toContain(
+      'running (pid 29979)',
+    );
+  });
+
+  it('says nothing is installed when launchctl said nothing', () => {
+    expect(parseAgentStatus(undefined)).toEqual({ loaded: false });
+    expect(describeAgentStatus({ loaded: false }, true)).toContain(
+      'not installed',
+    );
+  });
+
+  it('decodes the wait status, because 256 is not an exit code', () => {
+    // **The case this whole pair exists for.** `bootstrap` exits 0 once the
+    // job is loaded, which says nothing about whether it stayed up — and the
+    // likeliest install-day failure is a `tamaclaude daemon` already running
+    // by hand, so the agent dies on `already listening` and restarts every
+    // thirty seconds while the installer says it worked. Reproduced on real
+    // hardware: `LastExitStatus = 256`.
+    //
+    // 256 is a raw `wait(2)` status. The exit code is 1.
+    expect(describeAgentStatus(parseAgentStatus(crashed), true)).toContain(
+      'last exit 1',
+    );
+    // A signalled death reads as a signal rather than a nonsense exit code.
+    expect(describeAgentStatus({ loaded: true, lastExit: 9 }, true)).toContain(
+      'signal 9',
+    );
+  });
+
+  it('notices the node it was installed with has gone', () => {
+    // `ProgramArguments[0]` is `process.execPath`, which every version manager
+    // stamps with a version number. Upgrade node, prune the old one, and
+    // launchd fails to spawn forever — while `tamaclaude pack` in a terminal
+    // answers perfectly, because it runs under the shell's node.
+    const said = describeAgentStatus({ loaded: true, pid: 1 }, false);
+    expect(said).toContain('node it was installed with is gone');
+    expect(said).toContain('install-agent --apply');
   });
 });
