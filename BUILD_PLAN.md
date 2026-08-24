@@ -211,9 +211,11 @@ that is not waiting on the design freeze.
       entirely, so "the turn finished" is not observable the way Stage 4's
       payoff screen assumes. **`Stop` and `StopFailure` are alternatives, not a
       sequence** — at most one fires per turn — so a failed turn leaves `FAILED`
-      standing and `dizzy` reaches the panel. Checked 24 Aug against the same
-      live documentation; still unobserved, because three hours of hook capture
-      caught 156 events and no `StopFailure` at all.
+      standing and `dizzy` reaches the panel. Checked 24 Aug against the same live
+      documentation, which says it in a verb — "Runs _instead of_ Stop when the
+      turn ends due to an API error". Still unobserved: a live hook capture on
+      22 Aug caught no `StopFailure` at all, which is evidence about how rare
+      they are and none about ordering.
 
 - [x] Tool → state mapping (`PreToolUse.tool_name`)
 - [x] Multi-session compositing — resolution ranks by state, hero plus chips
@@ -226,10 +228,10 @@ that is not waiting on the design freeze.
       `animation-critic`
 - [x] `StopFailure` → the state, `error_type` and the quip exist, and `dizzy`
       is built, baked and wired (`FAILED` in `packages/daemon/src/animation.ts`).
-      `error_type` is stored and still read by nothing: all three of
-      `rate_limit`, `overloaded` and `authentication_failed` show one picture.
-      That is the state/animation split working as designed, not a gap — the
-      field is kept because it arrives once and cannot be recovered
+      The error is stored and, since 24 Aug, read: `rate_limit` and
+      `overloaded` draw `overheated`, the other eight documented values keep
+      `dizzy`. The field is kept because it arrives once and cannot be
+      recovered
 - [ ] **Remote transport** — TCP + shared secret, so the recipient's Raspberry Pi agent appears on the
       display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
       from day one (cheap), but ship it only if Stage 4 is on schedule.
@@ -323,16 +325,19 @@ than partially. Eight good screens beat nine plus four rough ones.
   12. **overheated (`StopFailure` with `error_type` `rate_limit` or `overloaded`)** — proposed
       on 22 Aug, not part of the original catalogue, and therefore a change to
       this plan rather than work under it. It is the cheapest screen left:
-      `error_type` has been stored since Stage 3 and read by nothing, so the
-      trigger needs no new event, no settings change and no protocol field —
-      only for `animationFor` to refine `FAILED` by `errorType` the way it
-      already refines `WORKING` by `tool`. Tier B, behind the 6 Sep gate with
+      the error has been stored since Stage 3, so the trigger needed no new
+      event, no settings change and no protocol field — only for `animationFor`
+      to refine `FAILED` by it the way it already refines `WORKING` by `tool`.
+      Wired 24 Aug, and the wire field turned out to be `error` rather than the
+      `error_type` assumed since Stage 3, so nothing had ever reached it. Tier B, behind the 6 Sep gate with
       the rest, and the first thing to cut if that gate is at risk: `dizzy`
-      already draws every `StopFailure`, so cutting this loses a distinction
+      drew every `StopFailure` before this, so cutting it loses a distinction
       rather than leaving a state blank. **Art first, wiring last** — the
       wiring lands in `packages/daemon`, which Stage 3 marks done, so building
       it first means either reverting shipped code at the gate or leaving a
-      dead branch behind. Art landed 23 Aug, wiring 24 Aug, in that order. Through `spec-grill` once; the first plan was found
+      dead branch behind. Art landed at 08:58 and wiring at 11:32, both on 24 Aug — the order held,
+      which is the part that matters, but they were hours apart rather than
+      days. Through `spec-grill` once; the first plan was found
       unbuildable and rewritten around a sploot pose, which is upstream's scene
       and which `docs/ANIMATION.md` §The generation contract names as its own
       example. Plan in `PLANS.md`. Measured after the first

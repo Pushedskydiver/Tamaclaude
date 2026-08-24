@@ -284,6 +284,29 @@ function messageFor(
 }
 
 /**
+ * Which animation a resolved panel shows.
+ *
+ * Extracted and exported for one reason: as three lines inlined in `paintOnce`
+ * it had **no test at all**. `paintOnce` is not exported and `sceneFor` takes
+ * the animation as an input, so deleting the `errorType` argument left all 430
+ * tests green with the feature gone — which is the same shape of silent gap as
+ * `packages/hooks` reading a field name that does not exist. One export and one
+ * test is the whole cost of noticing.
+ *
+ * `sessions[0]` is the hero by construction: `resolve.ts` sorts once and
+ * returns `state` from `ranked.at(0)` and `sessions` from the same array, so
+ * they cannot disagree.
+ */
+export function animationForPanel(
+  panel: ReturnType<typeof resolvePanel>,
+): AnimationName {
+  return animationFor(panel.state, {
+    tool: panel.tool,
+    errorType: panel.sessions.at(0)?.errorType,
+  });
+}
+
+/**
  * The frames for an animation, or none if it has not been baked.
  *
  * `animationFor` maps every session state and every `PreToolUse.tool_name` onto
@@ -503,7 +526,9 @@ async function paintOnce(
   // the empty check below is what that buys. Both are currently unreachable:
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
-  // before it is wired, which is how `overheated` sits today. They are kept because the two lists are
+  // before it is wired, which `overheated` did between 23 and 24 Aug. The two
+  // lists happen to be equal again now, which is exactly when this guard is
+  // easiest to delete and worst to be without. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what
@@ -514,10 +539,7 @@ async function paintOnce(
   // Earlier versions of this comment said three states fall back to
   // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
   // reached only from `WORKING`, with an unmapped tool or with no tool.
-  const wanted = animationFor(panel.state, {
-    tool: panel.tool,
-    errorType: panel.sessions.at(0)?.errorType,
-  });
+  const wanted = animationForPanel(panel);
   const frames = await framesFor(wanted);
   const showing =
     frames.length > 0

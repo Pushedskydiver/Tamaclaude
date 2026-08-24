@@ -7,7 +7,7 @@ import { SESSION_STATES, stateRank } from './state.js';
 
 describe('the payoff for a spent session', () => {
   it('shows overheated for a rate limit and dizzy for anything else', () => {
-    // `error_type` has been stored since Stage 3 and read by nothing. This is
+    // The error has been stored since Stage 3 and was read by nothing. This is
     // the first thing to read it: `rate_limit` and `overloaded` both mean "wait
     // and come back", which is what the picture says, and the other eight
     // documented values keep `dizzy`.

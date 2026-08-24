@@ -136,7 +136,17 @@ type ClaudeCodePayload = {
   readonly tool_name?: unknown;
   readonly agent_id?: unknown;
   readonly agent_type?: unknown;
-  readonly error_type?: unknown;
+  /**
+   * `StopFailure`'s error, and **the field is `error`, not `error_type`.**
+   * `error_type` appears nowhere in the hook documentation; it was assumed in
+   * Stage 3 and the assumption survived a check that verified the *values*
+   * against the docs and never the key. The consequence was silent and total:
+   * `optionalString(payload.error_type)` returned `undefined` on every real
+   * payload, so the daemon's `errorType` was never set, and the screen keyed on
+   * it could not appear. Nothing failed, because a missing optional field is
+   * indistinguishable from an error that carried no type.
+   */
+  readonly error?: unknown;
 };
 
 /** A present, non-empty string, or nothing. Empty is treated as absent. */
@@ -161,7 +171,7 @@ function translate(raw: string): HookEvent | undefined {
     tool: optionalString(payload.tool_name),
     agentId: optionalString(payload.agent_id),
     agentType: optionalString(payload.agent_type),
-    errorType: optionalString(payload.error_type),
+    errorType: optionalString(payload.error),
   };
 }
 

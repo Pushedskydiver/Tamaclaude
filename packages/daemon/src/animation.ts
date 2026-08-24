@@ -138,8 +138,11 @@ const ERROR_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
  *
  * One object rather than two optional positional strings. `animationFor(state,
  * tool, errorType)` typechecks with the two swapped and returns the wrong
- * picture silently, and there are two production call sites and twenty in
- * tests — exactly the shape of mistake nothing would catch.
+ * picture silently, across two production call sites and a couple of dozen in
+ * tests — exactly the shape of mistake nothing would catch. Not a precise
+ * count: `cli/daemon.ts` records that spelled-out counts here went stale twice
+ * in a week, and an earlier draft of this line said "twenty" and was wrong the
+ * day it was written.
  *
  * Each field refines a different state and they never both apply: `tool` is
  * only read for `WORKING`, `errorType` only for `FAILED`.

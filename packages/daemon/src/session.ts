@@ -49,12 +49,15 @@ export type Session = {
    * `authentication_failed`. Kept rather than collapsed into `FAILED` because
    * it arrives exactly once and cannot be recovered afterwards.
    *
-   * Nothing reads it yet. `resolve.ts` returns whole `Session` objects, so it
-   * does cross that boundary — but the quip is keyed on the state alone and
-   * `FAILED` shows `dizzy` for all three of them. One state,
-   * one picture, which is the split this module and `animation.ts` are built
-   * on. Storing it keeps the option of a rate-limit screen open; it does not
-   * mean one exists.
+   * **Read since 24 Aug**, by `animationFor` and by the quip lookup:
+   * `rate_limit` and `overloaded` draw `overheated`, the other eight documented
+   * values keep `dizzy`, and a pack can key a quip on `FAILED:rate_limit`. So
+   * one state now maps to two pictures — the first exception to the split this
+   * module and `animation.ts` are otherwise built on. The state still says how
+   * much a human is needed; only the picture refines.
+   *
+   * It arrives on `StopFailure` as `error`, not `error_type`. `packages/hooks`
+   * does that translation, and read the wrong name for three weeks.
    */
   readonly errorType?: string;
   /**
@@ -130,22 +133,28 @@ type Transition = (event: HookEvent, now: number) => Partial<Session>;
  * is every response that finishes. What it does prove is that this session is
  * not doing anything at this instant, which is exactly `IDLE`.
  *
- * **It does not follow a `StopFailure`.** The two are documented as alternative
- * branches of the same per-turn loop — at most one fires per turn, `Stop` when
- * the turn completes and `StopFailure` when an API error ends it. That matters
+ * **It does not follow a `StopFailure`.** The documentation says so in a verb:
+ * "Runs *instead of* Stop when the turn ends due to an API error." Both also sit
+ * in the same "once per turn" cadence group. Two reviews disagreed about this
+ * — one read a truncated fetch and concluded mutual exclusivity was only
+ * implied by a diagram — so it is quoted here rather than paraphrased. That matters
  * because this transition sets `IDLE` and clears nothing else: if a `Stop`
  * arrived after a failed turn it would overwrite `FAILED` within a frame, and
  * `dizzy` would never reach the panel at all. It does not, so there is no
  * defensive branch here — a `Stop` while `FAILED` is unreachable, and building
  * for it would be the dead code `state.ts` refuses elsewhere.
  *
- * Documented rather than observed, and worth saying which: three hours of live
- * hook capture on 22 Aug caught 156 events and **zero** `StopFailure`, so the
- * ordering has never been seen on this machine. If `dizzy` turns out never to
- * appear on the panel, this is the first paragraph to doubt. Note it deliberately does not clear `notifiedAt`: Claude Code asks
- * for input and finishes responding at nearly the same moment, and a `Stop`
- * that wiped the notification would lose the wait depending on which of the
- * two arrived first.
+ * Documented rather than observed, and worth saying which: a live hook capture
+ * on 22 Aug caught **zero** `StopFailure` across a long session, so the
+ * ordering has never been seen on this machine. No count is quoted — the
+ * capture was scratch work with no artefact in the tree, and a capture with
+ * no failures in it is evidence about frequency and none about ordering. If `dizzy` turns out never to
+ * appear on the panel, this is the first paragraph to doubt.
+ *
+ * Note the transition deliberately does not clear `notifiedAt`: Claude Code
+ * asks for input and finishes responding at nearly the same moment, and a
+ * `Stop` that wiped the notification would lose the wait depending on which
+ * of the two arrived first.
  */
 const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
   string,

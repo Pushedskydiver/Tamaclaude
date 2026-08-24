@@ -8,11 +8,17 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createRegistry, observe } from '@tamaclaude/daemon';
+import { createRegistry, observe, resolvePanel } from '@tamaclaude/daemon';
 import { parsePackManifest } from '@tamaclaude/packs';
 import { loadSprite, render } from '@tamaclaude/renderer';
 
-import { frameAt, framesFor, runDaemon, sceneFor } from './daemon.js';
+import {
+  animationForPanel,
+  frameAt,
+  framesFor,
+  runDaemon,
+  sceneFor,
+} from './daemon.js';
 
 const NOW = 1_700_000_000_000;
 
@@ -247,6 +253,23 @@ describe('what the panel says', () => {
     expect(
       new Set([working.message, blocked.message, failed.message]).size,
     ).toBe(3);
+  });
+
+  it('picks overheated for a rate limit on the path the panel actually uses', () => {
+    // The production path, not the table. `animationFor` is unit-tested, but
+    // `paintOnce` composed the arguments inline and nothing exercised that
+    // composition — deleting the `errorType` argument left every test green
+    // with the feature gone. This is the test that notices.
+    const limited = after(
+      { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+      { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
+    );
+    const other = after(
+      { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+      { sessionId: 's', kind: 'StopFailure', errorType: 'server_error' },
+    );
+    expect(animationForPanel(resolvePanel(limited, NOW))).toBe('overheated');
+    expect(animationForPanel(resolvePanel(other, NOW))).toBe('dizzy');
   });
 
   it('gives a rate limit its own quip, so it is not just a different picture', () => {
