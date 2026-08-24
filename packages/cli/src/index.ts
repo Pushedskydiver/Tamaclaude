@@ -19,9 +19,11 @@ import {
   observe,
   resolvePanel,
 } from '@tamaclaude/daemon';
+import { findPanels, nodeUsb } from '@tamaclaude/device';
 import { isBirthday } from '@tamaclaude/packs';
 
 import { runDaemon } from './daemon.js';
+import { chooseDevice } from './device.js';
 import { resolvePack } from './pack.js';
 
 /** One line naming the loaded pack and where it came from. */
@@ -85,26 +87,28 @@ function pack(): void {
 
 /** Printed for a missing device, an unknown command, and anything help-shaped. */
 const USAGE =
-  'usage: tamaclaude daemon <device>\n' +
+  'usage: tamaclaude daemon [device]\n' +
   '       tamaclaude pack\n' +
+  '  with no device, the panel is found by its USB descriptor\n' +
   '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n' +
   '  the pack comes from $TAMACLAUDE_PACK, else ~/.tamaclaude/pack/\n' +
   '  `tamaclaude pack` says which one, and when its birthday fires\n' +
   '  with no command, prints one line of smoke-test output\n';
 
-/**
- * `tamaclaude daemon` — listen, render, and drive the panel until killed.
- *
- * The device path is an argument rather than a discovery, because guessing
- * which `/dev/cu.*` is the panel is a worse failure than being told: the wrong
- * guess writes packets at somebody's modem.
- */
-async function daemon(argv: readonly string[]): Promise<void> {
-  const devicePath = argv[0];
-  if (devicePath === undefined) {
-    process.stderr.write(USAGE);
+async function devicePathFor(argv: readonly string[]): Promise<string> {
+  const chosen = chooseDevice(argv[0], await findPanels(nodeUsb()));
+  if ('refusal' in chosen) {
+    process.stderr.write(`${chosen.refusal}\n${USAGE}`);
     process.exit(2);
   }
+  return chosen.path;
+}
+
+/**
+ * `tamaclaude daemon` — listen, render, and drive the panel until killed.
+ */
+async function daemon(argv: readonly string[]): Promise<void> {
+  const devicePath = await devicePathFor(argv);
   // Resolved before the socket is opened, so a bad pack fails without leaving
   // a listener behind.
   const resolved = resolvePack();

@@ -24,6 +24,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { chooseDevice } from './device.js';
+
 const ROOT = resolve(fileURLToPath(import.meta.url), '../../../..');
 
 const BUILT = resolve(ROOT, 'packages/cli/dist/index.js');
@@ -306,5 +308,51 @@ describe('the tamaclaude binary', () => {
     expect(out).toContain('$TAMACLAUDE_PACK');
     expect(out).toContain('birthday: none in this pack');
     expect(status).toBe(0);
+  });
+
+  describe('chooseDevice', () => {
+    it('takes the device it was given, without looking', () => {
+      // The escape hatch, and what gets typed during the soak week. A named
+      // path wins even when discovery would have found something else.
+      expect(
+        chooseDevice('/dev/cu.given', [{ path: '/dev/cu.found' }]),
+      ).toEqual({ path: '/dev/cu.given' });
+    });
+
+    it('takes the only panel when there is exactly one', () => {
+      expect(
+        chooseDevice(undefined, [{ path: '/dev/cu.usbmodem1101' }]),
+      ).toEqual({ path: '/dev/cu.usbmodem1101' });
+    });
+
+    it('refuses to choose between two panels, and names both', () => {
+      // **The case the design turns on.** Every ESP32-C3/C6/S3 in
+      // USB-Serial/JTAG mode shares `0x303A:0x1001`, and `BUILD_PLAN.md` calls
+      // for a spare board while Stage 6 flashes a gift board separate from the
+      // dev board. Picking the first would drive the wrong panel while
+      // reporting itself online — which survives a whole soak week.
+      const chosen = chooseDevice(undefined, [
+        { path: '/dev/cu.usbmodem1101', serial: '00:11:22:33:44:55' },
+        { path: '/dev/cu.usbmodem2201', serial: '66:77:88:99:AA:BB' },
+      ]);
+      expect(chosen).not.toHaveProperty('path');
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        '/dev/cu.usbmodem1101',
+      );
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        '/dev/cu.usbmodem2201',
+      );
+      // The serials are what let a person tell two identical boards apart.
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        '66:77:88:99:AA:BB',
+      );
+    });
+
+    it('refuses when nothing is plugged in, rather than inventing a path', () => {
+      const chosen = chooseDevice(undefined, []);
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        'no panel found',
+      );
+    });
   });
 });

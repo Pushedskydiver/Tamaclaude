@@ -17,3 +17,7 @@ export type { Transport } from './transport.js';
 // Exported for the `daemon` command, which injects a fake port in its tests
 // the same way this package's own tests do.
 export type { SerialSystem, SerialWatch } from './serial.js';
+// Which `/dev/cu.*` is the panel, read from the USB descriptor rather than
+// guessed. Here rather than in `cli` because it is a fact about the host's
+// device stack, which is what this package is for.
+export { findPanels, nodeUsb } from './usb.js';
