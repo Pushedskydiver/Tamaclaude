@@ -262,16 +262,21 @@ describe('what the panel says', () => {
     // filter, so the only thing keeping it off the glass was the example pack
     // happening to define `quips.mapped.FAILED`.
     //
-    // Packs are hand-edited and Zod-validated, i.e. a trust boundary, and the
-    // recipient's pack is written in Stage 5. A pack that omits that one key
-    // rendered the word `Bash` for a dead session — pixel-for-pixel identical
-    // to one happily running Bash, which is exactly what this function's own
-    // doc says it exists to stop.
+    // Packs are hand-edited and Zod-validated, i.e. a trust boundary. A pack
+    // that omits the key renders the word `Bash` for a dead session —
+    // pixel-for-pixel identical to one happily running Bash, which is exactly
+    // what this function's own doc says it exists to stop.
     //
-    // Measured rather than assumed: `FAILED` is the *only* state that reaches
-    // the tool line with a stale tool. `Stop` clears it, so `DONE`, `IDLE`,
-    // `ASLEEP` and `WAITING` have none; `THINKING` is cleared by `RESUMED`.
-    // A review guessed `DONE` carried one too, and it does not.
+    // **Two keys shielded the example pack, not one.** `quips.mapped.FAILED`
+    // covers the general case, and `FAILED:rate_limit` covers this one, because
+    // `refinedFailureLine` runs ahead of both the mapped lookup and the tool
+    // line. The session below fails with `rate_limit` on purpose — it is the
+    // path with two shields, so emptying `mapped` is what reaches the defect.
+    //
+    // `FAILED` is the only state that reaches the tool line with a stale tool.
+    // `SessionEnd` also leaves `tool` set, at `ASLEEP` — the panel never sees
+    // it because `isLive` drops a session with `endedAt`, which is a different
+    // reason from the one an earlier version of this comment gave.
     const bare = parsePackManifest({
       ...pack,
       quips: { ...pack.quips, mapped: {} },
@@ -285,9 +290,14 @@ describe('what the panel says', () => {
       { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
       NOW,
     );
+    // The state is asserted, not just the tool — the row discipline this
+    // branch established two commits ago, applied to its own new test.
+    expect(resolvePanel(died, NOW).state).toBe('FAILED');
     expect(resolvePanel(died, NOW).tool).toBe('Bash');
-    expect(sceneFor({ registry: died, pack: bare, now: NOW }).message).not.toBe(
-      'Bash',
+    // `.toBe`, not `.not.toBe('Bash')`, which passes for any string at all.
+    // This pins the last-resort branch as well as the absence of the tool.
+    expect(sceneFor({ registry: died, pack: bare, now: NOW }).message).toBe(
+      'failed',
     );
 
     // And the two states where the tool *is* the interesting fact still show
@@ -307,6 +317,18 @@ describe('what the panel says', () => {
     );
     expect(sceneFor({ registry: asking, pack: bare, now: NOW }).message).toBe(
       'Write',
+    );
+
+    // **And a mapped quip still beats the tool**, which nothing pinned until a
+    // review swapped the two lookups and watched the whole suite stay green.
+    // `NEEDS_PERMISSION` is the only state in the shipping pack that has both
+    // a tool and a mapped quip, and the assertions above hand it `bare` — the
+    // one pack shape where the precedence cannot be observed. With the real
+    // pack the reorder renders `Write` where it should say "may I?", and
+    // `hooks` sets `tool` on every tool-scoped event, so real permission
+    // requests do arrive carrying one.
+    expect(sceneFor({ registry: asking, pack, now: NOW }).message).toBe(
+      pack.quips.mapped.NEEDS_PERMISSION,
     );
   });
 

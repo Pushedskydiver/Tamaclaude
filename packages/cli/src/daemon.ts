@@ -297,17 +297,37 @@ function refinedFailureLine(
 /**
  * The states where the tool is the interesting fact, rather than a leftover.
  *
- * A whitelist, not a blacklist on `FAILED`. `StopFailure` is the only handler
- * that leaves `tool` set today — measured, not assumed: `Stop` clears it, so
- * `DONE`, `IDLE`, `ASLEEP` and `WAITING` carry none, and `RESUMED` clears it
- * for `THINKING`. But a blacklist puts a new state on the wrong side of the
- * default, and the failure it lands in is the one this whole function exists
- * to prevent.
+ * **Two handlers leave `tool` set, not one.** `StopFailure` is the one that
+ * reaches the glass. `SessionEnd` also leaves it — `session.ts` stores
+ * `ASLEEP` with the tool the session died holding — and the only thing hiding
+ * that is `isLive` dropping a session with `endedAt`. An earlier version of
+ * this comment said `Stop` clearing `tool` was the reason `ASLEEP` was safe,
+ * which is true of `ASLEEP` by promotion and false of `ASLEEP` by `SessionEnd`.
+ * It was badged "measured, not assumed" and was neither.
+ *
+ * That is also the argument for a whitelist over a blacklist on `FAILED`, and
+ * it is stronger than the one first written here: a `FAILED`-only blacklist is
+ * not merely risky for some future state, it already has a live state on the
+ * wrong side of it. If eviction ever held an ended session on the strip for a
+ * beat, `ASLEEP` would surface carrying `Bash`.
+ *
+ * A total `Record` rather than a `Set`, for the reason `TONE` above gives: a
+ * `Set` compiles clean when a state is added to `SESSION_STATES` and silently
+ * puts it outside. Here that defaults safe, so the stake is lower than
+ * `TONE`'s — but "safe by absence" and "decided" are different things, and
+ * only one of them survives someone reading the table later.
  */
-const TOOL_STATES: ReadonlySet<SessionState> = new Set([
-  'WORKING',
-  'NEEDS_PERMISSION',
-]);
+const TOOL_STATES: Readonly<Record<SessionState, boolean>> = {
+  WORKING: true,
+  NEEDS_PERMISSION: true,
+  // Everything below carries no tool, or carries a stale one.
+  FAILED: false,
+  THINKING: false,
+  DONE: false,
+  IDLE: false,
+  ASLEEP: false,
+  WAITING: false,
+};
 
 /**
  * What the message band says, in words a person can act on.
@@ -325,13 +345,15 @@ const TOOL_STATES: ReadonlySet<SessionState> = new Set([
  * sitting unused while the panel showed enum names. So a mapped quip beats the
  * tool, then an idle quip, and a lower-cased state name only as a last resort.
  * It no longer wins outright — see the two lookups below — and the tool line
- * *is* filtered by state now. It was not, for as long as this paragraph has
- * claimed it: `panel.tool` was returned whenever it was set, and `FAILED`
- * carries the tool the session died running. The only thing keeping the
- * original defect off the glass was the example pack happening to define
- * `quips.mapped.FAILED` — so a hand-written pack that omitted one key got
- * `Bash` for a dead session, which is what the paragraph above says this
- * function exists to stop. A review found it; `TOOL_STATES` closes it.
+ * *is* filtered by state now. It was not until `TOOL_STATES` landed, though
+ * this paragraph claimed a filter from the day it was written until two
+ * commits ago, when a review made it say the opposite and say it accurately.
+ * `panel.tool` was returned whenever it was set, and `FAILED` carries the tool
+ * the session died running — so a hand-written pack could get `Bash` for a
+ * dead session, which is what the paragraph above says this function exists to
+ * stop. What shielded the example pack was two keys, not one: `FAILED` for the
+ * general case and `FAILED:rate_limit`, which `refinedFailureLine` reaches
+ * first, for the rate-limit case specifically.
  *
  * The idle quip is chosen by the clock rather than at random, because a desk
  * toy that reshuffles its own text every 125ms is a fidget, not a pet — and
@@ -344,8 +366,11 @@ const TOOL_STATES: ReadonlySet<SessionState> = new Set([
  * pre-empted by the bare `FAILED` key. `birthdayLine` would not — it fires
  * only on states that have no mapped entry in the one pack written so far, so
  * what it actually steps in front of is everything below: `panel.tool` for
- * `WORKING` and `DONE`, the idle rotation for `IDLE`, and the last-resort
- * lowercased state name for `THINKING` and `ASLEEP`, which reach neither.
+ * `WORKING`, the idle rotation for `IDLE`, and the last-resort lowercased
+ * state name for `THINKING`, `ASLEEP` and `DONE`, which reach neither. An
+ * earlier version put `DONE` in the first group; `Stop` clears `tool`, so a
+ * payoff never has one — and the commit that established that fact left this
+ * sentence contradicting it eleven lines further down.
  *
  * That distinction is not academic: `BUILD_PLAN.md` schedules mapped quips for
  * more states in Stage 5, and on the day the birthday will take precedence
@@ -363,7 +388,7 @@ function messageFor(
   if (refined !== undefined) return refined;
   const mapped = pack.quips.mapped[panel.state];
   if (mapped !== undefined) return mapped;
-  if (TOOL_STATES.has(panel.state) && panel.tool !== undefined) {
+  if (TOOL_STATES[panel.state] && panel.tool !== undefined) {
     return panel.tool;
   }
   if (panel.state === 'IDLE' && pack.quips.idle.length > 0) {
