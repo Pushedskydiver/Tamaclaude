@@ -158,10 +158,45 @@ async function installAgent(argv: readonly string[]): Promise<void> {
   } catch {
     // Not loaded. Fine.
   }
+  await waitUntilUnloaded(domain);
   execFileSync('launchctl', ['bootstrap', domain, plistPath], {
     stdio: 'inherit',
   });
   process.stdout.write(`Installed and started. Logs go to ${options.log}\n`);
+}
+
+/**
+ * Wait for a booted-out agent to actually be gone.
+ *
+ * **`launchctl bootout` returns 0 while the service is still there.** Measured
+ * on this machine: exit 0 immediately, and the label kept answering
+ * `launchctl print` for about 800ms afterwards. Bootstrapping inside that
+ * window fails with `Bootstrap failed: 5: Input/output error`, which is
+ * launchd's way of saying the label is already taken.
+ *
+ * That is a real second-install failure and only a round trip on real hardware
+ * found it: the plist is rewritten, the old agent is gone, the new one never
+ * starts, and the panel keeps showing the last frame it was sent. Everything
+ * looks like it worked except the thing that matters.
+ *
+ * Polling rather than a fixed sleep, because 800ms is one measurement on one
+ * Mac and the number that matters is "gone", not "long enough".
+ */
+async function waitUntilUnloaded(domain: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    try {
+      execFileSync('launchctl', ['print', `${domain}/${AGENT_LABEL}`], {
+        stdio: 'ignore',
+      });
+    } catch {
+      return; // `print` failing is the label being free, which is what we want.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(
+    `${AGENT_LABEL} did not unload within 10s; run \`launchctl bootout gui/$(id -u)/${AGENT_LABEL}\` and try again`,
+  );
 }
 
 /**
