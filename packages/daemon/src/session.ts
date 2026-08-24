@@ -126,9 +126,23 @@ type Transition = (event: HookEvent, now: number) => Partial<Session>;
  * `toString` with something from `Object.prototype`.
  *
  * **`Stop` means idle, not done.** The spec keyed the payoff screen on it;
- * the live documentation says it fires on *every* response. What it does prove
- * is that this session is not doing anything at this instant, which is exactly
- * `IDLE`. Note it deliberately does not clear `notifiedAt`: Claude Code asks
+ * the live documentation says it fires when Claude finishes responding, which
+ * is every response that finishes. What it does prove is that this session is
+ * not doing anything at this instant, which is exactly `IDLE`.
+ *
+ * **It does not follow a `StopFailure`.** The two are documented as alternative
+ * branches of the same per-turn loop — at most one fires per turn, `Stop` when
+ * the turn completes and `StopFailure` when an API error ends it. That matters
+ * because this transition sets `IDLE` and clears nothing else: if a `Stop`
+ * arrived after a failed turn it would overwrite `FAILED` within a frame, and
+ * `dizzy` would never reach the panel at all. It does not, so there is no
+ * defensive branch here — a `Stop` while `FAILED` is unreachable, and building
+ * for it would be the dead code `state.ts` refuses elsewhere.
+ *
+ * Documented rather than observed, and worth saying which: three hours of live
+ * hook capture on 22 Aug caught 156 events and **zero** `StopFailure`, so the
+ * ordering has never been seen on this machine. If `dizzy` turns out never to
+ * appear on the panel, this is the first paragraph to doubt. Note it deliberately does not clear `notifiedAt`: Claude Code asks
  * for input and finishes responding at nearly the same moment, and a `Stop`
  * that wiped the notification would lose the wait depending on which of the
  * two arrived first.

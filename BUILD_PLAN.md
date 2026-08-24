@@ -209,7 +209,11 @@ that is not waiting on the design freeze.
       two senses are unrelated.) Finally, `Stop` fires on every response rather
       than at task completion and `StopFailure` ignores exit code and output
       entirely, so "the turn finished" is not observable the way Stage 4's
-      payoff screen assumes.
+      payoff screen assumes. **`Stop` and `StopFailure` are alternatives, not a
+      sequence** — at most one fires per turn — so a failed turn leaves `FAILED`
+      standing and `dizzy` reaches the panel. Checked 24 Aug against the same
+      live documentation; still unobserved, because three hours of hook capture
+      caught 156 events and no `StopFailure` at all.
 
 - [x] Tool → state mapping (`PreToolUse.tool_name`)
 - [x] Multi-session compositing — resolution ranks by state, hero plus chips
