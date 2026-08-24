@@ -439,7 +439,14 @@ than partially. Eight good screens beat nine plus four rough ones.
       rarer than. What can be said is that this is the only entry whose trigger
       was counted in sessions at all, and one in a thousand is rare by any
       reading. Salience rather than frequency is its case, as with item 7
-  13. road bike (long runs)
+  13. road bike (long runs) — **Tier C, not B.** `spec.md` puts it with
+      `beacon` under "stretch — cut without regret". A plan written on 25 Aug
+      called it Tier B and was corrected: it is the most expensive item in the
+      catalogue (the first prop that carries him, and there is no seated pose
+      in the corpus), and it has no trigger — nothing measures duration. If it
+      is ever attempted, the cheap wiring is an elapsed field on `Refinement`
+      in `animation.ts`, branching inside the `WORKING` arm, rather than a new
+      state in `effectiveState`.
 
 **`Stop` does not mean "the turn finished".** Confirmed against live docs in
 Stage 3: it fires on every response. So the payoff screen above cannot be

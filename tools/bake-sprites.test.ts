@@ -272,8 +272,16 @@ describe('the baked animations', () => {
  *
  * Walks up from the bottom-most drawn row — the feet — through the legs, and
  * counts the empty rows immediately above them. Derived rather than measured
- * against a fixed row, because `typing` is seated and his legs start eight rows
- * lower than everyone else's.
+ * against a fixed row, so a pose that moves the legs is still covered.
+ *
+ * An earlier version of this sentence justified that by saying `typing` is
+ * seated with its legs eight rows lower. It is not: `typing.svg` puts them at
+ * `y="13"`, the same as every other animation, and its own comment says
+ * "Planted." What makes it *look* seated is the laptop occluding the tops of
+ * the legs. There is no seated pose anywhere in the corpus — the only pose
+ * variant is `overheated`'s sploot, which kept the torso bottom on the ground
+ * line precisely so the fixed contact shadow still fit. Corrected because a
+ * plan was written against this sentence and inherited the error.
  *
  * Bounded to `LEG_BAND` rows above the feet. Unbounded, the walk runs past the
  * body entirely and returns the daylight between the body and a floating prop —

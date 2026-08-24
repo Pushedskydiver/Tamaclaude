@@ -1008,38 +1008,46 @@ default rather than the only one.
 
 ## Wizard — `WebSearch`, `WebFetch`
 
-Clawd is looking something up, and the answer is arriving from somewhere else.
+Clawd is calling something in from somewhere else, and it is arriving.
 
-`BUILD_PLAN.md` Stage 4 item 10, Tier B. **5.5% of measured tool calls** — the
-fourth most-watched working screen, behind `gym` at 63.9%, `bouldering` at
-17.6% and `typing` at 7.9%. Unmapped today, so `WebSearch` and `WebFetch` both
-draw `thinking` via `FALLBACK`.
+`BUILD_PLAN.md` Stage 4 item 10, Tier B per `spec.md`. Unmapped today, so both
+tools draw `thinking` via `FALLBACK`.
 
-`data-loop-seconds="8"`, matching `thinking` and `permission-sign`.
+`data-loop-seconds="12"`, **not 8**. Three evenly phased motes need 3 to divide
+the frame count, and 3 does not divide 64 — the arithmetic that moved `dizzy`
+to 12 seconds. At 96 frames three motes are 32 apart exactly.
 
-- **Action.** A pointed hat on his head; one claw raised, and something small
-  arriving in the air in front of it. The reading is _summoning_, not
-  _searching_ — a crab at a screen is `typing`, and the screen that already
-  exists for "thinking about it" is `thinking`.
+- **Action.** A pointed hat, and one claw extended holding a small object with
+  motes arriving toward it. The reading is _summoning_, not _searching_: a crab
+  at a screen is `typing`, and "thinking about it" is already `thinking`.
 - **Body mechanics.** `idle`'s breath, legs outside it. One claw rotated and
-  extended at the shoulder, held, as `permission-sign` does — the raise is the
-  pose, not an event, because `frameAt` is wall-clock modulo and a raise at the
-  top of the loop is a pump at loop frequency forever.
-- **Eyes.** Open, tracking the arriving thing rather than facing front. One
-  slow blink on `permission-sign`'s timing.
-- **Props.** The hat: a triangle over the head, top clear of the -4 landscape
-  crop line, sitting _on_ the skull rather than floating above it. It is the
-  only element that says wizard, so it has to survive at true size — check it
-  is not two pixels of noise before anything else is drawn.
-- **Effects.** Two or three motes arriving toward the raised claw, each a
-  single unit, on the `asleep` Z cadence — `steps(1)` with inline delays, never
-  separate longhands, which is the ordering trap `overheated` hit.
+  extended at the shoulder and held, as `permission-sign` does. **It must hold
+  something** — §5. `permission-sign` holds a plate, `gym` a bar, the payoff a
+  vehicle; an empty extended claw is the half of that precedent that does not
+  work alone.
+- **Eyes.** Open, toward the arriving motes rather than front. One slow blink.
+- **Props.** The hat, and the small held object. **Stepped rects, not a
+  polygon** — every SVG in the corpus is rects only, and `svg2frames`'s
+  safe-area walk is `querySelectorAll('rect')`, so a `<polygon>` hat is
+  invisible to the one gate that checks the -4 line. `paintRock` is the worked
+  example of a stepped silhouette. A long diagonal also antialiases along its
+  whole length, which is how `typing` got "a cold rim across the top of his
+  head".
+- **Effects.** Three motes, `steps(1)` with **inline** delays — that is
+  `dizzy`'s and `overheated`'s idiom, not `asleep`'s, which is `linear`. Each
+  mote is a dark mass with a pale core, not a single unit: measured, `#C9D1D9`
+  is **1.01:1 against the day sky's low band** and a dark tone is **1.03:1
+  against night**, so one flat tone is invisible at some hour whichever it is.
+  This is the fifth time that defect would have landed.
 
-**Not wanted:** a wand, which is a second prop competing with the hat for the
-same silhouette. A book or a screen — those read as `bouldering` and `typing`.
-Sparkles filling the stage: `dizzy` owns orbiting effects and two screens that
-both scatter small things around him are one screen. Any hat colour that lands
-between the peach and black without `#6F4436` declared.
+**Not wanted:** a wand — it competes with the hat for the same silhouette, and
+the held object solves what the wand was for. A book or a screen: those read as
+`bouldering` and `typing`. Motes scattered around him rather than arriving at
+the claw, which is `dizzy`'s screen. Single-tone motes at any size.
+
+**Fallback:** the hat and the held object with breath and a blink, no motes. It
+is `permission-sign`'s shape and it reads. **Decide by Wed 3 Sep** — if the
+motes are not legible against day and night by then, ship without them.
 
 ---
 
@@ -1047,109 +1055,146 @@ between the peach and black without `#6F4436` declared.
 
 Clawd is not doing the work; several small things are doing it for him.
 
-`BUILD_PLAN.md` Stage 4 item 11, Tier B. **0.7% of tool calls**, the
-least-seen screen that has a measured trigger — six catalogue entries fire on
-hook events or timers and have no tool-call frequency at all, so this is not a
-claim about the whole catalogue. It is the natural cut if the 6 Sep gate is
-tight.
+`BUILD_PLAN.md` Stage 4 item 11, Tier B per `spec.md`.
 
-`data-loop-seconds="12"`, matching `dizzy` and `asleep`: a slow screen for a
-state that lasts as long as a subagent does.
+**The trigger is the risk, and it is not `Agent`.** Subagents are not a separate
+event stream — `events.ts` says they ride the ordinary events, and
+`state.ts` says sidechains get their own transcript file but not their own
+session id, which is what the daemon keys on. So a subagent's own `Bash` and
+`Read` calls land on the _parent's_ session and repaint the stage as `gym` or
+`bouldering` within seconds of `Agent` firing. Keyed on the tool, this screen
+lasts one or two seconds, not the length of a subagent.
 
-- **Action.** A board on the ground to his left, and pieces on it that move
-  without him touching them. He watches. The subagent badge already counts them
-  in the status band, so this screen carries the _feeling_ of delegation rather
-  than the number.
+`session.subagents` already exists, is already incremented on `SubagentStart`,
+and already feeds the badge. Keying on `subagents > 0` is the fix and it is a
+`packages/daemon` change with a mandatory `da-review` — **settle it before any
+SVG is drawn**, and confirm with one live hook capture, because it decides
+whether this is a 12-second screen or a 2-second one.
+
+`data-loop-seconds="12"`.
+
+- **Action.** A board on the ground to his left with pieces that move without
+  him touching them. He watches.
 - **Body mechanics.** Breath only, legs outside it. **No claw raise** — this is
-  the one working screen where he is deliberately not acting, and a gesture
-  would undo that. It is the strongest argument for building it at all.
-- **Eyes.** Down and left, on the board. No blink, or one very late: a screen
-  about watching should not spend its budget on the watcher.
-- **Props.** The board, on the left flank at ground level, overlapping his legs
-  the way the payoff vehicle overlaps his arm. **Five units is the width that
-  reads** — three was rendered for the payoff and came out a block with two
-  dots. Two or three pieces, one unit each, at least two tones so they are not
-  a texture.
-- **Effects.** None. The pieces moving _is_ the effect.
+  the one working screen where he deliberately does not act.
+- **Eyes.** Down and left, on the board. **Keep the blink.** Measured across the
+  bakes, `confused` reaches 26 distinct frames of 96 _with_ two blinks and a
+  caret; dropping the blink here would make this the calmest screen in the
+  corpus, and unlike the payoff it cannot borrow a short exposure window to
+  excuse it — a subagent run is unbounded and the viewer sees the loop repeat.
+- **Props.** The board, left flank, ground level, overlapping his legs.
+  **Measure the width rather than inheriting 5 units** — that figure came from
+  a _vehicle_, which needs wheels, a cabin and a window to read; a flat slab
+  with pieces may read at 3 or 4. It matters because the payoff's vehicle is
+  already a 5-unit ground-level slab on the same flank, and prop mass is what a
+  glance reads. Two or three pieces, at least two tones, measured against sand.
+- **Effects.** None. The pieces moving is the effect.
 
-**Not wanted:** dice, which read as gambling rather than delegation and are a
-single unit that will rasterise to a dot. A board he is reaching toward —
-§Props need contact wants overlap, and his legs already provide it. More than
-three pieces: at 8px a unit they merge into a stripe. Any piece that leaves the
-board, which reads as spilling rather than playing.
+**Not wanted:** dice — they read as gambling, and a single unit rasterises to a
+dot. A board he reaches toward: his legs already provide the contact. More than
+three pieces; at 8px a unit they merge. Any piece leaving the board.
 
----
+**Known gap it widens:** a ground-level prop beside his legs blinds `hipGap`
+the way the payoff's vehicle does, making this the second animation to do it.
+The replacement gate is designed in `tools/bake-sprites.test.ts` and unbuilt.
 
-## Road bike — long runs
-
-Something is going to take a while, and he has settled in for it.
-
-`BUILD_PLAN.md` Stage 4 item 13, Tier B, and the only one of the three with no
-tool trigger: it is keyed on _duration_, which nothing in the daemon currently
-measures. **That wiring does not exist and is the first thing to cost.**
-`effectiveState` promotes `IDLE` on quiet, not `WORKING` on length, so this
-needs a new promotion — a `WORKING` session whose `workedAt` is far enough in
-the past — and that is a `Session` change of the kind `BUILD_PLAN.md` wanted
-finished before Stage 3's window closed.
-
-`data-loop-seconds="12"`. Cadence matters more here than in the other two: a
-long screen that loops quickly reads as impatience.
-
-- **Action.** Clawd on a bike, pedalling steadily, going nowhere. The joke is
-  endurance rather than speed.
-- **Body mechanics.** Legs on the pedals — **this is the one screen where the
-  legs are the animation**, which inverts the rule the other plans follow, so
-  the breathing group and the leg group have to be reasoned about fresh rather
-  than copied. Body still, claws on the bars.
-- **Eyes.** Forward, steady. One blink late in the loop.
-- **Props.** The bike. It has to carry him, which is unlike any prop in the
-  corpus — every existing one sits beside or in front of him. **Cost this
-  before drawing:** the contact shadow is hard-wired to the slot and assumes
-  feet on the ground, and a seated crab is `typing`'s problem too, which solved
-  it by lowering the legs eight rows rather than by moving the shadow.
-- **Effects.** None. Motion lines would say speed, which is the opposite of
-  the reading.
-
-**Not wanted:** a road, scenery, or anything implying travel — the rock pool is
-the setting and a second one competes with it. Speed lines. A bike drawn so
-completely that it stops being a silhouette at 8px a unit; the wheels are the
-only part that must read. Standing pedalling, which loses the endurance.
+**Fallback:** cut it. At 0.7% of tool calls it is the least-seen screen with a
+measured trigger, and if the `subagents > 0` wiring does not land it has no
+trigger worth the art. **Decide by Sun 6 Sep**, with the Tier A gate.
 
 ---
 
-## What every plan below has to answer now
+## Sweeping — `PreCompact`
 
-Six constraints that cost real rework this month, collected so a plan can be
-checked against them before any SVG is drawn rather than after. Each one is a
-place a shipped animation has already gone wrong.
+The context is filling up and Clawd is tidying it.
+
+`BUILD_PLAN.md` Stage 4 item 8, and **Tier B per `spec.md` — the third owed
+screen, which the first draft of this section replaced with `road bike`.**
+`road bike` is Tier C: "cut without regret". Promoting it was reopening a
+settled decision on the most expensive of the three, seventeen days before
+freeze.
+
+**Nothing can draw this yet.** `COMPACTING` is absent from `SESSION_STATES`,
+deliberately — `state.ts` records tier 1 as empty because `PreCompact`'s art
+does not exist — and `hook-settings.ts` does not register the hook. So this is
+art _plus_ a state, a rank, a `STATE_ANIMATIONS` entry and a hook registration.
+Cost that before drawing; it is the largest wiring bill of the three.
+
+`data-loop-seconds="8"`.
+
+- **Action.** Clawd sweeping something off the stage with an extended claw.
+  What he sweeps should read as _removed_, not destroyed.
+- **Body mechanics.** Breath, legs outside it. One claw rotated and extended at
+  the shoulder, moving rather than held — this is the one screen of the three
+  where the claw's travel carries the reading, so it is the `overheated` fan
+  idiom rather than the `permission-sign` hold.
+- **Eyes.** Following the sweep.
+- **Props.** A broom or the swept material — decide which, because both is two
+  props. Whatever it is has to touch the claw on every frame of the stroke.
+- **Effects.** None beyond the swept material itself.
+
+**Not wanted:** dust clouds, which are the small-pale-things failure again.
+A stage that visibly empties, since the loop repeats and it would refill.
+
+**Fallback:** cut it. It has the largest wiring cost and the least visible
+trigger — `PreCompact` fires rarely. **Decide by Sun 6 Sep.**
+
+---
+
+## What every plan has to answer
+
+Seven constraints, each one a place an animation has already gone wrong on this
+project. Checking a plan against them costs minutes; discovering them from a
+critic's render costs a rebuild.
 
 1. **Where does the prop go?** The stage spans x -3 to 18 and the character
    occupies 0 to 15, so the free width is 3 units per flank and it is not
    contiguous. The right flank is the rock pool, units x 11.25 to 17.50 for its
-   full height above the ground line — anything parked there is in the water.
-   The left flank is clear at ground level. The character cannot move:
-   `docs/ANIMATION.md` says grow the stage instead, and the stage is already
-   within half a unit of the panel's ceiling.
-2. **Does the prop touch him?** §Props need contact. A prop that shares only an
-   edge does not read; `gym`'s bar three units clear read as hovering, and the
-   payoff screen's first draft touched nothing on any frame while claiming it
-   did. Overlap is the mechanism, not a compromise.
-3. **What new colour does it declare, and what does that colour capture?**
-   `paletteOf` is per-document and matches `fill="#RRGGBB"` — a hex in a
-   comment is not a declaration. Every declared colour becomes a snap target
-   for every other colour's antialiased edges. Compute what the new colour
-   takes from the peach-to-black ramp before drawing, and declare `#6F4436` if
-   it takes the middle.
-4. **Is the claw rotating _and_ extending, pivoted at the shoulder?** A bare
-   rotation cannot clear the silhouette, and a pivot at the claw's own tip
-   extends it inward under the torso. Both are shipped mistakes.
-5. **Are the legs outside the breathing group, and is `ground-shadow` absent?**
+   full height above the ground line. The left flank is clear at ground level
+   but the environment's rock sits at x -2.25 to 1.00, y 6.6 to 8.75. The
+   character cannot move: `docs/ANIMATION.md` says grow the stage instead, and
+   the stage is within half a unit of the panel's ceiling.
+2. **Does the prop touch him?** §Props need contact. Sharing an edge is not
+   contact — the payoff screen's first draft touched nothing on any frame while
+   claiming it did, and `gym`'s bar three units clear read as hovering.
+3. **What does a new colour capture?** `paletteOf` is per-document and matches
+   `/fill\s*[:=]\s*"?(#RRGGBB)/` **against the raw file text** — so a `fill`
+   token inside a comment _is_ a declaration, and so is a `fill:` in a `<style>`
+   rule. What is not is a bare hex in prose, which is how the payoff screen's
+   remedy went missing. Every declared colour becomes a snap target for every
+   other colour's antialiased edges; compute what a new one takes from the
+   peach-to-black ramp before drawing, and declare `#6F4436` if it takes the
+   middle.
+4. **What does it measure against the grounds it will actually sit on?** This
+   is the one that has bitten most often — the boot splash wordmark,
+   `confused`'s caret, `dizzy`'s stars and `asleep`'s Zs all failed it, and
+   `asleep`'s is still unfixed. Run `node tools/contrast.ts` and paste the row.
+   Two numbers that decide most of it: the corpus pale `#C9D1D9` is **1.01:1
+   against the day sky's lowest band**, so a pale thing at head height is
+   invisible by day; a dark mass is **1.03:1 against night sky**. One flat tone
+   does not survive four times of day at head height, which is why `dizzy` ended
+   up a dark mass with a pale core.
+5. **Is the claw rotating _and_ extending, pivoted at the shoulder — and does
+   it hold something?** A bare rotation cannot clear the silhouette; a pivot at
+   the claw's own tip extends it inward under the torso.
+   `docs/ANIMATION.md` adds the third clause: "give it something to hold".
+   Every extended claw in the corpus holds a prop or moves.
+6. **Are the legs outside the breathing group, and is `ground-shadow` absent?**
    Legs inside it make the whole sprite bob and the feet sink into their own
-   contact shadow. `ground-shadow` is the one base element an animation must
-   not carry.
-6. **Do the keyframes land on whole frames?** One frame is
-   `100 / (loop_seconds * 8)` percent. Percentages between frames are silently
-   snapped, and a hold that looks like four frames may be three.
+   contact shadow. There is **no seated pose in the corpus** — `typing` looks
+   seated and is not, it is standing behind a laptop — so a pose off the ground
+   line means `UNGROUNDED`/`castsShadow` in `packages/renderer`, which is a
+   change with a mandatory review rather than an SVG edit.
+7. **Do the keyframes land on whole frames, and does the effect period divide
+   the loop?** One frame is `100 / (loop_seconds * 8)` percent. And _n_ evenly
+   phased effects need _n_ to divide the frame count: three things at 8 seconds
+   is 64/3 frames apart, which is not an integer — the reason `dizzy` is 12
+   seconds.
+
+Two of these were stated backwards in the first draft of this section: that a
+hex in a comment is never a declaration, and that the claw mistakes had
+shipped. Neither was true. A checklist that inflates its own evidence gets
+discounted exactly when it is most needed.
 
 ## Template
 
