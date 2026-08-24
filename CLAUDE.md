@@ -82,28 +82,35 @@ table and rationale: `docs/ARCHITECTURE.md`.
   such safety net, and it is the design-freeze artefact. Copy it somewhere real
   before relying on it.
 - **`packs/` and `.claude/research/` are gitignored.** The repo is public and
-  the personal content is not: logos, quips, pet and every in-joke live in
-  ignored files. Tracked docs refer to those by role ("the recipient's pack",
-  "its mapped quip"), never by content.
+  the personal content is not: logos, quips, the pet and every in-joke live in
+  ignored files. Tracked docs name them by role.
 
-  **The test is whether a detail narrows the field to a person**, given that the
-  author is public and the recipient is findable from him. That is the line,
-  not category membership. An activity does not narrow anything — the animation
-  catalogue is _built_ from what the recipient enjoys, and `gym` and
-  `bouldering` are animation names, SVG filenames, `ANIMATIONS` entries and a
-  `package.json` script across 26 and 18 tracked files. A make and colour
-  together does narrow it, which is why the payoff screen's vehicle was renamed
-  to its role on 24 Aug after reaching ten places across five tracked files. So
-  do a pet's name, an employer, a street, and anything carrying a serial.
+  **The rule is: do not add a new personal detail to a tracked file.** If a
+  screen needs one, the detail goes in the pack and the tracked file names its
+  role. That is checkable by anyone, including someone who has never met the
+  recipient — which neither previous version of this rule was. The first asked
+  whether a thing was an interest, and condemned the animation catalogue, which
+  is built from interests. The second asked whether a detail "narrows the field
+  to a person, given the author is public and the recipient is findable from
+  him" — and that premise decides the question before the test runs, so it
+  returned whichever answer was wanted.
 
-  This used to read "interests… live in ignored files", which condemned those
-  110 occurrences while the same document called the animations the point of the
-  project. Measured when a review pressed on it: the recipient's name, their
-  pet's name and two franchises appear in **zero** tracked files, and the
-  activities appear everywhere. The practice was already identifiability; the
-  wording was the thing out of step, and `a rule nobody can follow gets ignored
-rather than fixed` is written four paragraphs below about the previous time
-  this happened.
+  **What is already tracked is grandfathered, and listed here so nobody has to
+  guess.** Four activities appear as animation names, SVG filenames,
+  `ANIMATIONS` entries and a `package.json` script — 25, 18, 4 and 2 tracked
+  files. They are the catalogue. The date is four lines up, deliberately.
+
+  **The grandfathered set does not grow**, and the reason is combination, which
+  no per-detail test can see: an exact date, four activities and a public author
+  already narrow the field a long way, and each addition narrows it further
+  while passing any "is this one detail identifying?" check.
+
+  **Three things have leaked and been removed after the fact**, all caught by
+  review rather than before merge: a name from three tracked files, an in-joke
+  quip from a renderer test, and the payoff screen's vehicle by make and colour
+  from five files. Assume the next one gets through too, and that removal from
+  the working tree is not removal — see the public-repo row in `BUILD_PLAN.md`,
+  which accepts history in full.
 
   **What is deliberately not protected: that this is a birthday gift, and its
   date.** Both are stated four lines into this file and the date drives every
