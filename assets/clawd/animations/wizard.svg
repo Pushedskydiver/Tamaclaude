@@ -361,24 +361,32 @@
           <rect x="8" y="2.75" width="0.75" height="0.5"/>
           <rect x="6.75" y="1.75" width="0.75" height="0.5"/>
         </g>
-        <!-- The brim. Pale only where the peach torso is behind it; the
-             overhang past the torso's right edge is dark.
+        <!-- The brim. Pale across its whole width, overhanging the torso's
+             right edge by a unit.
 
-             The overhang is what makes the brim read as a brim rather than as
-             the head's own outline, and it has to be there. But `paintEnvironment`
-             puts the horizon at unit y 6.50 and this brim spans 5.5 to 6.5,
-             riding to 7.125 on the bob — so a *pale* overhang is a bright bar
-             with nothing behind it but sky and sea, sitting on the scenery's
-             strongest line. Measured before the fix: flush with the sea's first
-             row on 21 of 96 frames and covering it on 18 more.
+             The overhang is what makes this read as a brim rather than as the
+             head's own outline, and it has to be pale. A dark end-cap was
+             tried, to keep the overhang off the horizon, and a critic sent it
+             back: the cone's base is at x 4, two units inboard and a row up,
+             so a dark block at x 13 has no dark mass to bind to and reads as a
+             speck floating beside his head — and against night sky it is
+             1.55:1 and simply gone, so the silhouette it was protecting
+             existed on one ground of four. Upstream `hat-mishap`'s brim
+             overhangs by three units each side in one flat colour, and never
+             changes colour at the overhang.
 
-             Moving the brim does not fix it, and this is worth writing down:
-             the torso's own top edge travels 6.00 to 6.63 as he breathes, so it
-             crosses 6.50 by itself. Anything sitting on the head is at the
-             horizon on part of the loop. What can be fixed is whether the thing
-             at the horizon is the brightest object on the panel. -->
-        <rect id="fx-hat-brim" x="2" y="5.5" width="11" height="1" fill="#C9D1D9"/>
-        <rect id="fx-hat-brim-tip" x="13" y="5.5" width="1" height="1" fill="#000000"/>
+             So the horizon overlap is accepted rather than fixed, and this is
+             what that costs: `paintEnvironment` puts the horizon at unit y
+             6.50 and this brim spans 5.5 to 6.5, riding to 7.125 on the bob,
+             so its bottom row is flush with the sea's first row on 21 of 96
+             frames and covers it on 18 more. Judged at true size, it does not
+             read as a problem.
+
+             **Moving the brim would not fix it anyway.** The torso's own top
+             edge travels 6.00 to 6.63 as he breathes, so it crosses 6.50 by
+             itself; anything sitting on the head is at the horizon for part of
+             the loop. -->
+        <rect id="fx-hat-brim" x="2" y="5.5" width="12" height="1" fill="#C9D1D9"/>
       </g>
 
       <!-- A dark ring around a pale core: one object rather than a larger
