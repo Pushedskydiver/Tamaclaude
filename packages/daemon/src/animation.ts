@@ -98,6 +98,13 @@ const STATE_ANIMATIONS: Readonly<
   NEEDS_PERMISSION: 'permission-sign',
   FAILED: 'dizzy',
   WAITING: 'confused',
+  // The payoff screen's art is `BUILD_PLAN.md` item 6 and is not built. `idle`
+  // is what `DONE` decays into fifteen seconds later, so borrowing it means the
+  // trigger changes nothing on the glass until the art lands — the state is
+  // real, the rank is real, and the picture is the one the panel would have
+  // shown anyway. That is the point of landing the trigger first: if item 6 is
+  // cut at the gate, this line stays and nothing has to be reverted.
+  DONE: 'idle',
   THINKING: 'thinking',
   IDLE: 'idle',
   ASLEEP: 'asleep',
