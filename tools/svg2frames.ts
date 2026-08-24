@@ -7,8 +7,11 @@
  *
  *   node tools/svg2frames.ts <input.svg> [outDir] [scale]
  *
- * Determinism is the whole point: nothing depends on wall-clock time, so the
- * same SVG always produces the same bytes.
+ * Determinism is the whole point, and it takes two things rather than one:
+ * nothing may depend on wall-clock time, *and* the capture has to wait for the
+ * seek to be painted. Only the first was here until 24 Aug, while this header
+ * claimed the guarantee outright — see `seekAnimations` for what that cost.
+ * With both, the same SVG always produces the same bytes.
  *
  * Seeking sets each animation's `currentTime` to the elapsed time and nothing
  * else. Do **not** compensate for `animation-delay` here, however tempting it
@@ -186,10 +189,42 @@ function reportSafeArea(highest: number, viewBoxTop: number): void {
   );
 }
 
-/** Seek every animation to `elapsed` ms. The effect applies its own delay. */
-function seekAnimations(elapsed: number): void {
+/**
+ * Seek every animation to `elapsed` ms, and wait for the seek to be painted.
+ *
+ * The effect applies its own delay, so setting `currentTime` is the whole
+ * seek. The two `requestAnimationFrame`s are not: without them
+ * `page.screenshot` races the compositor and can rasterise a partially applied
+ * state.
+ *
+ * **This was shipping wrong frames, not just unstable ones.** Measured on
+ * `payoff`: renders of an unchanged SVG disagreed with each other on 4 of 9
+ * comparisons, always a handful of pixels on one antialiased edge — the right
+ * eye's, at ~32% coverage in one run and ~27% in another. That was the visible
+ * symptom, and it is why re-baking a clean tree produced diffs in sprites
+ * nobody had touched. The cause is worse: with the wait, **9 of 64 frames come
+ * out different from what the tool produced before**, and 8 of those matched
+ * none of ten unwaited runs. So those frames were consistently captured
+ * mid-settle rather than occasionally.
+ *
+ * That the waited raster is the converged one rather than merely another
+ * variant is checked rather than assumed: replacing the two frames with a flat
+ * 250 ms sleep gives output identical to this on all 64 frames, and differing
+ * from the unwaited tool on the same 9. Two frames cost nothing; the sleep
+ * costs 16 seconds an animation.
+ *
+ * One frame is not enough. The first callback runs before the paint that the
+ * style change schedules; the second runs after it, which is the point at
+ * which the screenshot has something settled to capture.
+ */
+async function seekAnimations(elapsed: number): Promise<void> {
   document.getAnimations().forEach((animation) => {
     animation.currentTime = elapsed;
+  });
+  await new Promise((painted) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(painted);
+    });
   });
 }
 
