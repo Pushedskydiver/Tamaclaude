@@ -10,6 +10,8 @@ import {
   ASLEEP_AFTER_MS,
   DONE_AFTER_MS,
   EVICT_AFTER_MS,
+  needsAttention,
+  SESSION_STATES,
   WAITING_AFTER_MS,
 } from './state.js';
 
@@ -217,5 +219,27 @@ describe('the payoff against other sessions', () => {
     registry = observe(registry, { sessionId: 'finished', kind: 'Stop' }, T0);
     registry = observe(registry, { sessionId: 'resting', kind: 'Stop' }, T0);
     expect(resolvePanel(registry, T0 + DONE_AFTER_MS).state).toBe('DONE');
+  });
+});
+
+describe('needsAttention', () => {
+  it('is exactly the three states that ask for a human', () => {
+    // Pinned by extension rather than by rank, because the whole point of the
+    // predicate is that callers stop knowing the rank. Written against
+    // `SESSION_STATES` so a new state cannot be added without landing on one
+    // side of this or the other — an omission here would be a state the
+    // message band silently decides is safe to cover.
+    const asking = SESSION_STATES.filter((state) => needsAttention(state));
+    expect([...asking]).toEqual(['NEEDS_PERMISSION', 'FAILED', 'WAITING']);
+  });
+
+  it('does not include DONE, which loses to work rather than winning over it', () => {
+    // `DONE` is the state most easily mistaken for an attention state: it is a
+    // payoff, so it feels like it should seize the screen. It does not — it
+    // ranks below `WORKING` and `THINKING` deliberately. A birthday quip may
+    // cover it; a blocked session it may not.
+    expect(needsAttention('DONE')).toBe(false);
+    expect(needsAttention('WORKING')).toBe(false);
+    expect(needsAttention('IDLE')).toBe(false);
   });
 });

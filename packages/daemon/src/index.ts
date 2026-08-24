@@ -55,12 +55,10 @@ export { resolvePanel } from './resolve.js';
 export type { Session } from './session.js';
 export { effectiveState } from './session.js';
 export type { SessionState } from './state.js';
-// `ATTENTION_RANK` and `stateRank` cross the boundary for one caller: the
-// message band has to know whether a state is asking for a human, so the
-// birthday line can step aside for it. Exporting the rank rather than a list of
-// state names means the answer stays in one place — `state.ts` already warns
-// that "a bare `2` in two files is a bug waiting for someone to renumber a
-// tier".
-export { ATTENTION_RANK, stateRank } from './state.js';
+// `needsAttention` crosses the boundary for one caller: the message band has to
+// know whether a state is asking for a human, so the birthday line can step
+// aside for it. This was `ATTENTION_RANK` and `stateRank`, which let the caller
+// open-code the comparison — see `state.ts` for the mutant that shape admitted.
+export { needsAttention } from './state.js';
 export { startSocketServer } from './socket-server.js';
 export { defaultSocketPath } from './socket-path.js';

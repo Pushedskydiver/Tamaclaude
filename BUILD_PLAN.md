@@ -97,7 +97,7 @@ The whole product, minus hardware.
       its own function, and `knip` would have failed on one that did.
 - [ ] Harness draws through `render()` rather than approximating the bands —
       what makes Stage 2's exit true by construction instead of by inspection
-- [ ] Pack loader + manifest schema
+- [x] Pack loader + manifest schema
 - [~] `packs/example/` — manifest and palette done; **placeholder art still to
   come**, and Stage 1's exit depends on it
 - [x] Dirty-rect differ + RLE encoder, with unit tests and a compression-ratio assertion
@@ -367,15 +367,24 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
-- [ ] Birthday screen, date-triggered 23 Sep. **The trigger is built and the
-      screen is not.** `packs`, an optional `birthday: { date, quip }` keyed
-      `MM-DD` so it recurs, and `isBirthday` comparing in local time because
-      the day the panel should celebrate is the one the person beside it is
-      having. The quip beats the resting and working lines and loses to every
-      attention state — the same rule `DONE` is ranked by, and the reason it is
-      a rule is that the day it matters most that the panel still says when to
-      look is the day nobody is watching it for status. What remains is art:
-      the scene on the line above.
+- [~] Birthday screen, date-triggered 23 Sep. **The trigger is built; the
+  screen is not, and no tracked pack carries a date.** `packs` takes an
+  optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
+  `isBirthday` compares in local time because the day the panel should
+  celebrate is the one the person beside it is having. `02-29` falls back
+  to the 28th in a common year, and a day that exists in no month is
+  refused — both because accepting a date that can never fire is a failure
+  nobody can notice until the day has passed.
+  The quip beats the resting and working lines and loses to any state
+  asking for a human. **That is not the rule `DONE` is ranked by**, and
+  two earlier versions of this line said it was: `DONE` ranks below
+  `WORKING` because "a payoff belongs on a quiet desk", and this covers
+  both. They share only the attention half. The reason to differ is that
+  rank decides the stage, where a resting Clawd over a running tool would
+  be a lie, while this decides the message band and the animation still
+  shows the work. Two reviews caught the claim independently.
+  What remains: the art on the line above, and the `birthday` field in the
+  recipient's pack, which is the first unchecked item in this stage.
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its

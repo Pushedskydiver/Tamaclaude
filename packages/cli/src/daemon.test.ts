@@ -256,37 +256,99 @@ describe('what the panel says', () => {
   });
 
   it('says happy birthday all day, without hiding anything that needs a human', () => {
-    // The rule `DONE` taught this morning, applied again: a celebration must
-    // never cover a session that is blocked. So the birthday quip beats idle
-    // and working lines, and loses to every attention state — on the one day
-    // of the year it matters most that the panel still does its job.
+    // **This is not the rule `DONE` is ranked by, and an earlier version of
+    // this comment said it was.** `DONE` loses to `WORKING` and `THINKING`
+    // (`state.ts` ranks it 5 against their 3 and 4) on the grounds that "a
+    // payoff belongs on a quiet desk". The birthday quip covers them. The two
+    // rules share exactly one half — neither covers a state asking for a human
+    // — and it was the appeal to precedent that was false, not the behaviour.
+    //
+    // The reason they differ: `STATE_RANK` decides which session owns the
+    // *stage*, and showing a resting Clawd over a running tool is a lie about
+    // what is happening. This decides the *message band* only; the animation
+    // still shows the work, so nothing on the glass is false. And `DONE` is
+    // triggered by quiet, which makes "belongs on a quiet desk" nearly
+    // tautological for it, while a birthday is a property of the day and holds
+    // whatever the desk is doing. A line that waited for a quiet desk could be
+    // missed for a whole working Wednesday, which is the one outcome the
+    // feature exists to prevent.
     const birthdayPack = parsePackManifest({
       ...pack,
       birthday: { date: '09-23', quip: 'happy birthday' },
     });
     const onTheDay = new Date(2026, 8, 23, 10, 0, 0).getTime();
     const dayBefore = new Date(2026, 8, 22, 10, 0, 0).getTime();
-    // Built at `onTheDay`, not at the file's `NOW`. A registry stamped months
-    // earlier is evicted by the time it is resolved, so the panel would be an
-    // empty desk and the assertion would pass for the wrong reason — which is
-    // exactly what the first version of this test did.
-    const at = (event: HookEvent, when: number) =>
-      observe(createRegistry(when), event, when);
-    const idle = at({ sessionId: 's', kind: 'Stop' }, onTheDay);
-    const blocked = at({ sessionId: 's', kind: 'PermissionRequest' }, onTheDay);
-    const idleBefore = at({ sessionId: 's', kind: 'Stop' }, dayBefore);
 
+    // Built at the instant they are resolved at, not at the file's `NOW` —
+    // which is 14 Nov 2023, two years and ten months before the birthday under
+    // test. The first version of this test used the `after(...)` helper above,
+    // so every session was long past `EVICT_AFTER_MS` by the time the scene
+    // rendered and the "blocked" panel it asserted against was an empty desk.
+    // It passed, and it was checking nothing.
+    const at = (events: readonly HookEvent[], when: number): Registry =>
+      events.reduce<Registry>(
+        (registry, event) => observe(registry, event, when),
+        createRegistry(when),
+      );
+    const say = (events: readonly HookEvent[], when: number, at_ = when) =>
+      sceneFor({ registry: at(events, at_), pack: birthdayPack, now: when })
+        .message;
+
+    // Every state, and whether the birthday may cover it. Written as a table
+    // over all eight because two mutants survived the previous version: a
+    // guard narrowed to `state === 'NEEDS_PERMISSION'` (dropping `FAILED` and
+    // `WAITING` in silence) and one widened to `state !== 'IDLE'`. Neither
+    // could be seen by a test that only exercised `IDLE` and one attention
+    // state.
+    const covered: readonly (readonly [string, readonly HookEvent[]])[] = [
+      ['THINKING', [{ sessionId: 's', kind: 'UserPromptSubmit' }]],
+      ['WORKING', [{ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }]],
+      ['IDLE', [{ sessionId: 's', kind: 'Stop' }]],
+      ['ASLEEP', [{ sessionId: 's', kind: 'SessionEnd' }]],
+    ];
+    for (const [state, events] of covered) {
+      expect(say(events, onTheDay), state).toBe('happy birthday');
+    }
+
+    const guarded: readonly (readonly [string, readonly HookEvent[]])[] = [
+      ['NEEDS_PERMISSION', [{ sessionId: 's', kind: 'PermissionRequest' }]],
+      ['FAILED', [{ sessionId: 's', kind: 'StopFailure' }]],
+      [
+        'FAILED:rate_limit',
+        [{ sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' }],
+      ],
+    ];
+    for (const [state, events] of guarded) {
+      expect(say(events, onTheDay), state).not.toBe('happy birthday');
+    }
+
+    // `WAITING` needs the clock to move, so the notification lands a minute
+    // earlier — still the same local day, which is the point.
     expect(
-      sceneFor({ registry: idle, pack: birthdayPack, now: onTheDay }).message,
-    ).toBe('happy birthday');
-    expect(
-      sceneFor({ registry: blocked, pack: birthdayPack, now: onTheDay })
-        .message,
-    ).toBe(birthdayPack.quips.mapped.NEEDS_PERMISSION);
-    expect(
-      sceneFor({ registry: idleBefore, pack: birthdayPack, now: dayBefore })
-        .message,
+      say(
+        [{ sessionId: 's', kind: 'Notification' }],
+        onTheDay,
+        onTheDay - 60_000,
+      ),
+      'WAITING',
     ).not.toBe('happy birthday');
+
+    // `DONE` is covered, and is the case worth naming: it is a payoff, so it
+    // reads like something the birthday should defer to. It is not an
+    // attention state, and its own art is untouched either way.
+    expect(
+      say(
+        [{ sessionId: 's', kind: 'PreToolUse', tool: 'Bash' }],
+        onTheDay,
+        onTheDay - 45_000,
+      ),
+      'DONE',
+    ).toBe('happy birthday');
+
+    // And not on any other day: the idle rotation, not the quip.
+    expect(say([{ sessionId: 's', kind: 'Stop' }], dayBefore)).not.toBe(
+      'happy birthday',
+    );
   });
 
   it('picks overheated for a rate limit on the path the panel actually uses', () => {

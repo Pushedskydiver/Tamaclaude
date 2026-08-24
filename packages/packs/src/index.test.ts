@@ -82,9 +82,20 @@ describe('the birthday', () => {
   it('turns over at local midnight, not UTC', () => {
     // The bug this is here to catch: comparing in UTC puts the day an hour or
     // thirteen out depending on the offset, so the panel celebrates while the
-    // person in front of it is still on the 22nd, or vice versa. Built from
-    // local components on purpose, so the assertion holds in any timezone the
-    // suite runs in — including CI.
+    // person in front of it is still on the 22nd, or vice versa.
+    //
+    // **This test is vacuous under UTC**, where local time *is* UTC and every
+    // assertion below compares a value with itself. An earlier version of this
+    // comment claimed the opposite — that building from local components made
+    // it hold "in any timezone the suite runs in, including CI" — which was
+    // true and worthless: CI is `ubuntu-latest` with no `TZ`. A review planted
+    // `getUTCMonth`/`getUTCDate` and all 11 tests here stayed green.
+    //
+    // `vitest.config.ts` now pins Europe/London. The offset assertion is the
+    // point: it fails loudly if that pin is lost, or if these dates ever move
+    // into a month when London *is* UTC, instead of letting this go quietly
+    // green against the one bug it exists to catch.
+    expect(new Date(2026, 8, 23).getTimezoneOffset()).not.toBe(0);
     const pack = parsePackManifest({
       ...valid,
       birthday: { date: '09-23', quip: 'happy birthday' },
@@ -108,16 +119,50 @@ describe('the birthday', () => {
     }
   });
 
-  it('accepts 02-29 rather than pretending it is not a birthday', () => {
-    // It parses, and it simply never matches in a common year. Refusing it at
-    // the boundary would be the schema deciding something about the person
-    // rather than about the format.
+  it('celebrates a 29 February birthday on the 28th in a common year', () => {
+    // The schema comment argues that "a pack that silently never fires is the
+    // failure that cannot be noticed until the day has passed", and this test
+    // used to assert exactly that failure — accepting `02-29` and then doing
+    // nothing in three years out of four. A review caught the contradiction.
+    //
+    // 28 February rather than 1 March: it keeps a February birthday in
+    // February, and the asymmetry decides it — silence is invisible and
+    // unrecoverable on the day, while a fallback is at worst one day's
+    // disagreement with a preference, and it is visible.
     const leap = parsePackManifest({
       ...valid,
       birthday: { date: '02-29', quip: 'happy birthday' },
     });
+    // 2028 has the day, so the 28th is not it — the real one is tomorrow.
     expect(isBirthday(leap, new Date(2028, 1, 29, 12).getTime())).toBe(true);
-    expect(isBirthday(leap, new Date(2027, 1, 28, 12).getTime())).toBe(false);
+    expect(isBirthday(leap, new Date(2028, 1, 28, 12).getTime())).toBe(false);
+    // 2027 does not, so the 28th stands in.
+    expect(isBirthday(leap, new Date(2027, 1, 28, 12).getTime())).toBe(true);
+    // 2100 is divisible by 4 and is not a leap year.
+    expect(isBirthday(leap, new Date(2100, 1, 28, 12).getTime())).toBe(true);
+    // 2000 is divisible by 100 and is one.
+    expect(isBirthday(leap, new Date(2000, 1, 28, 12).getTime())).toBe(false);
+    expect(isBirthday(leap, new Date(2000, 1, 29, 12).getTime())).toBe(true);
+    // And it does not leak into a neighbouring day in either kind of year.
+    expect(isBirthday(leap, new Date(2027, 2, 1, 12).getTime())).toBe(false);
+    expect(isBirthday(leap, new Date(2027, 1, 27, 12).getTime())).toBe(false);
+  });
+
+  it('refuses a day that exists in no year', () => {
+    // The regex alone accepts all six of these. Each would validate, ship, and
+    // then never fire — the exact failure the schema comment above refuses,
+    // and unlike `02-29` there is no year in which they are real.
+    for (const date of ['02-30', '02-31', '04-31', '06-31', '09-31', '11-31']) {
+      expect(() =>
+        parsePackManifest({ ...valid, birthday: { date, quip: 'x' } }),
+      ).toThrow();
+    }
+    // The legal end-of-month days still pass, so this is not just stricter.
+    for (const date of ['01-31', '04-30', '02-29', '12-31']) {
+      expect(() =>
+        parsePackManifest({ ...valid, birthday: { date, quip: 'x' } }),
+      ).not.toThrow();
+    }
   });
 
   it('refuses a date that is not MM-DD, at the boundary', () => {

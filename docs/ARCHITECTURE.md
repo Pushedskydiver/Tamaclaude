@@ -202,8 +202,8 @@ defect.
 
 ## Packs
 
-A pack is the customisation surface: a palette, a quip table, props and an
-optional logo. Config selects one; nothing else changes.
+A pack is the customisation surface: a palette, a quip table, an optional
+birthday, props and an optional logo. Config selects one; nothing else changes.
 
 **The character is not per-pack.** Clawd is shared — one base geometry, one
 animation set, recoloured and re-dressed per pack. Making the character

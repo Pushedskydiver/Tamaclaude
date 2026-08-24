@@ -33,11 +33,10 @@ import process from 'node:process';
 
 import {
   animationFor,
-  ATTENTION_RANK,
   effectiveState,
+  needsAttention,
   resolvePanel,
   startSocketServer,
-  stateRank,
 } from '@tamaclaude/daemon';
 import { openPanel } from '@tamaclaude/device';
 import { isBirthday, parsePackManifest } from '@tamaclaude/packs';
@@ -235,18 +234,38 @@ function subagentText(sessions: readonly Session[]): string {
  * The birthday line, when today is the day and nothing is asking for a human.
  *
  * Its own function because `messageFor` hit a complexity of 14 against a limit
- * of 10 the moment this landed, and because the rule it encodes deserves a name:
- * **a celebration never covers an attention state.** `DONE` was ranked by that
- * same rule this morning. The one day of the year it matters most that the
- * panel still says when to look is the day nobody is watching it for status.
+ * of 10 the moment this landed, and because the rule it encodes deserves a
+ * name: **a celebration never covers a state that is asking for a human.** The
+ * one day of the year it matters most that the panel still says when to look is
+ * the day nobody is watching it for status.
+ *
+ * **This is not the rule `DONE` is ranked by**, and the first version of this
+ * comment claimed it was — twice, here and in `BUILD_PLAN.md`. `DONE` sits at
+ * rank 5, below `WORKING` and `THINKING`, and `state.ts` puts the reason in
+ * bold: "a payoff belongs on a quiet desk". The birthday line covers both. Two
+ * independent reviews caught the same sentence, one of them noting that the
+ * paragraph cited as support argues the opposite.
+ *
+ * They share one half — neither covers an attention state — and differ on the
+ * other for two reasons. `STATE_RANK` decides which session owns the *stage*,
+ * where a resting Clawd over a running tool is a lie about what is happening;
+ * this decides the *message band* alone, and the animation still shows the
+ * work, so nothing on the glass is false. And `DONE` is triggered by quiet,
+ * which makes "belongs on a quiet desk" nearly tautological for it, while a
+ * birthday is a property of the day and holds whatever the desk is doing. A
+ * line that waited for a quiet desk could be missed for an entire working
+ * Wednesday, which is the one outcome this exists to prevent.
  */
 function birthdayLine(
   panel: ReturnType<typeof resolvePanel>,
   pack: PackManifest,
   now: number,
 ): string | undefined {
-  if (stateRank(panel.state) === ATTENTION_RANK) return undefined;
+  if (needsAttention(panel.state)) return undefined;
   if (!isBirthday(pack, now)) return undefined;
+  // `?.` only because TypeScript cannot narrow `birthday` across `isBirthday`;
+  // if it were somehow absent this returns undefined and `messageFor` falls
+  // through to the ordinary line, which is the right way to fail.
   return pack.birthday?.quip;
 }
 
@@ -287,39 +306,37 @@ function refinedFailureLine(
  * A pack's `quips.mapped` is keyed on exactly these state names — which
  * `state.ts` says is *why* they are SCREAMING_SNAKE — and until now nothing in
  * the repo read it: the example pack has "may I?" and "well, that happened"
- * sitting unused while the panel showed enum names. So a mapped quip wins, then
- * the tool for the states where a tool is the interesting fact, then an idle
- * quip, and a lower-cased state name only as a last resort.
+ * sitting unused while the panel showed enum names. So a mapped quip beats the
+ * tool, then an idle quip, and a lower-cased state name only as a last resort.
+ * It no longer wins outright — see the two lookups below — and it is not
+ * filtered by state: `panel.tool` is returned whenever it is set, which for
+ * `FAILED` means the stale tool this paragraph was written to stop showing.
+ * The mapped `FAILED` key is what keeps that unreachable, not a state check.
  *
  * The idle quip is chosen by the clock rather than at random, because a desk
  * toy that reshuffles its own text every 125ms is a fidget, not a pet — and
  * because a random one would make the dirty-rect diff send a frame per tick.
  *
- * Two lookups run before the mapped quip, each with its own doc: the
- * birthday line (`birthdayLine`) and the error-refined failure line
- * (`refinedFailureLine`). Both are ahead of the mapped lookup because a
- * bare state key would otherwise answer first.
+ * **Two lookups now run before the mapped quip**, which retires the sentence
+ * above: `birthdayLine` and `refinedFailureLine`, each with its own doc. They
+ * are ahead of it for different reasons, and an earlier version of this
+ * paragraph gave one reason for both. `refinedFailureLine` genuinely would be
+ * pre-empted by the bare `FAILED` key. `birthdayLine` would not — it fires
+ * only on states that have no mapped entry in any pack written so far, so what
+ * it actually steps in front of is `panel.tool` and the idle rotation.
+ *
+ * That distinction is not academic: `BUILD_PLAN.md` schedules mapped quips for
+ * more states in Stage 5, and on the day the birthday will take precedence
+ * over every one of them that is not asking for a human.
  */
 function messageFor(
   panel: ReturnType<typeof resolvePanel>,
   pack: PackManifest,
   now: number,
 ): string {
-  // The birthday first — see `birthdayLine`. Before the mapped lookup because
-  // `IDLE` has no mapped entry and would otherwise fall to the idle rotation.
+  // The birthday first — see `birthdayLine` for what it does and does not cover.
   const birthday = birthdayLine(panel, pack, now);
   if (birthday !== undefined) return birthday;
-  // A compound key first, then the bare state. `FAILED:rate_limit` lets a pack
-  // say something different when the limit is the reason, which is what
-  // `events.ts` records `error_type` as having been kept open for — and it
-  // matters now that two `FAILED` values draw different pictures, because
-  // otherwise `overheated` and `dizzy` share a message band and the picture is
-  // the only difference between them. No schema change: `quips.mapped` is
-  // already `z.record(z.string(), z.string())`, so any key validates.
-  //
-  // Read off the hero rather than through `resolvePanel`, which returns state
-  // and tool but not `errorType`. `sessions[0]` is the hero and is a whole
-  // `Session`, so the value is already here.
   const refined = refinedFailureLine(panel, pack);
   if (refined !== undefined) return refined;
   const mapped = pack.quips.mapped[panel.state];
