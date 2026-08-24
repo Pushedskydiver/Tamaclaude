@@ -255,6 +255,225 @@ describe('what the panel says', () => {
     ).toBe(3);
   });
 
+  it('never shows the tool of a session that died running it', () => {
+    // The defect `messageFor` was written to prevent, reachable again through
+    // the pack. `StopFailure` does not clear `tool`, so a session that died on
+    // a rate limit still carries `Bash` — and the tool line had no state
+    // filter, so the only thing keeping it off the glass was the example pack
+    // happening to define `quips.mapped.FAILED`.
+    //
+    // Packs are hand-edited and Zod-validated, i.e. a trust boundary. A pack
+    // that omits the key renders the word `Bash` for a dead session —
+    // pixel-for-pixel identical to one happily running Bash, which is exactly
+    // what this function's own doc says it exists to stop.
+    //
+    // **Two keys shielded the example pack, not one.** `quips.mapped.FAILED`
+    // covers the general case, and `FAILED:rate_limit` covers this one, because
+    // `refinedFailureLine` runs ahead of both the mapped lookup and the tool
+    // line. The session below fails with `rate_limit` on purpose — it is the
+    // path with two shields, so emptying `mapped` is what reaches the defect.
+    //
+    // `FAILED` is the only state that reaches the tool line with a stale tool.
+    // `SessionEnd` also leaves `tool` set, at `ASLEEP` — the panel never sees
+    // it because `isLive` drops a session with `endedAt`, which is a different
+    // reason from the one an earlier version of this comment gave.
+    const bare = parsePackManifest({
+      ...pack,
+      quips: { ...pack.quips, mapped: {} },
+    });
+    const died = observe(
+      observe(
+        createRegistry(NOW),
+        { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+        NOW,
+      ),
+      { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
+      NOW,
+    );
+    // The state is asserted, not just the tool — the row discipline this
+    // branch established two commits ago, applied to its own new test.
+    expect(resolvePanel(died, NOW).state).toBe('FAILED');
+    expect(resolvePanel(died, NOW).tool).toBe('Bash');
+    // `.toBe`, not `.not.toBe('Bash')`, which passes for any string at all.
+    // This pins the last-resort branch as well as the absence of the tool.
+    expect(sceneFor({ registry: died, pack: bare, now: NOW }).message).toBe(
+      'failed',
+    );
+
+    // And the two states where the tool *is* the interesting fact still show
+    // it — so this is a filter, not a removal.
+    const working = observe(
+      createRegistry(NOW),
+      { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
+      NOW,
+    );
+    expect(sceneFor({ registry: working, pack: bare, now: NOW }).message).toBe(
+      'Bash',
+    );
+    const asking = observe(
+      working,
+      { sessionId: 's', kind: 'PermissionRequest', tool: 'Write' },
+      NOW,
+    );
+    expect(sceneFor({ registry: asking, pack: bare, now: NOW }).message).toBe(
+      'Write',
+    );
+
+    // **And a mapped quip still beats the tool**, which nothing pinned until a
+    // review swapped the two lookups and watched the whole suite stay green.
+    // `NEEDS_PERMISSION` is the only state in the shipping pack that has both
+    // a tool and a mapped quip, and the assertions above hand it `bare` — the
+    // one pack shape where the precedence cannot be observed. With the real
+    // pack the reorder renders `Write` where it should say "may I?", and
+    // `hooks` sets `tool` on every tool-scoped event, so real permission
+    // requests do arrive carrying one.
+    expect(sceneFor({ registry: asking, pack, now: NOW }).message).toBe(
+      pack.quips.mapped.NEEDS_PERMISSION,
+    );
+  });
+
+  it('says happy birthday all day, without hiding anything that needs a human', () => {
+    // **This is not the rule `DONE` is ranked by, and an earlier version of
+    // this comment said it was.** `DONE` loses to `WORKING` and `THINKING`
+    // (`state.ts` ranks it 5 against their 3 and 4) on the grounds that "a
+    // payoff belongs on a quiet desk". The birthday quip covers them. The two
+    // rules share exactly one half — neither covers a state asking for a human
+    // — and it was the appeal to precedent that was false, not the behaviour.
+    //
+    // The reason they differ: `STATE_RANK` decides which session owns the
+    // *stage*, and showing a resting Clawd over a running tool is a lie about
+    // what is happening. This decides the *message band* only; the animation
+    // still shows the work, so nothing on the glass is false. And `DONE` is
+    // triggered by quiet, which makes "belongs on a quiet desk" nearly
+    // tautological for it, while a birthday is a property of the day and holds
+    // whatever the desk is doing. A line that waited for a quiet desk could be
+    // missed for a whole working Wednesday, which is the one outcome the
+    // feature exists to prevent.
+    const birthdayPack = parsePackManifest({
+      ...pack,
+      // A mapped quip on a *non-attention* state, which the example pack has
+      // none of — its three keys are all attention states. Without one, moving
+      // the birthday lookup to sit after the mapped lookup left the whole
+      // suite green, so the precedence this function exists to establish was
+      // asserted nowhere.
+      quips: {
+        ...pack.quips,
+        mapped: { ...pack.quips.mapped, IDLE: 'nothing doing' },
+      },
+      birthday: { date: '09-23', quip: 'happy birthday' },
+    });
+    const onTheDay = new Date(2026, 8, 23, 10, 0, 0).getTime();
+    const dayBefore = new Date(2026, 8, 22, 10, 0, 0).getTime();
+
+    // Built at the instant it is resolved at, not at the file's `NOW` — which
+    // is 14 Nov 2023, two years and ten months before the birthday under test.
+    // The first version of this test used the `after(...)` helper above, so
+    // every session was long past `EVICT_AFTER_MS` by the time the scene
+    // rendered and the "blocked" panel it asserted against was an empty desk.
+    const at = (events: readonly HookEvent[], when: number): Registry =>
+      events.reduce<Registry>(
+        (registry, event) => observe(registry, event, when),
+        createRegistry(when),
+      );
+
+    /**
+     * One row: assert the events really produce `state`, then assert whether
+     * the birthday covers it.
+     *
+     * **The state assertion is the point.** The previous version of this table
+     * asserted only the message, and two of its rows silently did not produce
+     * the state they named: `SessionEnd` sets `endedAt`, so the session is not
+     * live and the panel is an empty desk resolving to `IDLE` with no sessions
+     * — the exact failure the comment above says the version before it fell
+     * into, four lines further down — and `PreToolUse` alone never promotes to
+     * `DONE`, because `effectiveState` returns early for any stored state that
+     * is not `IDLE`. The table claimed eight states and covered six, and a
+     * mutant that made the birthday step aside for `DONE` and `ASLEEP` survived
+     * the entire suite. A message-only assertion cannot see a mislabelled row.
+     */
+    const check = (row: {
+      readonly state: string;
+      readonly events: readonly HookEvent[];
+      readonly celebrates: boolean;
+      readonly builtAt?: number;
+    }): void => {
+      const { state, events, celebrates, builtAt = onTheDay } = row;
+      const registry = at(events, builtAt);
+      expect(resolvePanel(registry, onTheDay).state, `${state} setup`).toBe(
+        state,
+      );
+      const { message } = sceneFor({
+        registry,
+        pack: birthdayPack,
+        now: onTheDay,
+      });
+      if (celebrates) expect(message, state).toBe('happy birthday');
+      else expect(message, state).not.toBe('happy birthday');
+    };
+
+    // Covered: the birthday replaces the line. `IDLE` also carries a mapped
+    // quip, so this is what pins the lookup order.
+    const P = { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' } as const;
+    check({
+      state: 'THINKING',
+      events: [{ sessionId: 's', kind: 'UserPromptSubmit' }],
+      celebrates: true,
+    });
+    check({ state: 'WORKING', events: [P], celebrates: true });
+    check({
+      state: 'IDLE',
+      events: [{ sessionId: 's', kind: 'Stop' }],
+      celebrates: true,
+    });
+    check({
+      state: 'ASLEEP',
+      events: [{ sessionId: 's', kind: 'Stop' }],
+      celebrates: true,
+      builtAt: onTheDay - 300_000,
+    });
+    check({
+      state: 'DONE',
+      events: [P, { sessionId: 's', kind: 'Stop' }],
+      celebrates: true,
+      builtAt: onTheDay - 45_000,
+    });
+
+    // Guarded: something is asking for a human, so it still says so.
+    check({
+      state: 'NEEDS_PERMISSION',
+      events: [{ sessionId: 's', kind: 'PermissionRequest' }],
+      celebrates: false,
+    });
+    check({
+      state: 'FAILED',
+      events: [{ sessionId: 's', kind: 'StopFailure' }],
+      celebrates: false,
+    });
+    check({
+      state: 'FAILED',
+      events: [
+        { sessionId: 's', kind: 'StopFailure', errorType: 'rate_limit' },
+      ],
+      celebrates: false,
+    });
+    check({
+      state: 'WAITING',
+      events: [{ sessionId: 's', kind: 'Notification' }],
+      celebrates: false,
+      builtAt: onTheDay - 60_000,
+    });
+
+    // And on any other day the mapped quip wins, which is the same assertion
+    // read backwards: the birthday is the only reason it ever loses.
+    expect(
+      sceneFor({
+        registry: at([{ sessionId: 's', kind: 'Stop' }], dayBefore),
+        pack: birthdayPack,
+        now: dayBefore,
+      }).message,
+    ).toBe('nothing doing');
+  });
+
   it('picks overheated for a rate limit on the path the panel actually uses', () => {
     // The production path, not the table. `animationFor` is unit-tested, but
     // `paintOnce` composed the arguments inline and nothing exercised that

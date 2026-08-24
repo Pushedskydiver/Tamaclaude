@@ -62,7 +62,8 @@ it is deliberately near-leaf, since Claude Code runs it on every hook event.
 
 - `protocol` — wire format, RLE RGB565 encoder, dirty-rect diffing. Zero deps.
 - `renderer` — virtual 172×320 screen, scene graph, sprite playback, fonts.
-- `packs` — pack loader, manifest schema (zod), palette, quips.
+- `packs` — manifest schema (zod), palette, quips. Not a loader: reading a
+  pack off disk is still the CLI's job, by a repo-relative path.
 - `daemon` — session state machine, tool→state mapping, transports.
 - `hooks` — the Claude Code hook handler binary.
 - `device` — USB-CDC transport + the ESP-IDF firmware source.
@@ -97,7 +98,13 @@ The whole product, minus hardware.
       its own function, and `knip` would have failed on one that did.
 - [ ] Harness draws through `render()` rather than approximating the bands —
       what makes Stage 2's exit true by construction instead of by inspection
-- [ ] Pack loader + manifest schema
+- [~] Manifest schema (zod) done. **There is no pack loader**: `packages/packs`
+  exports `parsePackManifest`, `packPalette` and `isBirthday` and nothing
+  that reads a file. Loading is a hardcoded repo-relative `readFileSync` in
+  `packages/cli/src/index.ts`, whose own comment says it must not survive
+  packaging, and there is no pack _selection_ at all. This was briefly
+  marked `[x]` on 24 Aug by the commit that added the birthday field; three
+  reviews caught it. The remainder is the Stage 3 packaging item below.
 - [~] `packs/example/` — manifest and palette done; **placeholder art still to
   come**, and Stage 1's exit depends on it
 - [x] Dirty-rect differ + RLE encoder, with unit tests and a compression-ratio assertion
@@ -360,14 +367,35 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 ## Stage 5 — Personalisation (Sun 6 – Sun 13 Sep)
 
-- [ ] The recipient's pack (gitignored): palette, quips, logo, pet sprite
+- [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet sprite
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
 - [ ] Company logo → pixel: SVG → nearest-neighbour → palette quantise (`sharp`)
 - [ ] Quips mapped to states, never randomised
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
-- [ ] Birthday screen, date-triggered 23 Sep
+- [~] Birthday screen, date-triggered 23 Sep. **The trigger is built; the
+  screen is not, and no tracked pack carries a date.** `packs` takes an
+  optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
+  `isBirthday` compares in local time because the day the panel should
+  celebrate is the one the person beside it is having. `02-29` falls back
+  to the 28th in a common year, and a day that exists in no month is
+  refused — both because accepting a date that can never fire is a failure
+  nobody can notice until the day has passed.
+  The quip beats the resting and working lines and loses to any state
+  asking for a human. **That is not the rule `DONE` is ranked by**, and
+  two earlier versions of this line said it was: `DONE` ranks below
+  `WORKING` because "a payoff belongs on a quiet desk", and this covers
+  both. They share only the attention half. The reason to differ is that
+  rank decides the stage, where a resting Clawd over a running tool would
+  be a lie, while this decides the message band and the animation still
+  shows the work. Two reviews caught the claim independently.
+  What remains: the art on the line above, and a pack that actually carries a
+  date. The recipient's pack is the first unchecked item in this stage and did
+  not name a `birthday` field until now — and until one does, the trigger is
+  unreachable in production, because the only pack the binary can load is
+  `packs/example`. That is the same missing selection mechanism as the Stage 1
+  line above.
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its

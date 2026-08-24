@@ -97,6 +97,24 @@ export function stateRank(state: SessionState): number {
 }
 
 /**
+ * Whether this state is asking for a human.
+ *
+ * A predicate rather than an exported `ATTENTION_RANK` and `stateRank` pair,
+ * which is what the message band first reached across the boundary for. Two
+ * exports let the caller open-code the comparison, and a review demonstrated
+ * the cost: replacing the caller's guard with `state === 'NEEDS_PERMISSION'`
+ * silently dropped `FAILED` and `WAITING` with nothing red anywhere. With the
+ * comparison beside the table it reads, that mutant cannot be written.
+ *
+ * The extension is pinned by a test, because the hazard the old shape carried
+ * does not go away by itself: split attention into two ranks and an equality
+ * against one of them stops covering the other, with nothing to notice.
+ */
+export function needsAttention(state: SessionState): boolean {
+  return stateRank(state) === ATTENTION_RANK;
+}
+
+/**
  * Spec §9's timings. **None of these are pack-configurable**, deliberately —
  * nobody retunes a sixty-second threshold via JSON on a birthday present, and
  * the knobs would cost schema, validation and tests each.
