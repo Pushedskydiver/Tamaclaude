@@ -98,7 +98,21 @@ The whole product, minus hardware.
       progress track is a `drawBorder` with a `fillRect` inside. Nothing earned
       its own function, and `knip` would have failed on one that did.
 - [ ] Harness draws through `render()` rather than approximating the bands —
-      what makes Stage 2's exit true by construction instead of by inspection
+      what makes Stage 2's exit true by construction instead of by inspection.
+      **Costed 24 Aug, not built.** The blocker was never the renderer: it
+      imports no `node:` builtins, so it is pure and could run in a browser
+      unchanged. There are two ways in and both are real work rather than a
+      comment fix. (a) Add a bundler — none is in the repo, so it is a
+      dependency decision under `docs/CONVENTIONS.md` — and inline the
+      renderer into the page so the browser calls `render()` directly.
+      (b) Pre-render whole panels in Node through `render()` and inline those
+      instead of sprite frames, which needs no dependency and makes the
+      criterion trivially true, but multiplies the inlined images by
+      orientation and layout and loses live candidate-switching for anything
+      not baked. (b) is the smaller change and the larger file.
+      Until one lands, `tools/harness.ts` and `tools/blit-scene.ts` both say
+      in their headers that the browser and the panel agree only by
+      inspection, which is what this criterion exists to rule out.
 - [x] Manifest schema (zod) in `packages/packs`; pack resolution in
       `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
       `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still

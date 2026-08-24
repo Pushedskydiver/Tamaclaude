@@ -9,17 +9,32 @@
  * hero against two-up, portrait against landscape, and whether the message and
  * strip bands earn their height.
  *
+ * **What it draws is not what the panel draws, and that is a known gap rather
+ * than a design.** See the note below on Stage 2's exit.
+ *
  *   pnpm harness && open out/harness.html
  *
  * Output is a single self-contained file: every frame is inlined, so it can be
  * opened from disk with no server and no network. Geometry, slots, scales and
  * the landscape crop come from `@tamaclaude/renderer` rather than constants
- * copied here, so those cannot drift. Text layout within a band is this page's
- * approximation — the renderer draws none of it yet — so judge band heights
- * and sprite scale here, and glyph positioning once the canvas sink exists.
+ * copied here, so those cannot drift.
  *
- * It is driven by rendered frames, not by Claude Code. Wiring it to real
- * session events is Stage 3.
+ * **Text layout within a band is this page's approximation, and the gap is now
+ * the other way round from what this comment used to say.** It claimed "the
+ * renderer draws none of it yet". The renderer draws all of it — the status
+ * band, the clock, the session chips, the subagent badge and the message band,
+ * seen on the real panel on 21 Aug — while this page still reimplements the
+ * layout in browser JavaScript. So the two agree by inspection, which is
+ * exactly what Stage 2's exit criterion ("browser and panel show the same
+ * thing") is written to rule out, and the gap has widened rather than closed:
+ * the panel draws 2x bitmap status text that no browser view renders at all.
+ * `tools/blit-scene.ts` says the same thing from the other side.
+ *
+ * So judge band heights and sprite scale here; do not judge glyph positioning
+ * here, because it is not the glyph positioning the device performs.
+ *
+ * It is driven by rendered frames, not by Claude Code. Injecting synthetic
+ * events is a separate unchecked Stage 1 line; Stage 3 itself has landed.
  */
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
