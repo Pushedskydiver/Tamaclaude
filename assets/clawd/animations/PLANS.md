@@ -1106,31 +1106,34 @@ four, so a mote glides instead of hopping 9 pixels twice a second. **Check
 separation analytically before rendering**; the rectangles are known from the
 keyframes, and 96 frames of three pairs is a loop, not a render.
 
-**Three things shipped known and measured rather than fixed**, all judged LOW
-by the critic that found them and all recorded so the next person does not
-have to rediscover them:
+**Three things a critic found and passed as benign: two fixed, one accepted.**
 
-- **The brim's bottom edge is on the horizon.** `paintEnvironment` puts the
-  horizon at unit y 6.50 and the brim runs y 5.5 to 6.5, so on 21 of 96 frames
-  its bottom row is flush with the sea's first row and on 18 more it covers it.
-  The one-unit right overhang is entirely against sky and sea, so on those
-  frames it reads as a pale tab welded to the horizon. **Half a unit either way
-  clears it**, and the reason it was not moved is that up costs the overlap
-  with the skull the bob depends on and down puts the whole brim in the sea
-  band. This has now been raised in two consecutive reviews.
-- **Two specks weld to the brim.** The specks on the widest cone row share the
-  brim's top edge, so they rasterise as one pale run rather than as specks. The
-  file claims "no two touching even at a corner", which is true speck-to-speck
-  and not true speck-to-brim.
-- **One speck is flush with the cone's right edge**, which reads as an inward
-  notch in the silhouette at dawn and day, where `#C9D1D9` is 1.10:1 and 1.01:1
-  against the low sky band. Hue separation carries it at true size.
+- **Two specks welded to the brim** by sharing its top edge, so they rasterised
+  as one pale run rather than as specks — the file claimed "no two touching even
+  at a corner", which was true speck-to-speck and false speck-to-brim. **One was
+  flush with the cone's right edge**, which is not a speck but a notch in the
+  silhouette, at its worst by day where `#C9D1D9` is 1.01:1 against the low sky
+  band. Both fixed: specks are 0.75 x 0.5 now and each is generated with an
+  assertion that it sits a quarter unit clear of its row's edges and of every
+  other speck, so the constraint is checked while authoring rather than promised
+  in a comment. Measured from the bake, each speck is its own 24-pixel pale
+  component on all 96 frames — 576 of them, none touching anything.
+- **The brim's pale overhang sits on the horizon**, flush with the sea's first
+  row on 21 of 96 frames and covering it on 18 more. **Accepted.** Two things
+  came out of trying to fix it. The first is that moving the brim cannot: the
+  torso's own top edge travels 6.00 to 6.63, so it crosses 6.50 by itself, and
+  anything sitting on the head is at the horizon for part of the loop. The
+  second is that darkening the overhang is worse — the cone's base is two units
+  inboard and a row up, so a dark end-cap has no dark mass to bind to and reads
+  as a speck floating beside his head, and against night sky at 1.55:1 it
+  vanishes, so the silhouette it was protecting existed on one ground of four.
+  Upstream `hat-mishap` overhangs by three units each side in one flat colour
+  and never changes colour at the overhang.
 
-The reason none of the three was fixed is worth stating plainly: each is a
-geometry change, three hat drafts had already been rejected on sight, and a
-fourth round-trip trades a certain risk of new defects against three benign
-ones. **Prefer the recorded defect to the unreviewed fix** when a critic has
-said ship.
+**The general lesson is the one worth keeping:** a defect that is unavoidable
+in one dimension is not therefore worth attacking in another. The horizon
+overlap follows from where the head is; the only lever was how bright the thing
+at the horizon is, and pulling it cost more than it bought.
 
 **A cone needs to taper on both sides.** Three drafts of this hat failed in
 three different ways: a pale band across it read as a tiered cake, then every
