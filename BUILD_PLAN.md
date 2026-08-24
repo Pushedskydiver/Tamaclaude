@@ -424,9 +424,10 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   `~/.tamaclaude/pack/` — so the trigger is reachable as soon as a pack names
   a date. What is not built is anything that _sets_ the variable on boot; that
   is the launchd item in Stage 3. This paragraph said the mechanism was
-  missing and cited the Stage 1 line for it, five lines below the sentence
-  saying where the pack goes; the commit that built the resolver left the
-  contradiction standing and a review caught it.
+  missing and cited the Stage 1 line for it, in the same stage whose first item
+  already said where the pack goes; the commit that built the resolver left the
+  contradiction standing and a review caught it. An earlier version of this
+  sentence put the two five lines apart, which is wrong by about thirty.
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its

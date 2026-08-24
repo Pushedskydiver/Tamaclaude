@@ -64,7 +64,7 @@ pnpm build && pnpm test && pnpm lint && pnpm typecheck && pnpm format:check && p
 interactive page that animates at 8fps and switches orientation, layout and
 animation live, with no hardware needed. It is driven by rendered frames rather
 than by live Claude Code sessions. Stage 3 has landed for the daemon and the
-panel; wiring the harness to real events is its own unchecked Stage 1 line.
+panel; the harness's own event injection is a separate unchecked Stage 1 line.
 
 To render an animation to frames and review it at true panel size:
 

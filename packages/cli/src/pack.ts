@@ -21,13 +21,19 @@
  * Without one it is `no pack configured` on stderr, exit 2, fixed in fifteen
  * seconds.
  *
- * **The compensating control is weaker than it first looks, and worth stating
- * honestly.** The firmware's splash is not a "no host" screen: `main.c` says
- * it "stays up until the host paints over it, and it is never redrawn",
- * because no-host is not observable on this link. So on a cold boot the glass
- * shows the splash, but on a *restart* — the likelier case, and the one a
- * crash-looping launchd agent produces — it holds the last frame the daemon
- * painted, which reads as working-but-frozen rather than as misconfigured.
+ * **What the glass shows meanwhile, stated carefully, because two reviews
+ * disagreed about it and both earlier versions of this paragraph were wrong.**
+ * The splash is not a "no host" screen — `main.c` draws it once at boot and
+ * never redraws it, because no-host is not observable on this link. And
+ * "never redrawn" holds only within one firmware boot: `serial.ts` records,
+ * from a real run rather than from theory, that *opening the port resets the
+ * board*, so every connect reboots it and repaints the splash.
+ *
+ * None of which applies to this failure, for a reason about call order rather
+ * than firmware: `resolvePack` runs before `runDaemon` opens the port, so
+ * refusing to start never touches the device at all. The panel keeps whatever
+ * it had — the splash if nothing has driven it, the last painted frame
+ * otherwise, which reads as working-but-frozen.
  *
  * ## The counter-argument, which is good, and the third option
  *
@@ -131,10 +137,17 @@ type Lookup = {
  * for the override and not for the location. The directory is not guaranteed
  * to exist when this runs — resolution happens before the socket is prepared,
  * so on a fresh machine nothing has created it, which is exactly the
- * `no pack configured` case. It earns its place over the environment variable
- * alone for one reason: an env var set inside a launchd plist cannot be read
- * back out of a running agent, but `ls ~/.tamaclaude/pack/` answers the
- * question from any terminal.
+ * `no pack configured` case.
+ *
+ * It earns its place over the environment variable for a plainer reason than
+ * the one first written here: a fixed location means the pack can be installed
+ * without configuring anything, which is one less step to get wrong on
+ * somebody else's Mac.
+ *
+ * The original justification — that a plist's environment cannot be read back
+ * out of a running agent — is false, and a review disproved it by running
+ * `launchctl print gui/<uid>/<label>`, which prints the job's environment
+ * block. The plist is a readable file besides.
  */
 function defaultDirectory(home: string): string {
   return join(home, '.tamaclaude', 'pack');
@@ -208,25 +221,63 @@ function validate(manifest: unknown, directory: string): PackManifest {
   try {
     return parsePackManifest(manifest);
   } catch (cause) {
-    const issues =
-      cause instanceof Error
-        ? (
-            JSON.parse(cause.message) as readonly {
-              readonly path: readonly (string | number)[];
-              readonly message: string;
-            }[]
-          )
-            .map(
-              (issue) =>
-                `${issue.path.join('.') || '(root)'}: ${issue.message}`,
-            )
-            .join('; ')
-        : String(cause);
     throw new Error(
-      `the pack at ${join(directory, 'manifest.json')} is not a valid pack — ${issues}`,
+      `the pack at ${join(directory, 'manifest.json')} is not a valid pack — ${explain(cause)}`,
       { cause },
     );
   }
+}
+
+/**
+ * Escape a string for a one-line terminal message.
+ *
+ * **Field names come out of the manifest, which is untrusted input** — the
+ * repo's own named example of it. Interpolated raw, a key containing a newline
+ * turns the "one sentence" this CLI promises into several, and a key
+ * containing an ESC byte writes raw ANSI to somebody's terminal. Both measured
+ * through the built binary.
+ *
+ * This was a regression rather than an oversight: the zod dump it replaced was
+ * `JSON.stringify` output, so it escaped exactly these characters. Being more
+ * readable cost the escaping, and a review caught it. `JSON.stringify` minus
+ * its quotes restores it, which is the same mechanism zod was relying on.
+ */
+function printable(text: string): string {
+  return JSON.stringify(text).slice(1, -1);
+}
+
+/**
+ * Turn whatever `parsePackManifest` threw into a readable clause.
+ *
+ * A `ZodError` stringifies to a JSON array of issue objects. At a terminal
+ * that is worse than useless — it buries which field failed under punctuation.
+ *
+ * **The JSON parse is guarded, and the guard is the point.** Every input this
+ * sees today is a `JSON.parse` result and every rejection is a `ZodError`
+ * whose message is a JSON array — swept `{}`, `null`, `[]`, a string, a
+ * number, and every invalid manifest shape. But this runs *inside* a catch
+ * block, and an unguarded `JSON.parse` there converts any future non-zod throw
+ * into a `SyntaxError` from the error handler, discarding the original and the
+ * pack path with it. That is the exact failure this function exists to remove,
+ * produced by the code removing it. The day it goes live is the day
+ * `packManifestSchema` grows a `.transform` that can throw.
+ */
+function explain(cause: unknown): string {
+  const message = cause instanceof Error ? cause.message : String(cause);
+  const issues: unknown = ((): unknown => {
+    try {
+      return JSON.parse(message);
+    } catch {
+      return undefined;
+    }
+  })();
+  if (!Array.isArray(issues)) return printable(message);
+  return issues
+    .map((issue: { path?: readonly (string | number)[]; message?: string }) => {
+      const path = (issue.path ?? []).join('.');
+      return `${printable(path === '' ? '(root)' : path)}: ${printable(issue.message ?? 'invalid')}`;
+    })
+    .join('; ');
 }
 
 /**

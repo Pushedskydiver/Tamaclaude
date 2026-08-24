@@ -1,3 +1,5 @@
+import type { PackManifest } from '@tamaclaude/packs';
+
 import {
   mkdirSync,
   mkdtempSync,
@@ -150,14 +152,58 @@ describe('resolvePack', () => {
   });
 
   it('explains a schema failure instead of printing a zod issue array', () => {
+    // **Asserting the fields, not just the prefix.** The first version matched
+    // only `/is not a valid pack/`, which is a hardcoded string — so emptying
+    // the issue list entirely, dropping the field path, dropping the message
+    // and truncating to the first issue all left it green. Five mutants, five
+    // survivors, in the gate written to replace a vacuous one.
     const dir = tempDir();
     const pack = packAt(
       dir,
       JSON.stringify({ name: 'x', palette: [[0, 0, 0]] }),
     );
-    expect(() =>
-      resolvePack({ env: { TAMACLAUDE_PACK: pack }, home: dir }),
-    ).toThrow(/is not a valid pack/);
+    const failed = (): PackManifest =>
+      resolvePack({ env: { TAMACLAUDE_PACK: pack }, home: dir }).parsed;
+    expect(failed).toThrow(/is not a valid pack/);
+    // The palette is too short and `quips` is missing: both named, with their
+    // paths, joined rather than truncated to the first.
+    expect(failed).toThrow(/palette: /);
+    expect(failed).toThrow(/quips: /);
+    expect(failed).toThrow(/; /);
+  });
+
+  it('escapes a manifest key rather than letting it reach the terminal', () => {
+    // A pack manifest is untrusted input — hand-edited, and this repo's own
+    // named example of a trust boundary. Field names come out of it and land
+    // in a message printed to somebody's terminal.
+    //
+    // A key containing a newline broke the one-sentence promise this CLI makes
+    // about its errors; a key containing an ESC byte wrote raw ANSI. Both were
+    // regressions against the zod dump this replaced, which was
+    // `JSON.stringify` output and so escaped exactly these characters.
+    const dir = tempDir();
+    const pack = packAt(
+      dir,
+      JSON.stringify({
+        name: 'x',
+        palette: [
+          [0, 0, 0],
+          [1, 1, 1],
+        ],
+        quips: { mapped: { 'evil\nkey\u001b[31m': 42 }, idle: [] },
+      }),
+    );
+    let message = '';
+    try {
+      resolvePack({ env: { TAMACLAUDE_PACK: pack }, home: dir });
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    expect(message).toContain('is not a valid pack');
+    expect(message.split('\n')).toHaveLength(1);
+    expect(message).not.toContain('\u001b');
+    // Escaped, not dropped — the key is still identifiable.
+    expect(message).toContain('evil');
   });
 
   it('names the file when the manifest is not JSON', () => {

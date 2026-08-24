@@ -173,6 +173,9 @@ function smoke(): void {
 const KNOWN =
   /already listening|not a socket|over the .*-byte limit|no pack configured|could not read the pack|is not a valid pack|TAMACLAUDE_PACK is set but empty/;
 
+/** The subset of `KNOWN` meaning "not usable as typed" rather than "it failed". */
+const MISCONFIGURED = /no pack configured|TAMACLAUDE_PACK is set but empty/;
+
 const [, , command, ...rest] = process.argv;
 // **One try/catch around every command, not just `daemon`.** `smoke()` used to
 // sit outside it, so the one command that exists to prove the binary starts was
@@ -202,8 +205,11 @@ try {
         : (cause.stack ?? cause.message)
       : String(cause);
   process.stderr.write(`${line}\n`);
-  // 2 rather than 1 for a missing pack: it is the same class as a missing
-  // device path, which already exits 2 — the command was not usable as typed,
-  // rather than something failing while it ran.
-  process.exit(/no pack configured/.test(line) ? 2 : 1);
+  // 2 rather than 1 for a pack that was never configured, and for one named
+  // by an empty variable: both are the same class as a missing device path,
+  // which already exits 2 — the command was not usable as typed, rather than
+  // something failing while it ran. The distinction is not cosmetic, because
+  // the launchd agent in `BUILD_PLAN.md` Stage 3 is what will meet these
+  // failures, and a wrapper that retries a crash should not retry a typo.
+  process.exit(MISCONFIGURED.test(line) ? 2 : 1);
 }

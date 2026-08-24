@@ -60,13 +60,17 @@ function run(
   const result = spawnSync(process.execPath, [BUILT, ...args], {
     encoding: 'utf8',
     timeout: 10_000,
-    // `TZ` is carried through from `vitest.config.ts`'s pin. No assertion here
-    // depends on a date yet, but the countdown test below does, and a date
-    // test under an unpinned UTC is what `packages/packs/src/index.test.ts`
-    // spends fifteen lines explaining the cost of.
+    // `TZ` is carried through from `vitest.config.ts`'s pin, and its absence
+    // is an error rather than a default. The countdown cases below compute a
+    // date in this process and assert against one computed in the child; if
+    // the two run in different zones they disagree by a day, on a machine
+    // where nothing else changed. `?? ''` would have made that silent, which
+    // is the shape `pack.ts` refuses elsewhere — "I cannot tell" must not pick
+    // an answer. `packages/packs/src/index.test.ts` spends fifteen lines on
+    // what an unpinned zone costs a date test.
     env: {
       PATH: process.env.PATH ?? '',
-      TZ: process.env.TZ ?? '',
+      TZ: requiredTimezone(),
       HOME: NO_HOME,
       ...env,
     },
@@ -75,6 +79,18 @@ function run(
     out: `${result.stdout}${result.stderr}`,
     status: result.status ?? -1,
   };
+}
+
+/** The suite's pinned zone, or a failure that names the pin. */
+function requiredTimezone(): string {
+  const zone = process.env.TZ;
+  if (zone === undefined || zone === '') {
+    throw new Error(
+      'TZ is unset: vitest.config.ts pins it, and the countdown cases compare ' +
+        'a date computed here against one computed in the child process',
+    );
+  }
+  return zone;
 }
 
 const NO_HOME = resolve(ROOT, 'packages/cli/dist/no-such-home');
@@ -113,6 +129,17 @@ beforeAll(() => {
   writeFileSync(
     join(BAD_PACK, 'manifest.json'),
     JSON.stringify({ ...VALID, palette: [[0, 0, 0]] }),
+  );
+  // `BIRTHDAY_PACK` gets a valid manifest here as well as inside the countdown
+  // cases that overwrite it. Without one, any future test reaching it first
+  // sees "could not read the pack", which reads as a product bug rather than
+  // as a fixture that was never written.
+  writeFileSync(
+    join(BIRTHDAY_PACK, 'manifest.json'),
+    JSON.stringify({
+      ...VALID,
+      birthday: { date: '09-23', quip: 'placeholder' },
+    }),
   );
 });
 afterAll(() => {
@@ -157,8 +184,13 @@ describe('the tamaclaude binary', () => {
    *
    * One line is the assertion that cannot be satisfied by accident: a stack is
    * always several. Driven through the binary rather than against the regex,
-   * so a sentence added without a matching clause fails here rather than
-   * needing to be remembered into a list.
+   * so each case proves its own sentence survives `KNOWN` end to end —
+   * deleting any single clause kills exactly one of them.
+   *
+   * It is still a list that has to be remembered: a new `throw` whose sentence
+   * is missing from `KNOWN` fails nothing until a fifth entry is added here.
+   * An earlier version of this paragraph claimed otherwise, which is the
+   * flavour of overclaim the gate it replaced was guilty of.
    */
   const failures: readonly {
     readonly what: string;
@@ -182,7 +214,10 @@ describe('the tamaclaude binary', () => {
       what: 'an empty variable, which is a mistake and not an absence',
       env: { TAMACLAUDE_PACK: '' },
       says: /TAMACLAUDE_PACK is set but empty/,
-      code: 1,
+      // 2, not 1: naming a pack with an empty variable is a command that was
+      // not usable as typed, which is what the device-path failure already
+      // exits 2 for.
+      code: 2,
     },
     {
       what: 'a manifest that is not a valid pack',
@@ -225,10 +260,13 @@ describe('the tamaclaude binary', () => {
     [1, 'tomorrow'],
     [9, 'in 9 days'],
     // **The far offsets are the ones with teeth.** A per-step error smaller
-    // than a day is invisible near zero and accumulates: changing the step
-    // from 24h to 23h passed at 0, 1 and 9 days, and only misplaces a date
-    // once the drift exceeds a full day, at 24 steps out. The first version of
-    // this table stopped at 9 and let that mutant live.
+    // than a day is invisible near zero and accumulates: a 23-hour step passed
+    // at 0, 1 and 9 days. It first misplaces a date at **13** steps —
+    // measured — because the anchor is local noon, so an hour of drift per
+    // step only crosses a midnight once it reaches twelve. An earlier version
+    // of this comment said 24 and a full day, which applies that same slack
+    // twice; the paragraph below gets it right for the one-minute case.
+    // The first version of this table stopped at 9 and let the mutant live.
     [30, 'in 30 days'],
     [200, 'in 200 days'],
     [364, 'in 364 days'],
