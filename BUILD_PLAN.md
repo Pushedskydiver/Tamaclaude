@@ -179,8 +179,12 @@ that is not waiting on the design freeze.
       daemon loads on demand and indexes by the clock. All six animations, all
       360 frames, verified decoding back to the source PNGs with zero pixel and
       zero mask mismatches — and seen animating on the real panel.
-      The raw art is 24,192,000 bytes of RGB565 plus the same again halved for
-      the mask; encoded it ships as 1,128,216. Size was never going to be what
+      The raw art was 24,192,000 bytes of RGB565 plus the same again halved for
+      the mask, and encoded it shipped as 1,128,216. **Those are the six-animation
+      figures and they are the stale copy** — ten animations and 664 frames now
+      measure 44,620,800 raw and 1,918,964 encoded. `tools/bake-sprites.ts` and
+      `packages/renderer/src/sprites/index.ts` carry the live numbers with a
+      caveat that only a re-bake refreshes them; this line had neither. Size was never going to be what
       limited how many animations this device gets, though it was quoted as
       though it might be.
 - [x] **Hook names confirmed against live documentation** — all three exist:
@@ -307,7 +311,31 @@ than partially. Eight good screens beat nine plus four rough ones.
       have a measured trigger. Six catalogue entries fire on hook events or
       timers and have no tool-call frequency at all, so this is not a claim
       about the whole catalogue
-  12. road bike (long runs)
+  12. **overheated (`StopFailure` with `error_type` `rate_limit` or `overloaded`)** — proposed
+      on 22 Aug, not part of the original catalogue, and therefore a change to
+      this plan rather than work under it. It is the cheapest screen left:
+      `error_type` has been stored since Stage 3 and read by nothing, so the
+      trigger needs no new event, no settings change and no protocol field —
+      only for `animationFor` to refine `FAILED` by `errorType` the way it
+      already refines `WORKING` by `tool`. Tier B, behind the 6 Sep gate with
+      the rest, and the first thing to cut if that gate is at risk: `dizzy`
+      already draws every `StopFailure`, so cutting this loses a distinction
+      rather than leaving a state blank. **Art first, wiring last** — the
+      wiring lands in `packages/daemon`, which Stage 3 marks done, so building
+      it first means either reverting shipped code at the gate or leaving a
+      dead branch behind. Through `spec-grill` once; the first plan was found
+      unbuildable and rewritten around a sploot pose, which is upstream's scene
+      and which `docs/ANIMATION.md` §The generation contract names as its own
+      example. Plan in `PLANS.md`. Measured after the first
+      draft of this entry went in without one: across 1,030 local transcripts
+      outside this project a usage limit was hit in **one session**, ~0.1% of
+      sessions. That does not divide against item 11's 0.7%, which is of _tool
+      calls_ — and item 11 says in as many words that its figure is "not a claim
+      about the whole catalogue", so there is no "rarest catalogued" to be
+      rarer than. What can be said is that this is the only entry whose trigger
+      was counted in sessions at all, and one in a thousand is rare by any
+      reading. Salience rather than frequency is its case, as with item 7
+  13. road bike (long runs)
 
 **`Stop` does not mean "the turn finished".** Confirmed against live docs in
 Stage 3: it fires on every response. So the Model 3 payoff above cannot be

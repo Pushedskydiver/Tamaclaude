@@ -22,10 +22,20 @@ currently using. The hook-event-to-animation mapping — debugger for
 
 **The animation technique**, which is the more valuable of the two ideas. Clawd
 Tank authors its sprites as CSS-animated SVG generated against one canonical
-base geometry, under the constraint that a generated animation may only add
-transforms and keyframes to existing elements with existing IDs — never redraw
-the character. Character consistency is therefore structural rather than
-statistical. That idea is theirs, it is not obvious, and it is the reason a
+base geometry with stable element IDs, so character consistency is structural
+rather than statistical.
+
+This paragraph used to add "under the constraint that a generated animation may
+only add transforms and keyframes to existing elements with existing IDs — never
+redraw the character". That is not what upstream does, and saying it here was
+worse than saying it elsewhere: this is the file carrying their MIT notice, so
+it was a false claim _about them_. `docs/ANIMATION.md` §The generation contract
+records the correction — upstream redraws poses freely across its catalogue and
+is more consistent for it, not less, and `docs/ANIMATION.md` cites "upstream's
+convention" for naming a pose variant. `BUILD_PLAN.md` tracked three copies of
+the retired wording being cleaned up on 22 Aug; this was the fourth and nobody
+found it until an animation was built _by_ redrawing a pose, taking upstream's
+splooted overheated crab as its reference. That idea is theirs, it is not obvious, and it is the reason a
 non-artist can build this at all. See `tools/gemini_animate.py` and
 `assets/svg-animations/PLANS.md` in the upstream repo.
 

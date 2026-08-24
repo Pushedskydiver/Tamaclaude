@@ -10,9 +10,14 @@
 import type { SessionState } from './state.js';
 
 /**
- * The animations that exist. `assets/clawd/animations/PLANS.md` is the
- * authority, and this list is what it has actually built — not the fifteen the
- * screen spec catalogues. A name here that has no SVG renders as nothing.
+ * The animations this daemon can ask for. `assets/clawd/animations/PLANS.md`
+ * is the authority for what exists — not the fifteen the screen spec
+ * catalogues — and this list is what is both built *and wired*, which is not
+ * the same thing. `overheated` is built and baked and deliberately absent
+ * here: art lands before wiring, so that cutting the art at the Stage 4 gate
+ * does not mean reverting shipped daemon code. `SPRITE_NAMES` is the built
+ * list, this is a subset of it, and `animation.test.ts` enforces that
+ * direction. A name here that has no SVG renders as nothing.
  */
 export const ANIMATIONS = [
   'typing',

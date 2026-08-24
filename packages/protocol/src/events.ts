@@ -43,9 +43,15 @@ export type HookEvent = {
   /** `agent_type` — `Explore`, `Plan`, or a custom agent's name. */
   readonly agentType?: string;
   /**
-   * `error_type` on `StopFailure`: `rate_limit`, `overloaded`,
-   * `authentication_failed` and so on. More specific than the single failure
-   * state the plan assumed.
+   * `error_type` on `StopFailure`. Ten documented values, verified against
+   * code.claude.com/docs/en/hooks.md rather than inferred from the three this
+   * comment used to name followed by "and so on": `rate_limit`, `overloaded`,
+   * `authentication_failed`, `oauth_org_not_allowed`, `billing_error`,
+   * `invalid_request`, `model_not_found`, `server_error`, `max_output_tokens`,
+   * `unknown`. It is a matcher field there, so a hook may register for one of
+   * them; this package registers `*` and reads the value off the payload.
+   *
+   * More specific than the single failure state the plan assumed.
    *
    * **Carried, not yet read.** `session.ts` stores it and nothing downstream
    * branches on it: the quip is keyed on the state alone and `FAILED` shows

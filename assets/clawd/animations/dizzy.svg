@@ -256,8 +256,9 @@
          frames 81-94, eight or more of them for seven consecutive frames.
          Dizzy's is one row, on isolated single frames. `thinking`, `confused`,
          `permission-sign` and `asleep` are at zero, and so are `gym` and
-         `bouldering` — measured across all nine, dizzy and `idle` are the only
-         two with any gap at all. (`typing` looks like a third and is not: he is
+         `bouldering` — measured across all ten, dizzy is the only one
+         with any gap at all — `idle`'s nine device pixels were closed on 22 Aug
+         and its own comment records the fix. (`typing` looks like a third and is not: he is
          seated, so his legs start eight device rows lower than everyone else's
          with body drawn continuously above them.) `thinking.svg` states its
          zero as a measured property.

@@ -14,7 +14,7 @@ wanted, so there was no way to tell a bug from a choice.
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
-Eight of the nine carry one; `gym` alone has none, because its bar is described
+Nine of the ten carry one; `gym` alone has none, because its bar is described
 under Action rather than filed as a prop, which is a distinction not worth
 enforcing. Both constraints this paragraph used to name have since been repealed by
 `docs/ANIMATION.md`, and it took two passes to notice. Palette snapping
@@ -140,9 +140,9 @@ written when a soft edge was permanent. `tools/svg2frames.ts` now snaps every
 rasterised pixel back onto the declared palette, which is what upstream
 clawd-tank does, so a rotated or eased edge hardens after the fact instead of
 being forbidden up front. This plan was the first written against the new
-contract. Three more have been written against it since — permission sign,
-confused and dizzy — so of the nine, four are current and five describe the old
-one. The preamble said so too until dizzy's branch corrected it.
+contract. Four more have been written against it since — permission sign,
+confused, dizzy and overheated — so of the ten, five are current and five
+describe the old one. The preamble said so too until dizzy's branch corrected it.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
 forbade it. Contact at chest height means the bar passes the face on its way
@@ -242,6 +242,52 @@ interesting on the first. No incident more often than once every few seconds.
 - **Eyes.** Closed — the open eye squashed to a dash about its outer edge.
 - **Props.** Three Zs on one keyframe track with delays two seconds apart, each
   glyph cell a whole art pixel, starting above the head and only ever rising.
+
+**Measured, unfixed, and two attempts have failed.** Composed on the real panel
+in the production config — landscape, `extent: 'panel'` — the worst Z's
+best-reading pixel is 3.94:1 at dawn, **1.83:1 at day**, 5.91 dusk, 12.89 night.
+Day is the sky the daemon shows for nine hours, and 1.83 is below the 2:1 the
+two-tone rule exists to clear, so for a third of the clock these are close to
+invisible. It is a real defect and it is still here.
+
+**Attempt 1 — a black copy of each Z offset one unit below.** Took day to 10.64
+and broke the glyph two ways. It filled the counter: a Z is legible because of
+the wedges of background above and below its diagonal, and a full-width bar one
+unit down lands in the upper one, rendering `PPPP / BBPB / .PB. / PPPP / BBBB`,
+a small skull rather than a letter. And its bottom bar landed on the torso — 16,
+32 and 24 device columns of contact on frames 0, 32 and 64.
+
+**Attempt 2 — two black cells extending the bars sideways.** Took day to 8.05
+with no sky regressing, no torso contact, and no change to the float track, the
+safe area or the bbox height. It failed for the reason that matters most: at day
+the pale drops to 1.05-2.45, so **all that survives is two cells at diagonally
+opposite corners of a twelve-cell glyph.** Two dots five units apart do not
+trace a letter, and being a different tone the eye segments them off from the
+faint strokes rather than reading one mark. It would not lay out either — three
+glyphs with a tick each side either collide (z-2's top tick and z-3's bottom
+tick share a column and fuse into a solid block on 34 of 96 frames) or the last
+reaches raster column 167.
+
+**Both attempts got the same thing wrong: which tone carries the shape.**
+`dizzy`'s star works because the _dark_ draws the cross and the pale is a pip
+inside it, so the shape survives on every sky and only the highlight changes.
+Here the pale draws the letter and the dark decorates it, so on the pale skies
+the letter is what goes. Inverting is not available: a dark Z with a pale pip is
+a readable star and an unreadable letter, and a true outline needs a unit right
+and a unit down, which are the panel edge and the torso.
+
+**The tractable direction is size, not contrast.** Upstream's
+`clawd-sleeping.svg` scales each Z from 0.4 to 1.2 as it rises rather than
+fighting the sky with a second tone. That is a redesign of the prop, and it
+deserves its own pass — not a patch, and not inside a PR about another
+animation.
+
+Whatever is tried next, check the **count** of connected components, not their
+sizes. A Z that merges with the body stops being a separate component and is
+absorbed into the one a size check excludes, so the sizes stay perfect while the
+glyph is welded on; that is how attempt 1 passed its own check. There is no
+`asleep` equivalent of the `dizzy` clearance test in `tools/bake-sprites.test.ts`,
+which is why nothing caught either failure except a critic looking at frames.
 
 **Not wanted:** Zs that overlap, or that touch the body — a grey glyph crossing
 his face reads as display corruption, and it shipped that way once. A
@@ -451,6 +497,149 @@ the stars themselves; the cross is symmetric under a quarter turn and its arms
 are one unit wide, so a rotation is either invisible or a fringe. Anything that
 reads as distress — this is a failed turn, not a catastrophe, and the strip
 tint carries severity.
+
+---
+
+## Overheated — `StopFailure` with `error_type: rate_limit` or `overloaded`
+
+Clawd has worked himself flat and is lying there fanning himself. He is not
+hurt and not asleep — he is spent, and he will be fine in a bit.
+
+`data-loop-seconds="6"`. **Proposed, then scheduled.** It was not in Stage 4's original
+catalogue, so adding it was a change to the plan rather than work under it;
+`BUILD_PLAN.md` carries it as item 12 now. This line read "is not one of the
+animations Stage 4 catalogues" in the present tense, which the commit that
+wrote it made false.
+
+The scene is upstream's `clawd-working-overheated.svg` — _"sitting down
+(splooted), completely exhausted, fanning himself with one hand"_ — and none of
+its execution transfers. Its smoke fades from 0.6 opacity to 0 and scales x2,
+its tones are two new greys with rounded corners, its eyes are 0.4 units tall
+and its breath is 2.5s. Every one of those breaks something here. What we take
+is the pose, and the pose is the whole point of taking it.
+
+**Why a pose and not a prop.** A first version of this plan kept the standing
+silhouette and separated the screen from `asleep` by eye state and rising heat.
+That fails twice over. `asleep`'s eyes are not shut — `@keyframes eyelid` holds
+a `scaleY` of 0.5 for its entire loop, which is a half-height eye, so "half-closed
+versus shut" is not a distinction at all; and `dizzy.svg` already records
+rejecting a held `scaleY` squash on this same state because it "would have made
+the two screens one picture". Meanwhile something rising off a still Clawd _is_
+`asleep`. `PLANS.md` §Confused states what a glance actually reads: "prop mass
+and silhouette", not eye direction. So the silhouette has to change, and once it
+does the prop is free to be anything.
+
+`docs/ANIMATION.md` §The generation contract names this exact case — "a sploot
+for sleeping… give the variant its own id (`torso-sploot`)".
+
+- **Action.** Splooted flat, fanning himself with the right claw, steam coming
+  off him. One pose, three speeds: a slow labouring breath, a fast fan, and
+  steam between the two.
+- **Body mechanics.** `#torso-sploot` replaces `#torso` at **x=2, y=10, 11x5**,
+  against the standing `x=2, y=6, 11x7`. Same x and same width on purpose: the
+  contact shadow is a fixed 9-unit band from unit 3 (`environment.ts`
+  `paintContactShadow`), so a wider body would overhang its own shadow, and at
+  this width the overhang is 1 unit each side exactly as when he stands. Nothing
+  in the renderer changes and `castsShadow` needs no new entry — he is on the
+  ground, more so than usual. The bottom edge stays on the ground line at y=15;
+  what changes is 2 units of height and a 4-unit drop.
+- **Legs.** `#legs-sploot`, a group of four **1x1 rects at y=9**, at x=3, 5, 9, 11 — the same
+  four columns as the standing legs, so they read as his legs, now splayed out
+  above a body that has spread beneath them. Upstream's move exactly.
+- **Eyes.** `#left-eye-squint` / `#right-eye-squint`, **1x1 at y=12**, x=4 and
+  x=10 — the standing columns, half the standing height. Squares, not slits: an
+  earlier version of this line called them slits and the ids were minted to
+  match, so the identifier asserted a shape the geometry denies. They sit on a
+  flat body, and the body is what separates the screen; the eyes only have to
+  not contradict it.
+- **The fanning claw.** `#arm-fan` from `#right-arm`, and **it must extend as
+  well as rotate**. §What a claw cannot do is explicit: a 2x2 block turned is
+  "an arrowhead, and an arrowhead hung off an 11x7 slab is not a limb" — a
+  45deg swing was built, judged and rejected. What makes a claw read is length,
+  and `gym` is the proof: `rotate(-73deg) scaleX(2.843)` turns the same 2x2 into
+  an arm. So the fan sweeps _and_ extends, pivoting at its inner lower corner
+  (13, 13). Sweep angles and the `scaleX` factor are the two numbers to derive
+  at render time rather than assert here — the constraint they must satisfy is
+  that the tip clears the torso silhouette at both ends of the sweep, which is
+  the failure §What a claw cannot do describes.
+- **Props.** Steam, as 2x2 puffs — a `#000000` block with a `#C9D1D9` core,
+  the same two tones `dizzy`'s stars already carry, so the palette gains no
+  entry and no new snap target. Three puffs on one 3s track at delays 0, -1s and
+  -2s, which is `dizzy`'s phasing and lands each 8 frames apart. Opacity is only
+  ever 0 or 1, flipped hard at the top of the rise the way `asleep`'s Zs flip —
+  never a fade, because partial opacity composites over the background and snaps
+  to transparent in this pipeline.
+
+**Timing, and every period checked against the loop.** 6s is 48 frames at 8fps.
+An `alternate` track must run an even number of times (`docs/ANIMATION.md`), so:
+the breath is a **6s track**, not `1.5s alternate` — that arrangement made
+every period divide 24 and produced 24 duplicate frames, and the SVG records
+why in full;
+the fan at **0.5s alternate** is 4 frames each way and 12 alternations; the
+steam at **3s** runs twice. All three land on whole frames. The breath is
+faster than `idle`'s 2s, which is what makes it a labouring one.
+
+**Six seconds, not twelve.** `dizzy` needed twelve because `FAILED` does not
+decay and it had to survive being stared at, and it earned them with a blink on
+a 12s track. This has three tracks at three speeds and no beat that wants a
+twelfth second, and `dizzy.svg` records what happens when a loop is longer than
+its content: frames 32-95 were byte-for-byte copies of 0-31.
+48 frames baked to 136,683 B against `dizzy`'s 401,428 — about a third, where
+this line forecast a half.
+
+**Safe area.** The pose creates headroom rather than spending it. Measured off
+the bake: the topmost body pixel is the fanning claw at **y=8.25**, so the steam
+has 12.25 units before the -4 line, and the steam itself tops out at **y=+1** —
+five units of margin, against `dizzy` sitting at -3 on 72 frames of 96, which is
+the one `docs/ANIMATION.md` singles out to watch.
+
+Both figures were guessed from the keyframes first and both were wrong: y=2 and
+six units for the steam, and a splayed leg at y=9 for the body. An earlier
+correction appended the right numbers and left the wrong ones standing, so the
+paragraph asserted both.
+
+**Which errors get it.** `rate_limit` and `overloaded`. An earlier version of
+this plan split them — `overloaded` is the server being busy rather than this
+session spending itself — and that is true and beside the point: both tell the
+viewer the same thing, which is _wait and come back_, and that is what the
+picture says. Splitting them would show a knock-on-the-head for a condition
+that is not a knock. The other eight keep `dizzy`.
+
+**The quip should move too, and it is not optional.** `messageFor` keys on state
+alone, so `overheated` and `dizzy` would share the `FAILED` line, the strip
+tint and the priority — leaving the picture as the only difference. Keying
+`quips.mapped` on a compound `FAILED:rate_limit` falling back to the bare state
+costs one lookup, needs no schema change (`z.record(z.string(), z.string())`
+already accepts it) and generalises to all ten error types, which is what
+`events.ts` records the field was kept open for. `packs/example` is **tracked**,
+so its line stays deliberately flat; the real one belongs in the ignored pack.
+
+**Not wanted:** an opacity fade on the steam. A new colour for it. A claw that
+rotates without extending. A silhouette that could be mistaken for `asleep` or
+`idle` — if a rendered frame at true size could be, the pose is what changes,
+not the prop. Anything that reads as distress or illness: hitting a limit is
+ordinary, and the joke is that Clawd is having a lie-down about it.
+
+**Measured, because this list is ordered by measured frequency and an earlier
+version of this entry was inserted without one.** Across 1,030 local transcripts
+outside this project, a usage limit was actually hit in **one session** —
+roughly 0.1% **of sessions**. `board game` fires on `Agent` at 0.7% **of tool
+calls**, which `BUILD_PLAN.md` calls "the least-seen of the screens that have a
+measured trigger" — a different denominator, so the two do not divide. What can
+be said without mixing units is that this is the only entry whose trigger was
+counted in sessions at all, and that one session in a thousand is rare by any
+reading.
+
+That is not automatically an argument against it. `permission sign` and
+`confused` were built because they are the screens the whole design principle
+exists to serve — the panel says _when to look_, and a limit is exactly a
+stop-waiting moment. But it is the argument that has to be made explicitly,
+because "it will be seen often" is not available.
+
+**Sequence: art first, wiring last.** The wiring lands in `packages/daemon`,
+which Stage 3 marks done. If the art is cut at the 6 Sep gate, wiring built
+first is either reverted in shipped code a fortnight before the date, or left as
+a dead branch pointing at `dizzy` with a test asserting it does nothing.
 
 ---
 

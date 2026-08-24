@@ -1,0 +1,320 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="6">
+  <!--
+    Clawd: overheated (StopFailure with error_type rate_limit or overloaded)
+
+    He has worked himself flat and is lying there fanning himself. Not hurt and
+    not asleep — spent, and fine in a bit.
+
+    ── Why this is a pose and not a prop ──────────────────────────────────
+
+    The first plan for this screen kept the standing silhouette and separated it
+    from `asleep` by eye state and rising heat. Both separators were false.
+    `asleep`'s `@keyframes eyelid` holds a `scaleY` of 0.5 for its entire loop,
+    which is a half-height eye and not a shut one, so "half-closed against shut"
+    is not a difference; and `dizzy.svg` already records rejecting a held
+    `scaleY` squash on this same state because it "would have made the two
+    screens one picture". Meanwhile something rising off a still Clawd is what
+    `asleep` *is*.
+
+    `PLANS.md` §Confused states what a glance actually reads: prop mass and
+    silhouette, not eye direction. So the silhouette changes, and once it does
+    the prop is free to be anything. `docs/ANIMATION.md` §The generation
+    contract names this exact case — "a sploot for sleeping… give the variant
+    its own id (`torso-sploot`)".
+
+    The scene is upstream's `clawd-working-overheated.svg`: "sitting down
+    (splooted), completely exhausted, fanning himself with one hand". None of
+    its execution transfers — its smoke fades from 0.6 opacity to 0 and scales
+    x2, its tones are two new greys with rounded corners, its eyes are 0.4 units
+    tall and its breath is 2.5s. Every one of those breaks something here.
+
+    ── The pose, in numbers ───────────────────────────────────────────────
+
+    `#torso-sploot` is x=2 y=10 11x5, against the standing x=2 y=6 11x7.
+
+    **Same x and same width on purpose.** `paintContactShadow` draws a fixed
+    9-unit band from unit 3, so a wider body would overhang its own shadow. At
+    this width the overhang is 1 unit each side, exactly as when he stands, so
+    nothing in the renderer changes and `castsShadow` needs no new entry — he is
+    on the ground, more so than usual. The bottom edge stays on the ground line
+    at y=15. What changes is 2 units of height and a 4-unit drop.
+
+    `#legs-sploot` holds four 1x1 rects at y=9, in the same four columns as the standing
+    legs (3, 5, 9, 11), so they read as his legs — splayed out above a body that
+    has spread beneath them. They sit directly on the torso's top edge:
+    the legs' bottom row is the torso's top row minus one on all 48 frames,
+    measured on isolated renders of each.
+
+    **`hipGap` reading 0 is not evidence of that.** That gate walks up from the
+    bottom-most drawn row *through the legs*; here the bottom-most row is the
+    torso and there is nothing below it, so the walk runs the whole 48-row body
+    and then trips the gate's own `LEG_BAND` bound, returning 0 without ever
+    looking for a gap. It does that for any pose whose contiguous bottom band is
+    deeper than 24 rows. It is vacuous for a sploot, and the
+    contiguity measured above is what actually holds.
+
+    The eyes are 1x1 at y=12, in the standing columns, half the standing height.
+    Squares, not slits — hence `#left-eye-squint` and `#right-eye-squint`, which
+    is also the id the generation contract uses as its example. An earlier
+    version called them slits in the prose and then minted `-slit` ids for them,
+    so the identifier asserted the shape the paragraph beside it denied.
+    Upstream draws 2x0.4; widening ours walks straight at `asleep`'s
+    `scale(2, 0.5)`, which is the shape this screen has to stay away from. They are not carrying the separation from `asleep` — the body is
+    — so they only have to not contradict it.
+
+    ── Why the fanning claw extends as well as turning ────────────────────
+
+    `docs/ANIMATION.md` §What a claw cannot do is explicit: a 2x2 block turned
+    is "an arrowhead, and an arrowhead hung off an 11x7 slab is not a limb". A
+    45deg swing was built, judged at true size and rejected. What makes a claw
+    read is length, and `gym` is the proof — `rotate(-73deg) scaleX(2.843)`
+    turns the same 2x2 into an arm.
+
+    So upstream's plain `rotate(-60deg)` would fail here. `#arm-fan` sweeps and
+    extends together, pivoting at its **shoulder** corner (13, 13) — the end
+    attached to the body. Pivoting at the far corner instead, which a first
+    version did, makes `scaleX` stretch the claw back *into* the torso and
+    leaves the tip sweeping three device pixels: a stub twitching against his
+    side rather than a limb fanning. `scaleX(2.2)` takes the 2x2 to 4.4x2 and the
+    sweep runs -25deg to -58deg. Both numbers are bounded by the canvas, not by
+    taste: at 2.5 and -18deg the extended claw reached column 167, the last one
+    there is, and a limb touching the edge of the raster is a limb that has been
+    cropped. Nothing may be drawn in row 0, row 199, column 0 or column 167.
+
+    ── Timing ─────────────────────────────────────────────────────────────
+
+    Six seconds is 48 frames at 8fps, and every period divides it.
+
+    **The breath is a 6s track, not `1.5s alternate`, and that distinction is
+    the whole animation.** An earlier version of this paragraph specified
+    `1.5s alternate` — 12 frames each way, 4 alternations — which is exactly the
+    arrangement that made the fan's 8-frame period, the steam's 24 and the
+    breath's 24 all divide 24, so frames 24-47 came out byte-for-byte copies of
+    0-23. Anyone re-deriving the loop from that sentence reinstates the defect,
+    which is why it is written down rather than quietly replaced. The breath
+    keeps four beats at the same rate; they are just keyframes on a full-loop
+    track with four different depths.
+
+    The fan is `alternate` and does have to run an even number of times: at 0.5s
+    it is 4 frames each way and 12 alternations. The steam runs twice on a 3s
+    track, three puffs at delays 0, -1s and -2s, which is `dizzy`'s phasing and
+    lands them 8 frames apart.
+
+    **Six and not twelve.** `dizzy` needed twelve because `FAILED` does not
+    decay and it had to survive being stared at, and it earned them with a blink
+    on a 12s track. This has three tracks at three speeds and no beat that wants
+    a twelfth second. `dizzy.svg` records what a loop longer than its content
+    costs: frames 32-95 byte-for-byte copies of 0-31, in a 402KB bake.
+
+    ── The steam ──────────────────────────────────────────────────────────
+
+    2x2 puffs, three dark cells and one pale, in `#000000` and `#C9D1D9` — the
+    two tones `dizzy`'s stars already carry, so the palette gains no entry and
+    no new snap target.
+
+    **Measured landscape/panel, which is the production config** — `daemon.ts`
+    sets `ORIENTATION = 'landscape'` and `ENVIRONMENT_EXTENT = 'panel'`. Worst
+    puff, best-reading pixel, against the real composed sky:
+
+      steam        7.76 dawn   10.64 day   5.06 dusk    8.96 night
+      dizzy stars  3.75 dawn    8.05 day   5.06 dusk   10.62 night
+
+    Better on dawn and day, level on dusk, and **lower on night** — the pale cell
+    carries night for both, and one pale cell in four reads less than one in
+    five. The floor is what matters and it is 5.06 at dusk, which is exactly
+    `dizzy`'s floor on the same sky: the corpus figure, already accepted.
+
+    **State the orientation with any contrast figure.** Landscape crops 32 raster
+    rows off the top, which slides the sprite a whole sky band relative to
+    `paintSky`, so the same art measured portrait moves on three of the four
+    skies — and *which* sky survives depends on the prop. Measured both ways:
+    this steam is invariant on **night** (8.96 either way), `dizzy`'s stars on
+    **dusk** (5.06 either way). Two harnesses disagreed over `dizzy` and matched
+    only on its invariant sky, so the single agreeing number was hiding a
+    systematic error rather than corroborating a method. An earlier version of
+    this paragraph reported that dusk-agreement as though it were a property of
+    *this* animation; it is not. A bare ratio with no config is not
+    reproducible. Declaring a colour makes it a snap target for every
+    other colour's edges, which is the defect the boot splash's wordmark,
+    `confused`'s caret and `dizzy`'s stars each hit in turn.
+
+    Opacity is only ever 0 or 1, flipped hard at the top of the rise the way
+    `asleep`'s Zs flip. Never a fade: partial opacity composites over the
+    background and snaps to transparent here, which is exactly what upstream's
+    smoke does and why it cannot come across.
+
+    ── Safe area ──────────────────────────────────────────────────────────
+
+    The pose creates headroom rather than spending it. Measured on the bake, the
+    topmost body-coloured pixel over the loop is at **unit y=8.25** — the fanning
+    claw at its -58deg extreme on frames 12 and 36 — a duplicate pair, not one
+    frame — and not a leg. The legs cannot be it:
+    they sit at y=9 and `heave` scales about y=15 with `scaleY` never above 1,
+    so they only ever move down. The steam tops out at **y=+1**, five units
+    inside the -4 line, where `dizzy` sits at -3 on 72 frames of 96.
+
+    Two earlier versions of this paragraph were wrong: one said the steam
+    reached y=2 with six units of margin, the other said the topmost body pixel
+    was a leg at y=9. Both were read off the keyframes instead of the bake, and
+    the second is 6 device pixels out.
+  -->
+  <defs>
+    <style>
+      /* One puff, drawn at the origin; the keyframes move the group. */
+
+      /* Delays inside the shorthand, never as separate `animation-delay`
+         declarations. `docs/ANIMATION.md` §Timing, on carrying the offset inside
+         the shorthand: it *resets* delay, so a longhand only survives while it
+         sits below. This file had the separate form and it worked
+         only by source order — moving the two delay rules above the shorthand,
+         which is a cosmetic tidy and nothing else, collapses all three puffs
+         onto one phase and they rise in lockstep.
+         `svg2frames` goes from "3 distinct delays" to "1".
+
+         Nothing else notices. The reordered version still renders 46 of 48
+         distinct frames with no adjacent identical pair, the same duplicate
+         offsets, the same byte cost, and passes every gate in the repo. Only
+         looking at it shows it. Every other animation here carries the delay
+         inline; this was the one that did not. */
+      #fx-steam-a { animation: rise 3s infinite steps(1); }
+      #fx-steam-b { animation: rise 3s -1s infinite steps(1); }
+      #fx-steam-c { animation: rise 3s -2s infinite steps(1); }
+
+      /* Whole art pixels, and the last two cells are off rather than faded.
+         3s is 24 frames, so each of the eight steps holds 3 frames. */
+      @keyframes rise {
+        0%      { transform: translate(0, 0px);  opacity: 1; }
+        12.5%   { transform: translate(0, -1px); opacity: 1; }
+        25%     { transform: translate(0, -2px); opacity: 1; }
+        37.5%   { transform: translate(1px, -3px); opacity: 1; }
+        50%     { transform: translate(1px, -4px); opacity: 1; }
+        62.5%   { transform: translate(2px, -5px); opacity: 1; }
+        75%     { transform: translate(2px, -6px); opacity: 0; }
+        87.5%   { transform: translate(2px, -6px); opacity: 0; }
+        100%    { transform: translate(0, 0px);  opacity: 1; }
+      }
+
+      /* The labouring breath. Faster than `idle`'s 2s, which is what makes it
+         a labour rather than a rest, and about the torso's own bottom edge so
+         the body never leaves the ground — `docs/ANIMATION.md` §Animating the
+         whole sprite is not animating, and the rule `idle` had to be fixed
+         against. */
+      #heave {
+        transform-origin: 7.5px 15px;
+        animation: heave 6s infinite ease-in-out;
+      }
+
+      /* Four breaths in the loop, and no two the same: deepening to the
+         third and settling on the fourth. `asleep` does the same thing with
+         three breaths in twelve seconds and a sigh in the middle.
+
+         **Do not oversell that.** Measured on the bake, the torso goes 40 down
+         to 36, 35, 34 and 37 device pixels — so the breaths differ from one
+         another by one to three pixels, a second and a half apart, which is
+         under what a viewer reads as "catching your breath". What the varying
+         depth actually earns is frame distinctness, which is real and is the
+         paragraph below. The breath itself reads on its own terms: 6 device
+         pixels of squash at forty a minute is laboured, and that is the whole
+         of the claim.
+
+         It is also what earns the full six seconds, and it took two goes.
+         Written as `1.5s alternate` the track's period was 24 frames, the fan's
+         8 and the steam's 24 — every period divided 24, so frames 24-47 came
+         out byte-for-byte copies of 0-23 and only 24 of 48 frames were
+         distinct. Moving to a 6s track with one deeper breath fixed half of
+         that: 35 distinct, with all 13 remaining duplicate pairs at an offset
+         of exactly 24, because breaths two and four were still identical to
+         each other. Making every breath a different depth is what finally
+         separates the halves. Half a loop of duplicate frames is the defect
+         `dizzy` shipped and documented. */
+      @keyframes heave {
+        0%      { transform: scale(1, 1); }
+        12.5%   { transform: scale(1.04, 0.9); }
+        25%     { transform: scale(1, 1); }
+        37.5%   { transform: scale(1.05, 0.88); }
+        50%     { transform: scale(1, 1); }
+        62.5%   { transform: scale(1.06, 0.86); }
+        75%     { transform: scale(1, 1); }
+        87.5%   { transform: scale(1.03, 0.92); }
+        100%    { transform: scale(1, 1); }
+      }
+
+      /* Rotate *and* extend. §What a claw cannot do: a turned 2x2 is an
+         arrowhead, and length is what makes a claw read. `gym` reaches its
+         raised claw with rotate(-73deg) scaleX(2.843); this is the same move
+         at a fanning amplitude. */
+      #arm-fan {
+        transform-origin: 13px 13px;
+        animation: fan 0.5s infinite alternate ease-in-out;
+      }
+
+      @keyframes fan {
+        from { transform: rotate(-25deg) scaleX(2.2); }
+        to   { transform: rotate(-58deg) scaleX(2.2); }
+      }
+    </style>
+  </defs>
+
+  <!-- ── steam, rising off him ──────────────────────────────────────────── -->
+  <!-- Three cells dark, one pale. The dark carries the pale skies and the pale
+       carries night, which is the two-tone `dizzy` measured: no single flat
+       tone reads against both a day sky and a night one. -->
+  <g>
+    <g id="fx-steam-a">
+      <rect x="4" y="6" width="1" height="1" fill="#C9D1D9"/>
+      <rect x="5" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="4" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="5" y="7" width="1" height="1" fill="#000000"/>
+    </g>
+    <g id="fx-steam-b">
+      <rect x="7" y="6" width="1" height="1" fill="#C9D1D9"/>
+      <rect x="8" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="7" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="8" y="7" width="1" height="1" fill="#000000"/>
+    </g>
+    <g id="fx-steam-c">
+      <rect x="10" y="6" width="1" height="1" fill="#C9D1D9"/>
+      <rect x="11" y="6" width="1" height="1" fill="#000000"/>
+      <rect x="10" y="7" width="1" height="1" fill="#000000"/>
+      <rect x="11" y="7" width="1" height="1" fill="#000000"/>
+    </g>
+  </g>
+
+  <g id="master-group">
+    <g id="heave">
+      <g id="body-color-group" fill="#DE886D">
+        <!-- The sploot: same x and width as the standing torso, 2 units
+             shorter, dropped 4 so its bottom sits on the ground line. -->
+        <rect id="torso-sploot" x="2" y="10" width="11" height="5"/>
+        <!-- Splayed above the spread body, in the standing leg columns. Their
+             own ids, not the base `outer-left-leg` and friends: those carry
+             1x2 at y=13 in every other animation and in `base.svg`, and a
+             reader diffing a pose against the base has to be able to trust
+             that an id means the geometry it has always meant. -->
+        <g id="legs-sploot">
+          <rect id="outer-left-leg-sploot" x="3" y="9" width="1" height="1"/>
+          <rect id="inner-left-leg-sploot" x="5" y="9" width="1" height="1"/>
+          <rect id="inner-right-leg-sploot" x="9" y="9" width="1" height="1"/>
+          <rect id="outer-right-leg-sploot" x="11" y="9" width="1" height="1"/>
+        </g>
+        <!-- Flat on the ground beside him, doing nothing. Base geometry is
+             2x2 at y=9 and this sits at y=13, so it is a variant and takes a
+             variant id like the rest. An earlier version kept the base id on
+             the grounds that a dropped rect is "the same rect" — but the base
+             ids are what a reader diffs a pose against, and 4 units is not the
+             same rect. `#right-arm` had the identical problem, undisclosed. -->
+        <rect id="left-arm-sploot" x="0" y="13" width="2" height="2"/>
+      </g>
+
+      <g id="arm-fan" fill="#DE886D">
+        <rect id="right-arm-fan" x="13" y="11" width="2" height="2"/>
+      </g>
+
+      <g id="eyes-color-group" fill="#000000">
+        <rect id="left-eye-squint" x="4" y="12" width="1" height="1"/>
+        <rect id="right-eye-squint" x="10" y="12" width="1" height="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

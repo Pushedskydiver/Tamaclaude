@@ -162,9 +162,9 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost drawn pixel, across every frame of all nine: `idle` +5.375,
+Measured topmost drawn pixel, across every frame of all ten: `idle` +5.375,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
-`asleep` -3, `dizzy` -3, `bouldering` -9. So the closest anything non-exempt
+`asleep` -3, `dizzy` -3, `overheated` +1, `bouldering` -9. So the closest anything non-exempt
 comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
 unit of margin, not none.
 
@@ -471,9 +471,9 @@ outside the SVG. The variety lives in the animation.
 
 It is also among the cheapest things in the repo. `idle` measures 3,609 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
-the six until `permission-sign` (2,645) and `confused` (3,323) landed; the nine
-now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,332 / 9,966 / 14,545 /
-22,568. The
+the six until `permission-sign` (2,645) and `confused` (3,323) landed; the ten
+now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,163 / 6,332 / 9,966 /
+14,545 / 22,568. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current
@@ -512,7 +512,7 @@ displacement — and `thinking` had already disproved it. `thinking.svg` records
 the reviewed version opening "up to eleven device pixels of daylight under the
 hips on 50 of 64 frames", the legs left behind as four free-floating stubs, and
 the fix being to compress about a base pivot: "the bottom edge is the pivot, so
-it does not move at all". Measured across all nine animations, seven have no
+it does not move at all". Measured across all ten animations, eight have no
 transparent row between body and legs at any frame, and the two that do split
 cleanly:
 

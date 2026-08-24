@@ -11,6 +11,7 @@ import { SOURCE as DIZZY } from '../packages/renderer/src/sprites/dizzy.data.ts'
 import { SOURCE as GYM } from '../packages/renderer/src/sprites/gym.data.ts';
 import { SOURCE as IDLE } from '../packages/renderer/src/sprites/idle.data.ts';
 import { loadSprite } from '../packages/renderer/src/sprites/index.ts';
+import { SOURCE as OVERHEATED } from '../packages/renderer/src/sprites/overheated.data.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
@@ -32,7 +33,7 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and nine full renders into `pnpm test`. It would also be flaky —
+ * and ten full renders into `pnpm test`. It would also be flaky —
  * `svg2frames` is not bit-reproducible, and two runs of `confused` differ on
  * one frame of 96 at a claw edge that lands on a fractional pixel and snaps
  * either way.
@@ -45,6 +46,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['dizzy', DIZZY],
   ['gym', GYM],
   ['idle', IDLE],
+  ['overheated', OVERHEATED],
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
@@ -274,6 +276,15 @@ describe('the baked animations', () => {
  * Bounded to `LEG_BAND` rows above the feet. Unbounded, the walk runs past the
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
+ *
+ * **The bound is also an escape, and one bake already takes it.** Any pose whose
+ * contiguous bottom band is deeper than `LEG_BAND` returns 0 without the walk
+ * ever looking for a gap, so the assertion passes for reasons that have nothing
+ * to do with the legs. `overheated` is splooted: its bottom-most row is the
+ * torso and there are no legs beneath it, so this reads 0 vacuously. What holds
+ * there instead is contiguity — a single connected body component on all 48
+ * frames — and nothing here asserts it. A second sploot would get the same
+ * green light and the same absence of coverage.
  */
 const LEG_BAND = 24;
 
