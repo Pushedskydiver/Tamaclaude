@@ -1,0 +1,58 @@
+[
+  {
+    "kUSBSerialNumberString": "00:11:22:33:44:55",
+    "IOObjectClass": "IOUSBHostDevice",
+    "USB Vendor Name": "Arduino LLC",
+    "USB Product Name": "Arduino Uno",
+    "idProduct": 67,
+    "idVendor": 9025,
+    "IORegistryEntryChildren": [
+      {
+        "IOObjectClass": "AppleUSBCDCCompositeDevice"
+      },
+      {
+        "IORegistryEntryChildren": [
+          {
+            "IOObjectClass": "AppleUSBACMControl"
+          }
+        ],
+        "IOObjectClass": "IOUSBHostInterface",
+        "idProduct": 67,
+        "USB Product Name": "Arduino Uno",
+        "USB Vendor Name": "Arduino LLC",
+        "idVendor": 9025
+      },
+      {
+        "IORegistryEntryChildren": [
+          {
+            "IORegistryEntryChildren": [
+              {
+                "IOCalloutDevice": "/dev/cu.usbmodem14201",
+                "IOObjectClass": "IOSerialBSDClient",
+                "IODialinDevice": "/dev/tty.usbmodem14201"
+              }
+            ],
+            "IOObjectClass": "AppleUSBACMData",
+            "idProduct": 67,
+            "idVendor": 9025
+          }
+        ],
+        "IOObjectClass": "IOUSBHostInterface",
+        "idProduct": 67,
+        "USB Product Name": "Arduino Uno",
+        "USB Vendor Name": "Arduino LLC",
+        "idVendor": 9025
+      },
+      {
+        "IOObjectClass": "IOUSBHostInterface",
+        "idProduct": 67,
+        "USB Product Name": "Arduino Uno",
+        "USB Vendor Name": "Arduino LLC",
+        "idVendor": 9025
+      },
+      {
+        "IOObjectClass": "AppleUSBHostDeviceUserClient"
+      }
+    ]
+  }
+]

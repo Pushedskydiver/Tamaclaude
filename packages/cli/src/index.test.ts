@@ -24,6 +24,8 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { chooseDevice } from './device.js';
+
 const ROOT = resolve(fileURLToPath(import.meta.url), '../../../..');
 
 const BUILT = resolve(ROOT, 'packages/cli/dist/index.js');
@@ -306,5 +308,137 @@ describe('the tamaclaude binary', () => {
     expect(out).toContain('$TAMACLAUDE_PACK');
     expect(out).toContain('birthday: none in this pack');
     expect(status).toBe(0);
+  });
+
+  /**
+   * **Skipped when the agent is actually installed, and that is not caution.**
+   * `run()` sandboxes `HOME`, which scopes the plist path — but launchd
+   * domains are per-uid, and `uninstall-agent` addresses `gui/$(id -u)`. On a
+   * machine where the agent is running, this test would boot out the real one,
+   * print `Stopped …`, and fail on an assertion about a machine it had just
+   * changed. That is the soak week, and the 19 Sep dry run, and Alex's own
+   * desk after `install-agent --apply`.
+   *
+   * A review found it. The same file already documents an inherited-`HOME` bug
+   * of exactly this shape, which is what makes the second instance worth
+   * naming rather than quietly guarding.
+   */
+  const agentIsInstalled = ((): boolean => {
+    try {
+      spawnSync(
+        'launchctl',
+        [
+          'print',
+          `gui/${String(process.getuid?.() ?? 0)}/com.tamaclaude.daemon`,
+        ],
+        {
+          stdio: 'ignore',
+        },
+      );
+      return (
+        spawnSync('launchctl', [
+          'print',
+          `gui/${String(process.getuid?.() ?? 0)}/com.tamaclaude.daemon`,
+        ]).status === 0
+      );
+    } catch {
+      return false;
+    }
+  })();
+
+  it.skipIf(agentIsInstalled || process.platform !== 'darwin')(
+    'uninstalls cleanly when nothing is installed',
+    () => {
+      // The path that must never fail: someone runs it twice, or runs it on a
+      // machine where the agent was never installed. An uninstall that errors
+      // when there is nothing to remove teaches people to ignore its output.
+      //
+      // `launchctl bootout` genuinely fails here — the label is not loaded — and
+      // that is the expected half of the answer rather than an error.
+      const { out, status } = run(['uninstall-agent'], {
+        TAMACLAUDE_PACK: EXAMPLE,
+      });
+      expect(out).toContain('was not running');
+      expect(out).toContain('No plist at');
+      // It says what it did *not* touch, because a person running an uninstall
+      // wants to know whether their pack survived it.
+      expect(out).toContain('left alone');
+      expect(status).toBe(0);
+    },
+  );
+
+  it.skipIf(process.platform === 'darwin')(
+    'says the agent commands are macOS only, off macOS',
+    () => {
+      // The other half of the skip above, so the suite is not simply blind on
+      // Linux. CI runs Ubuntu, and this is the assertion it *can* make — which
+      // matters, because the version of this file CI first saw failed there
+      // with a launchd error for a platform that has no launchd.
+      const { out, status } = run(['uninstall-agent'], {
+        TAMACLAUDE_PACK: EXAMPLE,
+      });
+      expect(out).toContain('needs launchd');
+      expect(out.trim().split('\n')).toHaveLength(1);
+      expect(status).toBe(1);
+    },
+  );
+
+  describe('chooseDevice', () => {
+    it('does not mistake a flag for a device path', () => {
+      // The plist passes `daemon --supervised`, so `argv[0]` is a flag. Taken
+      // as a path it would be opened forever and discovery never consulted —
+      // which is what the plist did until this was caught, before it shipped.
+      expect(chooseDevice('--supervised', [{ path: '/dev/cu.found' }])).toEqual(
+        {
+          path: '--supervised',
+        },
+      );
+      // `chooseDevice` is right to trust what it is handed; the filtering
+      // belongs in the caller, and `daemon()` does it.
+    });
+
+    it('takes the device it was given, without looking', () => {
+      // The escape hatch, and what gets typed during the soak week. A named
+      // path wins even when discovery would have found something else.
+      expect(
+        chooseDevice('/dev/cu.given', [{ path: '/dev/cu.found' }]),
+      ).toEqual({ path: '/dev/cu.given' });
+    });
+
+    it('takes the only panel when there is exactly one', () => {
+      expect(
+        chooseDevice(undefined, [{ path: '/dev/cu.usbmodem1101' }]),
+      ).toEqual({ path: '/dev/cu.usbmodem1101' });
+    });
+
+    it('refuses to choose between two panels, and names both', () => {
+      // **The case the design turns on.** Every ESP32-C3/C6/S3 in
+      // USB-Serial/JTAG mode shares `0x303A:0x1001`, and `BUILD_PLAN.md` calls
+      // for a spare board while Stage 6 flashes a gift board separate from the
+      // dev board. Picking the first would drive the wrong panel while
+      // reporting itself online — which survives a whole soak week.
+      const chosen = chooseDevice(undefined, [
+        { path: '/dev/cu.usbmodem1101', serial: '00:11:22:33:44:55' },
+        { path: '/dev/cu.usbmodem2201', serial: '66:77:88:99:AA:BB' },
+      ]);
+      expect(chosen).not.toHaveProperty('path');
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        '/dev/cu.usbmodem1101',
+      );
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        '/dev/cu.usbmodem2201',
+      );
+      // The serials are what let a person tell two identical boards apart.
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        '66:77:88:99:AA:BB',
+      );
+    });
+
+    it('refuses when nothing is plugged in, rather than inventing a path', () => {
+      const chosen = chooseDevice(undefined, []);
+      expect('refusal' in chosen ? chosen.refusal : '').toContain(
+        'no panel found',
+      );
+    });
   });
 });

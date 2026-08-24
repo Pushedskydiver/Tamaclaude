@@ -165,6 +165,89 @@ afterEach(async () => {
   opened.clear();
 });
 
+describe('giving up on a path that is not coming back', () => {
+  it('stops retrying after the bound and says so once', async () => {
+    // **The moved-port failure.** Unplug the panel, plug it into the next USB
+    // port along, and macOS gives it a different `/dev/cu.usbmodem*`. The
+    // reconnect loop retries the old path once a second forever, the daemon
+    // never exits, and the glass keeps showing the last frame it received. It
+    // looks like it is working. `tamaclaude pack` answers correctly. Nothing
+    // is red — which is the exact failure class this codebase is arranged
+    // against, and it recurs on every desk move.
+    //
+    // The fix is not to teach `panel.ts` to rediscover. It is to let it admit
+    // defeat, so the process can exit and the supervisor that installed it can
+    // start it again — and starting again is what runs discovery afresh.
+    const fake = fakeSerial();
+    fake.state.present = false;
+    let gaveUp = 0;
+    open({
+      serial: fake.system,
+      retryMs: 1,
+      giveUpAfter: 3,
+      onGiveUp: () => {
+        gaveUp += 1;
+      },
+    });
+    await delay(60);
+    expect(gaveUp).toBe(1);
+    // Three attempts, and then it stopped — not "slowed down".
+    expect(fake.state.opens).toBe(0);
+    const attempts = gaveUp;
+    await delay(40);
+    expect(gaveUp).toBe(attempts);
+  });
+
+  it('forgets the failures once the panel answers', async () => {
+    // A flaky cable that reconnects must not accumulate its way to a give-up
+    // over an evening. The count is *consecutive* failures.
+    //
+    // **Asserted on which attempt gives up, not on elapsed time.** Three fail,
+    // the fourth succeeds and is dropped, then the rest fail. With the reset,
+    // the tail starts from zero and give-up lands on attempt 4 + 5 = 9.
+    // Without it, the three earlier failures still count and it lands on 6.
+    // Two earlier versions of this test used delays instead, and the mutant
+    // that removes the reset survived both — the window between the two
+    // outcomes was inside the timing noise.
+    const fake = fakeSerial();
+    let attempts = 0;
+    let gaveUpAt = 0;
+    const counting: SerialSystem = {
+      open: async (path, watch) => {
+        attempts += 1;
+        fake.state.present = attempts === 4;
+        const port = await fake.system.open(path, watch);
+        // Dropped immediately, or the loop stops at the success and the tail
+        // never runs.
+        setTimeout(() => {
+          watch.onClosed();
+        }, 1);
+        return port;
+      },
+    };
+    open({
+      serial: counting,
+      retryMs: 1,
+      giveUpAfter: 5,
+      onGiveUp: () => {
+        gaveUpAt = attempts;
+      },
+    });
+    await delay(120);
+    expect(gaveUpAt).toBe(9);
+  });
+
+  it('retries forever when no bound is given', async () => {
+    // The default, and what `tamaclaude daemon` typed by hand should do: a
+    // person watching the terminal does not want it exiting under them.
+    const fake = fakeSerial();
+    fake.state.present = false;
+    open({ serial: fake.system, retryMs: 1 });
+    await delay(40);
+    expect(fake.state.opens).toBe(0);
+  });
+});
+
 describe('with no panel attached', () => {
   it('comes up offline instead of failing', async () => {
     const fake = fakeSerial();

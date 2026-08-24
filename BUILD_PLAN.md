@@ -98,7 +98,21 @@ The whole product, minus hardware.
       progress track is a `drawBorder` with a `fillRect` inside. Nothing earned
       its own function, and `knip` would have failed on one that did.
 - [ ] Harness draws through `render()` rather than approximating the bands —
-      what makes Stage 2's exit true by construction instead of by inspection
+      what makes Stage 2's exit true by construction instead of by inspection.
+      **Costed 24 Aug, not built.** The blocker was never the renderer: it
+      imports no `node:` builtins, so it is pure and could run in a browser
+      unchanged. There are two ways in and both are real work rather than a
+      comment fix. (a) Add a bundler — none is in the repo, so it is a
+      dependency decision under `docs/CONVENTIONS.md` — and inline the
+      renderer into the page so the browser calls `render()` directly.
+      (b) Pre-render whole panels in Node through `render()` and inline those
+      instead of sprite frames, which needs no dependency and makes the
+      criterion trivially true, but multiplies the inlined images by
+      orientation and layout and loses live candidate-switching for anything
+      not baked. (b) is the smaller change and the larger file.
+      Until one lands, `tools/harness.ts` and `tools/blit-scene.ts` both say
+      in their headers that the browser and the panel agree only by
+      inspection, which is what this criterion exists to rule out.
 - [x] Manifest schema (zod) in `packages/packs`; pack resolution in
       `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
       `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still
@@ -254,21 +268,57 @@ that is not waiting on the design freeze.
       example pack's generic quips and no birthday. A spec review killed the
       fallback this design originally had, on the grounds that it _was_ the
       silent-wrong-pack failure rather than a guard against it.
-- [ ] launchd agent; `brew` tap formula. **The assumption the pack resolver
-      now rests on is that something sets `TAMACLAUDE_PACK` in production, and
-      nothing does yet** — this item is where the plist that sets it gets
-      written. Until then the daemon is started by hand and the variable is
-      typed by hand. Failure is loud rather than silent, which is the point,
-      but loud on the day is still on the day. Nothing in the repo tests an
-      installed layout.
-      **If this slips, the agreed fallback is not "add a default pack" but
-      "fall back and say so on the glass"** — the message band already exists
-      and `describePack` already composes the line. A review made the case:
-      after 23 Sep the asymmetry inverts, since a missing birthday costs one
-      day a year and a panel that will not start costs every day, and a
-      crash-looping launchd agent writing to a log nobody reads is not louder
-      than a fallback, only differently silent. Recorded now so the argument
-      does not have to happen in the last week.
+- [~] **launchd agent built; `brew` tap deliberately not.** `tamaclaude
+install-agent` writes `~/Library/LaunchAgents/com.tamaclaude.daemon.plist`
+  — dry run by default, `--apply` to install, modelled on
+  `tamaclaude-install-hooks`. It resolves the pack _before_ writing, because
+  an agent installed where no pack exists would exit 2 on every start and
+  `KeepAlive` cannot tell exit 2 from exit 1 (launchd sees zero versus
+  non-zero only), so it would restart forever writing into a log nobody
+  opens. `bootout` precedes `bootstrap` so a second install cannot leave
+  the first agent running with stale arguments.
+  **The plist runs `process.execPath`, not the shebang.** `#!/usr/bin/env
+node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
+  on any machine using a version manager, which is this one — silently,
+  every ten seconds, forever.
+  **No brew tap.** A second repo, a formula, a versioned tarball and
+  un-privating the package, for one Mac. `git clone && pnpm install` is not
+  a one-line install either: it needs Xcode CLT, node and pnpm first. The
+  decision is to install it in person and let the printed card be a
+  keepsake carrying something true — the repo QR and "if it ever stops,
+  open Terminal and run `tamaclaude pack`".
+  `tamaclaude status` asks launchd whether it is actually running, and says so
+  when the node it was installed with has been upgraded away — the failure a
+  version-pinned `process.execPath` creates, and the one `tamaclaude pack`
+  cannot see because it runs under the shell's node. `install-agent --apply`
+  runs the same check rather than claiming success: `bootstrap` exiting 0 means
+  _loaded_, not running, and the likeliest install-day failure is a daemon
+  already running by hand, which makes the agent die on `already listening` and
+  restart every thirty seconds while the installer says it worked. Reproduced
+  and fixed.
+  `tamaclaude uninstall-agent` stops it and deletes the plist, because an agent
+  with `RunAtLoad` comes back at every login and the only way off otherwise is
+  `launchctl bootout` typed correctly by someone who knows it exists — which is
+  not the person this is a gift for.
+  **The moved-port case is closed, and not the way this line first proposed.**
+  macOS derives `/dev/cu.usbmodem1101` from the USB port, so moving the panel
+  one socket along changes its path and the reconnect loop would retry the old
+  one forever — glass holding its last frame, `tamaclaude pack` still correct,
+  nothing red, on every desk move. The recorded fix was to thread discovery
+  into `packages/device/src/panel.ts`. A review argued for a cheaper one that
+  reuses what this item already installs: bound the consecutive failures,
+  exit non-zero, and let `KeepAlive` restart the process, which runs discovery
+  again from scratch. `openPanel` takes `giveUpAfter`; the plist passes
+  `daemon --supervised`; a hand-typed daemon still retries forever, because a
+  person watching a terminal does not want it exiting under them.
+  **If this slips, the agreed fallback is not "add a default pack" but
+  "fall back and say so on the glass"** — the message band already exists
+  and `describePack` already composes the line. A review made the case:
+  after 23 Sep the asymmetry inverts, since a missing birthday costs one
+  day a year and a panel that will not start costs every day, and a
+  crash-looping launchd agent writing to a log nobody reads is not louder
+  than a fallback, only differently silent. Recorded now so the argument
+  does not have to happen in the last week.
 
 **Exit:** real Claude Code sessions drive the panel, placeholder art.
 
@@ -468,7 +518,12 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 - [ ] Run it on Alex's desk all week. Fix what irritates. No new features.
 - [ ] Assemble board in printed case
-- [ ] Dry-run the full install on a clean macOS user account
+- [ ] Dry-run the full install on a clean macOS user account. **Bring this
+      forward — it is the highest-information hour left in the plan.** The
+      untested assumption under everything else is that a Mac which is not this
+      one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
+      full `tsc -b`. Finding out on 19 Sep leaves four days, and the recovery
+      for "no toolchain" is a packaging project rather than a bug fix.
 - [ ] Printed card: QR to repo + one-line install
 - [ ] Flash the gift board (not the dev board) with the splash
 
