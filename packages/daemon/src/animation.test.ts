@@ -37,6 +37,16 @@ describe('animationFor', () => {
     expect(animationFor('WORKING', { tool: 'Read' })).toBe('bouldering');
   });
 
+  it('maps both web tools to wizard', () => {
+    // Spelled out rather than trusted, because a `Map` key is a raw string:
+    // `'Websearch'`, a trailing space or an `mcp__` prefix all typecheck, and
+    // an unmapped tool falls back to `thinking` — so a mistyped key here is a
+    // green suite and a panel quietly showing the wrong screen for 5.5% of
+    // tool calls. The fallback test below is what makes that silent.
+    expect(animationFor('WORKING', { tool: 'WebSearch' })).toBe('wizard');
+    expect(animationFor('WORKING', { tool: 'WebFetch' })).toBe('wizard');
+  });
+
   it('falls an unknown tool back to thinking rather than throwing', () => {
     // MCP servers invent tool names and Claude Code releases add them, so an
     // unrecognised tool is the ordinary case. It must not be an error, and it
@@ -96,9 +106,12 @@ describe('animationFor', () => {
     // The previous version filtered `animationFor`'s output by `ANIMATIONS`,
     // which is the tuple `AnimationName` is derived from, so it compared a
     // value against the set that defines its own type and could not fail.
-    // Planting `'wizard'` in `ANIMATIONS` and mapping `WebSearch` to it — an
+    // Planting `'sweeping'` in `ANIMATIONS` and mapping `Glob` to it — an
     // animation with no SVG and no bake, reachable from a real tool name —
-    // left all 413 tests green. Only `tsc` caught it, in `packages/cli`.
+    // leaves the rest of the suite green. Only `tsc` catches it, in
+    // `packages/cli`. The mutant used to be named `'wizard'`/`WebSearch`; that
+    // pair shipped for real on 24 Aug, so re-planting it would have proved the
+    // gate vacuous when it is not. A documented mutant has to stay unbuildable.
     //
     // `ANIMATIONS` is still the daemon's own list and stays the type; this
     // asserts the join to the renderer, which is the edge that can actually

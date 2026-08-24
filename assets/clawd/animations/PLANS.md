@@ -766,8 +766,9 @@ touching `Session` is a reopening rather than finishing.
   arguing.
 
   **The right gap is water.** `environment.ts` puts the rock pool at units
-  x 11.25 to 17.50 for its full height above the ground line, so anything
-  parked on that flank is parked in the pool. The rock on the left is at
+  x 11.25 to 17.50, **y 12.50 to 15.63** — a band straddling the ground line
+  rather than the flank's full height, so anything parked at ground level on
+  that flank is parked in the pool. The rock on the left is at
   y 6.6-8.75 — mid-distance, well above a ground-level prop — so **the left
   flank is the only one clear at ground level.**
 
@@ -904,7 +905,7 @@ to avoid, and that the corpus's existing light grey is the safest thing already
 in the palette.
 
 **The art overrode that, deliberately, and here is the reasoning.** The vehicle
-ships in the mid-saturated candidate — the 1.02:1-on-dusk-sand row above. What
+ships in the mid-saturated candidate — the 1.03:1-on-dusk-sand row above. What
 carries the shape is internal contrast rather than contrast with the ground:
 the window, the wheels and the shaded sill give it four tones, and the critic
 judged it at true size on all four sands and both orientations before passing
@@ -1010,12 +1011,14 @@ default rather than the only one.
 
 Clawd is calling something in from somewhere else, and it is arriving.
 
-`BUILD_PLAN.md` Stage 4 item 10, Tier B per `spec.md`. Unmapped today, so both
-tools draw `thinking` via `FALLBACK`.
+`BUILD_PLAN.md` Stage 4 item 10, Tier B per `spec.md`. Until 24 Aug both
+tools drew `thinking` via `FALLBACK`; `TOOL_ANIMATIONS` now maps both.
 
 `data-loop-seconds="12"`, **not 8**. Three evenly phased motes need 3 to divide
 the frame count, and 3 does not divide 64 — the arithmetic that moved `dizzy`
-to 12 seconds. At 96 frames three motes are 32 apart exactly.
+to 12 seconds. What shipped rides a 3s track of 24 frames, which tiles the
+96-frame loop four times, with the three motes 8 and 16 frames apart — exact
+thirds of the track, which is what needed 3 to divide it.
 
 - **Action.** A pointed hat, and one claw extended holding a small object with
   motes arriving toward it. The reading is _summoning_, not _searching_: a crab
@@ -1036,8 +1039,9 @@ to 12 seconds. At 96 frames three motes are 32 apart exactly.
 - **Effects.** Three motes, `steps(1)` with **inline** delays — that is
   `dizzy`'s and `overheated`'s idiom, not `asleep`'s, which is `linear`. Each
   mote is a dark mass with a pale core, not a single unit: measured, `#C9D1D9`
-  is **1.01:1 against the day sky's low band** and a dark tone is **1.03:1
-  against night**, so one flat tone is invisible at some hour whichever it is.
+  is **1.01:1 against the day sky's low band** and `#000000` is **1.55:1
+  against night sky low and 1.08:1 against its top**, so one flat tone is
+  invisible at some hour whichever it is.
   This is the fifth time that defect would have landed.
 
 **Not wanted:** a wand — it competes with the hat for the same silhouette, and
@@ -1085,8 +1089,29 @@ cone's symmetry with a non-monotonic step rather than running clean to a point.
 
 **And three motes on one path is a bead chain.** Evenly spaced collinear dots
 are what "three things a third of a cycle apart on a straight line" means. They
-need separate paths that fan; and delays that are not a multiple of the step
-length, or all three jump on the same frame and it strobes instead of flowing.
+need separate paths that fan.
+
+**Fanning was not enough, and the reason is size.** Three five-cell crosses at
+whole-unit cells cannot converge on a two-unit orb without meeting: measured
+over the loop, two of them were edge-adjacent on **24 of 96 frames**, which
+rasterises as one glyph. That is exactly the defect `componentSizes` in
+`tools/bake-sprites.test.ts` exists to catch, and it was hard-coded to `dizzy`
+— three lines from catching it. The gate is now a table and covers both.
+
+The fix was halving the mote to 0.5-unit cells: 1.5 units across and 80 device
+pixels against `dizzy`'s 320. Quartering the area buys the clearance, and it
+buys the cadence too — twelve positions of two frames each rather than six of
+four, so a mote glides instead of hopping 9 pixels twice a second. **Check
+separation analytically before rendering**; the rectangles are known from the
+keyframes, and 96 frames of three pairs is a loop, not a render.
+
+**A cone needs to taper on both sides.** Three drafts of this hat failed in
+three different ways: a pale band across it read as a tiered cake, then every
+row left-aligned at one x gave a vertical wall and a single slope which read as
+a shark fin, then a hard lateral kink in a five-row cone read as a blotched
+lump. What works is a six-row taper with the centres drifting — 7.5, 7.25,
+7.25, 7.25, 6.75, 6.75 — and the pale carried by scattered specks plus a brim
+proud of the torso, which is upstream's construction and not an accident.
 
 ---
 
@@ -1188,8 +1213,9 @@ critic's render costs a rebuild.
 
 1. **Where does the prop go?** The stage spans x -3 to 18 and the character
    occupies 0 to 15, so the free width is 3 units per flank and it is not
-   contiguous. The right flank is the rock pool, units x 11.25 to 17.50 for its
-   full height above the ground line. The left flank is clear at ground level
+   contiguous. The right flank is the rock pool, units x 11.25 to 17.50,
+   y 12.50 to 15.63 — a band across the ground line, not the flank's full
+   height, so it rules out ground-level props there rather than everything. The left flank is clear at ground level
    but the environment's rock sits at x -2.25 to 1.00, y 6.6 to 8.75. The
    character cannot move: `docs/ANIMATION.md` says grow the stage instead, and
    the stage is within half a unit of the panel's ceiling.
@@ -1210,7 +1236,8 @@ critic's render costs a rebuild.
    `asleep`'s is still unfixed. Run `node tools/contrast.ts` and paste the row.
    Two numbers that decide most of it: the corpus pale `#C9D1D9` is **1.01:1
    against the day sky's lowest band**, so a pale thing at head height is
-   invisible by day; a dark mass is **1.03:1 against night sky**. One flat tone
+   invisible by day; `#000000` is **1.55:1 against night sky low and 1.08:1
+   against its top**. One flat tone
    does not survive four times of day at head height, which is why `dizzy` ended
    up a dark mass with a pale core.
 5. **Is the claw rotating _and_ extending, pivoted at the shoulder — and does
@@ -1232,9 +1259,13 @@ critic's render costs a rebuild.
    colour**. `#C9D1D9` over `#000000` at half coverage is 15,909 from `#DE886D`
    and 32,480 from black. The wizard's first hat did this on 81 of 96 frames,
    `bouldering`'s violet line and the payoff's red fringe are the same
-   mechanism. Edges facing the _background_ are exempt: `svg2frames` captures
-   with `omitBackground`, so those are one colour at partial alpha and the mask
-   decides them, not the palette. The remedy is not to freeze the element —
+   mechanism. Edges facing the _background_ are **not** exempt — `BACKGROUND`
+   in `tools/frame-palette.ts` is `[0,0,0]` and is added to the palette itself,
+   so they are composited toward black and snapped like everything else.
+   Whether that is safe depends on the document: `wizard` declares three
+   colours and nothing sits between peach and black, so its background-facing
+   edges resolve to one or the other, while `payoff` declares `#6F4436`, which
+   does sit in that ramp and takes 50 of its 101 steps. Count the ramp. The remedy is not to freeze the element —
    move it by whole device pixels instead, with `steps(1)`, sampling whatever
    curve the body uses. `wizard`'s `#fx-bob` is the worked example.
 8. **Do the keyframes land on whole frames, and does the effect period divide

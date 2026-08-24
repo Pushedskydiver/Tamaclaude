@@ -407,7 +407,9 @@ than partially. Eight good screens beat nine plus four rough ones.
      Tier A gate above governs what gets cut, not what gets pulled forward. Recorded here
      because this list is what the 6 Sep decision is read off, and a plan that
      calls a shipped item deferred will mislead exactly that decision
-  10. wizard (WebSearch/WebFetch) — 5.5% of real tool calls
+  10. ✅ wizard (WebSearch/WebFetch) — 5.5% of real tool calls. Built 24 Aug;
+      the `TOOL_ANIMATIONS` wiring landed with the art rather than after it,
+      against the "art first, wiring last" note below
   11. board game (Agent/subagents) — 0.7%, the least-seen of the screens that
       have a measured trigger. Six catalogue entries fire on hook events or
       timers and have no tool-call frequency at all, so this is not a claim
@@ -440,7 +442,7 @@ than partially. Eight good screens beat nine plus four rough ones.
       was counted in sessions at all, and one in a thousand is rare by any
       reading. Salience rather than frequency is its case, as with item 7
   13. road bike (long runs) — **Tier C, not B.** `spec.md` puts it with
-      `beacon` under "stretch — cut without regret". A plan written on 25 Aug
+      `beacon` under "stretch — cut without regret". A plan written on 24 Aug
       called it Tier B and was corrected: it is the most expensive item in the
       catalogue (the first prop that carries him, and there is no seated pose
       in the corpus), and it has no trigger — nothing measures duration. If it

@@ -66,6 +66,15 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
 const STAR_PIXELS = 320;
 
 /**
+ * One `wizard` mote: the same five-cell cross at half scale, so 5 cells of 16.
+ *
+ * Half scale is not decoration. At whole units three crosses converging on a
+ * two-unit orb cannot avoid each other — measured, two were touching on 24 of
+ * 96 frames — and quartering the area is what buys the clearance.
+ */
+const MOTE_PIXELS = 80;
+
+/**
  * The eight neighbours of a pixel.
  *
  * Eight and not four: two crosses meeting at a corner are one glyph to the eye,
@@ -290,7 +299,7 @@ describe('the baked animations', () => {
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
  * **The bound fires on every correct pose, so the 0 is vacuous — and that is
- * not the problem.** Measured across all eleven bakes: the contiguous band
+ * not the problem.** Measured across all twelve bakes: the contiguous band
  * from the feet is 42 to 200 rows, well over the bound, so the walk never
  * looks for a gap. The exception proves the mechanism rather than the rule —
  * `dizzy` drops to 16 on the six frames where an orbiting star is the
@@ -385,21 +394,47 @@ describe('the body stays on its legs', () => {
   });
 });
 
-describe("dizzy's orbiting stars", () => {
-  it('stay clear of the body and of each other', async () => {
-    // See `componentSizes` for what this is and why it is counted from the
-    // bake. Three runs of 320 on every frame, or a star has merged with the
-    // body or with another star.
-    const frames = await loadSprite('dizzy');
+/**
+ * How many separate effect glyphs a frame must show, per animation.
+ *
+ * `dizzy`'s three stars orbit continuously, so all three are on every frame.
+ * `wizard`'s three motes each spend the first of twelve keyframes transparent
+ * — the gap between one arriving and the next — and they are 8 and 16 frames
+ * apart on a 24-frame track, so exactly one is away on six frames of every
+ * twenty-four.
+ *
+ * Both numbers are derived from the stylesheet rather than measured from the
+ * bake, which is the point: a bake that disagrees is the defect.
+ */
+const EFFECTS: ReadonlyArray<
+  readonly [SpriteName, number, (frame: number) => number]
+> = [
+  ['dizzy', STAR_PIXELS, () => 3],
+  [
+    'wizard',
+    MOTE_PIXELS,
+    (frame) =>
+      3 - [0, 8, 16].filter((delay) => (frame + delay) % 24 < 2).length,
+  ],
+];
+
+describe('orbiting stars and arriving motes', () => {
+  // This generalises what used to be a `dizzy`-only assertion, and the reason
+  // is that the first two drafts of `wizard` shipped the exact defect it
+  // exists for: two motes edge-adjacent, rasterising as one glyph, on 24 of 96
+  // frames. Three lines away from catching it and hard-coded to the one
+  // animation that had already been fixed.
+  it.each(EFFECTS)('%s keeps its effects apart', async (name, size, want) => {
+    const frames = await loadSprite(name);
     // `toEqual` against a list derived from `frames` passes on an empty list,
     // which is the shape a broken loader would hand back.
     expect(frames.length).toBeGreaterThan(0);
-    const stars = frames.map(
+    const seen = frames.map(
       (sprite) =>
         componentSizes(sprite.mask, sprite.frame.width).filter(
-          (size) => size === STAR_PIXELS,
+          (each) => each === size,
         ).length,
     );
-    expect(stars).toEqual(frames.map(() => 3));
+    expect(seen).toEqual(frames.map((_, frame) => want(frame)));
   });
 });
