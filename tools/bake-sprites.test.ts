@@ -291,17 +291,30 @@ describe('the baked animations', () => {
  *   planted in `payoff`, whose vehicle spans the rows beside his legs, reports
  *   0. So does `overheated`, splooted with no legs at all.
  *
- * A connectivity check was built to replace this and reverted, which is worth
- * recording so nobody builds it twice. Asking whether the bottom-most solid
- * pixel in the legs' columns belongs to the largest component catches the
- * plain lift exactly as this does — and misses the same `payoff` case, because
- * the vehicle touches both his arm and his legs, so a lifted torso is still
- * one component. It is also strictly worse for a single detached leg, which
- * falls below any sensible solidity threshold and stops being considered.
+ * **A connectivity check would work, and the first attempt at one was
+ * abandoned for a reason that was measurably wrong.** Recorded in detail
+ * because a wrong reason not to build something forecloses it more thoroughly
+ * than never having tried.
  *
- * So the honest statement is that **`payoff` is unprotected here** and no
- * cheap mask-level test changes that. What would is knowing which pixels are
- * the character and which are the prop, which a mask does not carry.
+ * Asking whether the bottom-most pixel in the legs' columns belongs to the
+ * largest component catches the plain `idle` lift, and it catches the
+ * `payoff` lift that this gate misses. With the torso lifted two units the
+ * components are 5,440 for the torso, 1,008 for the vehicle and 128 for each
+ * of the four legs — the vehicle does **not** hold the body together, because
+ * it touches the torso and not the legs: at row 176 it ends at device column
+ * 39 and the first leg starts at 48, an eight-pixel gap on every leg row.
+ *
+ * The first attempt discarded a component below 1,000 pixels, to keep
+ * `dizzy`'s orbiting stars from being mistaken for a body part. At that
+ * threshold the legs are discarded too, so the scan found nothing in their
+ * columns and passed vacuously — 0 frames flagged. At 100 it flags all 64. A
+ * review caught the arithmetic and the earlier version of this comment, which
+ * asserted the miss as a property of the formulation.
+ *
+ * What is genuinely unsolved is smaller than that: a star is 320 pixels and a
+ * leg is 128, so size alone cannot tell them apart, and the discriminator has
+ * to be something else — the legs stand on the ground row and the stars do
+ * not. That is the design work left, and it is worth doing.
  */
 const LEG_BAND = 24;
 

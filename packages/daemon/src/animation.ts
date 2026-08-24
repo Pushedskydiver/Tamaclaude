@@ -100,7 +100,7 @@ const STATE_ANIMATIONS: Readonly<
   NEEDS_PERMISSION: 'permission-sign',
   FAILED: 'dizzy',
   WAITING: 'confused',
-  // `BUILD_PLAN.md` item 6, and the reason the trigger shipped a fortnight
+  // `BUILD_PLAN.md` item 6, and the reason the trigger shipped six hours
   // before the art: `DONE` borrowed `idle` until now, so the state and the rank
   // were real while the glass showed the picture it would have shown anyway.
   // Nothing had to be reverted when the art arrived, which was the point.

@@ -11,12 +11,14 @@
  *
  *   node tools/contrast.ts '#B22222' ...
  *
- * ## Against the ground, not the sky
+ * ## Grounds first, skies too
  *
  * A ground-level prop is never seen against sky. `environment.ts` puts the
  * horizon at 62% of the stage with sea 6% below it, so everything standing on
- * the floor is on sand. The plan for the payoff screen asked for sky and would
- * have measured a pair that never touch.
+ * the floor is on sand — the payoff plan asked for sky and would have measured
+ * a pair that never touch. The skies are here as well, because a raised prop
+ * like `permission-sign`'s plate genuinely is against one, and because the
+ * figures this tool exists to make recomputable were taken against them.
  *
  * ## What this does not tell you
  *
@@ -31,8 +33,16 @@ import { realpathSync } from 'node:fs';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-/** The four grounds, from `packages/renderer/src/environment.ts`. */
-const GROUND: Readonly<Record<string, readonly [number, number, number]>> = {
+/**
+ * What the environment paints, as authored in `environment.ts`.
+ *
+ * Eight grounds and four skies. The sky entry is each gradient's topmost band
+ * — its palest, and so the hardest for a light prop. A raised prop is judged
+ * against a band this does not name, because `environment.ts` paints four per
+ * sky and which one a pixel meets depends on its height; treat the sky figures
+ * as one sample rather than the answer.
+ */
+const AGAINST: Readonly<Record<string, readonly [number, number, number]>> = {
   'dawn sand': [126, 108, 96],
   'day sand': [178, 156, 128],
   'dusk sand': [112, 88, 82],
@@ -41,7 +51,38 @@ const GROUND: Readonly<Record<string, readonly [number, number, number]>> = {
   'day pool': [96, 154, 168],
   'dusk pool': [84, 78, 104],
   'night pool': [34, 44, 70],
+  'dawn sky': [92, 96, 132],
+  'day sky': [184, 214, 236],
+  'dusk sky': [188, 116, 96],
+  'night sky': [30, 34, 56],
 };
+
+/**
+ * Round a channel the way the panel does.
+ *
+ * **The basis matters and the first version had it wrong.** `environment.ts`
+ * passes every colour through `rgb565`, which keeps 5 bits of red and blue and
+ * 6 of green — and that file states its own luminance figures are "as the
+ * panel receives it after `rgb565` truncation". A tool measuring the authoring
+ * triples is measuring a colour the panel never shows, and was quietly
+ * producing figures on a different basis from the ones already written down.
+ *
+ * No claim is made here about reproducing a specific published number. A
+ * review offered 1.31 and 1.80 as this tool's target, attributing them to the
+ * sign plate; they are `dizzy`'s worst *pip* pixel over its loop, per that
+ * file's own sentence, and against a per-time worst band rather than a fixed
+ * one. Two figures agreeing to two decimal places is not evidence they are the
+ * same measurement.
+ */
+function panelRounded([red, green, blue]: readonly [number, number, number]): [
+  number,
+  number,
+  number,
+] {
+  const five = (v: number): number => (v & 0xf8) | ((v & 0xf8) >> 5);
+  const six = (v: number): number => (v & 0xfc) | ((v & 0xfc) >> 6);
+  return [five(red), six(green), five(blue)];
+}
 
 function channel(value: number): number {
   const unit = value / 255;
@@ -84,7 +125,7 @@ function main(): void {
     process.stderr.write('usage: node tools/contrast.ts <#rrggbb> ...\n');
     process.exit(2);
   }
-  const names = Object.keys(GROUND);
+  const names = Object.keys(AGAINST);
   process.stdout.write(
     `${'colour'.padEnd(9)}${names.map((n) => n.padStart(11)).join('')}\n`,
   );
@@ -95,7 +136,10 @@ function main(): void {
       process.exit(2);
     }
     const cells = names.map((name) => {
-      const ratio = contrast(rgb, GROUND[name] ?? [0, 0, 0]);
+      const ratio = contrast(
+        panelRounded(rgb),
+        panelRounded(AGAINST[name] ?? [0, 0, 0]),
+      );
       return `${ratio.toFixed(2)}:1`.padStart(11);
     });
     process.stdout.write(`${hex.padEnd(9)}${cells.join('')}\n`);

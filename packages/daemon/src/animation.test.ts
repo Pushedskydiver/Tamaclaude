@@ -161,3 +161,17 @@ describe('stateRank', () => {
     expect(stateRank('DONE')).toBeLessThan(stateRank('IDLE'));
   });
 });
+
+describe('the payoff screen', () => {
+  it('draws its own art rather than borrowing idle', () => {
+    // **The one behavioural change of the branch that added the art**, and it
+    // had no test: `DONE` mapped to `idle` while the art was unbuilt, and the
+    // sweep below only checks the name is baked — which passed just as happily
+    // when the answer was `idle`. A review found it.
+    expect(animationFor('DONE')).toBe('payoff');
+    expect(animationFor('IDLE')).toBe('idle');
+    // Distinct, because the whole point of the state is that finishing looks
+    // different from resting.
+    expect(animationFor('DONE')).not.toBe(animationFor('IDLE'));
+  });
+});

@@ -162,7 +162,8 @@ landscape panel. Landscape therefore crops to 21 x 20 rather than rescaling,
 because rescaling to 172/25 is 6.88 device pixels per unit and every motion in
 every animation would land between pixels.
 
-Measured topmost drawn pixel, across every frame of all ten: `idle` +5.375,
+Measured topmost drawn pixel, across every frame of every animation then in
+the corpus: `idle` +5.375,
 `gym` +2, `confused` +2, `typing` -0.5, `permission-sign` -2, `thinking` -3,
 `asleep` -3, `dizzy` -3, `overheated` +1, `bouldering` -9. So the closest anything non-exempt
 comes to the -4 line is `thinking`, `asleep` and `dizzy` at -3, which is one
@@ -512,7 +513,8 @@ displacement — and `thinking` had already disproved it. `thinking.svg` records
 the reviewed version opening "up to eleven device pixels of daylight under the
 hips on 50 of 64 frames", the legs left behind as four free-floating stubs, and
 the fix being to compress about a base pivot: "the bottom edge is the pivot, so
-it does not move at all". Measured across all ten animations, eight have no
+it does not move at all". Measured across the ten animations in the corpus at
+the time, eight have no
 transparent row between body and legs at any frame, and the two that do split
 cleanly:
 

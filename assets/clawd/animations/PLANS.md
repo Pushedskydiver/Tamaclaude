@@ -14,7 +14,7 @@ wanted, so there was no way to tell a bug from a choice.
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
-Nine of the ten carry one; `gym` alone has none, because its bar is described
+All but one carry one; `gym` alone has none, because its bar is described
 under Action rather than filed as a prop, which is a distinction not worth
 enforcing. Both constraints this paragraph used to name have since been repealed by
 `docs/ANIMATION.md`, and it took two passes to notice. Palette snapping
@@ -141,7 +141,7 @@ rasterised pixel back onto the declared palette, which is what upstream
 clawd-tank does, so a rotated or eased edge hardens after the fact instead of
 being forbidden up front. This plan was the first written against the new
 contract. Four more have been written against it since — permission sign,
-confused, dizzy and overheated — so of the ten, five are current and five
+confused, dizzy, overheated and the payoff — so some plans here are current and some
 describe the old one. The preamble said so too until dizzy's branch corrected it.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
@@ -884,6 +884,16 @@ own header: this is a screen for the obviously-invisible, not a gate. What it
 does settle is that a dark saturated body on dusk sand is the one combination
 to avoid, and that the corpus's existing light grey is the safest thing already
 in the palette.
+
+**The art overrode that, deliberately, and here is the reasoning.** The vehicle
+ships in the mid-saturated candidate — the 1.02:1-on-dusk-sand row above. What
+carries the shape is internal contrast rather than contrast with the ground:
+the window, the wheels and the shaded sill give it four tones, and the critic
+judged it at true size on all four sands and both orientations before passing
+it. A light grey vehicle would measure better and read worse, because it would
+be the same tone family as the sign plate and the thought bubble, which are
+`Clawd`'s own props. Recorded because a plan that concludes one thing while the
+art beside it does another is worse than either.
 
 **`hipGap` will pass vacuously.** That gate walks up from the bottom-most drawn
 row and returns 0 once the contiguous bottom band exceeds 24 device pixels; a

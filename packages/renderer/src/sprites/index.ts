@@ -10,7 +10,7 @@
  * the bake still matches its SVG, which is a property no consumer of the
  * pixels can see.
  *
- * **Loaded on demand, and that is the point.** All ten animations together are
+ * **Loaded on demand, and that is the point.** Every animation together is
  * 1,918,964 bytes of encoded data and 2,581,059 of source — base64 is four
  * bytes for three, so the second number can only ever be about a third above
  * the first. (It read six, 1,128,216 and 1,515,153 until `permission-sign`,

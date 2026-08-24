@@ -387,9 +387,12 @@ than partially. Eight good screens beat nine plus four rough ones.
      install shows, so "from the recipient's pack" was never achievable as
      written — recognition comes from shape and context, and the tracked art
      carries no mark identifying a specific vehicle.
-     The fallback this line used to name is moot: the trigger shipped a
-     fortnight before the art and `DONE` borrowed `idle` in the meantime, so
-     the risk it was written against never arrived.
+     The fallback this line used to name is moot: the trigger shipped six hours
+     before the art — same day, `9fd31c3` at 11:22 and the art at 17:18 — and
+     `DONE` borrowed `idle` in between, so the risk it was written against
+     never arrived. An earlier version said a fortnight, which `main`'s history
+     does not contain: it starts on 18 Aug. Item 12 already made this exact
+     correction for `overheated`.
   7. Permission sign, and confused ✅ — Tier A per the screen spec; both were
      missing from every tier in its first draft despite being the two screens
      the whole design principle exists to serve. A `spec-grill` found both
