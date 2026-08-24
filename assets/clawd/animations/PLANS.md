@@ -1006,6 +1006,151 @@ default rather than the only one.
 
 ---
 
+## Wizard — `WebSearch`, `WebFetch`
+
+Clawd is looking something up, and the answer is arriving from somewhere else.
+
+`BUILD_PLAN.md` Stage 4 item 10, Tier B. **5.5% of measured tool calls** — the
+fourth most-watched working screen, behind `gym` at 63.9%, `bouldering` at
+17.6% and `typing` at 7.9%. Unmapped today, so `WebSearch` and `WebFetch` both
+draw `thinking` via `FALLBACK`.
+
+`data-loop-seconds="8"`, matching `thinking` and `permission-sign`.
+
+- **Action.** A pointed hat on his head; one claw raised, and something small
+  arriving in the air in front of it. The reading is _summoning_, not
+  _searching_ — a crab at a screen is `typing`, and the screen that already
+  exists for "thinking about it" is `thinking`.
+- **Body mechanics.** `idle`'s breath, legs outside it. One claw rotated and
+  extended at the shoulder, held, as `permission-sign` does — the raise is the
+  pose, not an event, because `frameAt` is wall-clock modulo and a raise at the
+  top of the loop is a pump at loop frequency forever.
+- **Eyes.** Open, tracking the arriving thing rather than facing front. One
+  slow blink on `permission-sign`'s timing.
+- **Props.** The hat: a triangle over the head, top clear of the -4 landscape
+  crop line, sitting _on_ the skull rather than floating above it. It is the
+  only element that says wizard, so it has to survive at true size — check it
+  is not two pixels of noise before anything else is drawn.
+- **Effects.** Two or three motes arriving toward the raised claw, each a
+  single unit, on the `asleep` Z cadence — `steps(1)` with inline delays, never
+  separate longhands, which is the ordering trap `overheated` hit.
+
+**Not wanted:** a wand, which is a second prop competing with the hat for the
+same silhouette. A book or a screen — those read as `bouldering` and `typing`.
+Sparkles filling the stage: `dizzy` owns orbiting effects and two screens that
+both scatter small things around him are one screen. Any hat colour that lands
+between the peach and black without `#6F4436` declared.
+
+---
+
+## Board game — `Agent` and subagents
+
+Clawd is not doing the work; several small things are doing it for him.
+
+`BUILD_PLAN.md` Stage 4 item 11, Tier B. **0.7% of tool calls**, the
+least-seen screen that has a measured trigger — six catalogue entries fire on
+hook events or timers and have no tool-call frequency at all, so this is not a
+claim about the whole catalogue. It is the natural cut if the 6 Sep gate is
+tight.
+
+`data-loop-seconds="12"`, matching `dizzy` and `asleep`: a slow screen for a
+state that lasts as long as a subagent does.
+
+- **Action.** A board on the ground to his left, and pieces on it that move
+  without him touching them. He watches. The subagent badge already counts them
+  in the status band, so this screen carries the _feeling_ of delegation rather
+  than the number.
+- **Body mechanics.** Breath only, legs outside it. **No claw raise** — this is
+  the one working screen where he is deliberately not acting, and a gesture
+  would undo that. It is the strongest argument for building it at all.
+- **Eyes.** Down and left, on the board. No blink, or one very late: a screen
+  about watching should not spend its budget on the watcher.
+- **Props.** The board, on the left flank at ground level, overlapping his legs
+  the way the payoff vehicle overlaps his arm. **Five units is the width that
+  reads** — three was rendered for the payoff and came out a block with two
+  dots. Two or three pieces, one unit each, at least two tones so they are not
+  a texture.
+- **Effects.** None. The pieces moving _is_ the effect.
+
+**Not wanted:** dice, which read as gambling rather than delegation and are a
+single unit that will rasterise to a dot. A board he is reaching toward —
+§Props need contact wants overlap, and his legs already provide it. More than
+three pieces: at 8px a unit they merge into a stripe. Any piece that leaves the
+board, which reads as spilling rather than playing.
+
+---
+
+## Road bike — long runs
+
+Something is going to take a while, and he has settled in for it.
+
+`BUILD_PLAN.md` Stage 4 item 13, Tier B, and the only one of the three with no
+tool trigger: it is keyed on _duration_, which nothing in the daemon currently
+measures. **That wiring does not exist and is the first thing to cost.**
+`effectiveState` promotes `IDLE` on quiet, not `WORKING` on length, so this
+needs a new promotion — a `WORKING` session whose `workedAt` is far enough in
+the past — and that is a `Session` change of the kind `BUILD_PLAN.md` wanted
+finished before Stage 3's window closed.
+
+`data-loop-seconds="12"`. Cadence matters more here than in the other two: a
+long screen that loops quickly reads as impatience.
+
+- **Action.** Clawd on a bike, pedalling steadily, going nowhere. The joke is
+  endurance rather than speed.
+- **Body mechanics.** Legs on the pedals — **this is the one screen where the
+  legs are the animation**, which inverts the rule the other plans follow, so
+  the breathing group and the leg group have to be reasoned about fresh rather
+  than copied. Body still, claws on the bars.
+- **Eyes.** Forward, steady. One blink late in the loop.
+- **Props.** The bike. It has to carry him, which is unlike any prop in the
+  corpus — every existing one sits beside or in front of him. **Cost this
+  before drawing:** the contact shadow is hard-wired to the slot and assumes
+  feet on the ground, and a seated crab is `typing`'s problem too, which solved
+  it by lowering the legs eight rows rather than by moving the shadow.
+- **Effects.** None. Motion lines would say speed, which is the opposite of
+  the reading.
+
+**Not wanted:** a road, scenery, or anything implying travel — the rock pool is
+the setting and a second one competes with it. Speed lines. A bike drawn so
+completely that it stops being a silhouette at 8px a unit; the wheels are the
+only part that must read. Standing pedalling, which loses the endurance.
+
+---
+
+## What every plan below has to answer now
+
+Six constraints that cost real rework this month, collected so a plan can be
+checked against them before any SVG is drawn rather than after. Each one is a
+place a shipped animation has already gone wrong.
+
+1. **Where does the prop go?** The stage spans x -3 to 18 and the character
+   occupies 0 to 15, so the free width is 3 units per flank and it is not
+   contiguous. The right flank is the rock pool, units x 11.25 to 17.50 for its
+   full height above the ground line — anything parked there is in the water.
+   The left flank is clear at ground level. The character cannot move:
+   `docs/ANIMATION.md` says grow the stage instead, and the stage is already
+   within half a unit of the panel's ceiling.
+2. **Does the prop touch him?** §Props need contact. A prop that shares only an
+   edge does not read; `gym`'s bar three units clear read as hovering, and the
+   payoff screen's first draft touched nothing on any frame while claiming it
+   did. Overlap is the mechanism, not a compromise.
+3. **What new colour does it declare, and what does that colour capture?**
+   `paletteOf` is per-document and matches `fill="#RRGGBB"` — a hex in a
+   comment is not a declaration. Every declared colour becomes a snap target
+   for every other colour's antialiased edges. Compute what the new colour
+   takes from the peach-to-black ramp before drawing, and declare `#6F4436` if
+   it takes the middle.
+4. **Is the claw rotating _and_ extending, pivoted at the shoulder?** A bare
+   rotation cannot clear the silhouette, and a pivot at the claw's own tip
+   extends it inward under the torso. Both are shipped mistakes.
+5. **Are the legs outside the breathing group, and is `ground-shadow` absent?**
+   Legs inside it make the whole sprite bob and the feet sink into their own
+   contact shadow. `ground-shadow` is the one base element an animation must
+   not carry.
+6. **Do the keyframes land on whole frames?** One frame is
+   `100 / (loop_seconds * 8)` percent. Percentages between frames are silently
+   snapped, and a hold that looks like four frames may be three.
+
 ## Template
 
 ```
