@@ -264,7 +264,7 @@ function messageFor(
  * a name in `ANIMATIONS`, and every one of those is baked — so this guard
  * cannot fire today, and saying otherwise would be inventing a hazard. It
  * exists for the next animation rather than the current ones: `sweeping` and
- * the Model 3 are `BUILD_PLAN.md` Stage 4, and the moment either is added to
+ * the payoff screen are `BUILD_PLAN.md` Stage 4, and the moment either is added to
  * `ANIMATIONS` it is reachable here before its art is baked. An empty stage is
  * the right answer to that; taking the panel down is not.
  *

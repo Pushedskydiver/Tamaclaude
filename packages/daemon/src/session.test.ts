@@ -45,7 +45,7 @@ describe('applyEvent', () => {
   });
 
   it('reads Stop as idle, because it fires on every response', () => {
-    // The spec keyed a Model 3 pulling up on `Stop`. The live documentation
+    // The spec keyed the payoff screen on `Stop`. The live documentation
     // says it fires on every response, so all it actually proves is that this
     // session is doing nothing at this instant.
     const working = applyEvent(

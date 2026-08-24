@@ -440,7 +440,7 @@ drift off the viewer: at that point this is `thinking` with a different prop.
 
 Clawd has taken a knock and is seeing stars.
 
-`data-loop-seconds="12"`. **Built**, ahead of `sweeping` and the Model 3 —
+`data-loop-seconds="12"`. **Built**, ahead of `sweeping` and the payoff screen —
 `BUILD_PLAN.md` items 8 and 6. (An earlier line here said "ahead of the two Tier
 B entries above it"; the two plans above this one are both Tier A and both
 shipped first.) It was catalogued Tier B and cuttable, on the grounds
@@ -640,6 +640,153 @@ because "it will be seen often" is not available.
 which Stage 3 marks done. If the art is cut at the 6 Sep gate, wiring built
 first is either reverted in shipped code a fortnight before the date, or left as
 a dead branch pointing at `dizzy` with a test asserting it does nothing.
+
+---
+
+## The payoff screen — a task actually finished
+
+The vehicle from the recipient's pack is parked beside Clawd, and he reacts to
+it. **Named by role throughout.** The vehicle is on the interests list in the
+gitignored brief, this repo is public, and `CLAUDE.md` says tracked docs name
+personal content by role and never by content — it read as a make and colour in
+four tracked files and two source files until 24 Aug.
+
+`BUILD_PLAN.md` Stage 4 item 6, the entry that plan calls "the payoff" and the
+only one carrying its own written fallback.
+
+### Parked, not arriving — and that is not a compromise
+
+`frameAt` in `packages/cli/src/daemon.ts` is `Math.floor(now / FRAME_MS) %
+frames`, wall-clock modulo, so **no animation in this architecture ever starts
+at frame 0**. `permission-sign` found this and wrote it down: "there is no
+raise, because there is nowhere to put one … a raise at the top of the loop is a
+pump at loop frequency, forever."
+
+An arrival is a raise. A car that pulls up would re-arrive every loop, and the
+viewer joins at a uniformly random phase. So the vehicle is parked on frame 0
+and never moves, and the loop is Clawd's reaction — the same shape
+`permission-sign` arrived at, for the same reason.
+
+### The trigger is the payoff
+
+This is the finding that reorders the whole entry. `Stop` fires once per
+response — nine times in one session across three hours, on real events. A quiet
+period after work fires once per _task_. Measured over 1,105 local transcripts
+with timestamped events:
+
+| quiet threshold | fires per session | sessions with at least one | share of session time on screen |
+| --------------- | ----------------: | -------------------------: | ------------------------------: |
+| 30 s            |              4.93 |                      78.7% |                            5.6% |
+| **45 s**        |          **2.85** |                  **61.8%** |                        **4.6%** |
+| 60 s            |              2.03 |                      50.7% |                            3.9% |
+| 90 s            |              1.32 |                      33.8% |                            3.0% |
+
+Against `Stop`'s ~26 turn boundaries a session, a 45-60s trigger is a **10-13x
+reduction**. That is a reward you notice rather than wallpaper — and it means
+**the payoff is the trigger, not the animation**. Whether the crab stands beside
+a moving vehicle or a parked one is a second-order improvement on a screen seen
+once or twice a session.
+
+### The trigger, concretely
+
+`effectiveState` is the home: it already promotes `IDLE` to `WAITING` after a
+notification and to `ASLEEP` after five minutes, both pure functions of the
+session and `now`, re-evaluated every frame and monotone in `now`, so there is no
+flicker. A **windowed** promotion — two bounds, not one — makes the state brief
+without any one-shot machinery:
+
+- `DONE_AFTER_MS` 45s, `DONE_SHOWN_MS` 15s, so the window closes at 60s, which
+  is exactly `WAITING_AFTER_MS`. The vehicle is there, then he starts staring at
+  you. That sequence is better than either state alone, and it is free.
+- Expiry is arithmetic: crossing the upper bound _is_ the expiry. No stored
+  timer, no `oneshotUntil`. Repeats collapse because there is nothing to
+  re-trigger.
+- It needs one `Session` field — set on `PreToolUse`, cleared on
+  `UserPromptSubmit` — because nothing existing distinguishes "did some work"
+  from "replied": `state` is `IDLE` either way, `Stop` clears `tool`, and
+  `lastEventAt > startedAt` is true after any reply.
+
+**Tier 1, and this reverses nothing by accident.** The screen spec settles the
+payoff as a pre-emptive one-shot that takes the stage regardless of what else is
+live, and `state.ts` records tier 1 as deliberately empty _because_ `Stop` could
+not drive it — "it lands with the quiet-period trigger that has to replace
+`Stop`". This is that trigger, so tier 1 fills here. Without it the screen is
+lost to a concurrently working session: **65.1% of live minutes have more than
+one session, and 53% of quiet gaps overlap another session's events** during the
+exact window this would be up. At `IDLE`'s rank that halves the payoff.
+
+**Do the trigger before 31 Aug.** Stage 3's window closes then; after that,
+touching `Session` is a reopening rather than finishing.
+
+### Art
+
+- **Action.** The vehicle is parked. Clawd reacts to it.
+- **Body mechanics.** Breathing, plus one reaction beat. Undecided which — but
+  not a bare claw rotation: §What a claw cannot do rules that out and `gym`
+  shows the fix is rotating _and_ extending.
+- **Eyes.** On the vehicle, with one slow blink — `permission-sign`'s pattern.
+- **Props.** The vehicle. **At most 5 units long.** The stage is 21 units wide
+  and the character occupies x 0-15, so the free width is 3 units left and 3
+  right and never contiguous: `L + 15 + c <= 21` gives L <= 5 at one unit of
+  clearance. It must also _touch_ something — `gym`'s bar three units clear
+  "read as a bar hovering above a crab".
+- **Effects.** None.
+
+**This is the first prop in the corpus that needs floor space.** `gym`'s barbell
+is 17 units wide but one thick and crosses the torso, which is what makes it
+read; `bouldering`'s wall is a backdrop behind him, exempted from the safe area.
+Ink is not the constraint here, plan area is, and the stage has six units of it.
+The landscape crop is not the risk — a ground-level prop is nowhere near the -4
+line. The risk is entirely horizontal.
+
+**Declare `#6F4436` in this file.** `paletteOf` derives the palette **per
+document**, and that brown is currently declared only in `typing.svg`. Without
+it, every candidate red captures torso edge pixels — measured over peach
+composited on black at 1% steps: `#CC0000` steals 9 bands, `#E82127` 13,
+`#8B0000` 30 and `#B22222` **36**, against the `#4C3475` violet's 10 that drew a
+one-pixel line across 80 of the torso's 88 pixels. With `#6F4436` declared, all
+four steal nothing. An earlier version of this plan called the reds safe on a
+measurement run against the union of every file's colours, which is not a
+palette any single document gets.
+
+**Contrast against all four skies must be measured before it ships**, landscape
+with `extent: 'panel'`. `confused` and `dizzy` were both rebuilt after measuring
+1.31:1 against day and 1.80:1 against dawn. A dark red on a dusk sky is that
+measurement waiting to be taken. And the stage is a rock pool now — the plan has
+to say what the vehicle is standing on.
+
+**`hipGap` will pass vacuously.** That gate walks up from the bottom-most drawn
+row and returns 0 once the contiguous bottom band exceeds 24 device pixels; a
+vehicle three units tall standing on the ground makes the whole band contiguous.
+It has already gone vacuous once, for `overheated`. Something else has to assert
+the body is on its feet here.
+
+**Not wanted:** a number plate, badge, or any mark identifying a specific
+vehicle. A prop drawn so large that Clawd stops being the subject. A vehicle
+that touches nothing. Any new colour without re-running the per-document snap
+test above.
+
+### The fallback is not 10% of the risk
+
+`BUILD_PLAN.md` prices it as "90% of the joke at 10% of the risk". That is true
+of the art and false of the item: **a parked frame with no trigger has nowhere
+to be shown**, so the six-file daemon change is paid on both branches. The
+`overheated` precedent of "art first, wiring last" does not transfer here, and
+the wiring is not cuttable with the art.
+
+It also cannot be literally static: `svg2frames` warns "all frames are identical
+— this animation does not animate", and `docs/ANIMATION.md` requires no
+warnings. So the fallback is `permission-sign`-shaped — parked vehicle,
+breathing, one slow blink — which is the right answer anyway, because a frozen
+crab on a live rock pool reads as a crash.
+
+| date           | decision                                                                                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mon 31 Aug** | trigger landed, before Stage 3's window closes                                                                                                                          |
+| **Wed 3 Sep**  | first true-size render of the parked vehicle at 5 units, judged on the panel at 320x172 and not zoomed. If it needs to overlap him, or reads as a red brick, stop there |
+| **Sun 6 Sep**  | ship-or-fallback, with the rest of the Tier A gate                                                                                                                      |
+
+A fallback decided on 22 September is not a fallback.
 
 ---
 

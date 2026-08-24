@@ -104,7 +104,7 @@ type Transition = (event: HookEvent, now: number) => Partial<Session>;
  * the key comes from outside this process, and an object literal answers
  * `toString` with something from `Object.prototype`.
  *
- * **`Stop` means idle, not done.** The spec keyed a Model 3 pulling up on it;
+ * **`Stop` means idle, not done.** The spec keyed the payoff screen on it;
  * the live documentation says it fires on *every* response. What it does prove
  * is that this session is not doing anything at this instant, which is exactly
  * `IDLE`. Note it deliberately does not clear `notifiedAt`: Claude Code asks

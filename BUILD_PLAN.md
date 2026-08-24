@@ -209,7 +209,7 @@ that is not waiting on the design freeze.
       two senses are unrelated.) Finally, `Stop` fires on every response rather
       than at task completion and `StopFailure` ignores exit code and output
       entirely, so "the turn finished" is not observable the way Stage 4's
-      Model 3 payoff assumes.
+      the payoff screen assumes.
 
 - [x] Tool → state mapping (`PreToolUse.tool_name`)
 - [x] Multi-session compositing — resolution ranks by state, hero plus chips
@@ -288,9 +288,14 @@ than partially. Eight good screens beat nine plus four rough ones.
   3. typing ✅ (Edit/Write)
   4. bouldering ✅ (Read)
   5. gym ✅ (Bash)
-  6. **Model 3 pulls up (Stop)** — the payoff. Fallback if it is not landing:
-     a static red-car frame with Clawd beside it and the quip, which is 90% of
-     the joke at 10% of the risk. "Do not cut" previously disarmed the only
+  6. **The payoff screen (Stop)** — the vehicle from the recipient's pack
+     pulls up. Named by role rather than by make and colour: this repo is
+     public, the vehicle is on the interests list in the gitignored brief, and
+     `CLAUDE.md` says tracked docs name personal content by role, never by
+     content. It read as the make and colour in four tracked files until
+     24 Aug. Fallback if it is not landing: a static frame with the vehicle
+     parked and Clawd beside it and the quip, which is 90% of the joke at 10%
+     of the risk. "Do not cut" previously disarmed the only
      mitigation this plan names for its own top art risk.
   7. Permission sign, and confused ✅ — Tier A per the screen spec; both were
      missing from every tier in its first draft despite being the two screens
@@ -338,7 +343,7 @@ than partially. Eight good screens beat nine plus four rough ones.
   13. road bike (long runs)
 
 **`Stop` does not mean "the turn finished".** Confirmed against live docs in
-Stage 3: it fires on every response. So the Model 3 payoff above cannot be
+Stage 3: it fires on every response. So the payoff screen above cannot be
 keyed on it as written, and needs a different trigger — most likely a quiet
 period after the last event, which the daemon can see and a hook cannot.
 
