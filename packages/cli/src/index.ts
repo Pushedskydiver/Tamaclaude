@@ -119,6 +119,7 @@ function pack(): void {
  * a path.
  */
 async function installAgent(argv: readonly string[]): Promise<void> {
+  requireDarwin('install-agent');
   const apply = argv.includes('--apply');
   const home = homedir();
   const plistPath = agentPlistPath(home);
@@ -173,6 +174,29 @@ async function installAgent(argv: readonly string[]): Promise<void> {
       ? `It is not running. The log is at ${options.log}\n`
       : `Installed and running. Logs go to ${options.log}\n`,
   );
+}
+
+/**
+ * Refuse the agent commands anywhere launchd does not exist.
+ *
+ * **CI found this, which is the point of having it.** On Linux `launchctl` is
+ * simply absent, so `execFileSync` throws with no exit status and the
+ * uninstall command reported `could not unload … (launchctl exit -1)` — a
+ * sentence about a failure, for a platform where the whole idea is
+ * meaningless. Before the errors were surfaced at all it "passed" there by
+ * swallowing them, which a review had already called out as passing by
+ * accident.
+ *
+ * Saying so plainly is better than either. The panel is a Mac accessory and
+ * `serial.ts` is macOS-only too; this is the first place that is worth a
+ * sentence rather than a stack.
+ */
+function requireDarwin(command: string): void {
+  if (process.platform !== 'darwin') {
+    throw new Error(
+      `tamaclaude ${command} needs launchd, which is macOS only (this is ${process.platform})`,
+    );
+  }
 }
 
 /**
@@ -279,6 +303,7 @@ async function waitUntilUnloaded(domain: string): Promise<void> {
  * kind of not-quite-gone that costs an evening.
  */
 function uninstallAgent(): void {
+  requireDarwin('uninstall-agent');
   const plistPath = agentPlistPath(homedir());
   const domain = launchdDomain();
   process.stdout.write(
@@ -480,7 +505,7 @@ function smoke(): void {
  * shipped, so no version of this ever ran that way.
  */
 const KNOWN =
-  /already listening|not a socket|over the .*-byte limit|no pack configured|could not read the pack|is not a valid pack|TAMACLAUDE_PACK is set but empty/;
+  /already listening|not a socket|over the .*-byte limit|no pack configured|could not read the pack|is not a valid pack|TAMACLAUDE_PACK is set but empty|needs launchd/;
 
 /** The subset of `KNOWN` meaning "not usable as typed" rather than "it failed". */
 const MISCONFIGURED = /no pack configured|TAMACLAUDE_PACK is set but empty/;

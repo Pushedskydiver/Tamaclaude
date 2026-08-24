@@ -346,7 +346,7 @@ describe('the tamaclaude binary', () => {
     }
   })();
 
-  it.skipIf(agentIsInstalled)(
+  it.skipIf(agentIsInstalled || process.platform !== 'darwin')(
     'uninstalls cleanly when nothing is installed',
     () => {
       // The path that must never fail: someone runs it twice, or runs it on a
@@ -364,6 +364,22 @@ describe('the tamaclaude binary', () => {
       // wants to know whether their pack survived it.
       expect(out).toContain('left alone');
       expect(status).toBe(0);
+    },
+  );
+
+  it.skipIf(process.platform === 'darwin')(
+    'says the agent commands are macOS only, off macOS',
+    () => {
+      // The other half of the skip above, so the suite is not simply blind on
+      // Linux. CI runs Ubuntu, and this is the assertion it *can* make — which
+      // matters, because the version of this file CI first saw failed there
+      // with a launchd error for a platform that has no launchd.
+      const { out, status } = run(['uninstall-agent'], {
+        TAMACLAUDE_PACK: EXAMPLE,
+      });
+      expect(out).toContain('needs launchd');
+      expect(out.trim().split('\n')).toHaveLength(1);
+      expect(status).toBe(1);
     },
   );
 
