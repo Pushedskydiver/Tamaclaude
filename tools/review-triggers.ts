@@ -67,7 +67,15 @@ function touches(files: readonly string[], prefix: string): boolean {
   return files.some((file) => file.startsWith(prefix));
 }
 
-function triggers(patterns: readonly string[]): readonly Trigger[] {
+/**
+ * The trigger table from `CLAUDE.md`, as predicates.
+ *
+ * Exported so the rows can be tested. They could not be before, and three of
+ * them were wrong: the animation row fired on markdown, the `spec-grill` row
+ * did not exist at all, and the diff the rows are fed could not see uncommitted
+ * work. A table that decides which reviews are owed is worth a test.
+ */
+export function triggers(patterns: readonly string[]): readonly Trigger[] {
   return [
     {
       what: 'a change under packages/**',
@@ -75,9 +83,32 @@ function triggers(patterns: readonly string[]): readonly Trigger[] {
       fires: (files) => touches(files, 'packages/'),
     },
     {
-      what: 'a change under assets/clawd/animations/**',
+      what: 'an animation under assets/clawd/animations/**',
       reviews: ['animation-critic'],
-      fires: (files) => touches(files, 'assets/clawd/animations/'),
+      // `.svg` rather than the whole directory: `PLANS.md` lives there too,
+      // and a plan-only diff was sending work to a reviewer whose job is to
+      // re-render frames — of animations that diff had not touched. The plan
+      // row below is what covers a plan.
+      fires: (files) =>
+        files.some(
+          (file) =>
+            file.startsWith('assets/clawd/animations/') &&
+            file.endsWith('.svg'),
+        ),
+    },
+    {
+      what: 'a spec or plan, before code moves against it',
+      reviews: ['spec-grill'],
+      // `CLAUDE.md`'s table has had this row since the table existed; this
+      // tool never implemented it, so the one review the table asks for
+      // *before* code moves was the one it could not report.
+      fires: (files) =>
+        files.some(
+          (file) =>
+            file.endsWith('PLANS.md') ||
+            file === 'BUILD_PLAN.md' ||
+            file.startsWith('docs/ARCHITECTURE'),
+        ),
     },
     {
       what: 'a change to a blast-radius file (docs/GIT.md)',
@@ -99,24 +130,53 @@ function triggers(patterns: readonly string[]): readonly Trigger[] {
   ];
 }
 
-/** Changed files and changed lines against `base`, lockfiles excluded. */
+/** `git`, with a non-zero exit treated as output rather than as a throw. */
+function git(...args: readonly string[]): string {
+  try {
+    return execFileSync('git', [...args], { encoding: 'utf8' });
+  } catch (failure) {
+    // `git diff --no-index` exits 1 when the files differ, which is the
+    // ordinary case here rather than an error.
+    const output: unknown = (failure as { stdout?: unknown }).stdout;
+    return typeof output === 'string' ? output : '';
+  }
+}
+
+/**
+ * Changed files and changed lines against `base`, lockfiles excluded.
+ *
+ * **The working tree is included, and that is the point of this tool.** It
+ * used to diff `base...HEAD`, which sees only what is committed. But the row
+ * this table exists to enforce hardest — "a spec or plan, _before_ code moves
+ * against it" — is by definition the case where nothing is committed yet, so
+ * the one question it most needed to answer was the one it could not see. Run
+ * against a branch holding a full plan rewrite, it printed "no changes against
+ * main".
+ *
+ * So the diff runs from the merge base against the tree, and untracked files
+ * are added separately: `git diff` cannot see a file git has never been told
+ * about, and a brand-new `.svg` is exactly the change the animation row exists
+ * for.
+ */
 function diff(base: string): {
   files: string[];
   lines: number;
   binary: number;
 } {
-  const range = `${base}...HEAD`;
-  const names = execFileSync('git', ['diff', '--name-only', range], {
-    encoding: 'utf8',
-  })
+  const from = git('merge-base', base, 'HEAD').trim() || base;
+  const tracked = git('diff', '--name-only', from).split('\n').filter(Boolean);
+  const untracked = git('ls-files', '--others', '--exclude-standard')
     .split('\n')
     .filter(Boolean);
-  const numstat = execFileSync('git', ['diff', '--numstat', range], {
-    encoding: 'utf8',
-  })
-    .split('\n')
-    .filter(Boolean);
-  return { files: names, ...countChanged(numstat) };
+  const numstat = [
+    ...git('diff', '--numstat', from).split('\n').filter(Boolean),
+    ...untracked.flatMap((file) =>
+      git('diff', '--numstat', '--no-index', '/dev/null', file)
+        .split('\n')
+        .filter(Boolean),
+    ),
+  ];
+  return { files: [...tracked, ...untracked], ...countChanged(numstat) };
 }
 
 /**
