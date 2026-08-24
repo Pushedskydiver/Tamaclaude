@@ -61,7 +61,9 @@
 
     Widths run 7, 5.5, 4.5, 3.5, 2.5, 1.5 from the brim up, tapering on both
     sides, with the centres running 7.5, 7.25, 7.25, 7.25, 6.75, 6.75 so the
-    tip leans left toward the arriving motes. Two earlier drafts got this
+    tip leans left toward the arriving motes. Four of the five steps move both
+    edges; the fourth holds the left at 5.5 and moves only the right, which is
+    the one place it does what the rejected draft did everywhere. Two earlier drafts got this
     wrong in opposite directions: one left-aligned every row at x 4, giving a
     vertical wall and one slope, which rendered as a shark fin; the next put a
     hard lateral kink in a five-row cone and it rendered as a blotched lump.
@@ -98,10 +100,14 @@
     §What a claw cannot do wants a claw rotated *and* extended, pivoted at the
     shoulder, and adds a third clause: give it something to hold. `rotate(65deg)
     scaleX(2.4)` about the shoulder at (2,10) puts the claw tip corners at
-    (0.88, 5.23) and (-0.94, 6.07) — above the rock, and inside the orb's box on
-    every frame, which is the clause §Props need contact adds. Sharing an edge
-    is not contact, so this is measured against a variant with the orb deleted:
-    the claw's peach is under it on all 96 frames.
+    (0.88, 5.23) and (-0.94, 6.07) — above the rock, and overlapping the orb.
+    The claw is inside `#breathe` and the orb is not, so the lower corner
+    drifts out past the orb's left edge by up to a device pixel as the body
+    scales; the corner is not the contact. §Props need contact is discharged by
+    measurement instead, against a variant with the orb deleted: the claw's
+    peach is under the orb on all 96 frames, 22 to 92 pixels of its 256.
+    Sharing an edge is not contact, and neither is a corner that happens to
+    land inside a box.
 
     80 degrees was tried first and rendered as nothing at all. Near-vertical the
     arm hugs the torso's own edge, and peach on peach has no silhouette.
@@ -117,12 +123,29 @@
     of them were edge-adjacent on 24 of 96 frames, rasterising as one glyph,
     which is exactly what `componentSizes` in `tools/bake-sprites.test.ts`
     exists to catch and what its `NEIGHBOURS` comment describes. Quartering the
-    area buys the room. Verified analytically over all 96 frames and all three
-    pairs: the closest any two motes come is 5 device pixels, and none comes
-    closer than 15 to the hat or 6 to the orb.
+    area buys the room. Verified from the bake over all 96 frames and all three
+    pairs — not from the keyframes, because a keyframe model assumes a uniform
+    two-frame dwell and that is not what renders (below) — and all three on one
+    metric — empty device pixels between nearest
+    cells, measured from the bake rather than from the keyframes: the closest
+    any two motes come is **3**, on frames 6, 30, 54 and 78, and none comes
+    closer than 15 to the hat or 6 to the orb. An earlier version of this
+    sentence read 5/15/6, which is three numbers on three metrics: 15 and 6 are
+    empty-pixel gaps and 5 was a Euclidean nearest-pixel distance. The 3 is the
+    one with the least headroom over the `componentSizes` gate, so it is the
+    worst of the three to round up.
 
-    Twelve positions on a 3s track, two frames each — `dizzy`'s cadence
-    exactly. The second draft used six positions of four frames, and a 9 pixel
+    Twelve positions on a 3s track — `dizzy`'s cadence exactly, and that
+    includes the part `dizzy` had to write down. **The dwell is not two frames
+    a position**; measured, it is 2, 3, 1 repeating. `dizzy.svg` §Why nothing
+    rotates has the cause: the twelve keyframe percentages are written to six
+    decimals, `8.333333%` of 3s is 249.99999ms and lands just before frame 2's
+    sample while `16.666667%` is 500.00001ms and lands just after frame 4's, so
+    a boundary falls either side of a sample depending on which way the
+    percentage rounded. This file inherits those percentages, so it inherits
+    the dwell — and PLANS.md §Dizzy records that the even-spacing claim was
+    asserted once and retracted, with the retraction written only into the SVG.
+    Asserting it here again would have made that three times. The second draft used six positions of four frames, and a 9 pixel
     jump every half second reads as hopping rather than flowing.
 
     The delays are inline in the `animation` shorthand rather than separate
@@ -142,7 +165,10 @@
       /* `idle`'s breath, about the hips. The legs are a sibling of this group
          so they stay planted — inside it the whole sprite bobs and the feet
          sink into their own contact shadow. 2s alternating is six iterations
-         of a twelve second loop, which is even, so the loop seams. */
+         of a twelve second loop, which is even — an odd count would end the
+         loop at the far end of the cycle and seam at the wrap. Measured, frame
+         95 to frame 0 changes 203 pixels against a mean neighbour delta of
+         326, so the wrap is the smallest transition in the loop. */
       #breathe {
         transform-origin: 7.5px 13px;
         animation: breathe 2s infinite alternate ease-in-out;
@@ -165,8 +191,9 @@
 
       /* One art pixel left, toward the arriving motes — as a transform on the
          base id, so the rects keep `base.svg`'s coordinates. `dizzy` moves its
-         eyes the same way. A whole unit is 8 device pixels, so this cannot
-         land off the grid. */
+         eyes without moving its rects either, though by wrapping them in a
+         new group rather than transforming a base id. A whole unit is 8 device
+         pixels, so this cannot land off the grid. */
       #eyes-color-group {
         transform: translateX(-1px);
       }
@@ -222,10 +249,14 @@
          single straight line are evenly spaced collinear dots, which rendered
          as a bead chain. These fan in from the left, from above and from the
          right, converging as they fall — the horizontal spread closes from
-         5.375 units to 2.0.
+         5.0 units to 2.0. (5.375 is the spread at the 0% keyframe, where all
+         three are `opacity: 0`; 5.0 is the widest anything on screen shows.)
 
-         -1s and -2s are 8 and 16 frames, four positions apart on a twelve
-         position track, so the three are always a third of the path apart. */
+         -1s and -2s are 8 and 16 frames, which is a third of the track each.
+         Four positions apart is what that authors; what renders drifts by one
+         either way, because the dwell is 2/3/1 rather than uniform — see the
+         note above. The useful consequence is the one thing a uniform dwell
+         would not give: the three never step on the same frame. */
       #fx-mote-a { animation: arrive-a 3s infinite steps(1); }
       #fx-mote-b { animation: arrive-b 3s -1s infinite steps(1); }
       #fx-mote-c { animation: arrive-c 3s -2s infinite steps(1); }

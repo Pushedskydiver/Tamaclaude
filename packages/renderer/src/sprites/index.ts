@@ -11,11 +11,13 @@
  * pixels can see.
  *
  * **Loaded on demand, and that is the point.** Every animation together is
- * 1,918,964 bytes of encoded data and 2,581,059 of source — base64 is four
+ * 2,491,444 bytes of encoded data and 3,349,297 of source — base64 is four
  * bytes for three, so the second number can only ever be about a third above
  * the first. (It read six, 1,128,216 and 1,515,153 until `permission-sign`,
- * `confused` and `dizzy` landed; only a re-bake refreshes these, so treat them
- * as of the last one.) Every consumer of `@tamaclaude/renderer` would pay to parse all of
+ * `confused` and `dizzy` landed, and 1,918,964 and 2,581,059 until `wizard`
+ * and the settle fix in `svg2frames` re-baked nine of the twelve; only a
+ * re-bake refreshes these, so treat them as of the last one — and note that
+ * both times it was a review that noticed, not the re-bake.) Every consumer of `@tamaclaude/renderer` would pay to parse all of
  * it on import if the barrel pulled them in eagerly. A dynamic import means a
  * daemon showing `idle` parses `idle` and nothing else, and an animation nobody
  * reaches costs nothing at all.

@@ -76,6 +76,25 @@ function send(path: string, line: string): Promise<void> {
 const delay = (ms: number): Promise<void> =>
   new Promise((done) => setTimeout(done, ms));
 
+/**
+ * Poll until `ready` holds, or give up after `within` ms.
+ *
+ * A fixed `delay` before an assertion is a bet that the machine is not busy,
+ * and `pnpm test` runs the suite in parallel, so the bet is worst exactly when
+ * the suite is largest. This one was lost: "paints the panel from a hook
+ * event" asserted a frame had reached the wire 60ms after the hook, and adding
+ * two unrelated tests elsewhere in the repo was enough to make it fail two runs
+ * in three — while passing four of four when run alone.
+ *
+ * Waiting for the condition instead is both faster on an idle machine and
+ * robust on a busy one. The timeout is only there so a genuine regression
+ * fails rather than hangs; it is not the expected wait.
+ */
+const until = async (ready: () => boolean, within = 2000): Promise<void> => {
+  const deadline = Date.now() + within;
+  while (!ready() && Date.now() < deadline) await delay(5);
+};
+
 describe('the daemon command', () => {
   const running: (() => Promise<void>)[] = [];
   const directories: string[] = [];
@@ -126,7 +145,7 @@ describe('the daemon command', () => {
       socketPath,
       `${JSON.stringify({ sessionId: 's1', kind: 'PreToolUse', tool: 'Bash' })}\n`,
     );
-    await delay(60);
+    await until(() => serial.state.written.length > before);
 
     expect(serial.state.written.length).toBeGreaterThan(before);
   });

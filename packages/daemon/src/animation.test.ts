@@ -107,9 +107,11 @@ describe('animationFor', () => {
     // which is the tuple `AnimationName` is derived from, so it compared a
     // value against the set that defines its own type and could not fail.
     // Planting `'sweeping'` in `ANIMATIONS` and mapping `Glob` to it — an
-    // animation with no SVG and no bake, reachable from a real tool name —
-    // leaves the rest of the suite green. Only `tsc` catches it, in
-    // `packages/cli`. The mutant used to be named `'wizard'`/`WebSearch`; that
+    // animation with no SVG and no bake, reachable from a real tool name — is
+    // what this line exists to catch, and it does: the filter goes red the
+    // moment an unbaked name enters `ANIMATIONS`. Before this assertion
+    // existed that same mutant left all 413 tests green and only `tsc` caught
+    // it, in `packages/cli`. The mutant used to be named `'wizard'`/`WebSearch`; that
     // pair shipped for real on 24 Aug, so re-planting it would have proved the
     // gate vacuous when it is not. A documented mutant has to stay unbuildable.
     //

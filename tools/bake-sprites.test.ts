@@ -35,10 +35,15 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and ten full renders into `pnpm test`. It would also be flaky —
- * `svg2frames` is not bit-reproducible, and two runs of `confused` differ on
- * one frame of 96 at a claw edge that lands on a fractional pixel and snaps
- * either way.
+ * and twelve full renders into `pnpm test`.
+ *
+ * **It used to be flaky too, and that is no longer the reason.** `svg2frames`
+ * screenshotted without waiting for the seek to be painted, so two runs of
+ * `confused` could differ on one frame of 96 at a claw edge landing on a
+ * fractional pixel. That was fixed on this branch, and the tool now refuses to
+ * write a frame whose two consecutive captures disagree. The cost is the whole
+ * argument now; the flakiness half is recorded because it was the stated
+ * justification and would otherwise read as still standing.
  */
 
 const BAKED: ReadonlyArray<readonly [string, string]> = [
@@ -403,8 +408,26 @@ describe('the body stays on its legs', () => {
  * apart on a 24-frame track, so exactly one is away on six frames of every
  * twenty-four.
  *
+ * **The `< 2` window is not "two frames a position", and the difference is
+ * load-bearing.** `dizzy.svg` §Why nothing rotates measures the real dwell as
+ * 2, 3, 1 repeating: the twelve keyframe percentages are written to six
+ * decimals, `8.333333%` of 3s is 249.99999ms and `16.666667%` is 500.00001ms,
+ * so a boundary falls either side of a sample depending on which way the
+ * percentage rounded. `wizard` inherits those percentages, so it inherits the
+ * dwell. This window is right only because keyframe 0 happens to draw the 2 of
+ * that cycle — had the rounding put the 3 or the 1 there, the same reasoning
+ * would produce a wrong expected sequence, and because the visibility signal
+ * and the fusion signal are the same number, a wrong window can mask a real
+ * merge. Re-derive it against `dizzy.svg` before trusting it for a third
+ * animation.
+ *
  * Both numbers are derived from the stylesheet rather than measured from the
  * bake, which is the point: a bake that disagrees is the defect.
+ *
+ * The table is hand-maintained and most animations have nothing separable to
+ * count, so a full-coverage assertion would be wrong. What is not wrong is
+ * remembering that this being hard-coded to `dizzy` is how `wizard` shipped
+ * two motes fused into one glyph for two commits.
  */
 const EFFECTS: ReadonlyArray<
   readonly [SpriteName, number, (frame: number) => number]
@@ -417,6 +440,44 @@ const EFFECTS: ReadonlyArray<
       3 - [0, 8, 16].filter((delay) => (frame + delay) % 24 < 2).length,
   ],
 ];
+
+describe('componentSizes', () => {
+  // The fusion detector every effect assertion below leans on, and which
+  // nothing exercised directly. `NEIGHBOURS` is eight rather than four
+  // precisely so a corner touch joins two glyphs; until this test that choice
+  // had never been shown to do anything.
+  const cross = (
+    grid: { mask: Uint8Array; width: number },
+    cx: number,
+    cy: number,
+  ) => {
+    for (const [dx, dy] of [
+      [0, -1],
+      [-1, 0],
+      [1, 0],
+      [0, 1],
+      [0, 0],
+    ] as const)
+      grid.mask[(cy + dy) * grid.width + (cx + dx)] = 1;
+  };
+
+  it('joins two crosses that touch only at a corner', () => {
+    const width = 8;
+    const mask = new Uint8Array(width * 8);
+    cross({ mask, width }, 1, 1);
+    cross({ mask, width }, 3, 3);
+    // (2,1) and (3,2) are diagonal neighbours, so the ten cells are one glyph.
+    expect(componentSizes(mask, width)).toEqual([10]);
+  });
+
+  it('keeps two crosses apart when nothing touches', () => {
+    const width = 10;
+    const mask = new Uint8Array(width * 10);
+    cross({ mask, width }, 1, 1);
+    cross({ mask, width }, 6, 6);
+    expect(componentSizes(mask, width)).toEqual([5, 5]);
+  });
+});
 
 describe('orbiting stars and arriving motes', () => {
   // This generalises what used to be a `dizzy`-only assertion, and the reason

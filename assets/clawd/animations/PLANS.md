@@ -648,7 +648,7 @@ a dead branch pointing at `dizzy` with a test asserting it does nothing.
 A vehicle is parked beside Clawd and he rests a claw on it.
 
 **Not "the vehicle from the recipient's pack", which is how this line read
-until 25 Aug and which was wrong twice over.** The pack cannot supply it —
+until 24 Aug and which was wrong twice over.** The pack cannot supply it —
 sprites bake fixed pixels — and leaving the sentence standing tied the prop to
 the recipient while the tracked art names a colour, which is the link
 `CLAUDE.md` forbids. The section below identified the error and this line was
@@ -917,7 +917,7 @@ art beside it does another is worse than either.
 **`hipGap` will pass vacuously, and it was already doing so everywhere.** That
 gate walks up from the bottom-most drawn row and returns 0 once the contiguous
 bottom band exceeds 24 device pixels. Measured after the art landed: every one
-of the eleven bakes exceeds it on a correct pose, so the walk never runs
+of the twelve bakes exceeds it on a correct pose, so the walk never runs
 anywhere — the interesting failure is under a _defect_, where a plain lift
 collapses the band to the legs and is caught, and a lift behind a
 ground-bridging prop like this vehicle is not. `overheated` is the other miss,
@@ -1062,7 +1062,8 @@ prop go?" and answered it for the _sprite_, not for the composite. Measured off
 `paintEnvironment`: the rock occupies units x -2.25 to 1.00, **y 6.63 to 8.75**,
 and the first draft put a dark orb at x -2 to 1, y 6 to 9 — four black cells on
 dark stone. The left flank is 3 units wide and the rock is most of it; the clear
-air above him is 10 units, from the -4 crop line to the horizon at y 6.50. So
+air above him is 10 units, from the -4 crop line to the torso top at y 6 —
+10.5 if measured to the horizon at 6.50. So
 the claw is raised to 65 degrees and the motes fall steeply into it. A
 sprite-only review cannot catch this, because the sprite is composited
 afterwards — **render the sprite on the four grounds before believing the
@@ -1104,6 +1105,32 @@ buys the cadence too — twelve positions of two frames each rather than six of
 four, so a mote glides instead of hopping 9 pixels twice a second. **Check
 separation analytically before rendering**; the rectangles are known from the
 keyframes, and 96 frames of three pairs is a loop, not a render.
+
+**Three things shipped known and measured rather than fixed**, all judged LOW
+by the critic that found them and all recorded so the next person does not
+have to rediscover them:
+
+- **The brim's bottom edge is on the horizon.** `paintEnvironment` puts the
+  horizon at unit y 6.50 and the brim runs y 5.5 to 6.5, so on 21 of 96 frames
+  its bottom row is flush with the sea's first row and on 18 more it covers it.
+  The one-unit right overhang is entirely against sky and sea, so on those
+  frames it reads as a pale tab welded to the horizon. **Half a unit either way
+  clears it**, and the reason it was not moved is that up costs the overlap
+  with the skull the bob depends on and down puts the whole brim in the sea
+  band. This has now been raised in two consecutive reviews.
+- **Two specks weld to the brim.** The specks on the widest cone row share the
+  brim's top edge, so they rasterise as one pale run rather than as specks. The
+  file claims "no two touching even at a corner", which is true speck-to-speck
+  and not true speck-to-brim.
+- **One speck is flush with the cone's right edge**, which reads as an inward
+  notch in the silhouette at dawn and day, where `#C9D1D9` is 1.10:1 and 1.01:1
+  against the low sky band. Hue separation carries it at true size.
+
+The reason none of the three was fixed is worth stating plainly: each is a
+geometry change, three hat drafts had already been rejected on sight, and a
+fourth round-trip trades a certain risk of new defects against three benign
+ones. **Prefer the recorded defect to the unreviewed fix** when a critic has
+said ship.
 
 **A cone needs to taper on both sides.** Three drafts of this hat failed in
 three different ways: a pale band across it read as a tiered cake, then every
@@ -1274,9 +1301,18 @@ critic's render costs a rebuild.
    is 64/3 frames apart, which is not an integer — the reason `dizzy` is 12
    seconds.
 
-And _n_ effects phased by delay need those delays off the step grid, not just
-on whole frames: three motes 8 frames apart with a 4-frame step all jump
-together, which strobes rather than flows.
+And for _n_ effects phased by delay, **check the frames each one actually
+changes on rather than inferring it from the delay.** The obvious rule — keep
+the delays off the step grid or they all jump together — is wrong, and
+`wizard` is the counter-example in the same commit that first wrote it down:
+its delays are 8 and 16 frames against a nominal 2-frame step, squarely on the
+grid, and the three motes still never step together. What saves it is that the
+dwell is not uniform. Six-decimal keyframe percentages put some boundaries a
+fraction before a sample time and some a fraction after, so twelve positions
+render as 2, 3, 1 repeating — `dizzy.svg` §Why nothing rotates measures it, and
+§Dizzy above records the even-spacing claim being asserted and retracted once
+already. The rule is also unsatisfiable as stated alongside thirds-of-track
+phasing, which forces the delays to be multiples of the step.
 
 Two of these were stated backwards in the first draft of this section: that a
 hex in a comment is never a declaration, and that the claw mistakes had

@@ -381,6 +381,30 @@ Two consequences for authors:
   zero on all 32 frames — and cost less on the wire, 19,992 B/s against
   21,792. Before adding a colour, ask what edge it now sits between.
 
+- **Two drawn colours must not meet inside a scaling group.** The sharper form
+  of the rule above, and the one that costs whole rebuilds. A `scale` puts
+  every internal edge off the pixel grid, so Chromium antialiases it, and the
+  blend of a pale prop over a dark one lands nearest **the body colour**:
+  `#C9D1D9` over `#000000` at half coverage is (100,104,108), which is 15,909
+  from `#DE886D` against 32,480 from black and 33,107 from the pale — peach
+  wins by more than twice. `wizard`'s first hat sat inside `#breathe` and grew
+  a salmon fringe on **81 of 96 frames**, with 87 frames also showing
+  transparent rows cutting it into floating bars.
+
+  **The remedy is not to freeze the prop.** A hat that ignores the breath reads
+  as pasted on. Move it by whole device pixels instead, with `steps(1)`,
+  sampling whatever curve the body uses — `wizard`'s `#fx-bob` is that curve
+  rounded per frame, and it tracks the head to within one pixel on every
+  frame. A whole pixel is never partially covered, so there is nothing to
+  antialias.
+
+  Edges facing the _background_ are not exempt: `BACKGROUND` in
+  `tools/frame-palette.ts` is `[0,0,0]` and is a palette entry itself, so they
+  are composited toward black and snapped like everything else. Whether that is
+  safe is a property of the document's palette, not of the background — count
+  the ramp. `payoff` declares `#6F4436`, which takes 50 of the 101 steps
+  between peach and black.
+
 - **Semi-transparent effects still work**, because their composited value is a
   palette entry.
 
