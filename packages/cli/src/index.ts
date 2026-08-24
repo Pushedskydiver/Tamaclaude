@@ -7,10 +7,9 @@
  * has to work on someone else's Mac on the day. The panel is its own UI, and
  * the CLI covers the rest. See BUILD_PLAN §Deliberately not scheduled.
  */
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import type { ResolvedPack } from './pack.js';
+
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 
 import {
   animationFor,
@@ -20,42 +19,65 @@ import {
   observe,
   resolvePanel,
 } from '@tamaclaude/daemon';
+import { isBirthday, parsePackManifest } from '@tamaclaude/packs';
 
 import { runDaemon } from './daemon.js';
+import { resolvePack } from './pack.js';
+
+/** One line naming the loaded pack and where it came from. */
+function describePack(pack: ResolvedPack): string {
+  const { name } = parsePackManifest(pack.manifest);
+  const how = pack.source === 'default' ? 'default' : '$TAMACLAUDE_PACK';
+  return `${name} at ${pack.directory} (${how})`;
+}
+
+/** A day count, in whole local days, or `undefined` if it never fires. */
+const YEAR_AND_A_DAY = 366;
 
 /**
- * The example pack, read from disk rather than inlined.
+ * `tamaclaude pack` — say which pack is loaded, and when it celebrates.
  *
- * It used to be a literal here with a one-colour palette. When
- * `packages/packs` tightened its schema to require a background *and* an ink —
- * a one-colour pack renders an entirely invisible panel — this file started
- * throwing on every run, and all six gates stayed green because nothing
- * executed the binary. Loading the real pack means the example cannot drift
- * from the format it is an example of.
+ * **This is the answer to the failure no schema can catch.** A pack that is
+ * valid but *wrong* — the example pack where the recipient's should be — loads
+ * cleanly, renders beautifully, and has no birthday in it. Zod cannot see that
+ * and neither can a person looking at the panel. So the surface that can see
+ * it has to exist and has to be trivial to run.
+ *
+ * The countdown is computed by asking `isBirthday` about each of the next 366
+ * days rather than by doing calendar arithmetic here. That is deliberate: it
+ * cannot disagree with the function that actually drives the panel, including
+ * about 29 February, which falls back to the 28th in a common year.
  */
-function examplePack(): unknown {
-  // Repo-relative, and **this must not survive packaging**. Installed as a
-  // `brew` formula (BUILD_PLAN Stage 3) the four `..` land in
-  // `node_modules`, where `packs/` does not exist — and the smoke test cannot
-  // catch it, because the test only ever runs from the repo. That is the same
-  // shape of blind spot the test was added to close, one level out.
-  const root = resolve(fileURLToPath(import.meta.url), '../../../..');
-  const manifest = resolve(root, 'packs/example/manifest.json');
-  try {
-    return JSON.parse(readFileSync(manifest, 'utf8'));
-  } catch (cause) {
-    // Named rather than left as a bare ENOENT or a JSON syntax error, both of
-    // which point at Node's internals instead of at the file.
-    throw new Error(`could not read the example pack at ${manifest}`, {
-      cause,
-    });
+function pack(): void {
+  const resolved = resolvePack();
+  const manifest = parsePackManifest(resolved.manifest);
+  process.stdout.write(`pack ${describePack(resolved)}\n`);
+  if (manifest.birthday === undefined) {
+    process.stdout.write('birthday: none in this pack\n');
+    return;
   }
+  const now = Date.now();
+  const days = Array.from({ length: YEAR_AND_A_DAY }, (_unused, offset) =>
+    isBirthday(
+      manifest,
+      new Date(now).setHours(12, 0, 0, 0) + offset * 86_400_000,
+    ),
+  ).indexOf(true);
+  const when =
+    days === 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${String(days)} days`;
+  process.stdout.write(
+    `birthday: ${manifest.birthday.date} — fires ${when}, saying ` +
+      `"${manifest.birthday.quip}"\n`,
+  );
 }
 
 /** Printed for a missing device, an unknown command, and anything help-shaped. */
 const USAGE =
   'usage: tamaclaude daemon <device>\n' +
+  '       tamaclaude pack\n' +
   '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n' +
+  '  the pack comes from $TAMACLAUDE_PACK, else ~/.tamaclaude/pack/\n' +
+  '  `tamaclaude pack` says which one, and when its birthday fires\n' +
   '  with no command, prints one line of smoke-test output\n';
 
 /**
@@ -71,12 +93,19 @@ async function daemon(argv: readonly string[]): Promise<void> {
     process.stderr.write(USAGE);
     process.exit(2);
   }
+  const pack = resolvePack();
   const running = await runDaemon({
     socketPath: defaultSocketPath(),
     devicePath,
-    pack: examplePack(),
+    pack: pack.manifest,
   });
-  process.stdout.write(`listening on ${defaultSocketPath()}\n`);
+  // The pack is named on the startup line, not just the socket. The failure
+  // this whole file is arranged against is a *valid* pack that is the wrong
+  // one, which no schema can catch — so the cheapest possible check is putting
+  // the answer in the terminal every time the daemon starts.
+  process.stdout.write(
+    `listening on ${defaultSocketPath()}\n` + `pack ${describePack(pack)}\n`,
+  );
   // Stopped on a signal rather than left to the process teardown, so the
   // socket file goes with it — `socket-server.ts` only removes a path it can
   // still prove is its own, and it cannot prove that after the process is gone.
@@ -101,7 +130,7 @@ async function daemon(argv: readonly string[]): Promise<void> {
  * caught by that gate on the first run.
  */
 function smoke(): void {
-  const state = createDaemon(examplePack(), []);
+  const state = createDaemon(resolvePack().manifest, []);
   const now = Date.now();
   const sessions = observe(
     createRegistry(now),
@@ -115,37 +144,51 @@ function smoke(): void {
   );
 }
 
+/**
+ * The failures this CLI composes a sentence for, printed without their stack.
+ *
+ * Everything else keeps the stack: a `TypeError` from a real bug arriving as
+ * one context-free line is an hour lost on a day that cannot move.
+ *
+ * **The pack clauses were missing and every pack failure printed a stack** —
+ * which is the one class of error whose whole value is the sentence, since it
+ * names the path you got wrong. Found by a spec review before the resolver
+ * shipped, so no version of this ever ran that way.
+ */
+const KNOWN =
+  /already listening|not a socket|over the .*-byte limit|no pack configured|could not read the pack/;
+
 const [, , command, ...rest] = process.argv;
-if (command === 'daemon') {
-  // Caught, because the likeliest failure here is a second daemon on a live
-  // socket, and `prepareSocketPath` already composes the right sentence for it.
-  // Uncaught, that sentence arrived under six lines of Node stack trace from
-  // inside `dist/`, which buries the one line worth reading.
-  try {
+// **One try/catch around every command, not just `daemon`.** `smoke()` used to
+// sit outside it, so the one command that exists to prove the binary starts was
+// also the one whose failure arrived as a raw stack. Now that both commands
+// load a pack, that gap would have been the first thing a person hit.
+try {
+  if (command === 'daemon') {
     await daemon(rest);
-  } catch (cause) {
-    // The message alone for the failures this CLI composes a sentence for; the
-    // stack for anything else. A `TypeError` from a real bug arriving as one
-    // context-free line is an hour lost on a day that cannot move — and
-    // `examplePack` deliberately attaches a `cause`, which a bare message
-    // throws away with it.
-    const known = /already listening|not a socket|over the .*-byte limit/;
-    const line =
-      cause instanceof Error
-        ? known.test(cause.message)
-          ? cause.message
-          : (cause.stack ?? cause.message)
-        : String(cause);
-    process.stderr.write(`${line}\n`);
-    process.exit(1);
+  } else if (command === 'pack') {
+    pack();
+  } else if (command === undefined) {
+    smoke();
+  } else {
+    // Not the smoke test. `tamaclaude frobnicate` used to print a cheerful
+    // `pack=example state=WORKING` and exit 0, so a typo of `daemon` looked
+    // like a successful run of something. With the usage, because the two most
+    // likely things typed here are a typo of `daemon` and something
+    // help-shaped.
+    process.stderr.write(`${USAGE}unknown command: ${command}\n`);
+    process.exit(2);
   }
-} else if (command === undefined) {
-  smoke();
-} else {
-  // Not the smoke test. `tamaclaude frobnicate` used to print a cheerful
-  // `pack=example state=WORKING` and exit 0, so a typo of `daemon` looked like
-  // a successful run of something. With the usage, because the two most likely
-  // things typed here are a typo of `daemon` and something help-shaped.
-  process.stderr.write(`${USAGE}unknown command: ${command}\n`);
-  process.exit(2);
+} catch (cause) {
+  const line =
+    cause instanceof Error
+      ? KNOWN.test(cause.message)
+        ? cause.message
+        : (cause.stack ?? cause.message)
+      : String(cause);
+  process.stderr.write(`${line}\n`);
+  // 2 rather than 1 for a missing pack: it is the same class as a missing
+  // device path, which already exits 2 — the command was not usable as typed,
+  // rather than something failing while it ran.
+  process.exit(/no pack configured/.test(line) ? 2 : 1);
 }

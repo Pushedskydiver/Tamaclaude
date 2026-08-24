@@ -98,13 +98,14 @@ The whole product, minus hardware.
       its own function, and `knip` would have failed on one that did.
 - [ ] Harness draws through `render()` rather than approximating the bands —
       what makes Stage 2's exit true by construction instead of by inspection
-- [~] Manifest schema (zod) done. **There is no pack loader**: `packages/packs`
-  exports `parsePackManifest`, `packPalette` and `isBirthday` and nothing
-  that reads a file. Loading is a hardcoded repo-relative `readFileSync` in
-  `packages/cli/src/index.ts`, whose own comment says it must not survive
-  packaging, and there is no pack _selection_ at all. This was briefly
-  marked `[x]` on 24 Aug by the commit that added the birthday field; three
-  reviews caught it. The remainder is the Stage 3 packaging item below.
+- [x] Manifest schema (zod) in `packages/packs`; pack resolution in
+      `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
+      `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still
+      not a loader**, deliberately: it validates a manifest someone else read,
+      which keeps one trust boundary rather than two. This line was briefly
+      `[x]` on 24 Aug while the loader half was a repo-relative `readFileSync`
+      that broke on any install; three reviews caught that, and the box went
+      back to `[~]` until the loader existed. It exists now.
 - [~] `packs/example/` — manifest and palette done; **placeholder art still to
   come**, and Stage 1's exit depends on it
 - [x] Dirty-rect differ + RLE encoder, with unit tests and a compression-ratio assertion
@@ -242,11 +243,22 @@ that is not waiting on the design freeze.
 - [ ] **Remote transport** — TCP + shared secret, so the recipient's Raspberry Pi agent appears on the
       display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
       from day one (cheap), but ship it only if Stage 4 is on schedule.
-- [ ] launchd agent; `brew` tap formula. **The CLI reads `packs/example`
-      by a repo-relative path** and that breaks the moment it is installed
-      somewhere else — its smoke test cannot catch it, because the test only
-      ever runs from the repo. Packaging is where a pack must come from a
-      configured location instead.
+- [x] **The pack comes from a configured location.** `TAMACLAUDE_PACK`, else
+      `~/.tamaclaude/pack/`, else refuse to start — `packages/cli/src/pack.ts`.
+      The repo-relative `readFileSync` is gone, so the binary no longer depends
+      on being run from a checkout. **There is no bundled default pack**, and
+      that is the load-bearing decision: a fallback would turn "you forgot to
+      point at your pack" into a panel that works, looks right, and carries the
+      example pack's generic quips and no birthday. A spec review killed the
+      fallback this design originally had, on the grounds that it _was_ the
+      silent-wrong-pack failure rather than a guard against it.
+- [ ] launchd agent; `brew` tap formula. **The assumption the pack resolver
+      now rests on is that something sets `TAMACLAUDE_PACK` in production, and
+      nothing does yet** — this item is where the plist that sets it gets
+      written. Until then the daemon is started by hand and the variable is
+      typed by hand. Failure is loud rather than silent, which is the point,
+      but loud on the day is still on the day. Nothing in the repo tests an
+      installed layout.
 
 **Exit:** real Claude Code sessions drive the panel, placeholder art.
 
@@ -367,7 +379,14 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 ## Stage 5 — Personalisation (Sun 6 – Sun 13 Sep)
 
-- [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet sprite
+- [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
+      sprite. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
+      points; `tamaclaude pack` confirms which, and prints the countdown.
+- [ ] **Set the Mac's clock to 23 Sep during the dry run and watch the panel.**
+      The only end-to-end test the birthday can ever have: the recipient's pack
+      is gitignored, so CI will never load it, and `isBirthday` reads the host's
+      local date. Five minutes, and it exercises resolution, schema, the
+      message band and the panel in one action.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
 - [ ] Company logo → pixel: SVG → nearest-neighbour → palette quantise (`sharp`)
 - [ ] Quips mapped to states, never randomised

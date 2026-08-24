@@ -4,10 +4,14 @@ The reference pack. Deliberately generic — this is the one pack committed to a
 public repo, so it demonstrates the format and nothing else.
 
 A pack is the customisation surface: a palette, a quip table, an optional
-birthday, props and an optional logo. Pointing at a different pack is meant to
-change every screen with no rebuild and no reflash — **but the selection
-mechanism is not built.** The CLI reads this directory by a repo-relative path,
-so today a pack swap means editing these files.
+birthday, props and an optional logo. Point `TAMACLAUDE_PACK` at a pack
+directory, or put one at `~/.tamaclaude/pack/`, and every screen changes with
+no rebuild and no reflash.
+
+A pack is the **directory**, not the manifest — `manifest.json` is a file
+inside it, and the logo and pet sprite will be its siblings. With no pack
+configured the daemon refuses to start; there is no bundled default to fall
+back to. Run `tamaclaude pack` to see which one is loaded.
 
 The character is **not** in the pack. Clawd is shared and recoloured via the
 two colour groups in `assets/clawd/base.svg` — making him swappable would mean
