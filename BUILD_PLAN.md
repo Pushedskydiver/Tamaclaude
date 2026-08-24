@@ -63,11 +63,12 @@ it is deliberately near-leaf, since Claude Code runs it on every hook event.
 - `protocol` — wire format, RLE RGB565 encoder, dirty-rect diffing. Zero deps.
 - `renderer` — virtual 172×320 screen, scene graph, sprite playback, fonts.
 - `packs` — manifest schema (zod), palette, quips. Not a loader: reading a
-  pack off disk is still the CLI's job, by a repo-relative path.
+  pack off disk is the CLI's job (`packages/cli/src/pack.ts`).
 - `daemon` — session state machine, tool→state mapping, transports.
 - `hooks` — the Claude Code hook handler binary.
 - `device` — USB-CDC transport + the ESP-IDF firmware source.
-- `cli` — `tamaclaude status|pack|dev`.
+- `cli` — `tamaclaude daemon <device>`, `tamaclaude pack`, and a bare smoke
+  run. `status` and `dev` were named here from Stage 0 and never built.
 
 ## Stage 1 — Renderer + dev harness (Wed 19 – Mon 24 Aug)
 
@@ -102,10 +103,11 @@ The whole product, minus hardware.
       `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
       `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still
       not a loader**, deliberately: it validates a manifest someone else read,
-      which keeps one trust boundary rather than two. This line was briefly
-      `[x]` on 24 Aug while the loader half was a repo-relative `readFileSync`
-      that broke on any install; three reviews caught that, and the box went
-      back to `[~]` until the loader existed. It exists now.
+      which keeps one trust boundary rather than two. This line went
+      `[ ]` → `[~]` → `[x]`. The `[~]` was the 24 Aug birthday commit, after
+      reviews found the loader half was a repo-relative `readFileSync` that
+      broke on any install. An earlier version of this sentence said the box
+      "went back to `[~]`", which no ref supports — it went forward to it.
 - [~] `packs/example/` — manifest and palette done; **placeholder art still to
   come**, and Stage 1's exit depends on it
 - [x] Dirty-rect differ + RLE encoder, with unit tests and a compression-ratio assertion
@@ -259,6 +261,14 @@ that is not waiting on the design freeze.
       typed by hand. Failure is loud rather than silent, which is the point,
       but loud on the day is still on the day. Nothing in the repo tests an
       installed layout.
+      **If this slips, the agreed fallback is not "add a default pack" but
+      "fall back and say so on the glass"** — the message band already exists
+      and `describePack` already composes the line. A review made the case:
+      after 23 Sep the asymmetry inverts, since a missing birthday costs one
+      day a year and a panel that will not start costs every day, and a
+      crash-looping launchd agent writing to a log nobody reads is not louder
+      than a fallback, only differently silent. Recorded now so the argument
+      does not have to happen in the last week.
 
 **Exit:** real Claude Code sessions drive the panel, placeholder art.
 
@@ -410,11 +420,13 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   be a lie, while this decides the message band and the animation still
   shows the work. Two reviews caught the claim independently.
   What remains: the art on the line above, and a pack that actually carries a
-  date. The recipient's pack is the first unchecked item in this stage and did
-  not name a `birthday` field until now — and until one does, the trigger is
-  unreachable in production, because the only pack the binary can load is
-  `packs/example`. That is the same missing selection mechanism as the Stage 1
-  line above.
+  date. Selection itself is built — `TAMACLAUDE_PACK`, else
+  `~/.tamaclaude/pack/` — so the trigger is reachable as soon as a pack names
+  a date. What is not built is anything that _sets_ the variable on boot; that
+  is the launchd item in Stage 3. This paragraph said the mechanism was
+  missing and cited the Stage 1 line for it, five lines below the sentence
+  saying where the pack goes; the commit that built the resolver left the
+  contradiction standing and a review caught it.
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its

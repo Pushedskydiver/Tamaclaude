@@ -17,11 +17,12 @@
  * A binary nothing executes is a binary nobody knows is broken. This runs it.
  */
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '../../../..');
 
@@ -36,9 +37,13 @@ const BUILT = resolve(ROOT, 'packages/cli/dist/index.js');
  * `~/.tamaclaude/pack/` — which is the install step this very change
  * documents, and which happens before the 19 Sep dry run — `pnpm test` on that
  * machine would either fail on the `pack=example` assertion or, worse, pass
- * while quietly reading somebody's private pack. The precedent for injecting
- * instead is `packages/hooks/src/index.test.ts`, which passes an explicit
- * `TAMACLAUDE_SOCKET`.
+ * while quietly reading somebody's private pack.
+ *
+ * `packages/hooks/src/index.test.ts` sets an explicit `TAMACLAUDE_SOCKET`, but
+ * over a spread of `process.env` — so it is a precedent for pinning the one
+ * variable under test, not for refusing to inherit. The refusal here is the
+ * stronger form, and it is needed because `HOME` matters to this binary and
+ * does not to that one.
  *
  * `HOME` points at a directory that does not exist, so the default-location
  * layer can never resolve by accident. A test that means "no pack" has to be
@@ -55,7 +60,16 @@ function run(
   const result = spawnSync(process.execPath, [BUILT, ...args], {
     encoding: 'utf8',
     timeout: 10_000,
-    env: { PATH: process.env.PATH ?? '', HOME: NO_HOME, ...env },
+    // `TZ` is carried through from `vitest.config.ts`'s pin. No assertion here
+    // depends on a date yet, but the countdown test below does, and a date
+    // test under an unpinned UTC is what `packages/packs/src/index.test.ts`
+    // spends fifteen lines explaining the cost of.
+    env: {
+      PATH: process.env.PATH ?? '',
+      TZ: process.env.TZ ?? '',
+      HOME: NO_HOME,
+      ...env,
+    },
   });
   return {
     out: `${result.stdout}${result.stderr}`,
@@ -65,6 +79,45 @@ function run(
 
 const NO_HOME = resolve(ROOT, 'packages/cli/dist/no-such-home');
 const EXAMPLE = resolve(ROOT, 'packs/example');
+
+/**
+ * Fixture packs, written under `dist/` so they are gitignored and disposable.
+ *
+ * `BAD_PACK` is schema-invalid rather than unreadable: a one-colour palette,
+ * which `packages/packs` refuses because a pack with no ink renders an
+ * entirely invisible panel. That is the failure a *hand-edited* manifest
+ * actually has, and until a review pointed it out the CLI answered it with a
+ * raw zod issue array under a Node stack.
+ *
+ * `BIRTHDAY_PACK` exists because `packs/example` has no `birthday`, so the
+ * countdown — the whole reason `tamaclaude pack` exists — had no coverage at
+ * all. Its date is chosen relative to the clock at run time, so the assertion
+ * does not rot.
+ */
+const FIXTURES = resolve(ROOT, 'packages/cli/dist/test-packs');
+const BAD_PACK = join(FIXTURES, 'bad');
+const BIRTHDAY_PACK = join(FIXTURES, 'birthday');
+
+const VALID = {
+  name: 'fixture',
+  palette: [
+    [0, 0, 0],
+    [255, 255, 255],
+  ],
+  quips: { mapped: {}, idle: [] },
+};
+
+beforeAll(() => {
+  mkdirSync(BAD_PACK, { recursive: true });
+  mkdirSync(BIRTHDAY_PACK, { recursive: true });
+  writeFileSync(
+    join(BAD_PACK, 'manifest.json'),
+    JSON.stringify({ ...VALID, palette: [[0, 0, 0]] }),
+  );
+});
+afterAll(() => {
+  rmSync(FIXTURES, { recursive: true, force: true });
+});
 
 describe('the tamaclaude binary', () => {
   it('starts, loads the pack it is pointed at, and exits cleanly', () => {
@@ -90,10 +143,123 @@ describe('the tamaclaude binary', () => {
     const { out, status } = run([], { TAMACLAUDE_PACK: resolve(ROOT, 'nope') });
     expect(out).toContain('could not read the pack');
     expect(out).not.toContain('pack=example');
-    // The sentence, not a stack: `KNOWN` has to match this or the one line
-    // worth reading arrives under six lines of Node internals.
-    expect(out).not.toContain('at Object.');
     expect(status).toBe(1);
+  });
+
+  /**
+   * Every failure this CLI composes a sentence for prints *only* that
+   * sentence.
+   *
+   * **The previous version of this asserted the output contained no
+   * `at Object.` — and an ESM stack contains no such frame**, so the check
+   * passed whether or not `KNOWN` matched. Deleting a clause from `KNOWN` left
+   * it green. A review found it by planting exactly that mutation.
+   *
+   * One line is the assertion that cannot be satisfied by accident: a stack is
+   * always several. Driven through the binary rather than against the regex,
+   * so a sentence added without a matching clause fails here rather than
+   * needing to be remembered into a list.
+   */
+  const failures: readonly {
+    readonly what: string;
+    readonly env: Readonly<Record<string, string>>;
+    readonly says: RegExp;
+    readonly code: number;
+  }[] = [
+    {
+      what: 'nothing configured',
+      env: {},
+      says: /no pack configured/,
+      code: 2,
+    },
+    {
+      what: 'a named pack that is not there',
+      env: { TAMACLAUDE_PACK: resolve(ROOT, 'nope') },
+      says: /could not read the pack/,
+      code: 1,
+    },
+    {
+      what: 'an empty variable, which is a mistake and not an absence',
+      env: { TAMACLAUDE_PACK: '' },
+      says: /TAMACLAUDE_PACK is set but empty/,
+      code: 1,
+    },
+    {
+      what: 'a manifest that is not a valid pack',
+      env: { TAMACLAUDE_PACK: BAD_PACK },
+      says: /is not a valid pack/,
+      code: 1,
+    },
+  ];
+
+  it.each(failures)(
+    'says one line and no stack for $what',
+    ({ env, says, code }) => {
+      const { out, status } = run([], env);
+      expect(out).toMatch(says);
+      expect(out.trim().split('\n')).toHaveLength(1);
+      expect(status).toBe(code);
+    },
+  );
+
+  /**
+   * The countdown, which had no coverage at all until a review said so.
+   *
+   * `packs/example` carries no `birthday`, and it is the only pack CI ever
+   * saw, so the only branch reached was the early return. Mutants that
+   * survived: the day length set to anything, the window set to 1,
+   * `indexOf(true)` to `indexOf(false)`, and "tomorrow" to "today".
+   *
+   * Dates are computed from the clock at run time rather than written down, so
+   * this cannot rot into a test that passes only in 2026. `TZ` is pinned by
+   * `vitest.config.ts` and carried into the child by `run`.
+   *
+   * The arithmetic it guards is worth stating, because it is not obvious why
+   * fixed 86,400,000ms steps are safe: each step is measured from *local noon*,
+   * and no DST shift is large enough to push noon across a local midnight, so
+   * every step lands on a distinct calendar day. Verified by sweep across four
+   * zones including Lord Howe's 30-minute shift and Chatham's +12:45.
+   */
+  it.each([
+    [0, 'today'],
+    [1, 'tomorrow'],
+    [9, 'in 9 days'],
+    // **The far offsets are the ones with teeth.** A per-step error smaller
+    // than a day is invisible near zero and accumulates: changing the step
+    // from 24h to 23h passed at 0, 1 and 9 days, and only misplaces a date
+    // once the drift exceeds a full day, at 24 steps out. The first version of
+    // this table stopped at 9 and let that mutant live.
+    [30, 'in 30 days'],
+    [200, 'in 200 days'],
+    [364, 'in 364 days'],
+  ])('counts a birthday %i days out as "%s"', (offset, expected) => {
+    const day = new Date();
+    day.setHours(12, 0, 0, 0);
+    day.setDate(day.getDate() + offset);
+    const date = `${String(day.getMonth() + 1).padStart(2, '0')}-${String(
+      day.getDate(),
+    ).padStart(2, '0')}`;
+    writeFileSync(
+      join(BIRTHDAY_PACK, 'manifest.json'),
+      JSON.stringify({ ...VALID, birthday: { date, quip: 'many happy' } }),
+    );
+    const { out, status } = run(['pack'], { TAMACLAUDE_PACK: BIRTHDAY_PACK });
+    expect(out).toContain(`birthday: ${date} — fires ${expected}`);
+    expect(out).toContain('many happy');
+    expect(status).toBe(0);
+  });
+
+  it('reports the default location as the default', () => {
+    // The other half of `describePack`, which only ever had its
+    // `$TAMACLAUDE_PACK` branch asserted — mutating the label to return that
+    // string unconditionally left the suite green.
+    const home = join(FIXTURES, 'home');
+    mkdirSync(join(home, '.tamaclaude'), { recursive: true });
+    cpSync(EXAMPLE, join(home, '.tamaclaude', 'pack'), { recursive: true });
+    const { out, status } = run(['pack'], { HOME: home });
+    expect(out).toContain('(default)');
+    expect(out).not.toContain('$TAMACLAUDE_PACK');
+    expect(status).toBe(0);
   });
 
   it('says which pack is loaded, because no schema can catch the wrong one', () => {

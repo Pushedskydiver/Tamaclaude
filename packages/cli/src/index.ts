@@ -19,19 +19,31 @@ import {
   observe,
   resolvePanel,
 } from '@tamaclaude/daemon';
-import { isBirthday, parsePackManifest } from '@tamaclaude/packs';
+import { isBirthday } from '@tamaclaude/packs';
 
 import { runDaemon } from './daemon.js';
 import { resolvePack } from './pack.js';
 
 /** One line naming the loaded pack and where it came from. */
-function describePack(pack: ResolvedPack): string {
-  const { name } = parsePackManifest(pack.manifest);
-  const how = pack.source === 'default' ? 'default' : '$TAMACLAUDE_PACK';
-  return `${name} at ${pack.directory} (${how})`;
+function describePack(resolved: ResolvedPack): string {
+  const how = resolved.source === 'default' ? 'default' : '$TAMACLAUDE_PACK';
+  return `${resolved.parsed.name} at ${resolved.directory} (${how})`;
 }
 
-/** A day count, in whole local days, or `undefined` if it never fires. */
+/**
+ * The search window for the next birthday: long enough to contain every date.
+ *
+ * 366 rather than 365 so a 29 February pack is reachable from any starting
+ * day. The index is never `-1` for a manifest that parsed: the schema refuses
+ * a date that occurs in no month, and `isBirthday` falls 29 February back to
+ * the 28th in a common year, so every valid date occurs exactly once in any
+ * 366-day window — checked exhaustively over four timezones.
+ *
+ * This constant previously carried a docstring describing a helper returning
+ * `number | undefined`, which had been inlined away. The comment outlived its
+ * function, which is the class `tools/detached-docs.test.ts` exists for and
+ * which it cannot see, because a line comment is not a bound doc block.
+ */
 const YEAR_AND_A_DAY = 366;
 
 /**
@@ -50,7 +62,7 @@ const YEAR_AND_A_DAY = 366;
  */
 function pack(): void {
   const resolved = resolvePack();
-  const manifest = parsePackManifest(resolved.manifest);
+  const manifest = resolved.parsed;
   process.stdout.write(`pack ${describePack(resolved)}\n`);
   if (manifest.birthday === undefined) {
     process.stdout.write('birthday: none in this pack\n');
@@ -93,18 +105,21 @@ async function daemon(argv: readonly string[]): Promise<void> {
     process.stderr.write(USAGE);
     process.exit(2);
   }
-  const pack = resolvePack();
+  // Resolved before the socket is opened, so a bad pack fails without leaving
+  // a listener behind.
+  const resolved = resolvePack();
   const running = await runDaemon({
     socketPath: defaultSocketPath(),
     devicePath,
-    pack: pack.manifest,
+    pack: resolved.manifest,
   });
   // The pack is named on the startup line, not just the socket. The failure
   // this whole file is arranged against is a *valid* pack that is the wrong
   // one, which no schema can catch — so the cheapest possible check is putting
   // the answer in the terminal every time the daemon starts.
   process.stdout.write(
-    `listening on ${defaultSocketPath()}\n` + `pack ${describePack(pack)}\n`,
+    `listening on ${defaultSocketPath()}\n` +
+      `pack ${describePack(resolved)}\n`,
   );
   // Stopped on a signal rather than left to the process teardown, so the
   // socket file goes with it — `socket-server.ts` only removes a path it can
@@ -156,7 +171,7 @@ function smoke(): void {
  * shipped, so no version of this ever ran that way.
  */
 const KNOWN =
-  /already listening|not a socket|over the .*-byte limit|no pack configured|could not read the pack/;
+  /already listening|not a socket|over the .*-byte limit|no pack configured|could not read the pack|is not a valid pack|TAMACLAUDE_PACK is set but empty/;
 
 const [, , command, ...rest] = process.argv;
 // **One try/catch around every command, not just `daemon`.** `smoke()` used to

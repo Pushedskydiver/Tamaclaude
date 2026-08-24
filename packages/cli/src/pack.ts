@@ -19,8 +19,36 @@
  * day after.
  *
  * Without one it is `no pack configured` on stderr, exit 2, fixed in fifteen
- * seconds. And the glass is not blank in the meantime: the boot splash is
- * baked into the firmware and draws itself with no host attached.
+ * seconds.
+ *
+ * **The compensating control is weaker than it first looks, and worth stating
+ * honestly.** The firmware's splash is not a "no host" screen: `main.c` says
+ * it "stays up until the host paints over it, and it is never redrawn",
+ * because no-host is not observable on this link. So on a cold boot the glass
+ * shows the splash, but on a *restart* — the likelier case, and the one a
+ * crash-looping launchd agent produces — it holds the last frame the daemon
+ * painted, which reads as working-but-frozen rather than as misconfigured.
+ *
+ * ## The counter-argument, which is good, and the third option
+ *
+ * A later review made a case worth writing down rather than winning against.
+ * **The cost asymmetry inverts after 23 September.** A missing birthday costs
+ * one day a year; a panel that will not start costs every day. And "loud" is
+ * only loud if somebody is listening: once a launchd agent owns the daemon it
+ * respawns on a throttle forever, and unless the plist sets
+ * `StandardErrorPath` the sentence goes to a log nobody reads. That is not
+ * silence-free, it is differently silent.
+ *
+ * There is a third option that dominates both, and the binary above hides it:
+ * **fall back, and say so on the glass.** The message band exists,
+ * `describePack` already composes the sentence, and the panel is the one
+ * surface guaranteed to be in front of a person. Then the mistake is neither
+ * invisible nor fatal.
+ *
+ * It is not built, because feature freeze is 13 September and this is not the
+ * thing to spend that budget on. It is written here so that if the launchd
+ * item slips, the fallback position is already agreed rather than argued
+ * about in the last week.
  *
  * ## Explicit and implicit, not absent and invalid
  *
@@ -30,13 +58,17 @@
  * mistakes, not absences. The distinction that survives contact is whether the
  * path was *named*:
  *
- * | Source                        | Missing means                    |
- * | ----------------------------- | -------------------------------- |
- * | `TAMACLAUDE_PACK`             | you told me a path and it is not there — fatal |
- * | `~/.tamaclaude/pack/`         | nothing configured — fatal, with instructions |
+ * | Source                     | Missing means                                  |
+ * | -------------------------- | ---------------------------------------------- |
+ * | `TAMACLAUDE_PACK` set      | you named a path and it is not there — fatal   |
+ * | `TAMACLAUDE_PACK` empty    | you meant to name one and did not — fatal      |
+ * | `~/.tamaclaude/pack/` bare | nothing configured — fatal, with instructions  |
  *
- * Both ends are fatal, so there is no fall-through to get wrong. The only
- * difference is which sentence gets printed.
+ * Every end is fatal, so there is no fall-through to get wrong; the only
+ * difference is which sentence prints. The middle row was missing from both
+ * this table and the code, while the sentence below it claimed no
+ * fall-through existed — an empty variable resolved to the default and looked
+ * entirely normal.
  *
  * ## Not a config file, and that reopens a decision
  *
@@ -55,10 +87,14 @@
  * Resolving to the file now would leave the sibling-asset question to be
  * answered ad hoc later.
  */
+import type { PackManifest } from '@tamaclaude/packs';
+
 import { lstatSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
+
+import { parsePackManifest } from '@tamaclaude/packs';
 
 /** Where a resolved pack came from, so `tamaclaude pack` can say. */
 type PackSource = 'TAMACLAUDE_PACK' | 'default';
@@ -66,8 +102,19 @@ type PackSource = 'TAMACLAUDE_PACK' | 'default';
 export type ResolvedPack = {
   /** The pack directory. */
   readonly directory: string;
-  /** The manifest inside it, still unparsed — the daemon is the validator. */
+  /**
+   * The manifest as read, unparsed, for handing to the daemon.
+   *
+   * The daemon validates it again. That is not redundancy to be tidied away:
+   * `packages/daemon` is the trust boundary and its guarantee must not depend
+   * on its caller having been careful. What the CLI's own parse buys is a
+   * *sentence* — a zod error reaching the terminal raw is a JSON array of
+   * issue objects, which is the least useful thing a hand-edited manifest
+   * could be answered with.
+   */
   readonly manifest: unknown;
+  /** The same manifest, validated here so failures can be explained. */
+  readonly parsed: PackManifest;
   readonly source: PackSource;
 };
 
@@ -77,10 +124,14 @@ type Lookup = {
 };
 
 /**
- * The default pack directory, matching `socket-path.ts` and `install.ts`.
+ * The default pack directory, under the same `~/.tamaclaude/` as the socket.
  *
- * `~/.tamaclaude/` already holds the socket, so this is the second thing in a
- * directory that exists. It earns its place over the environment variable
+ * `socket-path.ts` puts `daemon.sock` there. `install.ts` supplies the
+ * environment-variable idiom but writes to `~/.claude/`, so it is a precedent
+ * for the override and not for the location. The directory is not guaranteed
+ * to exist when this runs — resolution happens before the socket is prepared,
+ * so on a fresh machine nothing has created it, which is exactly the
+ * `no pack configured` case. It earns its place over the environment variable
  * alone for one reason: an env var set inside a launchd plist cannot be read
  * back out of a running agent, but `ls ~/.tamaclaude/pack/` answers the
  * question from any terminal.
@@ -95,9 +146,12 @@ function defaultDirectory(home: string): string {
  * `lstat`, not `existsSync`, and that is the whole point: `existsSync` follows
  * symlinks, so a dangling one — the shape a moved checkout leaves behind —
  * reads as "nothing here" and would produce `no pack configured` for a path
- * somebody deliberately created. `lstat` sees the link itself. Same reasoning
- * as `socket-path.ts`, which uses `lstat` so that "I cannot tell" never
- * resolves to the destructive answer.
+ * somebody deliberately created. `lstat` sees the link itself.
+ *
+ * `socket-path.ts` also reaches for `lstat` and shares the habit of refusing
+ * to let "I cannot tell" choose an answer — but its reason is about connect
+ * errnos, not symlinks, and it never mentions `existsSync`. The habit is the
+ * borrowed part, not the argument.
  *
  * So an empty directory, a dangling link and a regular file all count as
  * *something*, and all of them go on to fail with a message naming the path
@@ -107,8 +161,18 @@ function somethingIsThere(path: string): boolean {
   try {
     lstatSync(path);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // **Only `ENOENT` means nothing is here.** A bare `catch` returning false
+    // treated `EACCES` on `~/.tamaclaude/` and `ENOTDIR` — a regular file
+    // where the directory should be — as absence, and printed "put a pack
+    // here" for a path that is already occupied and cannot be created without
+    // deleting something. That is the same uselessness this file rejects for
+    // the empty-directory case, applied to one error class and not the other.
+    // Measured: both produced the wrong sentence before this.
+    //
+    // Anything else counts as present, so it falls on to `readManifest`, which
+    // names the file and the underlying reason.
+    return (error as NodeJS.ErrnoException).code !== 'ENOENT';
   }
 }
 
@@ -132,6 +196,40 @@ function readManifest(directory: string, source: PackSource): unknown {
 }
 
 /**
+ * Validate a manifest, turning a zod failure into something readable.
+ *
+ * A `ZodError` stringifies to a JSON array of issue objects. Printed at a
+ * terminal that is worse than useless — it buries which file and which field
+ * under punctuation. A hand-edited manifest failing validation is at least as
+ * likely as a missing one, and `docs/CONVENTIONS.md` says a pack is a genuine
+ * trust boundary for exactly that reason.
+ */
+function validate(manifest: unknown, directory: string): PackManifest {
+  try {
+    return parsePackManifest(manifest);
+  } catch (cause) {
+    const issues =
+      cause instanceof Error
+        ? (
+            JSON.parse(cause.message) as readonly {
+              readonly path: readonly (string | number)[];
+              readonly message: string;
+            }[]
+          )
+            .map(
+              (issue) =>
+                `${issue.path.join('.') || '(root)'}: ${issue.message}`,
+            )
+            .join('; ')
+        : String(cause);
+    throw new Error(
+      `the pack at ${join(directory, 'manifest.json')} is not a valid pack — ${issues}`,
+      { cause },
+    );
+  }
+}
+
+/**
  * Find the pack, or throw a sentence a person can act on.
  *
  * `env` and `home` are injectable so a test can point the whole resolution at
@@ -143,10 +241,25 @@ export function resolvePack(lookup: Lookup = {}): ResolvedPack {
   const home = lookup.home ?? homedir();
 
   const named = env.TAMACLAUDE_PACK;
-  if (named !== undefined && named !== '') {
+  if (named === '') {
+    // **Set but empty is a mistake, not an absence.** This used to fall
+    // through to the default, which is the one behaviour this whole file
+    // exists to prevent: `<string></string>` in a plist, or
+    // `TAMACLAUDE_PACK=$TYPO`, and the operator believes they named a pack
+    // while a different one loads and everything looks fine. Two reviews found
+    // it, and the module doc above claimed "no fall-through" while this was
+    // here.
+    throw new Error(
+      'TAMACLAUDE_PACK is set but empty: name a pack directory, or unset it ' +
+        'to use the default',
+    );
+  }
+  if (named !== undefined) {
+    const manifest = readManifest(named, 'TAMACLAUDE_PACK');
     return {
       directory: named,
-      manifest: readManifest(named, 'TAMACLAUDE_PACK'),
+      manifest,
+      parsed: validate(manifest, named),
       source: 'TAMACLAUDE_PACK',
     };
   }
@@ -157,9 +270,11 @@ export function resolvePack(lookup: Lookup = {}): ResolvedPack {
       `no pack configured: set TAMACLAUDE_PACK, or put a pack at ${fallback}`,
     );
   }
+  const manifest = readManifest(fallback, 'default');
   return {
     directory: fallback,
-    manifest: readManifest(fallback, 'default'),
+    manifest,
+    parsed: validate(manifest, fallback),
     source: 'default',
   };
 }

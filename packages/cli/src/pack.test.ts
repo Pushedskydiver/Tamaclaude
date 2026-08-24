@@ -24,10 +24,17 @@ const MANIFEST = JSON.stringify({
 
 describe('resolvePack', () => {
   // Declared in here rather than at module scope, matching `daemon.test.ts`.
-  // At module scope `functional/prefer-readonly-type` fires, and `--fix`
-  // rewrites it to `readonly string[]` — which makes `.push` and `.splice`
-  // type errors, so the autofix breaks the file. `pnpm lint` did not catch
-  // that; the pre-commit hook runs `eslint --fix` and did.
+  // At module scope `functional/prefer-readonly-type` fires — as a *warning*,
+  // so `pnpm lint` exits 0 — and `eslint --fix` rewrites the type to
+  // `readonly string[]`, after which `.push` and `.splice` do not exist on it.
+  // The autofix breaks the file.
+  //
+  // Whether anything notices is luck. `eslint --fix` exits 0 on a minimal
+  // repro of this, so the pre-commit hook would rewrite and commit it. Here it
+  // exited 1, because a type-aware rule in the same pass saw the fallout of
+  // its own autofix and flagged the argument as error-typed. So the honest
+  // statement is not "the hook catches it" but "the hook is what breaks it,
+  // and sometimes notices".
   const made: string[] = [];
   function tempDir(): string {
     const dir = mkdtempSync(join(tmpdir(), 'tamaclaude-pack-'));
@@ -57,8 +64,9 @@ describe('resolvePack', () => {
     // the example pack's generic quips and no `birthday`, nothing is red and
     // nobody finds out until 24 September.
     //
-    // The device is not dark meanwhile — the boot splash is baked into the
-    // firmware and draws without a host.
+    // The device is not dark meanwhile, though less reassuringly than it
+    // sounds: the firmware's splash is drawn once and never redrawn, so a
+    // restart leaves the last painted frame up rather than the splash.
     const home = tempDir();
     expect(() => resolvePack({ env: {}, home })).toThrow(/no pack configured/);
   });
@@ -114,6 +122,42 @@ describe('resolvePack', () => {
     mkdirSync(join(home, '.tamaclaude'), { recursive: true });
     symlinkSync(join(home, 'gone'), join(home, '.tamaclaude', 'pack'));
     expect(() => resolvePack({ env: {}, home })).toThrow(/could not read/);
+  });
+
+  it('treats a file where the directory should be as a mistake', () => {
+    // `ENOTDIR`, not `ENOENT`. The first version caught every stat error and
+    // called it absence, so this printed "put a pack at ~/.tamaclaude/pack" —
+    // advice you cannot follow without deleting the thing already there.
+    // Chosen over a chmod-000 test for the same class because permissions are
+    // ignored when the suite runs as root, and a gate that silently stops
+    // gating in one environment is the failure this repo keeps finding.
+    const home = tempDir();
+    writeFileSync(join(home, '.tamaclaude'), 'not a directory');
+    expect(() => resolvePack({ env: {}, home })).toThrow(/could not read/);
+  });
+
+  it('refuses an empty TAMACLAUDE_PACK rather than quietly using the default', () => {
+    // The blocking finding. A valid pack sits at the default location, so a
+    // fall-through would succeed and print nothing unusual — and an empty
+    // `<string></string>` in a launchd plist is how you get here in
+    // production.
+    const home = tempDir();
+    mkdirSync(join(home, '.tamaclaude'), { recursive: true });
+    packAt(join(home, '.tamaclaude'));
+    expect(() => resolvePack({ env: { TAMACLAUDE_PACK: '' }, home })).toThrow(
+      /set but empty/,
+    );
+  });
+
+  it('explains a schema failure instead of printing a zod issue array', () => {
+    const dir = tempDir();
+    const pack = packAt(
+      dir,
+      JSON.stringify({ name: 'x', palette: [[0, 0, 0]] }),
+    );
+    expect(() =>
+      resolvePack({ env: { TAMACLAUDE_PACK: pack }, home: dir }),
+    ).toThrow(/is not a valid pack/);
   });
 
   it('names the file when the manifest is not JSON', () => {

@@ -178,7 +178,7 @@ protocol <- hooks
 | `device`   | USB-CDC transport; firmware source lives here               | `protocol`                                |
 | `daemon`   | Session state machine, tool→state mapping, transports       | `renderer`, `packs`, `device`, `protocol` |
 | `hooks`    | The binary Claude Code executes on hook events              | `protocol`                                |
-| `cli`      | `tamaclaude status\|pack\|dev`                              | everything                                |
+| `cli`      | `tamaclaude daemon <device>`, `tamaclaude pack`             | everything                                |
 
 Enforced by `eslint-plugin-boundaries`. Adding an edge means editing
 `eslint.config.ts` deliberately, which is the point.
