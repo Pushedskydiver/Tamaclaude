@@ -287,6 +287,10 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   decision is to install it in person and let the printed card be a
   keepsake carrying something true — the repo QR and "if it ever stops,
   open Terminal and run `tamaclaude pack`".
+  `tamaclaude uninstall-agent` stops it and deletes the plist, because an agent
+  with `RunAtLoad` comes back at every login and the only way off otherwise is
+  `launchctl bootout` typed correctly by someone who knows it exists — which is
+  not the person this is a gift for.
   **Still open:** the daemon resolves the device once at startup, so a
   panel moved to a different USB port while it runs leaves it retrying a
   dead path. Discovery belongs inside the reconnect loop in
