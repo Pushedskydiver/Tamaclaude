@@ -373,15 +373,23 @@ than partially. Eight good screens beat nine plus four rough ones.
   3. typing ✅ (Edit/Write)
   4. bouldering ✅ (Read)
   5. gym ✅ (Bash)
-  6. **The payoff screen** — the vehicle from the recipient's pack
-     pulls up. Named by role rather than by make and colour: this repo is
-     public, the vehicle is on the interests list in the gitignored brief, and
-     `CLAUDE.md` says tracked docs name personal content by role, never by
-     content. It read as the make and colour in ten places across five
-     tracked files until 24 Aug. Fallback if it is not landing: a static frame with the vehicle
-     parked and Clawd beside it and the quip, which is 90% of the joke at 10%
-     of the risk. "Do not cut" previously disarmed the only
-     mitigation this plan names for its own top art risk.
+  6. **The payoff screen** ✅ — a vehicle parked at his left, overlapping, and
+     a claw laid on it once per loop. Named by role rather than by make and
+     colour: this repo is public, the vehicle is on the interests list in the
+     gitignored brief, and `CLAUDE.md` says tracked docs name personal content
+     by role, never by content. It read as the make and colour in ten places
+     across five tracked files until 24 Aug.
+     **Parked, not pulling up** — this line said "pulls up" until the art
+     landed, and `frameAt` is wall-clock modulo, so a state never starts at
+     frame 0 and an arrival would re-arrive every loop at a random phase.
+     **And the pack cannot supply it.** Sprites bake fixed pixels;
+     `packPalette` recolours bands only. Whatever the SVG draws is what every
+     install shows, so "from the recipient's pack" was never achievable as
+     written — recognition comes from shape and context, and the tracked art
+     carries no mark identifying a specific vehicle.
+     The fallback this line used to name is moot: the trigger shipped a
+     fortnight before the art and `DONE` borrowed `idle` in the meantime, so
+     the risk it was written against never arrived.
   7. Permission sign, and confused ✅ — Tier A per the screen spec; both were
      missing from every tier in its first draft despite being the two screens
      the whole design principle exists to serve. A `spec-grill` found both
