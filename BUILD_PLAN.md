@@ -367,7 +367,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
-- [ ] Birthday screen, date-triggered 23 Sep
+- [ ] Birthday screen, date-triggered 23 Sep. **The trigger is built and the
+      screen is not.** `packs`, an optional `birthday: { date, quip }` keyed
+      `MM-DD` so it recurs, and `isBirthday` comparing in local time because
+      the day the panel should celebrate is the one the person beside it is
+      having. The quip beats the resting and working lines and loses to every
+      attention state — the same rule `DONE` is ranked by, and the reason it is
+      a rule is that the day it matters most that the panel still says when to
+      look is the day nobody is watching it for status. What remains is art:
+      the scene on the line above.
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its

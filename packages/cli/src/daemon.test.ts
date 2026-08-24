@@ -255,6 +255,40 @@ describe('what the panel says', () => {
     ).toBe(3);
   });
 
+  it('says happy birthday all day, without hiding anything that needs a human', () => {
+    // The rule `DONE` taught this morning, applied again: a celebration must
+    // never cover a session that is blocked. So the birthday quip beats idle
+    // and working lines, and loses to every attention state — on the one day
+    // of the year it matters most that the panel still does its job.
+    const birthdayPack = parsePackManifest({
+      ...pack,
+      birthday: { date: '09-23', quip: 'happy birthday' },
+    });
+    const onTheDay = new Date(2026, 8, 23, 10, 0, 0).getTime();
+    const dayBefore = new Date(2026, 8, 22, 10, 0, 0).getTime();
+    // Built at `onTheDay`, not at the file's `NOW`. A registry stamped months
+    // earlier is evicted by the time it is resolved, so the panel would be an
+    // empty desk and the assertion would pass for the wrong reason — which is
+    // exactly what the first version of this test did.
+    const at = (event: HookEvent, when: number) =>
+      observe(createRegistry(when), event, when);
+    const idle = at({ sessionId: 's', kind: 'Stop' }, onTheDay);
+    const blocked = at({ sessionId: 's', kind: 'PermissionRequest' }, onTheDay);
+    const idleBefore = at({ sessionId: 's', kind: 'Stop' }, dayBefore);
+
+    expect(
+      sceneFor({ registry: idle, pack: birthdayPack, now: onTheDay }).message,
+    ).toBe('happy birthday');
+    expect(
+      sceneFor({ registry: blocked, pack: birthdayPack, now: onTheDay })
+        .message,
+    ).toBe(birthdayPack.quips.mapped.NEEDS_PERMISSION);
+    expect(
+      sceneFor({ registry: idleBefore, pack: birthdayPack, now: dayBefore })
+        .message,
+    ).not.toBe('happy birthday');
+  });
+
   it('picks overheated for a rate limit on the path the panel actually uses', () => {
     // The production path, not the table. `animationFor` is unit-tested, but
     // `paintOnce` composed the arguments inline and nothing exercised that

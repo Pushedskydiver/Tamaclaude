@@ -33,12 +33,14 @@ import process from 'node:process';
 
 import {
   animationFor,
+  ATTENTION_RANK,
   effectiveState,
   resolvePanel,
   startSocketServer,
+  stateRank,
 } from '@tamaclaude/daemon';
 import { openPanel } from '@tamaclaude/device';
-import { parsePackManifest } from '@tamaclaude/packs';
+import { isBirthday, parsePackManifest } from '@tamaclaude/packs';
 import {
   dirtyRect,
   encodeRect,
@@ -230,6 +232,49 @@ function subagentText(sessions: readonly Session[]): string {
 }
 
 /**
+ * The birthday line, when today is the day and nothing is asking for a human.
+ *
+ * Its own function because `messageFor` hit a complexity of 14 against a limit
+ * of 10 the moment this landed, and because the rule it encodes deserves a name:
+ * **a celebration never covers an attention state.** `DONE` was ranked by that
+ * same rule this morning. The one day of the year it matters most that the
+ * panel still says when to look is the day nobody is watching it for status.
+ */
+function birthdayLine(
+  panel: ReturnType<typeof resolvePanel>,
+  pack: PackManifest,
+  now: number,
+): string | undefined {
+  if (stateRank(panel.state) === ATTENTION_RANK) return undefined;
+  if (!isBirthday(pack, now)) return undefined;
+  return pack.birthday?.quip;
+}
+
+/**
+ * A `FAILED` line refined by which error it was, when the pack carries one.
+ *
+ * `FAILED:rate_limit` lets a pack say something different when a usage limit is
+ * the reason. It matters now that two `FAILED` values draw different pictures:
+ * without it `overheated` and `dizzy` share a message band and the picture is
+ * the only difference between them. No schema change — `quips.mapped` is
+ * `z.record(z.string(), z.string())`, so any key validates, and an unknown
+ * suffix simply misses and falls through to the bare state.
+ *
+ * The error is read off the hero rather than through `resolvePanel`, which
+ * returns state and tool but not `errorType`. `sessions[0]` is the hero and is
+ * a whole `Session`, so the value is already here.
+ */
+function refinedFailureLine(
+  panel: ReturnType<typeof resolvePanel>,
+  pack: PackManifest,
+): string | undefined {
+  if (panel.state !== 'FAILED') return undefined;
+  const errorType = panel.sessions.at(0)?.errorType;
+  if (errorType === undefined) return undefined;
+  return pack.quips.mapped[`${panel.state}:${errorType}`];
+}
+
+/**
  * What the message band says, in words a person can act on.
  *
  * **The state comes first, and that is the whole point.** This used to be
@@ -249,12 +294,21 @@ function subagentText(sessions: readonly Session[]): string {
  * The idle quip is chosen by the clock rather than at random, because a desk
  * toy that reshuffles its own text every 125ms is a fidget, not a pet — and
  * because a random one would make the dirty-rect diff send a frame per tick.
+ *
+ * Two lookups run before the mapped quip, each with its own doc: the
+ * birthday line (`birthdayLine`) and the error-refined failure line
+ * (`refinedFailureLine`). Both are ahead of the mapped lookup because a
+ * bare state key would otherwise answer first.
  */
 function messageFor(
   panel: ReturnType<typeof resolvePanel>,
   pack: PackManifest,
   now: number,
 ): string {
+  // The birthday first — see `birthdayLine`. Before the mapped lookup because
+  // `IDLE` has no mapped entry and would otherwise fall to the idle rotation.
+  const birthday = birthdayLine(panel, pack, now);
+  if (birthday !== undefined) return birthday;
   // A compound key first, then the bare state. `FAILED:rate_limit` lets a pack
   // say something different when the limit is the reason, which is what
   // `events.ts` records `error_type` as having been kept open for — and it
@@ -266,11 +320,7 @@ function messageFor(
   // Read off the hero rather than through `resolvePanel`, which returns state
   // and tool but not `errorType`. `sessions[0]` is the hero and is a whole
   // `Session`, so the value is already here.
-  const errorType = panel.sessions.at(0)?.errorType;
-  const refined =
-    panel.state === 'FAILED' && errorType !== undefined
-      ? pack.quips.mapped[`${panel.state}:${errorType}`]
-      : undefined;
+  const refined = refinedFailureLine(panel, pack);
   if (refined !== undefined) return refined;
   const mapped = pack.quips.mapped[panel.state];
   if (mapped !== undefined) return mapped;
