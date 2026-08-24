@@ -30,6 +30,7 @@ export const ANIMATIONS = [
   'permission-sign',
   'dizzy',
   'overheated',
+  'payoff',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -99,13 +100,11 @@ const STATE_ANIMATIONS: Readonly<
   NEEDS_PERMISSION: 'permission-sign',
   FAILED: 'dizzy',
   WAITING: 'confused',
-  // The payoff screen's art is `BUILD_PLAN.md` item 6 and is not built. `idle`
-  // is what `DONE` decays into fifteen seconds later, so borrowing it means the
-  // trigger changes nothing on the glass until the art lands — the state is
-  // real, the rank is real, and the picture is the one the panel would have
-  // shown anyway. That is the point of landing the trigger first: if item 6 is
-  // cut at the gate, this line stays and nothing has to be reverted.
-  DONE: 'idle',
+  // `BUILD_PLAN.md` item 6, and the reason the trigger shipped a fortnight
+  // before the art: `DONE` borrowed `idle` until now, so the state and the rank
+  // were real while the glass showed the picture it would have shown anyway.
+  // Nothing had to be reverted when the art arrived, which was the point.
+  DONE: 'payoff',
   THINKING: 'thinking',
   IDLE: 'idle',
   ASLEEP: 'asleep',

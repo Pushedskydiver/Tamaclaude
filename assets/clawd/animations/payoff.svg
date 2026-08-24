@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="8">
+  <!--
+    Clawd: the payoff (DONE)
+
+    A task actually finished. The vehicle is parked beside him and he looks at
+    it. Plan: assets/clawd/animations/PLANS.md §The payoff screen.
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates and colours; all motion is CSS applied by ID.
+
+    ── Where the vehicle goes, and why it is not where the plan said ──────
+
+    The plan sized it at 5 units from `L + 15 + c <= 21`, which holds only if
+    the character is flush against a stage edge. He is not: the stage spans
+    x -3 to 18 and he occupies 0 to 15, so the free width is 3 units each
+    side, non-contiguous. Three units was rendered at true size and reads as a
+    block with two dots.
+
+    The right flank is water — `environment.ts` puts the rock pool at units
+    x 11.38 to 17.63 — so anything parked there is parked in it. The left rock
+    sits at y 6.6-8.75, well clear of the ground, so the left flank is the
+    only one free.
+
+    And he cannot move: docs/ANIMATION.md says "Keep the character's own
+    coordinates untouched. Grow the stage instead", the stage is already at
+    the panel's 21.5-unit ceiling, and `environment.ts` draws the contact
+    shadow at a hard-wired offset from the slot — shift him and he floats.
+
+    So it overlaps him, which §Props need contact says is why props read at
+    all: "the ones that read have a prop touching Clawd, and the ones that do
+    not have a prop floating near him". `permission-sign`'s plate is a 5x7
+    prop crossing his columns for the same reason. The plan's stop condition
+    forbidding overlap was written against the wrong arithmetic.
+
+    ── What makes it read as a vehicle at 40 pixels ──────────────────────
+
+    Not body-against-ground contrast. `tools/contrast.ts` measures every
+    candidate under 2:1 on at least two of the four sands, and the worst at
+    1.02:1 — but Clawd's own peach is 1.01:1 against day sand and is perfectly
+    legible on the panel. A luminance ratio is not what carries a silhouette
+    at this size.
+
+    Internal contrast is. The window is #C9D1D9 and the wheels are #000000 —
+    both already in the corpus, so no new colour and no new snap target — and
+    they give the shape three tones to be read by on any ground.
+
+    #6F4436 is declared here per the plan: `paletteOf` is per-document, and
+    without a brown between peach and black the antialiased torso edge snaps
+    to the nearest palette entry, which would be the body colour. It does not
+    stop the snapping — it takes 50 of the 101 steps itself — it moves the
+    target to a brown that reads as shading.
+
+    ── The loop ──────────────────────────────────────────────────────────
+
+    The vehicle never moves. `frameAt` is wall-clock modulo the frame count,
+    so a state never begins at frame 0 and an arrival would re-arrive every
+    loop at a uniformly random phase — `permission-sign` found this and wrote
+    it down. Parked on frame 0, and the loop is his reaction.
+
+    Eyes one pixel left, toward it. One slow blink, `permission-sign`'s
+    pattern and its timing.
+  -->
+  <defs>
+    <style>
+      /* Whole art pixels throughout. One frame of the eight second loop is
+         1.5625%. */
+
+      /* `idle`'s breath: two seconds alternating, about the hips, so the body
+         settles onto planted legs rather than lifting off them. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* Squashed about the eye line, never hidden — §Closing an eye. Linear,
+         because a lid that accelerates reads as a wince. Timings copied from
+         `permission-sign`, where they were measured against the frame grid. */
+      #eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 8s infinite linear;
+      }
+
+      @keyframes blink {
+        0%, 62.5%      { transform: scaleY(1); }
+        64.0625%       { transform: scaleY(0.1); }
+        65.625%        { transform: scaleY(0.1); }
+        67.1875%, 100% { transform: scaleY(1); }
+      }
+
+      /* The reaction beat. A claw lifted toward the vehicle and set down
+         again — rotate *and* extend, because §What a claw cannot do rules out
+         a bare rotation and `gym` shows the pair is what makes a limb read as
+         a limb rather than a lozenge sliding on the ribs. Once per loop, held
+         at the top, so it is a gesture rather than a wave. */
+      #left-arm-joint {
+        transform-origin: 0px 10px;
+        animation: gesture 8s infinite ease-in-out;
+      }
+
+      @keyframes gesture {
+        0%, 20%   { transform: rotate(0deg) scaleX(1); }
+        30%, 45%  { transform: rotate(-38deg) scaleX(1.6); }
+        55%, 100% { transform: rotate(0deg) scaleX(1); }
+      }
+    </style>
+  </defs>
+
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- The vehicle. Parked, never moves, drawn before the body so his near
+       claw passes in front of it: §Props need contact, and a prop behind
+       everything reads as scenery. -->
+  <g id="fx-vehicle">
+    <rect id="fx-vehicle-body" x="-3" y="12" width="5" height="2" fill="#B22222"/>
+    <rect id="fx-vehicle-cabin" x="-2.75" y="10.5" width="2.5" height="1.5" fill="#B22222"/>
+    <rect id="fx-vehicle-window" x="-2.4" y="11" width="1.8" height="1" fill="#C9D1D9"/>
+    <rect id="fx-vehicle-front-wheel" x="-2.5" y="14" width="1" height="1" fill="#000000"/>
+    <rect id="fx-vehicle-rear-wheel" x="0.5" y="14" width="1" height="1" fill="#000000"/>
+  </g>
+
+  <g id="master-group">
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+        <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+        <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+        <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+        <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+      </g>
+
+      <g id="eyes-blink">
+        <g id="eyes-color-group" fill="#000000">
+          <!-- One art pixel left, toward the vehicle. §Eyes. -->
+          <rect id="left-eye" x="3" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="9" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+  </g>
+  <!-- #6F4436 is declared for the palette, not drawn: see the note above. -->
+</svg>

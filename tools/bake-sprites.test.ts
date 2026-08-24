@@ -12,6 +12,7 @@ import { SOURCE as GYM } from '../packages/renderer/src/sprites/gym.data.ts';
 import { SOURCE as IDLE } from '../packages/renderer/src/sprites/idle.data.ts';
 import { loadSprite } from '../packages/renderer/src/sprites/index.ts';
 import { SOURCE as OVERHEATED } from '../packages/renderer/src/sprites/overheated.data.ts';
+import { SOURCE as PAYOFF } from '../packages/renderer/src/sprites/payoff.data.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
@@ -47,6 +48,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['gym', GYM],
   ['idle', IDLE],
   ['overheated', OVERHEATED],
+  ['payoff', PAYOFF],
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
@@ -277,14 +279,25 @@ describe('the baked animations', () => {
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
- * **The bound is also an escape, and one bake already takes it.** Any pose whose
- * contiguous bottom band is deeper than `LEG_BAND` returns 0 without the walk
- * ever looking for a gap, so the assertion passes for reasons that have nothing
- * to do with the legs. `overheated` is splooted: its bottom-most row is the
- * torso and there are no legs beneath it, so this reads 0 vacuously. What holds
- * there instead is contiguity — a single connected body component on all 48
- * frames — and nothing here asserts it. A second sploot would get the same
- * green light and the same absence of coverage.
+ * **The bound is an escape that every bake takes, and this gate has never
+ * gated anything.** Measured on 24 Aug across all eleven animations: the
+ * contiguous bottom band exceeds `LEG_BAND` in every one, so `hipGap` returns
+ * 0 through the early return without ever looking for a gap. Windowing the row
+ * test to the legs' own columns does not change it.
+ *
+ * The cause is structural rather than per-animation. The walk assumes it can
+ * pass up through the legs and out the other side, and in `base.svg` the legs
+ * are flush against the torso — legs at y13-15, torso at y6-13 — so the band
+ * from the feet runs through the whole body, seventy-odd rows, and trips the
+ * bound every time. An earlier version of this comment said one bake took the
+ * escape and named `overheated`; that was true and far too narrow.
+ *
+ * **So this assertion is currently decoration.** It is left in place, failing
+ * nothing and claiming nothing, because deleting it would lose the one written
+ * account of what it was for. What would actually detect a body lifted off its
+ * legs is a connectivity check — a single body component per frame — which
+ * `componentSizes` below already computes for the star clearance and which
+ * nothing yet applies here.
  */
 const LEG_BAND = 24;
 
