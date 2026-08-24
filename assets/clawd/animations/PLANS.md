@@ -1106,31 +1106,32 @@ four, so a mote glides instead of hopping 9 pixels twice a second. **Check
 separation analytically before rendering**; the rectangles are known from the
 keyframes, and 96 frames of three pairs is a loop, not a render.
 
-**Three things shipped known and measured rather than fixed**, all judged LOW
-by the critic that found them and all recorded so the next person does not
-have to rediscover them:
+**Three things a critic found and passed as benign, fixed anyway**, because
+they were cheap once the geometry was settled and each had a checkable
+invariant:
 
-- **The brim's bottom edge is on the horizon.** `paintEnvironment` puts the
-  horizon at unit y 6.50 and the brim runs y 5.5 to 6.5, so on 21 of 96 frames
-  its bottom row is flush with the sea's first row and on 18 more it covers it.
-  The one-unit right overhang is entirely against sky and sea, so on those
-  frames it reads as a pale tab welded to the horizon. **Half a unit either way
-  clears it**, and the reason it was not moved is that up costs the overlap
-  with the skull the bob depends on and down puts the whole brim in the sea
-  band. This has now been raised in two consecutive reviews.
-- **Two specks weld to the brim.** The specks on the widest cone row share the
-  brim's top edge, so they rasterise as one pale run rather than as specks. The
-  file claims "no two touching even at a corner", which is true speck-to-speck
-  and not true speck-to-brim.
-- **One speck is flush with the cone's right edge**, which reads as an inward
-  notch in the silhouette at dawn and day, where `#C9D1D9` is 1.10:1 and 1.01:1
-  against the low sky band. Hue separation carries it at true size.
+- **The brim's pale overhang sat on the horizon.** `paintEnvironment` puts the
+  horizon at unit y 6.50 and the brim spans 5.5 to 6.5, riding to 7.125 on the
+  bob, so the one unit projecting past the torso was a bright bar with nothing
+  behind it but sky and sea — flush with the sea's first row on 21 of 96 frames
+  and covering it on 18 more. **Moving the brim does not fix this**, and that is
+  the part worth keeping: the torso's own top edge travels 6.00 to 6.63, so it
+  crosses 6.50 by itself, and anything sitting on the head is at the horizon on
+  part of the loop. What is fixable is whether the thing at the horizon is the
+  brightest object on the panel. The overhang is dark now and the pale stops at
+  the torso's edge, which keeps the silhouette the overhang was added for.
+- **Two specks welded to the brim** by sharing its top edge, so they rasterised
+  as one pale run rather than as specks — the file claimed "no two touching even
+  at a corner", which was true speck-to-speck and false speck-to-brim.
+- **One speck was flush with the cone's right edge**, which is not a speck but a
+  notch in the silhouette, at its worst by day where `#C9D1D9` is 1.01:1 against
+  the low sky band.
 
-The reason none of the three was fixed is worth stating plainly: each is a
-geometry change, three hat drafts had already been rejected on sight, and a
-fourth round-trip trades a certain risk of new defects against three benign
-ones. **Prefer the recorded defect to the unreviewed fix** when a critic has
-said ship.
+All three now hold as invariants rather than as intentions, and each is
+asserted against a planted mutant: every speck sits a quarter unit clear of its
+row's edges and of every other speck, there are zero pale pixels past the
+torso's right edge, and the brim's pale run measures exactly 704 pixels on all
+96 frames — a welded speck makes it 768.
 
 **A cone needs to taper on both sides.** Three drafts of this hat failed in
 three different ways: a pale band across it read as a tiered cake, then every

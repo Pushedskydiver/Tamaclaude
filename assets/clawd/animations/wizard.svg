@@ -348,17 +348,37 @@
           <rect id="fx-hat-r5" x="6" y="-0.5" width="1.5" height="1"/>
         </g>
         <!-- Six specks, so the cone carries at night without a band cutting
-             it in half. Scattered, and no two touching even at a corner: a
-             run of them is a stripe, which is what a band was rejected for. -->
+             it in half. Every one sits a quarter unit clear of its row's edges
+             and of every other speck: a speck flush with the cone's edge is not
+             a speck, it is a notch in the silhouette, and one flush with the
+             brim welds into it and becomes part of the band. Both were shipped
+             once and caught by a critic. -->
         <g id="fx-hat-specks" fill="#C9D1D9">
-          <rect x="5" y="4.5" width="1" height="1"/>
-          <rect x="9" y="4.5" width="1" height="1"/>
-          <rect x="7" y="3.5" width="1" height="1"/>
-          <rect x="5.5" y="2.5" width="1" height="1"/>
-          <rect x="8.5" y="2.5" width="1" height="1"/>
-          <rect x="7" y="1.5" width="1" height="1"/>
+          <rect x="5" y="4.75" width="0.75" height="0.5"/>
+          <rect x="9" y="4.75" width="0.75" height="0.5"/>
+          <rect x="7" y="3.75" width="0.75" height="0.5"/>
+          <rect x="5.5" y="2.75" width="0.75" height="0.5"/>
+          <rect x="8" y="2.75" width="0.75" height="0.5"/>
+          <rect x="6.75" y="1.75" width="0.75" height="0.5"/>
         </g>
-        <rect id="fx-hat-brim" x="2" y="5.5" width="12" height="1" fill="#C9D1D9"/>
+        <!-- The brim. Pale only where the peach torso is behind it; the
+             overhang past the torso's right edge is dark.
+
+             The overhang is what makes the brim read as a brim rather than as
+             the head's own outline, and it has to be there. But `paintEnvironment`
+             puts the horizon at unit y 6.50 and this brim spans 5.5 to 6.5,
+             riding to 7.125 on the bob — so a *pale* overhang is a bright bar
+             with nothing behind it but sky and sea, sitting on the scenery's
+             strongest line. Measured before the fix: flush with the sea's first
+             row on 21 of 96 frames and covering it on 18 more.
+
+             Moving the brim does not fix it, and this is worth writing down:
+             the torso's own top edge travels 6.00 to 6.63 as he breathes, so it
+             crosses 6.50 by itself. Anything sitting on the head is at the
+             horizon on part of the loop. What can be fixed is whether the thing
+             at the horizon is the brightest object on the panel. -->
+        <rect id="fx-hat-brim" x="2" y="5.5" width="11" height="1" fill="#C9D1D9"/>
+        <rect id="fx-hat-brim-tip" x="13" y="5.5" width="1" height="1" fill="#000000"/>
       </g>
 
       <!-- A dark ring around a pale core: one object rather than a larger
