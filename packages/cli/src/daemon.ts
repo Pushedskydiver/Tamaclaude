@@ -255,6 +255,23 @@ function messageFor(
   pack: PackManifest,
   now: number,
 ): string {
+  // A compound key first, then the bare state. `FAILED:rate_limit` lets a pack
+  // say something different when the limit is the reason, which is what
+  // `events.ts` records `error_type` as having been kept open for — and it
+  // matters now that two `FAILED` values draw different pictures, because
+  // otherwise `overheated` and `dizzy` share a message band and the picture is
+  // the only difference between them. No schema change: `quips.mapped` is
+  // already `z.record(z.string(), z.string())`, so any key validates.
+  //
+  // Read off the hero rather than through `resolvePanel`, which returns state
+  // and tool but not `errorType`. `sessions[0]` is the hero and is a whole
+  // `Session`, so the value is already here.
+  const errorType = panel.sessions.at(0)?.errorType;
+  const refined =
+    panel.state === 'FAILED' && errorType !== undefined
+      ? pack.quips.mapped[`${panel.state}:${errorType}`]
+      : undefined;
+  if (refined !== undefined) return refined;
   const mapped = pack.quips.mapped[panel.state];
   if (mapped !== undefined) return mapped;
   if (panel.tool !== undefined) return panel.tool;
@@ -264,6 +281,29 @@ function messageFor(
     return pack.quips.idle[minute % pack.quips.idle.length] ?? panel.state;
   }
   return panel.state.toLowerCase().replaceAll('_', ' ');
+}
+
+/**
+ * Which animation a resolved panel shows.
+ *
+ * Extracted and exported for one reason: as three lines inlined in `paintOnce`
+ * it had **no test at all**. `paintOnce` is not exported and `sceneFor` takes
+ * the animation as an input, so deleting the `errorType` argument left all 430
+ * tests green with the feature gone — which is the same shape of silent gap as
+ * `packages/hooks` reading a field name that does not exist. One export and one
+ * test is the whole cost of noticing.
+ *
+ * `sessions[0]` is the hero by construction: `resolve.ts` sorts once and
+ * returns `state` from `ranked.at(0)` and `sessions` from the same array, so
+ * they cannot disagree.
+ */
+export function animationForPanel(
+  panel: ReturnType<typeof resolvePanel>,
+): AnimationName {
+  return animationFor(panel.state, {
+    tool: panel.tool,
+    errorType: panel.sessions.at(0)?.errorType,
+  });
 }
 
 /**
@@ -486,7 +526,9 @@ async function paintOnce(
   // the empty check below is what that buys. Both are currently unreachable:
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
-  // before it is wired, which is how `overheated` sits today. They are kept because the two lists are
+  // before it is wired, which `overheated` did between 23 and 24 Aug. The two
+  // lists happen to be equal again now, which is exactly when this guard is
+  // easiest to delete and worst to be without. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what
@@ -497,7 +539,7 @@ async function paintOnce(
   // Earlier versions of this comment said three states fall back to
   // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
   // reached only from `WORKING`, with an unmapped tool or with no tool.
-  const wanted = animationFor(panel.state, panel.tool);
+  const wanted = animationForPanel(panel);
   const frames = await framesFor(wanted);
   const showing =
     frames.length > 0

@@ -53,12 +53,17 @@ export type HookEvent = {
    *
    * More specific than the single failure state the plan assumed.
    *
-   * **Carried, not yet read.** `session.ts` stores it and nothing downstream
-   * branches on it: the quip is keyed on the state alone and `FAILED` shows
-   * `dizzy` whichever error arrived. It is kept because it arrives exactly
-   * once and cannot be recovered afterwards, so dropping it here would close
-   * the option — a rate limit and an auth failure could deserve different
-   * quips. Today they do not get them.
+   * **Read since 24 Aug.** `rate_limit` and `overloaded` draw their own screen
+   * and can carry their own quip; the other eight keep `dizzy` and the `FAILED`
+   * line. The reason for storing it — that it arrives exactly once and cannot
+   * be recovered afterwards — is why the option was still open three weeks
+   * later when something wanted it.
+   *
+   * **The wire name is `error`.** This field is ours; the translation lives in
+   * `packages/hooks`, which read `error_type` until 24 Aug. `error_type`
+   * appears nowhere in the hook documentation, so every real payload arrived
+   * with nothing here — and no test noticed, because the fixtures were written
+   * from the same assumption.
    */
   readonly errorType?: string;
 };

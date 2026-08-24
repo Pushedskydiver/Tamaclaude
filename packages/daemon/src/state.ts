@@ -8,6 +8,15 @@
  * two vocabularies are separate — a pack should not have to track Claude
  * Code's hook names, which change on Anthropic's schedule rather than ours.
  *
+ * **One deliberate exception, since 24 Aug:** a quip may be keyed
+ * `FAILED:<error>` — `FAILED:rate_limit` — to say something different when a
+ * usage limit is the reason rather than an ordinary failure. That embeds an
+ * upstream *value* rather than a hook name, which is a smaller version of the
+ * same coupling for the same reason, so it is written down rather than assumed.
+ * It degrades gracefully: an unknown suffix falls through to the bare state,
+ * and the animation falls through to `dizzy`. `packs/example/README.md` carries
+ * the same note, because that is the file a pack author copies from.
+ *
  * Eight of the screen spec's ten §5 states. `COMPACTING` is absent for the
  * reason in `STATE_RANK`; `DISCONNECTED` is absent because it is not a property
  * of a session at all — it says the panel has no host, which the transport

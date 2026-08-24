@@ -145,14 +145,21 @@ describe('tamaclaude-notify', () => {
       });
     });
 
-    it('carries error_type, which nothing reads yet', async () => {
+    it('reads the error off `error`, the name the hook actually sends', async () => {
+      // The field is `error`. A first version read `error_type`, which appears
+      // nowhere in the hook documentation, so every real `StopFailure` arrived
+      // carrying no error at all and the screen keyed on it could never appear.
+      // Nothing failed — a missing optional field looks exactly like an error
+      // that carried no type — so this test is the only thing between that bug
+      // and the panel. It asserts the *documented wire name*, which is the half
+      // the original got wrong while checking the values against the docs.
       const daemon = listen(socket);
       await runHook(
         socket,
         JSON.stringify({
           session_id: 'abc123',
           hook_event_name: 'StopFailure',
-          error_type: 'rate_limit',
+          error: 'rate_limit',
         }),
       );
       const body = await daemon.received;

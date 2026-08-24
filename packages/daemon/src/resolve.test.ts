@@ -72,10 +72,9 @@ describe('three sessions working at once', () => {
     expect(resolvePanel(registry, now).state).toBe('WORKING');
     expect(ids(registry, now)).toEqual(['s3', 's2', 's1']);
     expect(
-      animationFor(
-        resolvePanel(registry, now).state,
-        resolvePanel(registry, now).tool,
-      ),
+      animationFor(resolvePanel(registry, now).state, {
+        tool: resolvePanel(registry, now).tool,
+      }),
     ).toBe('typing');
   });
 
@@ -205,7 +204,7 @@ describe('the payoff against other sessions', () => {
     registry = observe(registry, { sessionId: 'finished', kind: 'Stop' }, T0);
     const panel = resolvePanel(registry, T0 + DONE_AFTER_MS);
     expect(panel.state).toBe('WORKING');
-    expect(animationFor(panel.state, panel.tool)).toBe('gym');
+    expect(animationFor(panel.state, { tool: panel.tool })).toBe('gym');
   });
 
   it('does take the stage from a resting one', () => {

@@ -25,7 +25,8 @@
   "quips": {
     "mapped": {
       "FAILED": "well, that happened",
-      "NEEDS_PERMISSION": "may I?"
+      "NEEDS_PERMISSION": "may I?",
+      "FAILED:rate_limit": "cooling off"
     },
     "idle": [
       "...",

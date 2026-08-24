@@ -5,19 +5,36 @@ import { SPRITE_NAMES } from '@tamaclaude/renderer';
 import { animationFor, ANIMATIONS, FALLBACK } from './animation.js';
 import { SESSION_STATES, stateRank } from './state.js';
 
+describe('the payoff for a spent session', () => {
+  it('shows overheated for a rate limit and dizzy for anything else', () => {
+    // The error has been stored since Stage 3 and was read by nothing. This is
+    // the first thing to read it: `rate_limit` and `overloaded` both mean "wait
+    // and come back", which is what the picture says, and the other eight
+    // documented values keep `dizzy`.
+    expect(animationFor('FAILED', { errorType: 'rate_limit' })).toBe(
+      'overheated',
+    );
+    expect(animationFor('FAILED', { errorType: 'overloaded' })).toBe(
+      'overheated',
+    );
+    expect(animationFor('FAILED', { errorType: 'authentication_failed' })).toBe(
+      'dizzy',
+    );
+    expect(animationFor('FAILED')).toBe('dizzy');
+  });
+});
+
 describe('animationFor', () => {
   it('maps the three editing tools to typing', () => {
     const tools = ['Edit', 'Write', 'NotebookEdit'];
-    expect(tools.map((tool) => animationFor('WORKING', tool))).toEqual([
-      'typing',
-      'typing',
-      'typing',
-    ]);
+    expect(
+      tools.map((tool) => animationFor('WORKING', { tool: tool })),
+    ).toEqual(['typing', 'typing', 'typing']);
   });
 
   it('maps Bash to gym and Read to bouldering', () => {
-    expect(animationFor('WORKING', 'Bash')).toBe('gym');
-    expect(animationFor('WORKING', 'Read')).toBe('bouldering');
+    expect(animationFor('WORKING', { tool: 'Bash' })).toBe('gym');
+    expect(animationFor('WORKING', { tool: 'Read' })).toBe('bouldering');
   });
 
   it('falls an unknown tool back to thinking rather than throwing', () => {
@@ -25,12 +42,12 @@ describe('animationFor', () => {
     // unrecognised tool is the ordinary case. It must not be an error, and it
     // must not read as `idle` — that would claim nothing is happening while a
     // tool runs, which is the one direction the panel must never be wrong in.
-    expect(animationFor('WORKING', 'mcp__linear__create_issue')).toBe(
+    expect(animationFor('WORKING', { tool: 'mcp__linear__create_issue' })).toBe(
       'thinking',
     );
-    expect(animationFor('WORKING', 'Grep')).toBe('thinking');
-    expect(animationFor('WORKING', '__proto__')).toBe('thinking');
-    expect(animationFor('WORKING', 'constructor')).toBe('thinking');
+    expect(animationFor('WORKING', { tool: 'Grep' })).toBe('thinking');
+    expect(animationFor('WORKING', { tool: '__proto__' })).toBe('thinking');
+    expect(animationFor('WORKING', { tool: 'constructor' })).toBe('thinking');
   });
 
   it('falls back when WORKING carries no tool at all', () => {
@@ -43,7 +60,7 @@ describe('animationFor', () => {
   });
 
   it('ignores the tool for any state that is not WORKING', () => {
-    expect(animationFor('IDLE', 'Bash')).toBe('idle');
+    expect(animationFor('IDLE', { tool: 'Bash' })).toBe('idle');
   });
 
   it('gives the two answered attention states their own art', () => {
@@ -97,7 +114,7 @@ describe('animationFor', () => {
     const unbuilt = [
       ...SESSION_STATES.map((state) => animationFor(state)),
       animationFor('WORKING'),
-      animationFor('WORKING', 'Read'),
+      animationFor('WORKING', { tool: 'Read' }),
     ].filter((name) => !baked.includes(name));
     expect(unbuilt).toEqual([]);
   });
