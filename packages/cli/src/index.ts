@@ -10,7 +10,7 @@
 import type { ResolvedPack } from './pack.js';
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
@@ -164,6 +164,49 @@ async function installAgent(argv: readonly string[]): Promise<void> {
   process.stdout.write(`Installed and started. Logs go to ${options.log}\n`);
 }
 
+/**
+ * `tamaclaude uninstall-agent` — stop it, and stop it coming back.
+ *
+ * **An install with no uninstall is half a feature, and this one especially.**
+ * The agent has `RunAtLoad`, so it starts at every login, and `KeepAlive`, so
+ * it restarts whenever it exits non-zero. A `SIGTERM` stops it until the next
+ * login and no further. Without this command the only way off is `launchctl
+ * bootout` and `rm`, typed correctly, by someone who knows both — which is not
+ * the person this is a gift for.
+ *
+ * Not a dry run, unlike installing. Removal is the reversible direction: the
+ * worst case is re-running `install-agent --apply`, whereas the worst case of
+ * installing by accident is a process that starts itself forever on somebody
+ * else's Mac.
+ *
+ * The plist is deleted as well as booted out. Leaving the file would mean the
+ * agent returns at the next login having apparently been removed, which is the
+ * kind of not-quite-gone that costs an evening.
+ */
+function uninstallAgent(): void {
+  const plistPath = agentPlistPath(homedir());
+  const domain = `gui/${String(process.getuid?.() ?? 0)}`;
+  try {
+    execFileSync('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`], {
+      stdio: 'ignore',
+    });
+    process.stdout.write(`Stopped ${AGENT_LABEL}\n`);
+  } catch {
+    // Not loaded. That is one of the two ways to already be uninstalled, and
+    // it is not a failure — the other half of the job may still need doing.
+    process.stdout.write(`${AGENT_LABEL} was not running\n`);
+  }
+  if (existsSync(plistPath)) {
+    rmSync(plistPath);
+    process.stdout.write(`Removed ${plistPath}\n`);
+  } else {
+    process.stdout.write(`No plist at ${plistPath}\n`);
+  }
+  process.stdout.write(
+    'The pack, the socket and the log are left alone; nothing else was touched.\n',
+  );
+}
+
 /** Printed for a missing device, an unknown command, and anything help-shaped. */
 const USAGE =
   'usage: tamaclaude daemon [device]\n' +
@@ -174,7 +217,9 @@ const USAGE =
   '  `tamaclaude pack` says which one, and when its birthday fires\n' +
   '  with no command, prints one line of smoke-test output\n' +
   '       tamaclaude install-agent [--apply]\n' +
-  '  starts the daemon at login; dry run unless --apply\n';
+  '  starts the daemon at login; dry run unless --apply\n' +
+  '       tamaclaude uninstall-agent\n' +
+  '  stops it and stops it coming back\n';
 
 async function devicePathFor(argv: readonly string[]): Promise<string> {
   const chosen = chooseDevice(argv[0], await findPanels(nodeUsb()));
@@ -273,6 +318,8 @@ try {
     pack();
   } else if (command === 'install-agent') {
     await installAgent(rest);
+  } else if (command === 'uninstall-agent') {
+    uninstallAgent();
   } else if (command === undefined) {
     smoke();
   } else {

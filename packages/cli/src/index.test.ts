@@ -310,6 +310,24 @@ describe('the tamaclaude binary', () => {
     expect(status).toBe(0);
   });
 
+  it('uninstalls cleanly when nothing is installed', () => {
+    // The path that must never fail: someone runs it twice, or runs it on a
+    // machine where the agent was never installed. An uninstall that errors
+    // when there is nothing to remove teaches people to ignore its output.
+    //
+    // `launchctl bootout` genuinely fails here — the label is not loaded — and
+    // that is the expected half of the answer rather than an error.
+    const { out, status } = run(['uninstall-agent'], {
+      TAMACLAUDE_PACK: EXAMPLE,
+    });
+    expect(out).toContain('was not running');
+    expect(out).toContain('No plist at');
+    // It says what it did *not* touch, because a person running an uninstall
+    // wants to know whether their pack survived it.
+    expect(out).toContain('left alone');
+    expect(status).toBe(0);
+  });
+
   describe('chooseDevice', () => {
     it('takes the device it was given, without looking', () => {
       // The escape hatch, and what gets typed during the soak week. A named
