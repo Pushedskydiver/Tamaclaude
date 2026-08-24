@@ -16,6 +16,7 @@ import { SOURCE as PAYOFF } from '../packages/renderer/src/sprites/payoff.data.t
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
+import { SOURCE as WIZARD } from '../packages/renderer/src/sprites/wizard.data.ts';
 import { fingerprint } from './art-fingerprint.ts';
 
 /**
@@ -34,10 +35,15 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and ten full renders into `pnpm test`. It would also be flaky —
- * `svg2frames` is not bit-reproducible, and two runs of `confused` differ on
- * one frame of 96 at a claw edge that lands on a fractional pixel and snaps
- * either way.
+ * and twelve full renders into `pnpm test`.
+ *
+ * **It used to be flaky too, and that is no longer the reason.** `svg2frames`
+ * screenshotted without waiting for the seek to be painted, so two runs of
+ * `confused` could differ on one frame of 96 at a claw edge landing on a
+ * fractional pixel. That was fixed on this branch, and the tool now refuses to
+ * write a frame whose two consecutive captures disagree. The cost is the whole
+ * argument now; the flakiness half is recorded because it was the stated
+ * justification and would otherwise read as still standing.
  */
 
 const BAKED: ReadonlyArray<readonly [string, string]> = [
@@ -52,6 +58,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
+  ['wizard', WIZARD],
 ];
 
 /**
@@ -62,6 +69,15 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
  * moment to re-derive the clearance rather than re-derive the constant.
  */
 const STAR_PIXELS = 320;
+
+/**
+ * One `wizard` mote: the same five-cell cross at half scale, so 5 cells of 16.
+ *
+ * Half scale is not decoration. At whole units three crosses converging on a
+ * two-unit orb cannot avoid each other — measured, two were touching on 24 of
+ * 96 frames — and quartering the area is what buys the clearance.
+ */
+const MOTE_PIXELS = 80;
 
 /**
  * The eight neighbours of a pixel.
@@ -272,15 +288,23 @@ describe('the baked animations', () => {
  *
  * Walks up from the bottom-most drawn row — the feet — through the legs, and
  * counts the empty rows immediately above them. Derived rather than measured
- * against a fixed row, because `typing` is seated and his legs start eight rows
- * lower than everyone else's.
+ * against a fixed row, so a pose that moves the legs is still covered.
+ *
+ * An earlier version of this sentence justified that by saying `typing` is
+ * seated with its legs eight rows lower. It is not: `typing.svg` puts them at
+ * `y="13"`, the same as every other animation, and its own comment says
+ * "Planted." What makes it *look* seated is the laptop occluding the tops of
+ * the legs. There is no seated pose anywhere in the corpus — the only pose
+ * variant is `overheated`'s sploot, which kept the torso bottom on the ground
+ * line precisely so the fixed contact shadow still fit. Corrected because a
+ * plan was written against this sentence and inherited the error.
  *
  * Bounded to `LEG_BAND` rows above the feet. Unbounded, the walk runs past the
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
  * **The bound fires on every correct pose, so the 0 is vacuous — and that is
- * not the problem.** Measured across all eleven bakes: the contiguous band
+ * not the problem.** Measured across all twelve bakes: the contiguous band
  * from the feet is 42 to 200 rows, well over the bound, so the walk never
  * looks for a gap. The exception proves the mechanism rather than the rule —
  * `dizzy` drops to 16 on the six frames where an orbiting star is the
@@ -375,21 +399,103 @@ describe('the body stays on its legs', () => {
   });
 });
 
-describe("dizzy's orbiting stars", () => {
-  it('stay clear of the body and of each other', async () => {
-    // See `componentSizes` for what this is and why it is counted from the
-    // bake. Three runs of 320 on every frame, or a star has merged with the
-    // body or with another star.
-    const frames = await loadSprite('dizzy');
+/**
+ * How many separate effect glyphs a frame must show, per animation.
+ *
+ * `dizzy`'s three stars orbit continuously, so all three are on every frame.
+ * `wizard`'s three motes each spend the first of twelve keyframes transparent
+ * — the gap between one arriving and the next — and they are 8 and 16 frames
+ * apart on a 24-frame track, so exactly one is away on six frames of every
+ * twenty-four.
+ *
+ * **The `< 2` window is not "two frames a position", and the difference is
+ * load-bearing.** `dizzy.svg` §Why nothing rotates measures the real dwell as
+ * 2, 3, 1 repeating: the twelve keyframe percentages are written to six
+ * decimals, `8.333333%` of 3s is 249.99999ms and `16.666667%` is 500.00001ms,
+ * so a boundary falls either side of a sample depending on which way the
+ * percentage rounded. `wizard` inherits those percentages, so it inherits the
+ * dwell. This window is right only because keyframe 0 happens to draw the 2 of
+ * that cycle — had the rounding put the 3 or the 1 there, the same reasoning
+ * would produce a wrong expected sequence, and because the visibility signal
+ * and the fusion signal are the same number, a wrong window can mask a real
+ * merge. Re-derive it against `dizzy.svg` before trusting it for a third
+ * animation.
+ *
+ * Both numbers are derived from the stylesheet rather than measured from the
+ * bake, which is the point: a bake that disagrees is the defect.
+ *
+ * The table is hand-maintained and most animations have nothing separable to
+ * count, so a full-coverage assertion would be wrong. What is not wrong is
+ * remembering that this being hard-coded to `dizzy` is how `wizard` shipped
+ * two motes fused into one glyph for two commits.
+ */
+const EFFECTS: ReadonlyArray<
+  readonly [SpriteName, number, (frame: number) => number]
+> = [
+  ['dizzy', STAR_PIXELS, () => 3],
+  [
+    'wizard',
+    MOTE_PIXELS,
+    (frame) =>
+      3 - [0, 8, 16].filter((delay) => (frame + delay) % 24 < 2).length,
+  ],
+];
+
+describe('componentSizes', () => {
+  // The fusion detector every effect assertion below leans on, and which
+  // nothing exercised directly. `NEIGHBOURS` is eight rather than four
+  // precisely so a corner touch joins two glyphs; until this test that choice
+  // had never been shown to do anything.
+  const cross = (
+    grid: { mask: Uint8Array; width: number },
+    cx: number,
+    cy: number,
+  ) => {
+    for (const [dx, dy] of [
+      [0, -1],
+      [-1, 0],
+      [1, 0],
+      [0, 1],
+      [0, 0],
+    ] as const)
+      grid.mask[(cy + dy) * grid.width + (cx + dx)] = 1;
+  };
+
+  it('joins two crosses that touch only at a corner', () => {
+    const width = 8;
+    const mask = new Uint8Array(width * 8);
+    cross({ mask, width }, 1, 1);
+    cross({ mask, width }, 3, 3);
+    // (2,1) and (3,2) are diagonal neighbours, so the ten cells are one glyph.
+    expect(componentSizes(mask, width)).toEqual([10]);
+  });
+
+  it('keeps two crosses apart when nothing touches', () => {
+    const width = 10;
+    const mask = new Uint8Array(width * 10);
+    cross({ mask, width }, 1, 1);
+    cross({ mask, width }, 6, 6);
+    expect(componentSizes(mask, width)).toEqual([5, 5]);
+  });
+});
+
+describe('orbiting stars and arriving motes', () => {
+  // This generalises what used to be a `dizzy`-only assertion, and the reason
+  // is that the first two drafts of `wizard` shipped the exact defect it
+  // exists for: two motes edge-adjacent, rasterising as one glyph, on 24 of 96
+  // frames. Three lines away from catching it and hard-coded to the one
+  // animation that had already been fixed.
+  it.each(EFFECTS)('%s keeps its effects apart', async (name, size, want) => {
+    const frames = await loadSprite(name);
     // `toEqual` against a list derived from `frames` passes on an empty list,
     // which is the shape a broken loader would hand back.
     expect(frames.length).toBeGreaterThan(0);
-    const stars = frames.map(
+    const seen = frames.map(
       (sprite) =>
         componentSizes(sprite.mask, sprite.frame.width).filter(
-          (size) => size === STAR_PIXELS,
+          (each) => each === size,
         ).length,
     );
-    expect(stars).toEqual(frames.map(() => 3));
+    expect(seen).toEqual(frames.map((_, frame) => want(frame)));
   });
 });

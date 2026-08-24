@@ -7,8 +7,16 @@
  *
  *   node tools/svg2frames.ts <input.svg> [outDir] [scale]
  *
- * Determinism is the whole point: nothing depends on wall-clock time, so the
- * same SVG always produces the same bytes.
+ * Determinism is the whole point, and it takes two things rather than one:
+ * nothing may depend on wall-clock time, *and* the capture has to wait for the
+ * seek to be painted. Only the first was here until 24 Aug, while this header
+ * claimed the guarantee outright — see `seekAnimations` for what that cost.
+ * With both, the same SVG produces the same bytes on the same Chromium and
+ * host: that is what has been verified, over repeated runs, under 20x and 50x
+ * CPU throttling and against a dozen competing processes. Nothing checks it
+ * across platforms, and CI never renders — the six gates do not run
+ * Playwright — so a cross-platform difference would surface in a bake diff
+ * rather than in a red build.
  *
  * Seeking sets each animation's `currentTime` to the elapsed time and nothing
  * else. Do **not** compensate for `animation-delay` here, however tempting it
@@ -20,7 +28,8 @@
  *
  * That mistake is close to undetectable by eye. Negative delays are usually a
  * neat fraction of the period — the two claws tap alternately via `-0.125s`
- * against a `0.25s` cycle — so double-counting lands an exact whole period
+ * on a `0.5s` cycle whose strikes are 0.25s apart — so double-counting lands
+ * an exact strike period
  * away and renders as perfect lockstep: everything still moves, just together.
  * Verified by driving both formulas and reading back the computed transforms.
  */
@@ -186,10 +195,42 @@ function reportSafeArea(highest: number, viewBoxTop: number): void {
   );
 }
 
-/** Seek every animation to `elapsed` ms. The effect applies its own delay. */
-function seekAnimations(elapsed: number): void {
+/**
+ * Seek every animation to `elapsed` ms, and wait for the seek to be painted.
+ *
+ * The effect applies its own delay, so setting `currentTime` is the whole
+ * seek. The two `requestAnimationFrame`s are not: without them
+ * `page.screenshot` races the compositor and can rasterise a partially applied
+ * state.
+ *
+ * **This was shipping wrong frames, not just unstable ones.** Measured on
+ * `payoff`: renders of an unchanged SVG disagreed with each other on 4 of 9
+ * comparisons, always a handful of pixels on one antialiased edge — the right
+ * eye's, at ~32% coverage in one run and ~27% in another. That was the visible
+ * symptom, and it is why re-baking a clean tree produced diffs in sprites
+ * nobody had touched. The cause is worse: with the wait, **9 of 64 frames come
+ * out different from what the tool produced before**, and 8 of those matched
+ * none of ten unwaited runs. So those frames were consistently captured
+ * mid-settle rather than occasionally.
+ *
+ * That the waited raster is the converged one rather than merely another
+ * variant is checked rather than assumed: replacing the two frames with a flat
+ * 250 ms sleep gives output identical to this on all 64 frames, and differing
+ * from the unwaited tool on the same 9. Two frames cost nothing; the sleep
+ * costs 16 seconds an animation.
+ *
+ * One frame is not enough. The first callback runs before the paint that the
+ * style change schedules; the second runs after it, which is the point at
+ * which the screenshot has something settled to capture.
+ */
+async function seekAnimations(elapsed: number): Promise<void> {
   document.getAnimations().forEach((animation) => {
     animation.currentTime = elapsed;
+  });
+  await new Promise((painted) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(painted);
+    });
   });
 }
 
@@ -288,6 +329,28 @@ async function captureFrame(
 ): Promise<{ bytes: Buffer; soft: number }> {
   await page.evaluate(seekAnimations, frame.elapsed);
   const raw = await page.screenshot({ omitBackground: true });
+  // Shoot it twice and require the two to agree.
+  //
+  // The wait in `seekAnimations` is what makes them agree; this is what stops
+  // the wait being removed, or being wrong for some future animation, without
+  // anyone noticing. Every animation is `paused`, so a settled page is static
+  // and two consecutive captures are trivially equal — a disagreement means
+  // the compositor was still working, which is the defect this pair exists to
+  // catch. Measured: with the wait removed it flags 28 of `payoff`'s 64
+  // frames; with it, 0 of 64 there and 0 of 96 on `wizard`.
+  //
+  // It costs a second screenshot per frame — about 1.3s on a 64-frame
+  // animation — and it is here rather than in `pnpm test` because rendering is
+  // a Playwright job the suite deliberately does not do, and because a frame
+  // that was captured mid-settle should fail at the moment it is produced
+  // rather than after it has been baked and committed.
+  const again = await page.screenshot({ omitBackground: true });
+  if (!raw.equals(again)) {
+    throw new Error(
+      `frame at ${frame.elapsed}ms rasterised differently on two consecutive ` +
+        `captures, so the compositor had not settled — see \`seekAnimations\``,
+    );
+  }
   const snapped = await page.evaluate(snapToPalette, {
     uri: `data:image/png;base64,${raw.toString('base64')}`,
     palette: frame.palette,

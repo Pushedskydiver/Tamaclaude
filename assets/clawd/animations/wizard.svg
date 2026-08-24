@@ -1,0 +1,401 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="12">
+  <!--
+    Clawd: wizard (WebSearch, WebFetch)
+
+    Something is being called in from somewhere else, and it is arriving. Plan:
+    assets/clawd/animations/PLANS.md §Wizard.
+
+    Generated against assets/clawd/base.svg. Every base element appears below at
+    its original coordinates and colours except `ground-shadow`, which
+    §Clawd lives somewhere forbids carrying. All motion, including the eyes'
+    one-pixel look to the left, is CSS applied by ID.
+
+    ── Two drawn colours must not meet inside a scaling group ────────────
+
+    This is the rule the first two drafts broke, and it is checklist §7.
+
+    `#breathe` is a scale, so every edge inside it lands off the pixel grid and
+    Chromium antialiases it. `snapToPalette` then resolves the blend to the
+    nearest declared colour by squared RGB, and for a pale-on-dark prop that
+    nearest colour is the *body*: `#C9D1D9` over `#000000` at half coverage is
+    (100,104,108), which is 15,909 from `#DE886D` against 32,480 from black and
+    33,107 from the pale. **Peach wins by more than twice.** Measured on the
+    first bake: 81 of 96 frames carried peach inside the hat, and 87 had
+    transparent rows cutting it into floating bars.
+
+    So the hat, the orb and the motes all sit outside `#breathe` and move only
+    by whole device pixels. **Not one of them is static** — a hat that ignored
+    the breath was the first fix and it read as pasted on. What protects them is
+    the whole-pixel translate, not stillness: a whole pixel is never partially
+    covered, so there is nothing to antialias.
+
+    What may stay inside `#breathe` is geometry whose edges face the
+    background. Not because such edges are exempt from snapping — `BACKGROUND`
+    in `tools/frame-palette.ts` is `[0,0,0]` and is added to the palette itself,
+    so those edges are composited toward black and snapped like everything
+    else. It is safe *here* because this document declares three colours and
+    nothing sits between peach and black, so the ramp resolves to one or the
+    other. `payoff.svg` declares `#6F4436`, which does sit in that ramp and
+    takes 50 of its 101 steps. Count the ramp before trusting it.
+
+    ── Where the magic goes, and why it is above him ─────────────────────
+
+    Measured off `paintEnvironment` rather than recalled: the rock occupies
+    units x -2.25 to 1.00, **y 6.63 to 8.75**; the pool is x 11.25 to 17.50,
+    y 12.50 to 15.63; the horizon is at y 6.50. The first draft's orb sat at
+    x -2 to 1, y 6 to 9 — four dark cells on dark stone. A sprite-only review
+    cannot catch that, because the sprite is composited afterwards. **Render it
+    on the four grounds before believing the staging.**
+
+    The left flank is 3 units wide and the rock is most of it. The clear air
+    above him runs from the -4 crop line to the torso top at y 6, which is 10
+    units, so the claw is raised and the motes fall into it.
+
+    ── The hat ───────────────────────────────────────────────────────────
+
+    Stepped rects, not a polygon: `svg2frames`'s safe-area walk is
+    `querySelectorAll('rect')`, so a `<polygon>` is invisible to the one gate
+    that checks the -4 crop line, which is the line a hat is most likely to
+    cross. `paintRock` is the worked example.
+
+    Widths run 7, 5.5, 4.5, 3.5, 2.5, 1.5 from the brim up, tapering on both
+    sides, with the centres running 7.5, 7.25, 7.25, 7.25, 6.75, 6.75 so the
+    tip leans left toward the arriving motes. Four of the five steps move both
+    edges; the fourth holds the left at 5.5 and moves only the right, which is
+    the one place it does what the rejected draft did everywhere. Two earlier drafts got this
+    wrong in opposite directions: one left-aligned every row at x 4, giving a
+    vertical wall and one slope, which rendered as a shark fin; the next put a
+    hard lateral kink in a five-row cone and it rendered as a blotched lump.
+    A clean monotonic taper reads as a mound, which is what the second draft
+    built and what a critic called it. Upstream clawd-tank's `hat-mishap`
+    reaches the same conclusion from the other side — its `#hat-cone` is 8
+    rects running 4-6-7-6-8-9-11-11, non-monotonic at the 7-6 step.
+
+    Six pale specks carry the two-tone survival through the cone, and the brim
+    carries it under them. A pale *band* across the cone lands on its widest
+    step and reads as icing on a stack. Upstream does the same thing with a
+    6-cell `#hat-stars` and a brim lighter than its cone.
+
+    The brim spans x 2 to 14, one unit proud of the torso on the right, so it
+    adds to the silhouette rather than tracing the body's own width. It does
+    not overhang on the left because the raised claw is there.
+
+    The apex sits at unit y -0.5, which is 3.5 units clear of the crop line at
+    rest and 4.125 at maximum bob.
+
+    ── Two tones, because one is invisible at some hour ──────────────────
+
+    Measured with `tools/contrast.ts` against the band a thing at head height
+    actually sits in: `#C9D1D9` is 1.01:1 against day sky low, and `#000000` is
+    1.55:1 against night sky low and 1.08:1 against night sky top. Whichever
+    single tone you pick it disappears at one time of day, so every added
+    element here is a dark mass with pale in it.
+
+    No new colour: only `#000000`, `#C9D1D9` and `#DE886D` are declared, all
+    already in the corpus.
+
+    ── The claw holds something ──────────────────────────────────────────
+
+    §What a claw cannot do wants a claw rotated *and* extended, pivoted at the
+    shoulder, and adds a third clause: give it something to hold. `rotate(65deg)
+    scaleX(2.4)` about the shoulder at (2,10) puts the claw tip corners at
+    (0.88, 5.23) and (-0.94, 6.07) — above the rock, and overlapping the orb.
+    The claw is inside `#breathe` and the orb is not, so the lower corner
+    drifts out past the orb's left edge by up to a device pixel as the body
+    scales; the corner is not the contact. §Props need contact is discharged by
+    measurement instead, against a variant with the orb deleted: the claw's
+    peach is under the orb on all 96 frames, 22 to 92 pixels of its 256.
+    Sharing an edge is not contact, and neither is a corner that happens to
+    land inside a box.
+
+    80 degrees was tried first and rendered as nothing at all. Near-vertical the
+    arm hugs the torso's own edge, and peach on peach has no silhouette.
+
+    ── Three motes ───────────────────────────────────────────────────────
+
+    Each is `dizzy`'s five-cell plus — a dark cross with a pale core — at
+    half scale: 0.5-unit cells, so 1.5 units across and 80 device pixels of
+    area, against `dizzy`'s 320 at whole-unit cells.
+
+    **Half scale is the fix for the defect that survived two drafts.** At whole
+    units three crosses converging on a 2-unit orb cannot avoid each other: two
+    of them were edge-adjacent on 24 of 96 frames, rasterising as one glyph,
+    which is exactly what `componentSizes` in `tools/bake-sprites.test.ts`
+    exists to catch and what its `NEIGHBOURS` comment describes. Quartering the
+    area buys the room. Verified from the bake over all 96 frames and all three
+    pairs — not from the keyframes, because a keyframe model assumes a uniform
+    two-frame dwell and that is not what renders (below) — and all three on one
+    metric — empty device pixels between nearest
+    cells, measured from the bake rather than from the keyframes: the closest
+    any two motes come is **3**, on frames 6, 30, 54 and 78, and none comes
+    closer than 15 to the hat or 6 to the orb. An earlier version of this
+    sentence read 5/15/6, which is three numbers on three metrics: 15 and 6 are
+    empty-pixel gaps and 5 was a Euclidean nearest-pixel distance. The 3 is the
+    one with the least headroom over the `componentSizes` gate, so it is the
+    worst of the three to round up.
+
+    Twelve positions on a 3s track — `dizzy`'s cadence exactly, and that
+    includes the part `dizzy` had to write down. **The dwell is not two frames
+    a position**; measured, it is 2, 3, 1 repeating. `dizzy.svg` §Why nothing
+    rotates has the cause: the twelve keyframe percentages are written to six
+    decimals, `8.333333%` of 3s is 249.99999ms and lands just before frame 2's
+    sample while `16.666667%` is 500.00001ms and lands just after frame 4's, so
+    a boundary falls either side of a sample depending on which way the
+    percentage rounded. This file inherits those percentages, so it inherits
+    the dwell — and PLANS.md §Dizzy records that the even-spacing claim was
+    asserted once and retracted, with the retraction written only into the SVG.
+    Asserting it here again would have made that three times. The second draft used six positions of four frames, and a 9 pixel
+    jump every half second reads as hopping rather than flowing.
+
+    The delays are inline in the `animation` shorthand rather than separate
+    `animation-delay` longhands. `overheated` found that ordering trap: a
+    longhand below the shorthand is overridden, and three effects collapse onto
+    one phase while every gate stays green.
+
+    The first keyframe of each is transparent — the gap between one mote and the
+    next — so either two or three are on stage at any time. The last sits just
+    short of the orb rather than on it, which keeps every visible mote its own
+    connected component and lets the bake assert exactly that.
+  -->
+  <defs>
+    <style>
+      /* One frame of the twelve second loop is 1.0416667%. */
+
+      /* `idle`'s breath, about the hips. The legs are a sibling of this group
+         so they stay planted — inside it the whole sprite bobs and the feet
+         sink into their own contact shadow. 2s alternating is six iterations
+         of a twelve second loop, which is even — an odd count would end the
+         loop at the far end of the cycle and seam at the wrap. Measured, frame
+         95 to frame 0 changes 203 pixels against a mean neighbour delta of
+         326, so the wrap is the smallest transition in the loop. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* The summoning arm. Rotation clears the silhouette, axial scale makes
+         it long enough to be an arm — the pair `gym` established. Static pose:
+         this raise is the screen, and `frameAt` is wall-clock modulo, so a
+         raise at the top of the loop would be a pump at loop frequency
+         forever. */
+      #left-arm-joint {
+        transform-origin: 2px 10px;
+        transform: rotate(65deg) scaleX(2.4);
+      }
+
+      /* One art pixel left, toward the arriving motes — as a transform on the
+         base id, so the rects keep `base.svg`'s coordinates. `dizzy` moves its
+         eyes without moving its rects either, though by wrapping them in a
+         new group rather than transforming a base id. A whole unit is 8 device
+         pixels, so this cannot land off the grid. */
+      #eyes-color-group {
+        transform: translateX(-1px);
+      }
+
+      /* Squashed about the eye line, never hidden — §Closing an eye. Linear,
+         because a lid that accelerates reads as a wince. The four percentages
+         are frames 76 to 79 of 96. */
+      #eyes-blink {
+        transform-origin: 7.5px 9px;
+        animation: blink 12s infinite linear;
+      }
+
+      @keyframes blink {
+        0%, 79.166667%          { transform: scaleY(1); }
+        80.208333%              { transform: scaleY(0.1); }
+        81.250000%              { transform: scaleY(0.1); }
+        82.291667%, 100%        { transform: scaleY(1); }
+      }
+
+      /* The hat and the orb ride the breath, but in whole device pixels.
+
+         The values are the per-frame rounding of `#breathe`'s own ease-in-out
+         curve: the head's top travels 6.00 to 6.63 units, which is 5.04 device
+         pixels, so this is that motion sampled at 8fps and snapped to the grid
+         — which is what a moving sprite *should* rasterise to. Every
+         percentage is a multiple of 100/32, so each lands on a whole frame,
+         and 4s tiles the 12s loop exactly three times. `steps(1)` holds each
+         value rather than sliding between them. */
+      #fx-bob {
+        animation: bob 4s infinite steps(1);
+      }
+
+      @keyframes bob {
+        0.000000%  { transform: translate(0, 0px); }
+        12.500000% { transform: translate(0, 0.125px); }
+        21.875000% { transform: translate(0, 0.25px); }
+        25.000000% { transform: translate(0, 0.375px); }
+        31.250000% { transform: translate(0, 0.5px); }
+        40.625000% { transform: translate(0, 0.625px); }
+        62.500000% { transform: translate(0, 0.5px); }
+        71.875000% { transform: translate(0, 0.375px); }
+        78.125000% { transform: translate(0, 0.25px); }
+        81.250000% { transform: translate(0, 0.125px); }
+        90.625000% { transform: translate(0, 0px); }
+      }
+
+      /* Three motes, each on its own path, phased by inline delays. `steps(1)`
+         so every rendered position is a whole device pixel — §Render scale —
+         and so opacity is only ever 0 or 1. A fractional opacity would blend
+         the pale core toward peach exactly as a scaled edge does.
+
+         Three paths, not one: three things a third of a cycle apart on a
+         single straight line are evenly spaced collinear dots, which rendered
+         as a bead chain. These fan in from the left, from above and from the
+         right, converging as they fall — the horizontal spread closes from
+         5.0 units to 2.0. (5.375 is the spread at the 0% keyframe, where all
+         three are `opacity: 0`; 5.0 is the widest anything on screen shows.)
+
+         -1s and -2s are 8 and 16 frames, which is a third of the track each.
+         Four positions apart is what that authors; what renders drifts by one
+         either way, because the dwell is 2/3/1 rather than uniform — see the
+         note above. The useful consequence is the one thing a uniform dwell
+         would not give: the three never step on the same frame. */
+      #fx-mote-a { animation: arrive-a 3s infinite steps(1); }
+      #fx-mote-b { animation: arrive-b 3s -1s infinite steps(1); }
+      #fx-mote-c { animation: arrive-c 3s -2s infinite steps(1); }
+
+      @keyframes arrive-a {
+        0.000000%  { transform: translate(-2.375px, -2.5px); opacity: 0; }
+        8.333333%  { transform: translate(-2.25px, -2px); opacity: 1; }
+        16.666667%  { transform: translate(-2.125px, -1.625px); opacity: 1; }
+        25.000000%  { transform: translate(-2.125px, -1.125px); opacity: 1; }
+        33.333333%  { transform: translate(-2px, -0.625px); opacity: 1; }
+        41.666667%  { transform: translate(-1.875px, -0.25px); opacity: 1; }
+        50.000000%  { transform: translate(-1.75px, 0.25px); opacity: 1; }
+        58.333333%  { transform: translate(-1.625px, 0.625px); opacity: 1; }
+        66.666667%  { transform: translate(-1.5px, 1.125px); opacity: 1; }
+        75.000000%  { transform: translate(-1.5px, 1.625px); opacity: 1; }
+        83.333333%  { transform: translate(-1.375px, 2px); opacity: 1; }
+        91.666667%  { transform: translate(-1.25px, 2.5px); opacity: 1; }
+      }
+
+      @keyframes arrive-b {
+        0.000000%  { transform: translate(0.75px, -2.75px); opacity: 0; }
+        8.333333%  { transform: translate(0.625px, -2.25px); opacity: 1; }
+        16.666667%  { transform: translate(0.625px, -1.875px); opacity: 1; }
+        25.000000%  { transform: translate(0.5px, -1.375px); opacity: 1; }
+        33.333333%  { transform: translate(0.375px, -0.875px); opacity: 1; }
+        41.666667%  { transform: translate(0.25px, -0.5px); opacity: 1; }
+        50.000000%  { transform: translate(0.25px, 0px); opacity: 1; }
+        58.333333%  { transform: translate(0.125px, 0.375px); opacity: 1; }
+        66.666667%  { transform: translate(0px, 0.875px); opacity: 1; }
+        75.000000%  { transform: translate(-0.125px, 1.375px); opacity: 1; }
+        83.333333%  { transform: translate(-0.125px, 1.75px); opacity: 1; }
+        91.666667%  { transform: translate(-0.25px, 2.25px); opacity: 1; }
+      }
+
+      @keyframes arrive-c {
+        0.000000%  { transform: translate(3px, -2.25px); opacity: 0; }
+        8.333333%  { transform: translate(2.75px, -1.875px); opacity: 1; }
+        16.666667%  { transform: translate(2.625px, -1.375px); opacity: 1; }
+        25.000000%  { transform: translate(2.375px, -1px); opacity: 1; }
+        33.333333%  { transform: translate(2.125px, -0.5px); opacity: 1; }
+        41.666667%  { transform: translate(2px, -0.125px); opacity: 1; }
+        50.000000%  { transform: translate(1.75px, 0.375px); opacity: 1; }
+        58.333333%  { transform: translate(1.625px, 0.75px); opacity: 1; }
+        66.666667%  { transform: translate(1.375px, 1.25px); opacity: 1; }
+        75.000000%  { transform: translate(1.125px, 1.625px); opacity: 1; }
+        83.333333%  { transform: translate(1px, 2.125px); opacity: 1; }
+        91.666667%  { transform: translate(0.75px, 2.5px); opacity: 1; }
+      }
+    </style>
+  </defs>
+
+  <g id="master-group">
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+
+      <g id="eyes-blink">
+        <g id="eyes-color-group" fill="#000000">
+          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- The hat and what the claw holds. Outside `#breathe` and on whole
+         device pixels, so their pale-on-dark boundaries never antialias;
+         drawn after the body so the hat sits on the skull and the orb sits in
+         front of the claw. Both ride `#fx-bob`, so they breathe with him. -->
+    <g id="fx-bob">
+      <g id="fx-hat">
+        <g id="fx-hat-cone" fill="#000000">
+          <rect id="fx-hat-r0" x="4" y="4.5" width="7" height="1"/>
+          <rect id="fx-hat-r1" x="4.5" y="3.5" width="5.5" height="1"/>
+          <rect id="fx-hat-r2" x="5" y="2.5" width="4.5" height="1"/>
+          <rect id="fx-hat-r3" x="5.5" y="1.5" width="3.5" height="1"/>
+          <rect id="fx-hat-r4" x="5.5" y="0.5" width="2.5" height="1"/>
+          <rect id="fx-hat-r5" x="6" y="-0.5" width="1.5" height="1"/>
+        </g>
+        <!-- Six specks, so the cone carries at night without a band cutting
+             it in half. Scattered, and no two touching even at a corner: a
+             run of them is a stripe, which is what a band was rejected for. -->
+        <g id="fx-hat-specks" fill="#C9D1D9">
+          <rect x="5" y="4.5" width="1" height="1"/>
+          <rect x="9" y="4.5" width="1" height="1"/>
+          <rect x="7" y="3.5" width="1" height="1"/>
+          <rect x="5.5" y="2.5" width="1" height="1"/>
+          <rect x="8.5" y="2.5" width="1" height="1"/>
+          <rect x="7" y="1.5" width="1" height="1"/>
+        </g>
+        <rect id="fx-hat-brim" x="2" y="5.5" width="12" height="1" fill="#C9D1D9"/>
+      </g>
+
+      <!-- A dark ring around a pale core: one object rather than a larger
+           mote, so a mote arriving at it is an event. -->
+      <g id="fx-orb">
+        <g id="fx-orb-ring" fill="#000000">
+          <rect x="-1" y="4.25" width="2" height="0.5"/>
+          <rect x="-1" y="5.75" width="2" height="0.5"/>
+          <rect x="-1" y="4.75" width="0.5" height="1"/>
+          <rect x="0.5" y="4.75" width="0.5" height="1"/>
+        </g>
+        <rect id="fx-orb-core" x="-0.5" y="4.75" width="1" height="1" fill="#C9D1D9"/>
+      </g>
+    </g>
+
+    <!-- Three motes, authored at the origin so each path translates the same
+         geometry; the paths are in the stylesheet. -->
+    <g id="fx-mote-a">
+      <rect x="0" y="-0.5" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="-0.5" y="0" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0.5" y="0" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0" y="0.5" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0" y="0" width="0.5" height="0.5" fill="#C9D1D9"/>
+    </g>
+    <g id="fx-mote-b">
+      <rect x="0" y="-0.5" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="-0.5" y="0" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0.5" y="0" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0" y="0.5" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0" y="0" width="0.5" height="0.5" fill="#C9D1D9"/>
+    </g>
+    <g id="fx-mote-c">
+      <rect x="0" y="-0.5" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="-0.5" y="0" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0.5" y="0" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0" y="0.5" width="0.5" height="0.5" fill="#000000"/>
+      <rect x="0" y="0" width="0.5" height="0.5" fill="#C9D1D9"/>
+    </g>
+  </g>
+</svg>
