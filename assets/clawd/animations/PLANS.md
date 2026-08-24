@@ -838,6 +838,18 @@ inside a comment is admitted. "Declare `#6F4436`" is satisfiable without
 drawing a pixel of it, which is not the same thing as the file containing that
 brown.
 
+**Shipped 24 Aug, and one thing left on the table.** The critic's second pass
+returned ship. It also measured that frames 0-11 and 37-63 — 61% of the loop —
+are breath plus one blink, which is a strict subset of what `idle` does in the
+same span, so for most of the loop the difference between this screen and the
+idle screen is the prop. It stays acceptable on arithmetic rather than on
+taste: `DONE_SHOWN_MS` is 15s against an 8s loop, so a viewer joining at a
+uniformly random phase always sees at least one whole gesture and usually two,
+with a worst case of five seconds' wait. If there is appetite for one more
+pass, the cheap win is a second small beat in frames 40-60 — a settle of the
+claw, or the blink paired with something — not a longer hold on the one beat
+there is.
+
 **Contrast must be measured against sand, not sky.** A parked ground-level
 vehicle is never against the sky: `environment.ts` puts the horizon at 62% with
 sea 6% below it, so sand runs from roughly unit y 8 to 16 and a vehicle at y

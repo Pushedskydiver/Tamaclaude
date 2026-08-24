@@ -43,6 +43,15 @@
     scale. #6F4436 is exactly half of the peach, so it takes the mid-coverage
     band and reads as shading, which is why `typing.svg` declares it too.
 
+    **And it does land on him — say so, because the fix is not "no rim".**
+    56 of 64 frames carry #6F4436 outside the vehicle, up to 311 pixels, along
+    the same torso top and flanks the red traced. That is the trade, not a
+    residue of it: the brown takes 50 of the 101 coverage steps itself, so the
+    snapping does not stop, it moves. Judged at true size on all four sands it
+    reads as a contour, which is an ordinary pixel-art device, where the red
+    read as a foreign object drawn over the creature. The legs are clean
+    either way, because static geometry never antialiases.
+
     ── The claw, and what makes a prop read ──────────────────────────────
 
     The pivot is the shoulder at (2,10), which is where the joint is. The
