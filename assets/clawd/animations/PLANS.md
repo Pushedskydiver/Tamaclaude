@@ -14,7 +14,7 @@ wanted, so there was no way to tell a bug from a choice.
 Each plan states **action**, **body mechanics**, **eyes** and **effects**,
 following the structure upstream clawd-tank uses in its own
 `assets/svg-animations/PLANS.md`, plus **props** where the animation has any.
-Nine of the ten carry one; `gym` alone has none, because its bar is described
+All but one carry one; `gym` alone has none, because its bar is described
 under Action rather than filed as a prop, which is a distinction not worth
 enforcing. Both constraints this paragraph used to name have since been repealed by
 `docs/ANIMATION.md`, and it took two passes to notice. Palette snapping
@@ -141,7 +141,7 @@ rasterised pixel back onto the declared palette, which is what upstream
 clawd-tank does, so a rotated or eased edge hardens after the fact instead of
 being forbidden up front. This plan was the first written against the new
 contract. Four more have been written against it since — permission sign,
-confused, dizzy and overheated — so of the ten, five are current and five
+confused, dizzy, overheated and the payoff — so some plans here are current and some
 describe the old one. The preamble said so too until dizzy's branch corrected it.
 
 **Overridden during review: the bar may cross the eyes.** This line originally
@@ -645,8 +645,14 @@ a dead branch pointing at `dizzy` with a test asserting it does nothing.
 
 ## The payoff screen — a task actually finished
 
-The vehicle from the recipient's pack is parked beside Clawd, and he reacts to
-it. **Named by role throughout.** The vehicle is on the interests list in the
+A vehicle is parked beside Clawd and he rests a claw on it.
+
+**Not "the vehicle from the recipient's pack", which is how this line read
+until 25 Aug and which was wrong twice over.** The pack cannot supply it —
+sprites bake fixed pixels — and leaving the sentence standing tied the prop to
+the recipient while the tracked art names a colour, which is the link
+`CLAUDE.md` forbids. The section below identified the error and this line was
+not corrected with it. **Named by role throughout.** The vehicle is on the interests list in the
 gitignored brief, this repo is public, and `CLAUDE.md` says tracked docs name
 personal content by role and never by content — it read as a make and colour in
 ten places across five tracked files — two docs and three source files — until
@@ -744,11 +750,36 @@ touching `Session` is a reopening rather than finishing.
   not a bare claw rotation: §What a claw cannot do rules that out and `gym`
   shows the fix is rotating _and_ extending.
 - **Eyes.** On the vehicle, with one slow blink — `permission-sign`'s pattern.
-- **Props.** The vehicle. **At most 5 units long.** The stage is 21 units wide
-  and the character occupies x 0-15, so the free width is 3 units left and 3
-  right and never contiguous: `L + 15 + c <= 21` gives L <= 5 at one unit of
-  clearance. It must also _touch_ something — `gym`'s bar three units clear
-  "read as a bar hovering above a crab".
+- **Props.** The vehicle, **5 units long and overlapping him, low and on his
+  left.** Three earlier answers to this were wrong and the arithmetic that
+  produced them was too.
+
+  `L + 15 + c <= 21` gives L <= 5 only if the character is flush against a
+  stage edge. He is not: the stage spans x -3 to 18 and he occupies 0 to 15, so
+  the free width is 3 units each side, non-contiguous, and 5 units needs 40px
+  against a 24px gap. The same paragraph said "never contiguous" and then used
+  the contiguous number.
+
+  **Three units does not read.** Rendered at true size through `svg2frames`, a
+  3-unit vehicle in the right gap is a small block with two dark dots — this
+  plan's own "reads as a brick", arrived at by drawing it rather than by
+  arguing.
+
+  **The right gap is water.** `environment.ts` puts the rock pool at units
+  x 11.25 to 17.50 for its full height above the ground line, so anything
+  parked on that flank is parked in the pool. The rock on the left is at
+  y 6.6-8.75 — mid-distance, well above a ground-level prop — so **the left
+  flank is the only one clear at ground level.**
+
+  **Moving him is not available.** `docs/ANIMATION.md` says "Keep the
+  character's own coordinates untouched. Grow the stage instead", and the stage
+  cannot grow: 21.5 units is the panel's ceiling at 8px per unit. Worse,
+  `environment.ts` draws the contact shadow at a hard-wired offset from the
+  slot, with no knowledge of what the SVG did — shift him and the shadow stays
+  put, which is the floating-feet defect the shadow exists to prevent.
+
+  So it overlaps him, which is what the corpus says makes a prop read at all.
+
 - **Effects.** None.
 
 **This is the first prop in the corpus that needs floor space.** `gym`'s barbell
@@ -759,27 +790,139 @@ Ink is not the constraint here, plan area is, and the stage has six units of it.
 The landscape crop is not the risk — a ground-level prop is nowhere near the -4
 line. The risk is entirely horizontal.
 
+**The pack cannot supply the vehicle, and the plan's first line assumes it
+can.** Sprites are baked pixel data: `svg2frames` rasterises, `bake-sprites`
+writes RGB565 into `packages/renderer/src/sprites/`, and `paintStage` draws the
+frame as-is. `packPalette` recolours the _bands_ — background, ink, attention,
+active — and nothing else. There is no mechanism by which a pack changes a
+sprite's colours, so whatever this file draws is what every install shows.
+
+That collides with the privacy rule rather than merely being inconvenient. If
+the vehicle is drawn in the colour that makes it recognisable, that colour is
+in a tracked public asset, which is the detail `CLAUDE.md` records being
+scrubbed from five files on 24 Aug. Three ways out, and the choice is a real
+one rather than a formality:
+
+1. **Draw a deliberately non-matching vehicle.** Recognition comes from shape
+   and context — a vehicle parked beside him on the screen that means "you
+   finished" — not from paint. Costs the wink, keeps the deadline, adds
+   nothing to a tracked file.
+2. **Make sprites pack-recolourable.** The honest fix and a real pipeline
+   change: a colour-role indirection through the bake, before a 13 Sep freeze,
+   for one prop.
+3. **Let the pack ship its own sprite.** Bigger than 2 — pack-supplied art has
+   no loader, no schema and no bake path.
+
+**The body colour is a legibility choice, and it is named in tracked files —
+in the art, and in the contrast tool's examples.** It has to be: whatever the
+SVG draws is what every install shows. What is not tracked, and must not be, is
+any sentence connecting that colour to the recipient's own vehicle. An earlier
+version of this line claimed the colour was "named nowhere in this repo", which
+stopped being true the moment the art landed in the same branch.
+`CLAUDE.md` records the vehicle leaking into five tracked files by make _and
+colour_ until 24 Aug. An earlier version of this section put the colour back
+the same day, in words four times over and as a signature paint hex — the same
+class of detail as the make, in the same tracked file, hours after it was
+removed. The plan below is written against an unnamed candidate; the hex lives
+in the pack.
+
 **Declare `#6F4436` in this file.** `paletteOf` derives the palette **per
 document**, and that brown is currently declared only in `typing.svg`. Without
-it, every candidate red captures torso edge pixels — measured over peach
-composited on black at 1% steps: `#CC0000` steals 9 bands, `#E82127` 13,
-`#8B0000` 30 and `#B22222` **36**, against the `#4C3475` violet's 10 that drew a
-one-pixel line across 80 of the torso's 88 pixels. With `#6F4436` declared, all
-four steal nothing. An earlier version of this plan called the reds safe on a
-measurement run against the union of every file's colours, which is not a
-palette any single document gets.
+it a saturated candidate captures torso edge pixels, because the snap target
+for an antialiased peach-on-dark edge is whatever is nearest in the document's
+own palette. Measured over peach composited on black at 1% steps, four
+candidates stole 10, 13, 30 and 36 of the 101 steps; with `#6F4436` declared,
+all four steal nothing.
 
-**Contrast against all four skies must be measured before it ships**, landscape
-with `extent: 'panel'`. `confused` and `dizzy` were both rebuilt after measuring
-1.31:1 against day and 1.80:1 against dawn. A dark red on a dusk sky is that
-measurement waiting to be taken. And the stage is a rock pool now — the plan has
-to say what the vehicle is standing on.
+**Two corrections to how that measurement was first written up.** It was
+compared against "the `#4C3475` violet's 10", which is not like for like — the
+violet's 10 comes from `bouldering`'s own palette, and in a minimal
+`{black, peach, candidate}` palette it steals 36, tying the worst of the four.
+So the comparison ran backwards. And `#6F4436` does not stop the snapping: it
+takes 50 of the 101 steps itself. It moves the target from the candidate to a
+brown, which is acceptable _because_ a brown between peach and black reads as
+shading — which is why `typing.svg` declares it — not because the edges go
+away.
 
-**`hipGap` will pass vacuously.** That gate walks up from the bottom-most drawn
-row and returns 0 once the contiguous bottom band exceeds 24 device pixels; a
-vehicle three units tall standing on the ground makes the whole band contiguous.
-It has already gone vacuous once, for `overheated`. Something else has to assert
-the body is on its feet here.
+**One trap in the remedy.** `paletteOf` regexes the raw SVG text, so a hex
+inside a comment is admitted. "Declare `#6F4436`" is satisfiable without
+drawing a pixel of it, which is not the same thing as the file containing that
+brown.
+
+**Shipped 24 Aug, and one thing left on the table.** The critic's second pass
+returned ship. It also measured that frames 0-11 and 37-63 — 61% of the loop —
+are breath plus one blink, which is a strict subset of what `idle` does in the
+same span, so for most of the loop the difference between this screen and the
+idle screen is the prop. It stays acceptable on arithmetic rather than on
+taste: `DONE_SHOWN_MS` is 15s against an 8s loop, so a viewer joining at a
+uniformly random phase always sees at least one whole gesture and usually two,
+with a worst case of five seconds' wait. If there is appetite for one more
+pass, the cheap win is a second small beat in frames 40-60 — a settle of the
+claw, or the blink paired with something — not a longer hold on the one beat
+there is.
+
+**Contrast must be measured against sand, not sky.** A parked ground-level
+vehicle is never against the sky: `environment.ts` puts the horizon at 62% with
+sea 6% below it, so sand runs from roughly unit y 8 to 16 and a vehicle at y
+12-15 sits entirely on it. Every candidate measured under 2:1 against at least
+two times of day, and the worst was flat invisible on dusk sand. Note that the
+1.31:1 and 1.80:1 that got `confused` and `dizzy` rebuilt were measured against
+_sky_, so they are not a benchmark for a sand figure — an earlier version of
+this paragraph compared the two directly, four lines after insisting on the
+distinction.
+**That moves the colour decision, so it belongs before the art rather than
+before the ship.** Stated as a caveat rather than a conclusion: the same metric
+puts the character's own peach at 1.01:1 against day sand, so either a
+luminance-only ratio over-reports for hue-separated pairs at ground level, or
+the environment has a readability problem at ground level that predates this
+screen. Either way the pair the plan named was the wrong one.
+
+**`tools/contrast.ts` is that tool, written rather than deferred.** The figures
+quoted in `dizzy.svg` and elsewhere came from throwaway scripts, and
+`bake-sprites.test.ts` records what that costs — a check described in a commit
+as refusing to write a file, which had never existed. Measured against all four
+sands and pools:
+
+| colour, against sand       | dawn |      day |     dusk | night |
+| -------------------------- | ---: | -------: | -------: | ----: |
+| Clawd's own peach          | 1.89 | **1.03** |     2.43 |  4.93 |
+| the vehicle's              | 1.32 |     2.56 | **1.03** |  1.98 |
+| the sign plate's `#C9D1D9` | 3.32 |     1.71 |     4.27 |  8.68 |
+
+Reproduce with `node tools/contrast.ts '#RRGGBB'`. These are on the rounded
+basis the panel shows; an earlier version of this table was on the authoring
+triples, which shifted every cell by a hundredth or two and put it on a
+different footing from figures already written down elsewhere.
+
+**No saturated colour clears 2:1 on all four grounds, and neither does the
+character.** Clawd measures 1.03:1 against day sand and is perfectly readable
+on the panel, so hue separation, the contact shadow and the silhouette are
+carrying weight that a luminance ratio does not model. The tool says so in its
+own header: this is a screen for the obviously-invisible, not a gate. What it
+does settle is that a dark saturated body on dusk sand is the one combination
+to avoid, and that the corpus's existing light grey is the safest thing already
+in the palette.
+
+**The art overrode that, deliberately, and here is the reasoning.** The vehicle
+ships in the mid-saturated candidate — the 1.02:1-on-dusk-sand row above. What
+carries the shape is internal contrast rather than contrast with the ground:
+the window, the wheels and the shaded sill give it four tones, and the critic
+judged it at true size on all four sands and both orientations before passing
+it. A light grey vehicle would measure better and read worse, because it would
+be the same tone family as the sign plate and the thought bubble, which are
+`Clawd`'s own props. Recorded because a plan that concludes one thing while the
+art beside it does another is worse than either.
+
+**`hipGap` will pass vacuously, and it was already doing so everywhere.** That
+gate walks up from the bottom-most drawn row and returns 0 once the contiguous
+bottom band exceeds 24 device pixels. Measured after the art landed: every one
+of the eleven bakes exceeds it on a correct pose, so the walk never runs
+anywhere — the interesting failure is under a _defect_, where a plain lift
+collapses the band to the legs and is caught, and a lift behind a
+ground-bridging prop like this vehicle is not. `overheated` is the other miss,
+and not for want of legs: it has four, sitting above the torso.
+Something else has to assert the body is on its feet here, and
+`tools/bake-sprites.test.ts` records what that something should be.
 
 **Not wanted:** a number plate, badge, or any mark identifying a specific
 vehicle. A prop drawn so large that Clawd stops being the subject. A vehicle
@@ -801,11 +944,11 @@ warnings. So the fallback is `permission-sign`-shaped — parked vehicle,
 breathing, one slow blink — which is the right answer anyway, because a frozen
 crab on a live rock pool reads as a crash.
 
-| date           | decision                                                                                                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Mon 31 Aug** | trigger landed, before Stage 3's window closes                                                                                                                          |
-| **Wed 3 Sep**  | first true-size render of the parked vehicle at 5 units, judged on the panel at 320x172 and not zoomed. If it needs to overlap him, or reads as a red brick, stop there |
-| **Sun 6 Sep**  | ship-or-fallback, with the rest of the Tier A gate                                                                                                                      |
+| date           | decision                                                                                                                                                                                                                         |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mon 31 Aug** | trigger landed, before Stage 3's window closes                                                                                                                                                                                   |
+| **Wed 3 Sep**  | first true-size render at 5 units on dusk sand, judged on the panel at 320x172 and not zoomed. Stop if it does not read as a vehicle, or if it makes him stop being the subject. **Overlap is not a stop condition** — see Props |
+| **Sun 6 Sep**  | ship-or-fallback, with the rest of the Tier A gate                                                                                                                                                                               |
 
 A fallback decided on 22 September is not a fallback.
 

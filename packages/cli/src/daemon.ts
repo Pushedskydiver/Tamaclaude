@@ -437,9 +437,10 @@ export function animationForPanel(
  * `animationFor` maps every session state and every `PreToolUse.tool_name` onto
  * a name in `ANIMATIONS`, and every one of those is baked — so this guard
  * cannot fire today, and saying otherwise would be inventing a hazard. It
- * exists for the next animation rather than the current ones: `sweeping` and
- * the payoff screen are `BUILD_PLAN.md` Stage 4, and the moment either is added to
- * `ANIMATIONS` it is reachable here before its art is baked. An empty stage is
+ * exists for the next animation rather than the current ones: `sweeping` is
+ * `BUILD_PLAN.md` Stage 4 item 8, and the moment it is added to `ANIMATIONS`
+ * it is reachable here before its art is baked. The payoff screen used to be
+ * named here too and no longer is — its art landed on 24 Aug. An empty stage is
  * the right answer to that; taking the panel down is not.
  *
  * Typed `AnimationName` rather than `string` on purpose. A `string` here is how

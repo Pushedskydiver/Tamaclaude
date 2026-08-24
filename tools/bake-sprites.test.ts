@@ -12,6 +12,7 @@ import { SOURCE as GYM } from '../packages/renderer/src/sprites/gym.data.ts';
 import { SOURCE as IDLE } from '../packages/renderer/src/sprites/idle.data.ts';
 import { loadSprite } from '../packages/renderer/src/sprites/index.ts';
 import { SOURCE as OVERHEATED } from '../packages/renderer/src/sprites/overheated.data.ts';
+import { SOURCE as PAYOFF } from '../packages/renderer/src/sprites/payoff.data.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
@@ -47,6 +48,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['gym', GYM],
   ['idle', IDLE],
   ['overheated', OVERHEATED],
+  ['payoff', PAYOFF],
   ['permission-sign', PERMISSION_SIGN],
   ['thinking', THINKING],
   ['typing', TYPING],
@@ -277,14 +279,53 @@ describe('the baked animations', () => {
  * body entirely and returns the daylight between the body and a floating prop —
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
- * **The bound is also an escape, and one bake already takes it.** Any pose whose
- * contiguous bottom band is deeper than `LEG_BAND` returns 0 without the walk
- * ever looking for a gap, so the assertion passes for reasons that have nothing
- * to do with the legs. `overheated` is splooted: its bottom-most row is the
- * torso and there are no legs beneath it, so this reads 0 vacuously. What holds
- * there instead is contiguity — a single connected body component on all 48
- * frames — and nothing here asserts it. A second sploot would get the same
- * green light and the same absence of coverage.
+ * **The bound fires on every correct pose, so the 0 is vacuous — and that is
+ * not the problem.** Measured across all eleven bakes: the contiguous band
+ * from the feet is 42 to 200 rows, well over the bound, so the walk never
+ * looks for a gap. The exception proves the mechanism rather than the rule —
+ * `dizzy` drops to 16 on the six frames where an orbiting star is the
+ * bottom-most thing, and there the walk does run and returns 1.
+ *
+ * None of that matters while nothing is wrong. What matters is the behaviour
+ * under a defect, and there the bound is the whole story. Planting a two-unit
+ * torso lift and re-baking:
+ *
+ * - **`idle` is caught.** With a real gap the band collapses to the legs
+ *   alone, inside the bound, so the walk runs and reports a gap.
+ * - **`payoff` is not.** Its vehicle spans the rows beside his legs, so the
+ *   band stays deep and the early return fires exactly as it does on a correct
+ *   pose. A prop that bridges the body and the ground blinds this gate to the
+ *   one defect it exists for.
+ * - **`overheated` is not either**, and not for want of legs — it has four, in
+ *   `legs-sploot`. They sit *above* the torso, so a walk from the bottom-most
+ *   row never reaches them.
+ *
+ * Two earlier versions of this paragraph got it wrong in opposite directions:
+ * one said the gate had never gated anything, the other that the 0 on a
+ * correct pose was cheap rather than vacuous. It is vacuous, and harmless
+ * until a prop makes it vacuous when it should not be.
+ *
+ * **A connectivity check would work, and the first attempt was abandoned on
+ * arithmetic that was wrong.** Asking whether the bottom-most pixel in the
+ * legs' columns belongs to the largest component catches the `idle` lift and
+ * the `payoff` lift both. With the torso lifted the components are 5,440 for
+ * the torso, 1,008 for the vehicle and 128 for each leg — the vehicle does not
+ * hold the body together, because it touches the torso and not the legs. At
+ * row 176 it ends at device column 39 and the first leg starts at 48; lower
+ * down, where only its wheels are drawn, the gap is wider still.
+ *
+ * The attempt discarded components under 1,000 pixels, to stop `dizzy`'s stars
+ * being read as body parts. That discards the legs too, so the scan found
+ * nothing in their columns and passed vacuously — 0 frames flagged, where 100
+ * flags all 64. A threshold artefact, published as a property of the
+ * formulation, and recorded here because a wrong reason not to build something
+ * forecloses it more thoroughly than never trying.
+ *
+ * What is genuinely unsolved is narrow: a star is 320 pixels and a leg is 128,
+ * so no *minimum* size threshold can drop the stars while keeping the legs —
+ * the stars are the larger. Size can separate them; a floor cannot. The
+ * discriminator that does work is that the legs stand on the ground row and
+ * the stars never get near it.
  */
 const LEG_BAND = 24;
 
