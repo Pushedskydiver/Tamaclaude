@@ -1041,13 +1041,52 @@ to 12 seconds. At 96 frames three motes are 32 apart exactly.
   This is the fifth time that defect would have landed.
 
 **Not wanted:** a wand — it competes with the hat for the same silhouette, and
-the held object solves what the wand was for. A book or a screen: those read as
+the held object solves what the wand was for. (Upstream's wizard _does_ carry
+both, and reads; but it has a 45-unit viewBox at 500px against this stage's 21
+at 168, so it is not evidence for this panel.) A book or a screen: those read as
 `bouldering` and `typing`. Motes scattered around him rather than arriving at
 the claw, which is `dizzy`'s screen. Single-tone motes at any size.
 
 **Fallback:** the hat and the held object with breath and a blink, no motes. It
 is `permission-sign`'s shape and it reads. **Decide by Wed 3 Sep** — if the
 motes are not legible against day and night by then, ship without them.
+
+### Built 24 Aug, and the three things this plan did not say
+
+**The magic goes above him, not beside him.** This plan asked "where does the
+prop go?" and answered it for the _sprite_, not for the composite. Measured off
+`paintEnvironment`: the rock occupies units x -2.25 to 1.00, **y 6.63 to 8.75**,
+and the first draft put a dark orb at x -2 to 1, y 6 to 9 — four black cells on
+dark stone. The left flank is 3 units wide and the rock is most of it; the clear
+air above him is 10 units, from the -4 crop line to the horizon at y 6.50. So
+the claw is raised to 65 degrees and the motes fall steeply into it. A
+sprite-only review cannot catch this, because the sprite is composited
+afterwards — **render the sprite on the four grounds before believing the
+staging.**
+
+**Two drawn colours must not meet inside a scaling group.** The hat began inside
+`#breathe`, which is a scale, so every step edge landed off the pixel grid and
+`snapToPalette` resolved the blends wrongly: `#C9D1D9` over `#000000` at half
+coverage is (100,104,108), whose squared distance to `#DE886D` is 15,909 against
+32,480 to black and 33,107 to the pale. **Peach wins by more than 2x.** Measured
+on the first bake: 81 of 96 frames carried peach above the torso and 87 had
+transparent rows cutting the hat into floating bars. It is now §7 of the
+checklist. The fix is not "make it static" — a hat that ignores the breath reads
+as pasted on, and the user said so. It is `#fx-bob`: the same ease-in-out curve
+sampled per frame and rounded to whole device pixels, which is what a moving
+sprite _should_ rasterise to.
+
+**A pale band across a cone reads as a tiered cake.** It lands on the widest
+step. The pale belongs on the brim, under the cone, which is also what carries
+the hat against a night sky when the black cannot. Upstream clawd-tank reaches
+the same construction from the opposite direction — its `hat-mishap` has a
+darkest band at the cone's base and a _lighter_ brim below it, and it breaks the
+cone's symmetry with a non-monotonic step rather than running clean to a point.
+
+**And three motes on one path is a bead chain.** Evenly spaced collinear dots
+are what "three things a third of a cycle apart on a straight line" means. They
+need separate paths that fan; and delays that are not a multiple of the step
+length, or all three jump on the same frame and it strobes instead of flowing.
 
 ---
 
@@ -1143,7 +1182,7 @@ trigger — `PreCompact` fires rarely. **Decide by Sun 6 Sep.**
 
 ## What every plan has to answer
 
-Seven constraints, each one a place an animation has already gone wrong on this
+Eight constraints, each one a place an animation has already gone wrong on this
 project. Checking a plan against them costs minutes; discovering them from a
 critic's render costs a rebuild.
 
@@ -1185,11 +1224,28 @@ critic's render costs a rebuild.
    seated and is not, it is standing behind a laptop — so a pose off the ground
    line means `UNGROUNDED`/`castsShadow` in `packages/renderer`, which is a
    change with a mandatory review rather than an SVG edit.
-7. **Do the keyframes land on whole frames, and does the effect period divide
+7. **Does any element with two colours inside it sit in a scaling group?** If
+   it does, it will fringe. A `scale` puts every internal edge off the pixel
+   grid, Chromium antialiases it, and `snapToPalette` sends the blend to
+   whichever palette entry is nearest in squared RGB — which, for a pale-on-dark
+   prop in a document that also declares the body colour, is **the body
+   colour**. `#C9D1D9` over `#000000` at half coverage is 15,909 from `#DE886D`
+   and 32,480 from black. The wizard's first hat did this on 81 of 96 frames,
+   `bouldering`'s violet line and the payoff's red fringe are the same
+   mechanism. Edges facing the _background_ are exempt: `svg2frames` captures
+   with `omitBackground`, so those are one colour at partial alpha and the mask
+   decides them, not the palette. The remedy is not to freeze the element —
+   move it by whole device pixels instead, with `steps(1)`, sampling whatever
+   curve the body uses. `wizard`'s `#fx-bob` is the worked example.
+8. **Do the keyframes land on whole frames, and does the effect period divide
    the loop?** One frame is `100 / (loop_seconds * 8)` percent. And _n_ evenly
    phased effects need _n_ to divide the frame count: three things at 8 seconds
    is 64/3 frames apart, which is not an integer — the reason `dizzy` is 12
    seconds.
+
+And _n_ effects phased by delay need those delays off the step grid, not just
+on whole frames: three motes 8 frames apart with a 4-frame step all jump
+together, which strobes rather than flows.
 
 Two of these were stated backwards in the first draft of this section: that a
 hex in a comment is never a declaration, and that the claw mistakes had
