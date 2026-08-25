@@ -136,17 +136,22 @@ The whole product, minus hardware.
   it grew.
   **Open, and why this is `[~]`:**
 
-  1. **Two review artefacts still paint a flat backdrop** — `contact-sheet.ts`
-     and the harness — where the device paints the environment edge to edge
-     (`ENVIRONMENT_EXTENT = 'panel'`), so both show a colour the panel never
-     displays. Both now say so instead of claiming to be the panel's ground,
-     and `docs/ANIMATION.md` §Judging now sends a reviewer to `panel-mock`.
-     What is still wrong is the _procedure_ rather than the prose:
-     `.claude/agents/animation-critic.md` step 4 and `docs/ANIMATION.md`'s
-     authoring loop both still say "build a contact sheet", and the agent
-     follows its own numbered steps. Nothing gates this either — no test fails
-     if a tool starts painting a panel colour again, which is how
-     `contact-sheet.ts` held one through three review passes.
+  1. **Closed 25 Aug.** `contact-sheet.ts` composed its frames over a flat
+     `#0d1117` — a `packs/example` palette entry copied by hand — where the
+     device paints the environment edge to edge (`ENVIRONMENT_EXTENT = 'panel'`).
+     It is the artefact the mandatory `animation-critic` reads, so every
+     animation review since the environment landed judged art against a
+     background the panel cannot display, which is the failure this plan
+     already records four animations shipping through.
+     It now composes each frame through `render()` and crops to the stage slot,
+     so a reviewer sees the sprite on its real ground and still sees the frames
+     side by side. `--sky` picks the scheme, `dusk` being the hardest case for
+     a pale prop. The harness keeps a backdrop and says so — it draws no bands
+     and is for motion, and `docs/ANIMATION.md` plus the critic's own step 4
+     send a reviewer to `panel-mock` for context.
+     `tools/one-panel-renderer.test.ts` is the gate that was missing, and
+     `contact-sheet.ts` has come off its allowlist rather than staying on it
+     harmlessly.
   2. **Hero versus two-up is open, and is now answerable by looking.**
      `composePanels` hardcoded `layout: 'hero'` until 25 Aug, so nothing could
      compose a two-up _panel_ through `render()` and the comparison could not

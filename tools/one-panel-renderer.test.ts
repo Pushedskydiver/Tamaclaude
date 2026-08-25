@@ -10,17 +10,18 @@ const TOOLS = resolve(import.meta.dirname);
 /**
  * Files allowed to name a pack colour, and why each one is.
  *
+ * `contact-sheet.ts` was here until 25 Aug and is not any more: it composes
+ * through `render()` now, so it has no colour to hardcode. An allowlist entry
+ * outliving its reason is how a list like this becomes a place things go to be
+ * forgotten, which is why the second test below checks the entries still name
+ * files that exist — and why this one was removed rather than left harmless.
+ *
  * An allowlist rather than a ban, because two of these genuinely have to draw
  * a panel and the third has to put *something* behind a transparent frame. The
  * point is that adding a fourth is a deliberate edit to this list rather than
  * a thing nobody notices.
  */
 const ALLOWED = new Map([
-  [
-    'contact-sheet.ts',
-    'a flat backdrop for transparent frames, and it says so — the sheet judges' +
-      ' motion, not context',
-  ],
   [
     'harness.ts',
     'same: a backdrop behind sprite slots, on a page that draws no bands',
