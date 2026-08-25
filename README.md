@@ -57,8 +57,35 @@ start rather than falling back to the example, because a fallback would turn
 
 ```bash
 pnpm install
+pnpm exec playwright install --only-shell chromium
 pnpm build && pnpm test && pnpm lint && pnpm typecheck && pnpm format:check && pnpm knip
 ```
+
+The browser is not optional and `pnpm install` does not fetch it. **Playwright
+publishes no install script** — it has had none since 1.38 — so a browser
+arrives only when the `playwright install` CLI is run explicitly. (It is not
+pnpm 10 declining to run dependency scripts, which is a real thing that happens
+to `unrs-resolver` here and would send you to `pnpm approve-builds`, where no
+amount of approving produces a browser.)
+
+`tools/svg2frames.ts` rasterises every animation frame in headless Chromium and
+`tools/frame-palette.test.ts` drives it end to end, so **`pnpm test` fails
+without this line** — with an error naming `svg2frames.ts` and never mentioning
+Playwright. CI has run it since 21 Aug, three days after Playwright entered the
+tree; the documented steps here never did.
+
+CI adds `--with-deps`, which installs Linux system libraries and does nothing
+useful on macOS. Node is pinned by `mise.toml` at 24.16.0 rather than by
+`engines.node`, which is a floor of `>=24.0.0` that nothing enforces;
+`packageManager` is an exact pin and pnpm enforces it.
+
+Nothing in the dependency tree compiles on install — verified by observation, a
+clean clone building with no compiler invoked, rather than by the absence of a
+`binding.gyp`, which is not a sound test: `fsevents` publishes
+`"install": "node-gyp rebuild"` and ships a prebuilt binary instead. That is
+narrower than "no Xcode CLT needed", which `BUILD_PLAN.md` Stage 6 still lists
+as untested and which remains untested — `git` itself is usually CLT-provided
+on macOS, so building and _getting started_ are different claims.
 
 `pnpm dev` builds the panel harness and tells you where to open it — an
 interactive page that animates at 8fps and switches orientation, layout and

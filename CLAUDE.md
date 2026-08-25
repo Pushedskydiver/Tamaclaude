@@ -11,6 +11,9 @@ the architecture is what it is.
 ## Commands
 
 ```bash
+pnpm install
+pnpm exec playwright install --only-shell chromium   # once; Playwright ships
+                                                     # no install script — see README
 pnpm build              # Build all packages
 pnpm test               # Run all tests
 pnpm lint               # Lint all packages
