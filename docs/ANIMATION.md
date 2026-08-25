@@ -276,7 +276,8 @@ into each animation SVG. Four reasons, and the last is the one that decides it:
 
 **Scenery that moves with the action stays in the SVG.** `bouldering` scrolls
 its wall because the wall _is_ the animation — the holds pass him and that is
-what says "climbing". `road bike` will do the same horizontally. The test is
+what says "climbing". A horizontal equivalent was planned for `road bike`,
+which is cut, so `bouldering` is the only animation this applies to. The test is
 whether the background would still make sense if the character were removed: a
 sky would, a climbing wall would not.
 
@@ -306,7 +307,9 @@ owns.
 
 Scroll the background _away_ from the direction of travel. Holds moving down
 read as Clawd going up, the same relationship a camera has to a climber it is
-following. `road bike` needs this same technique horizontally.
+following. A horizontal version of the same technique was `road bike`'s, and
+that screen is cut — this section is kept because the rule is about scrolling
+scenery generally, and `bouldering` is the animation that has it.
 
 ## Canvas conventions
 

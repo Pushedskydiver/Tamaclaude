@@ -97,7 +97,8 @@ frames are regenerated each time, since `out/` is gitignored.
 | `bouldering`      |          2,821 B |     3,008 B | 22.0 KB/s |  24:1 |     3.92% |
 
 **The busiest uses 3.92% of the measured link — 26x headroom.** `bouldering`
-scrolls its entire background every frame, the same shape as the road bike, and
+scrolls its entire background every frame — the worst shape in the catalogue
+now that `road bike`, which would have scrolled horizontally, is cut — and
 costs the most both on average and by worst single frame, which is the number a
 real-time link has to survive.
 
