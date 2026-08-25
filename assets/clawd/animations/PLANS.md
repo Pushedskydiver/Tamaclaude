@@ -1328,7 +1328,7 @@ The context is filling up and Clawd is tidying it.
 `BUILD_PLAN.md` Stage 4 item 8, and **Tier B per `spec.md` — the third owed
 screen, which the first draft of this section replaced with `road bike`.**
 `road bike` is Tier C: "cut without regret". Promoting it was reopening a
-settled decision on the most expensive of the three, twenty days before the
+settled decision on the most expensive of the three, nineteen days before the
 13 Sep feature freeze — the original said seventeen, which reproduces against
 no date in the plan.
 
@@ -1402,7 +1402,12 @@ changing is the wrong move.
 
 **Two exposure numbers, and they say opposite things.** Per occurrence this
 holds for minutes. In aggregate it is 0.62 compactions a day and 49.5 minutes
-total across a 30.9-day corpus — a **0.52% duty cycle**, taking "awake" as the
+total across a 30.9-day corpus — a duty cycle **between 0.33% and 0.58%** depending on how "awake" is counted —
+stated as a range because the single figure this line carried, 0.52%, does not
+reproduce under the method the same sentence gives. Union of activity with
+blocks broken at 10 minutes idle gives 0.58%; summing per-file blocks gives
+0.33%. Nothing turns on which, and the 0.62/day and 49.5 min beside it are exact.
+The method is "awake" as the
 union of activity with blocks broken at 10 minutes idle, which is the same
 definition §Board game uses. That very likely makes sweeping the _rarest_
 screen on the panel, not the longest-lived; the first draft claimed the latter
@@ -1504,13 +1509,18 @@ that way: the long-exposure screens are `idle` at 16s and `asleep`, `confused`,
 backwards: there the measurement changed the loop, here the first draft
 measured the window, stated the implication and changed nothing.
 
-- **Action.** Clawd sweeping with an extended claw. **Amended 25 Aug: nothing
+- **Action.** Clawd sweeping. **Amended 25 Aug: not with an extended claw** —
+  the claw rotates and the broom supplies the length; §As built item 2. This
+  bullet said "with an extended claw" until a review caught it contradicting the
+  bullet four lines below. **Amended 25 Aug: nothing
   is swept.** §Props below permits choosing the broom _or_ the material, and the
   broom was chosen, so there is no swept material on any of the 96 frames and
   "should read as _removed_" has nothing to attach to. A broom travelling over
   empty sand is what shipped; whether that reads as tidying is the judgement
   §As built records.
-- **Body mechanics.** Breath, legs outside it. One claw rotated at the shoulder,
+- **Body mechanics.** Breath, legs outside it. One claw rotated at the shoulder — **the shoulder is
+  the arm's pivot, not the broom's**, which §As built item 1 records being
+  misread the other way and costing a rebuild.
   moving rather than held — this is the one screen of the three where travel
   carries the reading, so it is the `overheated` fan idiom rather than the
   `permission-sign` hold. **Amended 25 Aug: the claw rotates and does not
@@ -1536,6 +1546,30 @@ but not "with the Tier A gate", which has already fired green and which the
 section above records as reading like a rubber stamp. And **do not start the
 wiring after 13 Sep**: it is atomic and cross-package, so it cannot be
 half-landed.
+
+**Corrected 25 Aug — that last clause bound nothing.** 13 Sep _is_ the feature
+freeze (`BUILD_PLAN.md`), so nothing may start after it in any case, and as
+written the rule permitted beginning an atomic cross-package change on freeze
+day. What was missing is a **start-by**, so: **start the wiring by Mon 8 Sep or
+cut it.** Two days after the decision, which is what an atomic change needs to
+land with room to revert.
+
+**And the 6 Sep decision needs a stop condition, which it did not have.**
+§Payoff's gate names one ("stop if it does not read as a vehicle"); this one
+named only a date, so on 6 Sep it would be decided by whoever was least tired.
+The condition is the assumption three paragraphs up, which is stated candidly
+and then left: the evidence that `PreCompact` fires at the _start_ of the window
+is transcript-layer and the claim is hook-layer. No transcript can show it, and
+it decides whether the screen is ever seen for its two minutes — which is the
+entire return on the wiring.
+
+**So: capture it before 6 Sep.** It needs no repo change — a throwaway hook
+settings entry pointing at a logging script, one manual compaction, and read
+whether `PreCompact` arrives at the start and whether anything else fires inside
+the window and takes the hero. **If the capture does not happen, cut the screen**
+rather than buying the wiring on a plausible premise. The art is already sunk and
+inert — `sweeping` is in `SPRITE_NAMES` and out of `ANIMATIONS` — so cutting
+costs nothing and reverts nothing.
 
 ### As built, 25 Aug — where the art differs from the brief above
 
@@ -1614,15 +1648,36 @@ A `1.5s` breath (three second cycle, eight even iterations) plus a stroke that
 pushes in 1.6s and recovers in 2.4s takes it to **88 of 96**. `3s` was tried
 first and scores 92, but it made this the slowest-breathing screen in the corpus
 — slower than `asleep`, which a crab doing manual work should not be. Measured
-across all fourteen animations by torso-top travel, 1.5s puts sweeping seventh
-at 3.33 px/s; 3s would have put it thirteenth. Four frames of distinctness lose
-to that, and all eight duplicate frames are a whole stroke period apart, where no
-viewer can pair them.
+across all fourteen animations as mean absolute travel of the **torso band's**
+top row per second — the metric matters, because "topmost drawn pixel anywhere"
+ranks `permission-sign` at zero by catching its held sign arm — 1.5s puts
+sweeping **sixth of fourteen at 3.33 px/s**, between `idle` at 3.75 and
+`board-game` at 3.00. At 3s it halves to 1.67 and ranks thirteenth, above only
+`permission-sign`. Four frames of distinctness lose to that, and all eight
+duplicate frames are a whole stroke period apart, where no viewer can pair
+them.
 
 The general rule: **loop length only buys variety if two tracks have different
 periods.** Length against a single period is the same picture for longer. It is
 checklist item 9 as of this commit, answerable with a frame count rather than an
 argument.
+
+**And the judgement the brief forwards here, taken rather than deferred: it
+reads as sweeping, not as removing.** §Action wanted what he sweeps to read as
+_removed_; §Props allowed choosing the broom instead of the material, and the
+broom was chosen, so there is nothing on the sand to remove. Rendered at true
+size on all four grounds, what the screen says is "a crab is sweeping" — the
+head is flat on the floor, travels a fifth of the panel, and the arm lies along
+the handle throughout. What it does not say on its own is _tidying up after
+something_. That last step is carried by context rather than by the frame: this
+screen only ever appears while the context is being compacted, and the panel is
+glanceable rather than read.
+
+The alternative was a second prop, which §Props rules out as two props, and
+which §Not wanted rules out again for the specific case of a stage that visibly
+empties on a loop that repeats. So this is the intended trade rather than a
+shortfall — but it is the screen's weakest link, and if anything about it is
+revisited before 13 Sep, this is the thing to revisit, not the stroke.
 
 **6. There is a blink.** `#eyes-blink` carried an id and no rule at all, so
 nothing blinked across a screen that holds for minutes. It is the only beat the
@@ -1677,7 +1732,11 @@ critic's render costs a rebuild.
 
    Buy the length either way: with `scaleX`, as `gym` does at -73deg and 2.85;
    or with a prop held collinear with the arm, as `sweeping` does with a broom
-   on a `tilt - 90deg` identity. A pivot at the claw's own tip extends it inward
+   on a `tilt - 90deg` identity. **Either way, state the composite length in
+   units**, because a mechanism test alone still passes a 1.5-unit collinear
+   prop that reads as a stub. The two poles are the bare claw at **2 units**,
+   which `docs/ANIMATION.md` records failing at true size in three separate
+   positions, and `gym`'s **6.8-unit** limb. `sweeping`'s handle is 6.7. A pivot at the claw's own tip extends it inward
    under the torso instead, which is the failure this item exists to catch.
    `docs/ANIMATION.md` adds the third clause: "give it something to hold".
    Every extended claw in the corpus holds a prop or moves.
@@ -1743,6 +1802,15 @@ phasing, which forces the delays to be multiples of the step.
    89/96 and `wizard` 87/96. Twelve seconds of loop bought two frames of content
    over four.
 
+   **Do not decide it on the ratio.** 19 of 96 is 19.8%, but `confused` is 27.1%
+   and `permission-sign` 25%, and both are deliberately still screens — there is
+   no threshold that separates the defect from the intended cases, and a ratio
+   test hands the reader the number that would not have caught it. The
+   discriminating test is structural: **no half or third of the loop may be a
+   byte-identical copy of another.** §Overheated records that exact check finding
+   that exact defect once already ("frames 32-95 were byte-for-byte copies of
+   0-31"), which makes `sweeping` the second time.
+
    A mirror-symmetric main track costs the other half again — the return stroke
    is the push played backwards — so an asymmetric one (`sweeping` pushes in
    1.6s and recovers in 2.4s) is where the rest comes from. Both fixed took it to
@@ -1752,8 +1820,16 @@ phasing, which forces the delays to be multiples of the step.
    against the arithmetic. `sweeping` first took `3s`, which decouples the
    periods and scores 92 — and made a working crab breathe slower than `asleep`.
 
-   Answer it with a count, not an argument:
-   `md5 -q out/<name>/frame_*.png | sort -u | wc -l`.
+   Answer it with a count, not an argument — and render first, because `out/`
+   is gitignored, so a fresh clone has none and an existing one may hold
+   yesterday's frames:
+
+   ```bash
+   node tools/svg2frames.ts assets/clawd/animations/<name>.svg out/<name> &&
+     shasum out/<name>/frame_*.png | cut -d' ' -f1 | sort -u | wc -l
+   ```
+
+   `shasum` rather than `md5 -q`, which is BSD-only and not on the Linux runner.
 
 Two of these were stated backwards in the first draft of this section: that a
 hex in a comment is never a declaration, and that the claw mistakes had
