@@ -256,10 +256,15 @@ the one an art review actually walks into.
       zero mask mismatches — and seen animating on the real panel.
       The raw art was 24,192,000 bytes of RGB565 plus the same again halved for
       the mask, and encoded it shipped as 1,128,216. **Those are the six-animation
-      figures and they are the stale copy** — thirteen animations and 840 frames now
-      measure 56,448,000 raw and 2,510,452 encoded. `tools/bake-sprites.ts` and
-      `packages/renderer/src/sprites/index.ts` carry the live numbers with a
-      caveat that only a re-bake refreshes them; this line had neither. Size was never going to be what
+      figures and they are the stale copy.** So was the thirteen-animation copy
+      that replaced them: measured 25 Aug, there are fourteen animations and 936
+      frames, 62,899,200 raw and 2,744,512 encoded — the thirteen-animation
+      total plus `sweeping` exactly. `tools/bake-sprites.ts` and
+      `packages/renderer/src/sprites/index.ts` were said to "carry the live
+      numbers"; they carry the caveat and their own stale copies, at ten and
+      thirteen animations. A figure that has now gone stale three times in one
+      file is a figure to stop quoting: re-derive it from the `.data.ts` files
+      when it is wanted. Size was never going to be what
       limited how many animations this device gets, though it was quoted as
       though it might be.
 - [x] **Hook names confirmed against live documentation** — all three exist:
@@ -307,9 +312,48 @@ the one an art review actually walks into.
       `overloaded` draw `overheated`, the other eight documented values keep
       `dizzy`. The field is kept because it arrives once and cannot be
       recovered
-- [ ] **Remote transport** — TCP + shared secret, so the recipient's Raspberry Pi agent appears on the
-      display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
-      from day one (cheap), but ship it only if Stage 4 is on schedule.
+- [~] ~~**Remote transport**~~ — **cut, 25 Aug.** TCP + shared secret, so a
+  remote Claude Code agent would appear on the display.
+  **This reverses a decision, and says so rather than dressing it as the
+  plan's own escape clause firing.** The line carried a condition from the
+  first commit that ever contained this file — "_Last item in the stage and
+  explicitly cuttable_ — design the protocol for it from day one (cheap),
+  but ship it only if Stage 4 is on schedule" — and a first version of this
+  entry claimed that condition had fired. It has not. Stage 4 has one
+  unchecked box and it is a _tool_; every Tier A animation exists, twelve
+  days before the 6 Sep gate. That version also said the catalogue was
+  "hand-drawn", which contradicts `docs/ANIMATION.md` — the animations are
+  LLM-authored CSS against a fixed geometry, and hand-drawing is the risk
+  register's untaken fallback. Both claims were wrong and both made the cut
+  look automatic when it is a judgement.
+  `.claude/research/foundations/brief.md` calls remote sessions a headline
+  feature and the screen spec puts `origin` in the frozen session model, so
+  this overrides the brief. The reasons it is still right: - **The install is on hardware nobody here owns.** `tamaclaude-notify`
+  would have to run on the other machine — second OS and arch, Node
+  there, reachability — untestable before the gift. - **The shared secret is a trust-boundary redesign, not a transport.**
+  `socket-server.ts` states the invariant that nothing may be kept per
+  peer; per-connection auth state contradicts it directly. The socket's
+  whole access model is the file mode, which no TCP port inherits. - **It would force a retune of `DEADLINE_MS`.** The hook's 150ms budget
+  is justified against a local socket write, and it sits on the user's
+  synchronous path — on a link nobody could test. - Being wrong costs nothing before 23 Sep, and the fallback is that the
+  panel shows local sessions, which is the whole product.
+  **What the cut does not undo.** The wire framing is transport-agnostic
+  and stays paid: newline-delimited JSON over many short-lived connections
+  (`socket-server.ts` is explicit that it is not one stream). The _secret_
+  half has no design anywhere — the phrase occurs only in this line — so
+  "the design half is done" is true of framing and false of authentication.
+  There is also a version needing no code at all: an SSH `RemoteForward` of
+  the Unix socket would deliver real remote events, since `TAMACLAUDE_SOCKET`
+  is already the only agreement between hooks and daemon. Untested, and it
+  would not light the hollow chip, because the daemon cannot tell where a
+  line came from.
+  `SessionOrigin` and the strip's hollow chip are kept: the field costs one
+  word at each construction site, and the strip has few spare visual axes.
+  `packages/renderer/src/strip.test.ts` pins the branch — a first version
+  of this entry called it "built and tested" when nothing asserted it.
+  Nothing on the _host_ produces a remote session; the panel could never
+  produce any session at all. The re-entry condition is in the deferred
+  table.
 - [x] **The pack comes from a configured location.** `TAMACLAUDE_PACK`, else
       `~/.tamaclaude/pack/`, else refuse to start — `packages/cli/src/pack.ts`.
       The repo-relative `readFileSync` is gone, so the binary no longer depends
