@@ -7,8 +7,14 @@
  * and an upstream payload change lands in one file. That is now live:
  * `translate()` in `packages/hooks/src/index.ts` reads stdin and maps
  * `session_id`, `hook_event_name`, `tool_name`, `agent_id`, `agent_type` and
- * `error_type` onto the fields below. This block said the translation was
- * unwritten and the shape aspirational for as long as it has been neither.
+ * `error` onto the fields below. This block said the translation was unwritten
+ * and the shape aspirational for as long as it has been neither.
+ *
+ * It then said `error_type` for as long again, which is worse: `errorType`
+ * below records that reading `error_type` was a real defect that emptied every
+ * `StopFailure` silently, and this header went on naming the wrong key three
+ * lines from the field that documents it. A file that corrects itself in one
+ * place and not the other is the shape a reader trusts least.
  *
  * Verified against code.claude.com/docs/en/hooks.md rather than assumed —
  * `BUILD_PLAN.md` Stage 3 gated the state machine on exactly that, because a

@@ -292,10 +292,17 @@ describe('what the panel says', () => {
     // line. The session below fails with `rate_limit` on purpose — it is the
     // path with two shields, so emptying `mapped` is what reaches the defect.
     //
-    // `FAILED` is the only state that reaches the tool line with a stale tool.
+    // `FAILED` is the only live state that reaches the *panel* with a stale
+    // tool — which the assertion below pins, since `resolve` copies it across
+    // unfiltered. It does not reach the message band: `TOOL_STATES.FAILED` is
+    // `false`, and that whitelist is the only thing stopping it. This comment
+    // said "reaches the tool line" until 25 Aug, which read as the opposite of
+    // what the next four lines assert.
+    //
     // `SessionEnd` also leaves `tool` set, at `ASLEEP` — the panel never sees
     // it because `isLive` drops a session with `endedAt`, which is a different
-    // reason from the one an earlier version of this comment gave.
+    // reason from the one an earlier version of this comment gave, and the
+    // reason a whitelist beats a `FAILED`-only blacklist.
     const bare = parsePackManifest({
       ...pack,
       quips: { ...pack.quips, mapped: {} },

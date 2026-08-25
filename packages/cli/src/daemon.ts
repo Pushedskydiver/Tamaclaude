@@ -306,13 +306,23 @@ function refinedFailureLine(
 /**
  * The states where the tool is the interesting fact, rather than a leftover.
  *
- * **Two handlers leave `tool` set, not one.** `StopFailure` is the one that
- * reaches the glass. `SessionEnd` also leaves it — `session.ts` stores
- * `ASLEEP` with the tool the session died holding — and the only thing hiding
- * that is `isLive` dropping a session with `endedAt`. An earlier version of
- * this comment said `Stop` clearing `tool` was the reason `ASLEEP` was safe,
- * which is true of `ASLEEP` by promotion and false of `ASLEEP` by `SessionEnd`.
- * It was badged "measured, not assumed" and was neither.
+ * **Two handlers leave `tool` set, not one.** `StopFailure` leaves it at
+ * `FAILED`, and `SessionEnd` leaves it at `ASLEEP` — `session.ts` stores
+ * `ASLEEP` with the tool the session died holding.
+ *
+ * Neither reaches the glass, and the reasons are different, which is the whole
+ * argument for this table. `FAILED` is stopped here and nowhere else: `resolve`
+ * copies `hero.tool` onto the panel unfiltered, so `panel.tool` really is
+ * `Bash` for a session that died running it, and the only thing between that
+ * and the message band is the `false` below. `ASLEEP` never gets that far,
+ * because `isLive` drops a session with `endedAt` before the panel is built.
+ *
+ * Said in the present tense here until 25 Aug, as though `StopFailure` still
+ * reached the glass — a description of the world immediately above the table
+ * that ended it. Before that, an earlier version said `Stop` clearing `tool`
+ * was the reason `ASLEEP` was safe, which is true of `ASLEEP` by promotion and
+ * false of `ASLEEP` by `SessionEnd`; it was badged "measured, not assumed" and
+ * was neither.
  *
  * That is also the argument for a whitelist over a blacklist on `FAILED`, and
  * it is stronger than the one first written here: a `FAILED`-only blacklist is
