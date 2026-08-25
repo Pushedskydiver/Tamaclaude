@@ -437,10 +437,12 @@ export function animationForPanel(
  * `animationFor` maps every session state and every `PreToolUse.tool_name` onto
  * a name in `ANIMATIONS`, and every one of those is baked — so this guard
  * cannot fire today, and saying otherwise would be inventing a hazard. It
- * exists for the next animation rather than the current ones: `sweeping` is
- * `BUILD_PLAN.md` Stage 4 item 8, and the moment it is added to `ANIMATIONS`
- * it is reachable here before its art is baked. The payoff screen used to be
- * named here too and no longer is — its art landed on 24 Aug. An empty stage is
+ * exists for the next animation rather than the current ones — and the example
+ * it names is maintenance. `sweeping` stood here until 25 Aug, when its art
+ * landed; `payoff` until 24 Aug. Both are baked now, so neither illustrates the
+ * hazard any more. `road-bike` is the next unbuilt screen in
+ * `assets/clawd/animations/PLANS.md`, and the moment a name like it is added to
+ * `ANIMATIONS` it is reachable here before its art is baked. An empty stage is
  * the right answer to that; taking the panel down is not.
  *
  * Typed `AnimationName` rather than `string` on purpose. A `string` here is how

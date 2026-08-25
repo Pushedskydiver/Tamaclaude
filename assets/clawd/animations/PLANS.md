@@ -1486,64 +1486,30 @@ that way: the long-exposure screens are `idle` at 16s and `asleep`, `confused`,
 backwards: there the measurement changed the loop, here the first draft
 measured the window, stated the implication and changed nothing.
 
-- **Action.** Clawd sweeping something off the stage with an extended claw.
-  What he sweeps should read as _removed_, not destroyed.
-- **Body mechanics.** Breath, legs outside it. One claw rotated and extended at
-  the shoulder, moving rather than held — this is the one screen of the three
-  where the claw's travel carries the reading, so it is the `overheated` fan
-  idiom rather than the `permission-sign` hold.
-- **Eyes.** Following the sweep.
+- **Action.** Clawd sweeping with an extended claw. **Amended 25 Aug: nothing
+  is swept.** §Props below permits choosing the broom _or_ the material, and the
+  broom was chosen, so there is no swept material on any of the 96 frames and
+  "should read as _removed_" has nothing to attach to. A broom travelling over
+  empty sand is what shipped; whether that reads as tidying is the judgement
+  §As built records.
+- **Body mechanics.** Breath, legs outside it. One claw rotated at the shoulder,
+  moving rather than held — this is the one screen of the three where travel
+  carries the reading, so it is the `overheated` fan idiom rather than the
+  `permission-sign` hold. **Amended 25 Aug: the claw rotates and does not
+  extend**, because the broom supplies the length instead; see §As built. Breath
+  is `3s`, not the corpus `2s` — at `2s alternate` its cycle is the stroke
+  exactly and the loop rendered 19 distinct frames of 96.
+- **Eyes.** Following the sweep. **Amended 25 Aug: static.** Built both ways and
+  the tracking version reads worse; §As built has the measurements and the
+  reason.
 - **Props.** A broom or the swept material — decide which, because both is two
   props. Whatever it is has to touch the claw on every frame of the stroke.
-- **Effects.** None beyond the swept material itself.
+- **Effects.** None beyond the swept material itself — so, none. A blink was
+  added instead, which the brief did not ask for and which is the screen's only
+  second beat.
 
 **Not wanted:** dust clouds, which are the small-pale-things failure again.
 A stage that visibly empties, since the loop repeats and it would refill.
-
-### As built, 25 Aug — three departures from the brief above
-
-The art landed with three things different from the sketch, each measured
-rather than argued.
-
-**The broom does not hang off the shoulder.** §Body mechanics says "one claw
-rotated and extended at the shoulder", and the first draft read that as the
-broom sharing the arm's pivot. A prop on a fixed radius from the shoulder
-travels an _arc_, so it lifts as it extends: the head was buried four device
-pixels in the sand for 57 of 96 frames and up to five above it for 35 more, an
-unbroken airborne run of 4.38 seconds. A compensating slide along the handle
-fixes the tip and leaves the corners, because a tilted bristle block dips.
-
-So the broom is authored **in floor coordinates and pivoted at its own head**:
-the head translates along x only, the handle leans about the head's centre, and
-the arm rotates to exactly `tilt - 90deg` so it lies along the handle. Contact
-became exact on all 96 frames — the head's lowest row is the ground line on
-every one — and the grip cannot open, because the two angles are one number.
-
-**The claw rotates but does not extend, and checklist §5 needs the nuance.**
-That item asks for rotation _and_ extension because "a bare rotation cannot
-clear the silhouette". Measured here, it clears it comfortably: the base arm
-already sits two units left of the torso, so rotating it puts the claw **11
-device pixels clear at the near end of the stroke and 17 at the far end** —
-counted on the baked frames, not from the angles, because the trigonometry
-alone gives 16 at the far end and misses the half pixel the breath adds.
-The reach the item is really asking for is supplied by the broom, which is what
-choosing a prop that travels buys. The item's instinct stands — measure the
-protrusion — but "extending" is a means, not the property.
-
-**The eyes do not follow.** §Eyes asks for a gaze that tracks the sweep, and
-the reason it cannot is `#fx-eyes-look` and the arm sharing the same corner:
-the left eye already sits at unit x 3 to 4, and at the near end of the stroke
-the arm's near corner reaches x 2.976. One more unit of leftward tracking puts
-the eye inside the arm. §Props need contact's other clause — do not walk a body
-part into a prop to make it track — decides it.
-
-**And the loop is three strokes, not one.** Twelve seconds spent on a single
-out-and-back put peak head speed at 1.24 device pixels per frame, which does not
-read as travel at true size. Three four-second strokes take it to 1.25 mean and
-2 peak, measured on the bake. The calm the two-minute window asks for is bought
-by the blink and the easing instead — which is _sampled_, because head position
-and both angles are related by an arctangent and easing them independently pulls
-them apart.
 
 **Fallback:** cut it. It has the largest wiring cost and the least visible
 trigger — and it is now measured rather than asserted: 0.62 compactions a day,
@@ -1552,6 +1518,89 @@ but not "with the Tier A gate", which has already fired green and which the
 section above records as reading like a rubber stamp. And **do not start the
 wiring after 13 Sep**: it is atomic and cross-package, so it cannot be
 half-landed.
+
+### As built, 25 Aug — where the art differs from the brief above
+
+The brief's own bullets are amended in place; this is the reasoning, each item
+measured rather than argued. Six things differ, and the count is stated because
+an earlier version of this heading said "three" over a list of four.
+
+**1. The broom does not hang off the shoulder.** The first draft read §Body
+mechanics' "at the shoulder" as the broom sharing the arm's pivot. A prop at a
+fixed radius travels an arc that lifts as it extends: the head was buried four
+device pixels in the sand for 57 of 96 frames and up to five above it for 35
+more, an unbroken airborne run of 4.38 seconds. A compensating slide along the
+handle fixes the tip and leaves the corners, because a tilted bristle block dips.
+
+So the broom is authored **in floor coordinates and pivoted at its own head**:
+the head translates along x only, the handle leans about the head's centre, and
+the arm rotates to exactly `tilt - 90deg` so it lies along the handle. Contact
+became exact on all 96 frames — the head occupies device rows 184 to 191 on
+every one, and 191 is the legs' own lowest row. The angle identity means the
+claw cannot come off the handle, though the _grip_ still drifts 0.10 to 2.01
+device pixels because the arm breathes and the handle does not; that number is
+stated in the SVG rather than argued away.
+
+**2. The claw rotates but does not extend — and the first defence of that was
+wrong.** Checklist §5 asks for rotation _and_ extension because "a bare rotation
+cannot clear the silhouette", so the first draft answered with clearance: the
+claw protrudes 11 to 16 device pixels past the torso.
+
+That answer is worthless, for two reasons found in review. The metric does not
+discriminate — `thinking`'s left arm has no rotation at all and scores 16 to 17
+on the same measure, because the base arm already sits two units left of the
+torso; sweeping's rotation _spends_ clearance rather than buying it. And the
+premise is a paraphrase that inverts its own authority: `docs/ANIMATION.md`
+says "**Rotation gets it out of the silhouette. It does not, on its own, make it
+read**", and "what makes a raised claw read is **length**".
+
+The real answer is the one sentence that carried no number: the handle is
+collinear with the arm by construction and over four units long, so the composite
+_is_ the length. That is `gym`'s rotation-plus-axial-scale achieved with a prop
+instead of `scaleX`, and it satisfies the doc's actual closing instruction —
+"extend a claw as well as turning it, and give it something to hold". Upstream's
+own sweeping animation does the same: a rotated, unscaled claw holding a broom.
+`docs/ANIMATION.md`'s `gym` example is about reaching _above the head_, which a
+down-and-left claw never needs. **Checklist §5 is amended to match**, because it
+is the item that made the wrong answer feel right.
+
+**3. The eyes are static, and this is a judgement, not a constraint.** §Eyes asks
+for a gaze that follows. Tracking _further left_ is genuinely blocked — the left
+eye sits at unit x 3 to 4 and the arm's near corner reaches 2.976, leaving 0.02
+of a unit. But tracking the other way is free, and a review was right to say so:
+hold the eye at its base x 4 to 5 at the near end and step left at the far end,
+clearing the arm by 1.02 and 0.21 units, whole-unit, on a period that divides the
+loop.
+
+So it was built and rendered rather than argued about. It reads worse. At the
+near end the eye centres in the head and Clawd looks straight ahead — at the one
+moment when the broom is closest and the gaze has least excuse — and a gaze that
+tracks for two thirds of a stroke then abandons the prop is worse than one that
+never leaves it.
+
+**4. The loop is three strokes, not one.** Twelve seconds on a single
+out-and-back put peak head speed at 1.24 device pixels per frame, which does not
+read as travel at true size. Three four-second strokes give 1.25 mean, and 3 on
+the push against 2 on the recover.
+
+**5. The stroke is asymmetric and the breath is `3s`, because the loop was
+buying nothing.** This is the finding that would have shipped: at `2s alternate`
+the breath's full cycle is four seconds — the stroke exactly, and in phase — so
+frames 0-31 were byte-identical to 32-63 and the file rendered **19 distinct
+images of 96**, the lowest in the corpus against `asleep` 96/96 and `idle`
+123/128. Twelve seconds of loop bought two frames of content over four. A `3s`
+breath (six second cycle, four even iterations) plus a stroke that pushes in
+1.6s and recovers in 2.4s takes it to **92 of 96**.
+
+The general rule, which no checklist item states: **loop length only buys
+variety if two tracks have different periods.** Length against a single period
+is the same picture for longer. Worth a checklist item on the next pass.
+
+**6. There is a blink.** `#eyes-blink` carried an id and no rule at all, so
+nothing blinked across a screen that holds for minutes. It is the only beat the
+stroke does not supply. Its `transform-origin` is `7.5px 10px` rather than the
+corpus `7.5px 9px`, because `#fx-eyes-look` nests inside it and moves the eyes a
+unit down; at 9 the lid collapsed into the brow with a measured 7 pixel drift.
 
 ---
 
@@ -1590,11 +1639,27 @@ critic's render costs a rebuild.
    against its top**. One flat tone
    does not survive four times of day at head height, which is why `dizzy` ended
    up a dark mass with a pale core.
-5. **Is the claw rotating _and_ extending, pivoted at the shoulder — and does
-   it hold something?** A bare rotation cannot clear the silhouette; a pivot at
-   the claw's own tip extends it inward under the torso.
+5. **Does the raised claw read as a limb — and does it hold something?**
+   **The property is length, not clearance.** `docs/ANIMATION.md`: "Rotation
+   gets it out of the silhouette. It does not, on its own, make it read", and
+   "what makes a raised claw read is **length**". So do not answer this item
+   with a protrusion measurement — it cannot fail. `thinking`'s left arm has no
+   rotation at all and clears the torso by 16 to 17 device pixels, because the
+   base arm is already two units left of it.
+
+   Buy the length either way: with `scaleX`, as `gym` does at -73deg and 2.85;
+   or with a prop held collinear with the arm, as `sweeping` does with a broom
+   on a `tilt - 90deg` identity. A pivot at the claw's own tip extends it inward
+   under the torso instead, which is the failure this item exists to catch.
    `docs/ANIMATION.md` adds the third clause: "give it something to hold".
    Every extended claw in the corpus holds a prop or moves.
+
+   Until 25 Aug this item read "Is the claw rotating _and_ extending ... a bare
+   rotation cannot clear the silhouette", which is the inverse of the sentence
+   it defers to — and §Sweeping duly answered it with a clearance number that
+   proved nothing. A checklist item that misquotes its own authority is worse
+   than no item, because it gets answered.
+
 6. **Are the legs outside the breathing group, and is `ground-shadow` absent?**
    Legs inside it make the whole sprite bob and the feet sink into their own
    contact shadow. There is **no seated pose in the corpus** — `typing` looks
@@ -1636,6 +1701,27 @@ render as 2, 3, 1 repeating — `dizzy.svg` §Why nothing rotates measures it, a
 §Dizzy above records the even-spacing claim being asserted and retracted once
 already. The rule is also unsatisfiable as stated alongside thirds-of-track
 phasing, which forces the delays to be multiples of the step.
+
+9. **Do two tracks have different periods — and how many distinct frames does
+   the bake actually contain?** Loop length buys variety only if something has a
+   second period. Length against a single period is the same picture for longer,
+   and nothing in the SVG looks wrong when it happens.
+
+   The trap is the corpus breath. `2s alternate` is a **four** second cycle, so
+   on any screen whose main track is also four seconds the two are in phase and
+   half the loop is a byte-identical repeat of the other half. `sweeping` shipped
+   into review that way: three four-second strokes against a `2s` breath rendered
+   **19 distinct images of 96**, against `asleep` 96/96, `idle` 123/128, `dizzy`
+   89/96 and `wizard` 87/96. Twelve seconds of loop bought two frames of content
+   over four.
+
+   A mirror-symmetric main track costs the other half again — the return stroke
+   is the push played backwards — so an asymmetric one (`sweeping` pushes in
+   1.6s and recovers in 2.4s) is where the rest comes from. Both fixed took it to
+   92 of 96.
+
+   Answer it with a count, not an argument:
+   `md5 -q out/<name>/frame_*.png | sort -u | wc -l`.
 
 Two of these were stated backwards in the first draft of this section: that a
 hex in a comment is never a declaration, and that the claw mistakes had

@@ -52,9 +52,12 @@ type RegisteredEvent = {
  * that quietly never shows the new one. The cost of matching everything is a
  * few percent more spawns of a binary that takes 30 ms.
  *
- * `PreCompact` is deliberately absent: the sweeping animation it would drive is
- * Stage 4 work, and registering an event nothing consumes would be describing
- * behaviour that does not exist.
+ * `PreCompact` is deliberately absent, and still is now that its `sweeping`
+ * art has landed (25 Aug): the daemon has no `COMPACTING` state and nothing
+ * consumes the event, so registering it would describe behaviour that does not
+ * exist. The art and the wiring land in separate changes on purpose — see
+ * `BUILD_PLAN.md` Stage 4 item 8 — so this comment stays true until the daemon
+ * side moves, and it is the daemon side that should delete it.
  *
  * Every event in `HANDLED_HOOK_EVENTS` must appear below, and nothing else may.
  * The list lives in `protocol` because this package and the daemon cannot see

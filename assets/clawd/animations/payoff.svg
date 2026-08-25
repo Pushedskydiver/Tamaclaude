@@ -8,7 +8,8 @@
 
     Generated against assets/clawd/base.svg, with two departures from the
     boilerplate the other files carry: `ground-shadow` is not here, because
-    §Clawd lives somewhere forbids carrying it and the renderer draws one; and
+    `docs/ANIMATION.md` §The base geometry forbids carrying it and the renderer
+    draws one; and
     the eyes are one unit left of their base coordinates, looking at the
     vehicle. Everything else is at its original coordinates and colours, and
     all motion is CSS applied by ID.

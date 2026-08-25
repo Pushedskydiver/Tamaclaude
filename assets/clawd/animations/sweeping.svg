@@ -8,41 +8,69 @@
 
     Generated against assets/clawd/base.svg. Every base element appears below at
     its original coordinates and colours except `ground-shadow`, which
-    §Clawd lives somewhere forbids carrying. All motion, including the eyes'
-    look down and left, is CSS applied by ID.
+    `docs/ANIMATION.md` §The base geometry forbids carrying. All motion,
+    including the eyes' look down and left, is CSS applied by ID.
 
-    ── Twelve seconds, because the window is two minutes ─────────────────
+    ── Twelve seconds, because the window is minutes ─────────────────────
 
-    Measured from `compact_boundary` records: compaction runs 109s median on
-    current Claude Code and up to 268s on older releases. So this loop is seen
-    about thirteen times over, which is the opposite of `board-game` — that
-    screen is replaced after 3.2 seconds and had to become a two second
-    punctuation mark. §Sweeping carries both measurements and the rule they
-    make: measure the window before choosing the loop.
+    Measured from `compact_boundary` records: compaction runs 109s median on the
+    release that will be running in September, 123s at its maximum there. So the
+    loop is seen about **nine** times over. An earlier draft said thirteen, which
+    is 109/8 — left over from when this file was eight seconds — and also what
+    the pooled 150s median gives, a figure PLANS.md §Sweeping retires in as many
+    words because it describes no version.
 
-    Twelve rather than eight because `docs/ANIMATION.md` says length is the
-    cheap way to buy variety and the corpus splits that way — `idle` at 16s and
-    `asleep`, `confused`, `dizzy` and `wizard` at 12s are the long-exposure
-    screens; 8s is where `thinking` and `payoff` sit.
+    That is the opposite of `board-game`, which is replaced at a **median** of
+    3.2s (p90 4.3s, max 9.6s — PLANS.md §Board game) and had to become a two
+    second punctuation mark. The rule both make: measure the window before
+    choosing the loop.
+
+    Twelve rather than eight because `docs/ANIMATION.md` says length is a cheap
+    way to buy variety, and the long-exposure screens sit there — `idle` at 16s,
+    `asleep`, `confused`, `dizzy` and `wizard` at 12s, against `thinking`,
+    `payoff` and `permission-sign` at 8s. The short loops are `board-game` and
+    `typing` at 2s, `gym` at 3s, `bouldering` at 4s and `overheated` at 6s.
+
+    ── Two periods, because one period is not a beat structure ───────────
+
+    **The length is only bought if something has a second period, and the first
+    draft of this file did not notice that it had none.** Its breath was the
+    corpus `2s alternate`, whose full cycle is four seconds — exactly the stroke,
+    exactly in phase. Rendered: frames 0-31 were byte-identical to 32-63, and
+    64-95 differed only at the two blink frames. **19 distinct images of 96**,
+    the lowest in the corpus, against `asleep` 96/96, `idle` 123/128, `dizzy`
+    89/96 and `wizard` 87/96. Twelve seconds of loop bought two frames of
+    content over four.
+
+    Two changes fix it, and the count is now **92 of 96**:
+
+      the breath is `3s alternate` — a six second cycle against a four second
+      stroke, so the combined period is the full twelve; four iterations in the
+      loop, which is even, so the wrap lands where the cycle started. It is
+      slower than the corpus rather than faster, which is the right direction
+      for a screen that fires unbidden.
+
+      the stroke is asymmetric — 1.6s out and 2.4s back, rather than a mirror
+      about its own midpoint. A symmetric stroke is the push played backwards,
+      so its second half is the first half re-rendered even once the breath is
+      decoupled. Measured on the bake: the head leads at **3 device pixels a
+      frame on the push and 2 on the recover**, mean 1.25.
 
     ── Three strokes in the twelve, not one ──────────────────────────────
 
-    The first draft spent all twelve seconds on a single out-and-back, on the
-    argument that a screen firing unbidden — 18 of 19 compactions measured were
-    automatic — is an argument for calm. That was right about the mood and wrong
-    about the arithmetic: it put peak head speed at 1.24 device pixels per
-    frame, so the twelve seconds were spent slowing down the only thing moving,
-    and at true size the broom did not read as travelling at all.
+    The first draft spent all twelve seconds on a single out-and-back, arguing
+    that a screen nobody asked for is an argument for calm. Right about the mood,
+    wrong about the arithmetic: a critic measured peak head speed at 1.24 device
+    pixels per frame, so the twelve seconds were spent slowing the only thing
+    that moved, and at true size the broom did not read as travelling.
 
     So the stroke is four seconds and runs three times. Four divides twelve
-    exactly, and the whole out-and-back is written into one keyframe block
-    rather than left to `alternate`, so the loop cannot wrap mid-cycle whatever
-    the loop length becomes. Head travel is 2.5 units — 20 device pixels a
-    half-stroke over 16 frames. Measured on the bake rather than computed:
-    **1.25 device pixels per frame mean, 2 peak**.
+    exactly, and the whole out-and-back is written into one keyframe block rather
+    than left to `alternate`, so the loop cannot wrap mid-cycle whatever the loop
+    length becomes. Head travel is 2.5 units — 20 device pixels a half-stroke.
 
-    Calm is bought instead by the blink and by the easing, which is sampled
-    rather than declared: see §The keyframes are sampled below.
+    Calm is bought by the blink and by the breath being the slowest thing on the
+    screen, not by making the stroke hard to see.
 
     ── A broom, and it does not share the arm's pivot ────────────────────
 
@@ -52,24 +80,24 @@
 
       `#fx-broom`      translates along x only. The head is a rect whose bottom
                        edge is y = 15, and translation cannot change that, so
-                       contact with the ground is exact on all 96 frames by
-                       construction rather than by arithmetic.
-      `#fx-broom-tilt` rotates the handle about the head's centre, so the
-                       handle leans as the head travels while the head stays
-                       flat on the floor.
-      `#left-arm-joint` rotates to exactly `tilt - 90deg`, so the arm lies
-                       along the handle at every sample. That identity is why
-                       the claw cannot come off the handle: the two angles are
-                       one number.
+                       contact is exact by construction. Measured: the head
+                       occupies device rows 184 to 191 on all 96 frames, and 191
+                       is the legs' own lowest row.
+      `#fx-broom-tilt` rotates the handle about the head's centre, so the handle
+                       leans as the head travels while the head stays flat.
+      `#left-arm-joint` rotates to exactly `tilt - 90deg`, so the arm lies along
+                       the handle at every sample. That identity is why the claw
+                       cannot come off the handle: the two angles are one number.
+                       Check the pair before changing either.
 
     A first draft instead hung the broom off the shoulder at a fixed radius and
-    claimed a shared pivot made contact free. It did the opposite — the head
-    swings on an arc that lifts as it extends, so it was buried four device
-    pixels for 57 frames and up to five above the sand for 35 more, one unbroken
-    airborne run of 4.38 seconds. Adding a compensating slide along the handle
+    claimed a shared pivot made contact free. It did the opposite — a head on a
+    fixed radius swings on an arc that lifts as it extends, so it was buried four
+    device pixels for 57 frames and up to five above the sand for 35 more, an
+    unbroken airborne run of 4.38 seconds. Sliding the broom along its own handle
     fixes the tip and not the corners: a 1.5-unit bristle block tilted 40° off
-    vertical dips its lower corner 0.48 units, which is the same four pixels
-    back again. The pivot had to move, not the maths.
+    vertical dips its lower corner 0.48 units, the same four pixels back again.
+    The pivot had to move, not the maths.
 
     ── Where everything sits ─────────────────────────────────────────────
 
@@ -78,38 +106,50 @@
     breathing group the head would sink 3.6 device pixels at each breath peak
     while the feet beside it stayed planted.
 
-    The cost is that the grip does drift, because the arm breathes and the
-    handle does not. Measured perpendicular to the handle — the only direction
-    that can uncover it — the shoulder's 0.56-unit breath displacement resolves
-    to **0.10 device pixels at the near end of the stroke and 2.01 at the far
-    end**, against a claw 16 pixels wide covering a handle 4 pixels thick. It
-    stays covered by a wide margin. An earlier draft asserted the grip "cannot
-    drift by construction" while the two were in different groups, which was
-    false; this states the number instead.
+    The cost is that the grip drifts, because the arm breathes and the handle
+    does not. Measured perpendicular to the handle — the only direction that can
+    uncover it — the shoulder's 0.56-unit breath displacement resolves to **0.10
+    device pixels at the near end of the stroke and 2.01 at the far end**,
+    against a claw 16 pixels wide covering a handle 4 pixels thick. It stays
+    covered by a wide margin. An earlier draft asserted the grip "cannot drift by
+    construction" while the two were in different groups, which was false; this
+    states the number instead.
 
     Draw order is document order: legs, broom, body. So the handle passes in
     front of the legs and behind the torso and the claw, which is what makes the
-    grip read as a grip. The handle is a unit longer than it needs to be and the
-    overrun is hidden by the torso — its tip reaches x 2.21 to 2.52 across the
-    stroke, against a torso whose left edge is at 1.890 at full breath.
+    grip read as a grip. The handle is a unit longer than it needs to be and its
+    **tip** is inside the torso on every frame — x 2.21 to 2.52 at the left top
+    corner and 2.97 at the right, against a torso whose left edge is 1.890 at
+    full breath. The overrun is not *entirely* hidden, which an earlier draft
+    claimed: a single column of it shows past the torso edge at unit x 1.88 to
+    2.00, at most **5 pixels** and on 60 of 96 frames. It reads as handle above
+    grip, which is what it is.
 
     The sweep stays left of the legs at x 3 and well clear of the pool at
     x 11.25, and the rock sits at y 6.63 to 8.75 — mid-distance, above all of
-    this.
+    this. Nothing is drawn in row 0, row 199, column 0 or column 167; the drawn
+    extent is x 2 to 144, y 120 to 191, and the tightest margin is the head's
+    leading edge at column 2.
 
     ── The keyframes are sampled, not eased ──────────────────────────────
 
-    Head position, handle angle and arm angle are related by an arctangent, so
-    an `ease-in-out` applied to all three independently would pull them apart
+    Head position, handle angle and arm angle are related by an arctangent, so an
+    `ease-in-out` applied to all three independently would pull them apart
     mid-stroke — the handle would lean at an angle its own head was not under.
-    Instead the true geometry is sampled at nine points with a sinusoidal
-    ease-in-out already baked into the sampled values, and the timing function
-    is `linear`.
+    Instead the true geometry is sampled at seventeen points with the ease
+    already baked into the sampled values, and the timing function is `linear`.
 
-    Sampling every 12.5% is every four frames, and the worst the straight line
-    between two samples strays from the true angle is **0.38 device pixels**
-    measured at the grip — a tenth of the handle's thickness. The technique is
-    `wizard`'s stepped bob: when the relation is not linear, sample it.
+    The error that matters is whether the handle still points at the shoulder,
+    which is the perpendicular distance from (2, 10) to the handle's centreline —
+    zero when `tan(tilt) = (2 - tx) / 4.5` holds, as it does at every sample. Its
+    worst value **between** samples is **0.038 device pixels**, a hundredth of the
+    handle's thickness. Because the arm is the tilt minus a constant, the arm
+    stays exactly parallel to the handle at every instant, so "at the grip" and
+    "at the shoulder" are one number rather than two.
+
+    An earlier draft published 0.38 px here, computed against a lever arm of
+    `d - 2` and a nine-sample track. Three independent measurements returned
+    0.131 for that track; the figure above is this one, remeasured.
 
     ── Two tones, because one is invisible at some hour ──────────────────
 
@@ -121,59 +161,92 @@
 
     No new colour: only `#000000`, `#C9D1D9` and `#DE886D`.
 
-    ── Only the head can fringe, and it is measured ──────────────────────
+    ── Only the head can fringe, and it is both of its edges ─────────────
 
     An antialiased edge blends toward the composited background, which is black,
-    and a pale-to-black blend lands nearer `#DE886D` than either parent — so a
-    pale edge that is not on the pixel grid rims peach. The **handle cannot do
-    this at all**: it is `#000000` on a black background, so its edge blends
-    black into black however it turns. Only the head is pale, and the head only
-    translates, so its horizontal edges stay axis-aligned and only the two
-    vertical ones are ever off-grid.
+    and a pale-to-black blend lands nearer `#DE886D` than either parent. The
+    **handle cannot do this at all**: it is `#000000` on a black background, so
+    its edge blends black into black however it turns. Only the head is pale.
 
-    Measured against a variant with the broom deleted: **60 of 96 frames carry
-    peach the broom creates, at most 16 pixels**, and on the worst frame it is a
-    single column at unit x -0.88, y 14.00 to 14.88 — the head's leading edge,
-    one pixel wide and eight tall. That is a rim on the prop, the shape `payoff`
-    accepted as a contour, rather than the detached line `bouldering` was
-    reverted for. The earlier shoulder-pivot draft rotated the head and carried
-    89 frames and 25 pixels; pivoting at the head cut both.
+    The mechanism is worth naming exactly, because two drafts described it
+    wrongly. When the head's translate is off the pixel grid it renders **19
+    device pixels wide instead of 20**, and the missing edge column snaps to
+    `#DE886D`. It is the head's own edge column going body-coloured, not a rim
+    added outside it.
 
-    The remedy if it ever stops reading is known and deliberately not taken:
-    declaring `#6F4436` puts a colour in the peach-to-black ramp so the blend
-    snaps there instead, which is why `payoff` and `typing` declare it. The cost
-    is that every peach-over-background edge on the crab then snaps there too —
-    a contour on the whole body to fix a rim on one prop.
+    Measured against a variant with the broom deleted: **57 of 96 frames carry
+    peach the broom creates, at most 16 pixels** — 30 frames where **both**
+    vertical edges of the head go peach at 8 pixels each, and 27 where only one
+    does. The worst frame is 1: columns at unit x -0.375 and 2.125, rows unit
+    y 14.00 to 15.00. An earlier draft called this "a single column ... one pixel
+    wide and eight tall", which is 8 pixels and cannot be the 16 the same
+    sentence claimed; the reporting script indexed a list of non-empty frames
+    with an index into all 96.
 
-    ── The eyes do not follow ────────────────────────────────────────────
+    Judged at 1x and 2x over all four grounds and left alone. Two remedies exist
+    and both cost more than the defect:
 
-    §Sweeping asks for a gaze that follows the stroke and this is a deliberate
-    departure — but not for the reason a first draft gave. That cited
-    `board-game`, where stepping the eyes repainted 512 pixels against a beat of
-    128 and made the face the subject of its own screen. **That arithmetic does
-    not apply here**: the broom is the largest moving thing on the panel and two
-    stepped eyes would be lost against it.
+      `#6F4436` in the palette puts a colour in the peach-to-black ramp so the
+      blend snaps there instead — which is why `payoff` and `typing` declare it —
+      but every peach-over-background edge on the crab then snaps there too. A
+      contour on the whole body to fix a ragged end on one prop.
 
-    The rule that does apply is the other one — do not walk a body part into a
-    prop to make it track. `#fx-eyes-look` already puts the left eye at unit
-    x 3 to 4, and at the near end of the stroke the arm's near corner reaches
-    x 2.98. There is 0.02 of a unit left. One more unit of leftward tracking
-    puts the eye inside the arm.
+      whole-pixel `steps(1)` on the head, which `docs/ANIMATION.md` gives as the
+      general remedy, takes the fringe to zero. It needs a keyframe per frame,
+      because at 1.25 px a frame nine keyframes would step the head 2.5 pixels
+      every four frames and read as stepping. That couples the file to the 8 fps
+      bake rate, which no other continuously-moving element in the corpus is.
 
-    So the gaze is static, down and left onto the head, and it reads on every
-    frame rather than half of them.
+    The rim reads as a slightly ragged end on the prop, not as the line
+    `bouldering` was reverted for — that was a one-pixel violet line across 80 of
+    the torso's 88 pixels, a foreign colour on the character rather than a
+    contour on its own edge.
+
+    ── The eyes do not follow, and that is a judgement ───────────────────
+
+    §Sweeping asks for a gaze that follows the stroke. Two earlier drafts gave
+    two wrong reasons for not doing it.
+
+    The first cited `board-game`, where stepping the eyes repainted 512 pixels
+    against a beat of 128 and made the face the subject of its own screen. **That
+    arithmetic does not apply here**: the broom is the largest moving thing on
+    the panel and two stepped eyes would be lost against it.
+
+    The second said the arm forbids it. That is true of one direction only.
+    `#fx-eyes-look` puts the left eye at unit x 3 to 4, and the arm's near corner
+    reaches x 2.976 — so tracking *further left* has 0.02 of a unit to spend and
+    walks the eye into the arm. But tracking the other way is free: hold the eye
+    at its base x 4 to 5 at the near end and step it left to 3 to 4 at the far
+    end, which clears the arm by 1.02 units and 0.21 respectively, on a whole-unit
+    step at a period that divides the loop.
+
+    So it was built and rendered. **It reads worse.** At the near end the eye sits
+    centred in the head and Clawd looks straight ahead — at the one moment in the
+    stroke when the broom is closest to him and the gaze has least excuse. A gaze
+    that tracks the prop for two thirds of a stroke and abandons it for the rest
+    is worse than one that never leaves it. Static, down and left onto the head,
+    reads on every frame.
   -->
   <defs>
     <style>
       /* One frame of the twelve second loop is 1.0416667%; one frame of the
-         four second stroke is 3.125%, and the samples below are every four. */
+         four second stroke is 3.125%. The stroke's samples are not evenly
+         spaced — 5% apart on the push and 7.5% on the recover — because the
+         stroke is asymmetric. See the comment on `sweep`. */
 
-      /* `idle`'s breath: 2s alternating is six iterations of a twelve second
-         loop, which is even, so the wrap lands where the cycle started. Legs
-         and broom are siblings of this group so they stay planted. */
+      /* **Three seconds, not the corpus two, and that is the whole beat
+         structure.** `2s alternate` is a four second cycle, which is the stroke
+         exactly and in phase with it, and the file rendered 19 distinct frames
+         of 96 — see §Two periods above. Three seconds is a six second cycle
+         against a four second stroke, so the combined period is the full twelve;
+         four iterations in the loop, which is even, so the wrap lands where the
+         cycle started. Amplitude is unchanged, so the breath is slower than the
+         corpus rather than faster — the right direction for a screen nobody
+         asked for. Legs and broom are siblings of this group so they stay
+         planted. */
       #breathe {
         transform-origin: 7.5px 13px;
-        animation: breathe 2s infinite alternate ease-in-out;
+        animation: breathe 3s infinite alternate ease-in-out;
       }
 
       @keyframes breathe {
@@ -182,20 +255,34 @@
       }
 
       /* The head slides along the floor. Translation only — this is what makes
-         contact exact rather than approximate. */
+         contact exact rather than approximate: the head rect's bottom edge is
+         y = 15 as authored, and no translate in x can change that.
+
+         The samples are asymmetric on purpose: 0 to 40% is the push and 40 to
+         100% the recover, so the second half of the stroke is not the first half
+         played backwards. A mirror-symmetric stroke costs half the loop's
+         distinct frames, which is how this file came to render 19 of 96. */
       #fx-broom {
         animation: sweep 4s infinite linear;
       }
 
       @keyframes sweep {
-        0.000000%   { transform: translateX(1px); }
-        12.500000%  { transform: translateX(0.6339px); }
-        25.000000%  { transform: translateX(-0.25px); }
-        37.500000%  { transform: translateX(-1.1339px); }
-        50.000000%  { transform: translateX(-1.5px); }
-        62.500000%  { transform: translateX(-1.1339px); }
-        75.000000%  { transform: translateX(-0.25px); }
-        87.500000%  { transform: translateX(0.6339px); }
+        0.000000% { transform: translateX(1px); }
+        5.000000% { transform: translateX(0.9048px); }
+        10.000000% { transform: translateX(0.6339px); }
+        15.000000% { transform: translateX(0.2284px); }
+        20.000000% { transform: translateX(-0.25px); }
+        25.000000% { transform: translateX(-0.7284px); }
+        30.000000% { transform: translateX(-1.1339px); }
+        35.000000% { transform: translateX(-1.4048px); }
+        40.000000% { transform: translateX(-1.5px); }
+        47.500000% { transform: translateX(-1.4048px); }
+        55.000000% { transform: translateX(-1.1339px); }
+        62.500000% { transform: translateX(-0.7284px); }
+        70.000000% { transform: translateX(-0.25px); }
+        77.500000% { transform: translateX(0.2284px); }
+        85.000000% { transform: translateX(0.6339px); }
+        92.500000% { transform: translateX(0.9048px); }
         100.000000% { transform: translateX(1px); }
       }
 
@@ -207,14 +294,22 @@
       }
 
       @keyframes tilt {
-        0.000000%   { transform: rotate(12.5288deg); }
-        12.500000%  { transform: rotate(16.8873deg); }
-        25.000000%  { transform: rotate(26.5651deg); }
-        37.500000%  { transform: rotate(34.8541deg); }
-        50.000000%  { transform: rotate(37.875deg); }
-        62.500000%  { transform: rotate(34.8541deg); }
-        75.000000%  { transform: rotate(26.5651deg); }
-        87.500000%  { transform: rotate(16.8873deg); }
+        0.000000% { transform: rotate(12.5288deg); }
+        5.000000% { transform: rotate(13.678deg); }
+        10.000000% { transform: rotate(16.8873deg); }
+        15.000000% { transform: rotate(21.4895deg); }
+        20.000000% { transform: rotate(26.5651deg); }
+        25.000000% { transform: rotate(31.2285deg); }
+        30.000000% { transform: rotate(34.8541deg); }
+        35.000000% { transform: rotate(37.1124deg); }
+        40.000000% { transform: rotate(37.875deg); }
+        47.500000% { transform: rotate(37.1124deg); }
+        55.000000% { transform: rotate(34.8541deg); }
+        62.500000% { transform: rotate(31.2285deg); }
+        70.000000% { transform: rotate(26.5651deg); }
+        77.500000% { transform: rotate(21.4895deg); }
+        85.000000% { transform: rotate(16.8873deg); }
+        92.500000% { transform: rotate(13.678deg); }
         100.000000% { transform: rotate(12.5288deg); }
       }
 
@@ -229,21 +324,40 @@
       }
 
       @keyframes sweep-arm {
-        0.000000%   { transform: rotate(-77.4712deg); }
-        12.500000%  { transform: rotate(-73.1127deg); }
-        25.000000%  { transform: rotate(-63.4349deg); }
-        37.500000%  { transform: rotate(-55.1459deg); }
-        50.000000%  { transform: rotate(-52.125deg); }
-        62.500000%  { transform: rotate(-55.1459deg); }
-        75.000000%  { transform: rotate(-63.4349deg); }
-        87.500000%  { transform: rotate(-73.1127deg); }
+        0.000000% { transform: rotate(-77.4712deg); }
+        5.000000% { transform: rotate(-76.322deg); }
+        10.000000% { transform: rotate(-73.1127deg); }
+        15.000000% { transform: rotate(-68.5105deg); }
+        20.000000% { transform: rotate(-63.4349deg); }
+        25.000000% { transform: rotate(-58.7715deg); }
+        30.000000% { transform: rotate(-55.1459deg); }
+        35.000000% { transform: rotate(-52.8876deg); }
+        40.000000% { transform: rotate(-52.125deg); }
+        47.500000% { transform: rotate(-52.8876deg); }
+        55.000000% { transform: rotate(-55.1459deg); }
+        62.500000% { transform: rotate(-58.7715deg); }
+        70.000000% { transform: rotate(-63.4349deg); }
+        77.500000% { transform: rotate(-68.5105deg); }
+        85.000000% { transform: rotate(-73.1127deg); }
+        92.500000% { transform: rotate(-76.322deg); }
         100.000000% { transform: rotate(-77.4712deg); }
       }
 
       /* Down and left, onto the head, and static — see the note above on why
-         it does not follow. On its own wrapper, which is `idle`'s convention,
-         rather than on `#eyes-color-group`, whose job is the pack recolour
-         hook. A whole unit, so it cannot land off the grid. */
+         it does not follow, which is a judgement and not a constraint.
+
+         On its own wrapper, which is `idle`'s convention, rather than on
+         `#eyes-color-group`. The usual reason given is that the colour group is
+         the pack recolour hook, and that reason does not survive checking twice
+         over: `wizard` puts its own eye-look transform straight onto
+         `#eyes-color-group`, so the corpus does not hold the preference
+         uniformly; and the hook itself is documented but not built — `packPalette`
+         maps a manifest's band colours and nothing else, sprites ship as baked
+         RGB565, and PLANS.md says outright that there is no mechanism by which a
+         pack changes a sprite's colours. So this is a naming convention worth
+         keeping for consistency, not a mechanism being protected.
+
+         A whole unit, so it cannot land off the grid. */
       #fx-eyes-look {
         transform: translate(-1px, 1px);
       }
@@ -251,12 +365,22 @@
       /* One slow blink in twelve seconds. `#eyes-blink` existed with an id and
          no rule at all, so nothing blinked across a screen that holds for two
          minutes — the stroke was the only motion, and one repeating stroke is
-         not a beat structure. Squashed about the eye line, never hidden, and
+         not a beat structure. Squashed about the eyes' own centre, never
+         hidden, and
          `linear`, because a lid that accelerates reads as a wince. The
          percentages are frames 76 to 79 of 96, which lands the blink inside the
          third stroke rather than on a stroke boundary. */
+      /* **10px, not the corpus 9px**, and the difference is the nesting.
+         `#fx-eyes-look` sits *inside* this group and translates the eyes a unit
+         down, so they occupy y 9 to 11 and the corpus eye line at y=9 is their
+         top edge here rather than their centre. Left at 9 the lid collapsed
+         upward into the brow: measured, the closed eye sat at device rows 148-149
+         against an open socket of 148-163, a 7 pixel drift. At 10 the drift is
+         0.0 and it closes about itself. Any file that both translates the eyes
+         and blinks them has to do this arithmetic; `wizard` escapes it because
+         its look transform is x only. */
       #eyes-blink {
-        transform-origin: 7.5px 9px;
+        transform-origin: 7.5px 10px;
         animation: blink 12s infinite linear;
       }
 

@@ -74,9 +74,15 @@ export const ATTENTION_RANK = 2;
  * A payoff belongs on a quiet desk. If anything is still happening, that is the
  * more useful thing to show.
  *
- * Tier 1 stays empty. `COMPACTING` is the spec's other occupant and
- * `PreCompact`'s sweeping animation is Tier B art that does not exist, so
- * building oneshot expiry for it would still be dead code with no way to fail.
+ * Tier 1 stays empty. `COMPACTING` is the spec's other occupant, and although
+ * its `sweeping` art landed on 25 Aug it is still absent from `SESSION_STATES`
+ * here and from `ANIMATIONS` in `animation.ts`, so building oneshot expiry for
+ * it would still be dead code with no way to fail. Note the reason has changed
+ * and the conclusion has not: the blocker used to be that the art did not
+ * exist. When the wiring does land, `assets/clawd/animations/PLANS.md`
+ * §Sweeping ranks `COMPACTING` **below** the attention states rather than at
+ * the frozen spec's tier 1 — compaction runs for minutes, and tier 1 there
+ * would cover a permission prompt for all of them.
  * This state needs none: the window has two bounds, so crossing the upper one
  * *is* the expiry.
  */

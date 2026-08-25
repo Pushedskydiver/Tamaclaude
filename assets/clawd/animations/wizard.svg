@@ -8,7 +8,8 @@
 
     Generated against assets/clawd/base.svg. Every base element appears below at
     its original coordinates and colours except `ground-shadow`, which
-    §Clawd lives somewhere forbids carrying. All motion, including the eyes'
+    `docs/ANIMATION.md` §The base geometry forbids carrying. All motion,
+    including the eyes'
     one-pixel look to the left, is CSS applied by ID.
 
     ── Two drawn colours must not meet inside a scaling group ────────────

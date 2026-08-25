@@ -400,7 +400,16 @@ than partially. Eight good screens beat nine plus four rough ones.
      reach above the head, which the geometry forbids, and `confused` wanted a
      6deg body tilt against a 2.5deg one already recorded as reading like a
      corrupted sprite
-  8. sweeping (PreCompact)
+  8. sweeping (PreCompact) — **art landed 25 Aug, wiring deliberately not.**
+     No ✅ because the item is not done: `sweeping` is in `SPRITE_NAMES` and
+     absent from `ANIMATIONS`, `SESSION_STATES` and `hook-settings.ts`, which is
+     the "art first, wiring last" order this list asks for. Recorded because the
+     6 Sep decision below is read off this list and the character of it has
+     changed — the art is sunk cost now, so cutting saves only the wiring, which
+     `assets/clawd/animations/PLANS.md` §Sweeping costs as cross-package and
+     atomic. That section also holds the rank decision the wiring depends on:
+     `COMPACTING` ranks **below the attention states**, not at the frozen spec's
+     tier 1, because a two-minute tier-1 screen would cover a permission prompt
   9. dizzy ✅ (StopFailure) — **taken out of order, ahead of 6 and 8.** It is
      the last state that was on the fallback, so building it is Stage 3
      correctness (the `[x]` in Stage 3) rather than Stage 4 art, and the 6 Sep
