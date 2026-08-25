@@ -8,17 +8,17 @@
  * This routes the same rasters through `render()` instead, so the panel is
  * composed by the renderer rather than by this file.
  *
- * **It is not yet what the harness draws with, and Stage 2's exit is not met.**
- * `BUILD_PLAN.md` makes that exit "browser and panel show the same thing", and
- * a review caught this file claiming to satisfy it. `tools/harness.ts` imports
- * only the layout helpers and has its own browser-side draw — its own header
- * says so: "Text layout within a band is this page's approximation." So the
- * two agree by inspection, which is exactly what the criterion is written to
- * rule out, and the gap widened here: the panel now draws 2x bitmap status
- * text that no browser view renders at all.
+ * **Everything that draws a panel now goes through here, which is what makes
+ * Stage 2's exit true.** `BUILD_PLAN.md` makes that exit "browser and panel
+ * show the same thing", and a review once caught this file claiming to satisfy
+ * it while `tools/harness.ts` and `tools/panel-mock.ts` each composed their own
+ * panel in browser CSS.
  *
- * Closing it means bundling the renderer into the harness page so both ends
- * call this same function. That is the remaining Stage 1 work, not this.
+ * It closed by deletion, not by bundling the renderer into a page. `panel-mock`
+ * composes through this function and blits the pixels; `harness` stopped
+ * drawing band contents at all. So there is no second panel-drawing path left
+ * to diverge — which is a stronger guarantee than two paths agreeing, and it
+ * needs no bundler, no new dependency and no build step.
  *
  * It also deletes arithmetic rather than adding it. Slot placement and the
  * landscape safe-area crop are `paintStage`'s job, and having them here as
@@ -30,6 +30,7 @@ import type {
   EnvironmentExtent,
   Orientation,
   Scene,
+  SessionChip,
   StageSprite,
   TimeOfDay,
 } from '@tamaclaude/renderer';
@@ -109,6 +110,17 @@ export function composePanels(
      */
     readonly time?: TimeOfDay;
     readonly extent?: EnvironmentExtent;
+    /**
+     * Chips for the strip band, when a caller wants to see it occupied.
+     *
+     * Defaults to none, which is what `tools/blit.ts` wants: it is showing an
+     * animation on the device, not modelling a desk. `tools/panel-mock.ts`
+     * passes some, because an empty strip is a 32px void in the landscape
+     * right-hand column and a review artefact that can never show the band
+     * populated cannot be used to judge it — which the CSS mock it replaced
+     * could, and was the one thing that version did better.
+     */
+    readonly sessions?: readonly SessionChip[];
   },
 ): readonly Frame[] {
   // The crop `paintStage` applies is derived from the *layout's* scale, and
@@ -141,7 +153,7 @@ export function composePanels(
       layout: 'hero',
       pack: options.pack,
       sprites: [raster],
-      sessions: [],
+      sessions: options.sessions ?? [],
       ...placeholderBands(options.name),
       environment: {
         time: options.time ?? 'day',

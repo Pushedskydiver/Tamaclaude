@@ -97,22 +97,32 @@ The whole product, minus hardware.
       not primitives** — a clock is text, a badge is text on a `fillRect`, a
       progress track is a `drawBorder` with a `fillRect` inside. Nothing earned
       its own function, and `knip` would have failed on one that did.
-- [ ] Harness draws through `render()` rather than approximating the bands —
-      what makes Stage 2's exit true by construction instead of by inspection.
-      **Costed 24 Aug, not built.** The blocker was never the renderer: it
-      imports no `node:` builtins, so it is pure and could run in a browser
-      unchanged. There are two ways in and both are real work rather than a
-      comment fix. (a) Add a bundler — none is in the repo, so it is a
-      dependency decision under `docs/CONVENTIONS.md` — and inline the
-      renderer into the page so the browser calls `render()` directly.
-      (b) Pre-render whole panels in Node through `render()` and inline those
-      instead of sprite frames, which needs no dependency and makes the
-      criterion trivially true, but multiplies the inlined images by
-      orientation and layout and loses live candidate-switching for anything
-      not baked. (b) is the smaller change and the larger file.
-      Until one lands, `tools/harness.ts` and `tools/blit-scene.ts` both say
-      in their headers that the browser and the panel agree only by
-      inspection, which is what this criterion exists to rule out.
+- [x] **Nothing but `render()` draws a panel** — which is what makes Stage 2's
+      exit ("browser and panel show the same thing") true by construction
+      rather than by inspection. Closed on 25 Aug by deletion, not by either
+      option this line used to cost.
+      Both were wrong, and a grill found why. (a) "bundle the renderer into the
+      page" was costed off a 332 KB spike that turned out to be **98.7% zod** —
+      `packages/renderer` value-imports `packPalette` from `packages/packs`,
+      whose module scope builds schemas, so the browser graph dragged a
+      validator and its locales behind eleven kilobytes of renderer. (b)
+      "pre-render whole panels" undercounted by two orders of magnitude: the
+      harness's controls cross-multiply to roughly ten thousand panels, and the
+      honest minimum still deletes four of nine controls.
+      And neither could have worked. `sceneFor` lives in `packages/cli`, and
+      `eslint.config.ts` allows `tools` → `renderer | packs | protocol` only, so
+      a tool must hand-build its `Scene` either way — "true by construction" was
+      never reachable by making a second drawer more faithful.
+      There were **three** competing draws, not the two both tool headers named:
+      `tools/panel-mock.ts` was the third and the worst, because it is the
+      artefact that goes into pull requests, and it hardcoded `#0d1117` and
+      `#c9d1d9` hand-synced to the example pack's palette. It now composes
+      through `composePanels` and the page only blits pixels. `tools/harness.ts`
+      keeps sprite scrubbing and draws band _outlines_ from `panelBands()`,
+      with no contents. Net LOC negative, no new dependency.
+      **One judgement needs re-checking:** the message band's height was
+      assessed on 24 Aug from CSS `overflow-wrap:anywhere`, not from
+      `drawTextBlock`.
 - [x] Manifest schema (zod) in `packages/packs`; pack resolution in
       `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
       `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still
