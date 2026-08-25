@@ -51,9 +51,12 @@
     **It overlaps the outer left leg, and that is the contact.** §Props need
     contact wants a prop that touches, and this screen deliberately has no claw
     raise — it is the one working screen where he does not act — so the legs
-    have to do it. Half a unit of overlap, which touches without hiding a foot.
+    have to do it. Half a unit of overlap, which covers four of the outer left
+    leg's eight columns over its full height on every frame. It reads as the
+    board standing in front of the near foot, which is what a prop on the ground
+    in front of him should do.
 
-    Five and a half units wide and two tall. The first draft was four and a
+    Six and a quarter units wide and two tall. The first draft was four and a
     half by one, on the reasoning that a flat slab needs less than the payoff's
     vehicle — that vehicle needed wheels, a cabin and a window to read. True,
     and it still rendered as a smudge on the sand: a board seen from a desk is
@@ -67,9 +70,12 @@
 
     Measured with `tools/contrast.ts` against sand, which is what this prop
     actually sits on: `#000000` is 4.21 / 8.19 / 3.28 / **1.61** at dawn, day,
-    dusk and night, and `#C9D1D9` is 3.32 / **1.71** / 4.27 / 8.68. The dark
-    slab carries by day and the pale pieces carry at night, which is why it is
-    both and not either.
+    dusk and night, and `#C9D1D9` is 3.32 / **1.71** / 4.27 / 8.68. So the **pale
+    top** carries at night, where it is 8.68:1 against sand and the dark parts
+    are 1.61:1; and the **dark edge and pieces** carry by day, where they are
+    8.19:1 and the pale top is 1.71:1. Either alone disappears at some hour,
+    which is why it is both. (An earlier draft of this paragraph had the tones
+    the wrong way round, and named pale pieces this file does not have.)
 
     No new colour: only `#000000`, `#C9D1D9` and `#DE886D`, all already in the
     corpus.
@@ -102,23 +108,43 @@
         50%      { transform: scale(1.01, 0.99) translate(0, 0.25px); }
       }
 
-      /* Down and left, onto the board — as a transform on the base id, so the
-         rects keep `base.svg`'s coordinates. Whole units, so it cannot land off
-         the grid. */
-      #eyes-color-group {
-        transform: translate(-1px, 1px);
+      /* Down, then following the piece left on the same beat.
+
+         On the wrapper rather than on `#eyes-color-group`, whose documented job
+         is the pack recolour hook — the corpus puts eye motion on a wrapper
+         (`idle`'s `#fx-eyes-look`, `confused`'s `#left-eye-cock`) and this file
+         already had the wrapper sitting empty. The rects keep `base.svg`'s
+         coordinates either way.
+
+         A static gaze is only legible against a rest pose the screen never
+         shows, so it barely read. Stepping it one unit on the piece's own frame
+         says he is following the thing that moved. §Collisions warns against
+         tracking a prop with a body part, but the hazard there is walking the
+         part into the prop: the board is three units below the eye line and
+         both eyes stay deep inside the torso at either position. */
+      #eyes-blink {
+        animation: look 2s infinite steps(1);
       }
 
-      /* The piece that moves. One cell right at frame 8, back at the wrap:
+      @keyframes look {
+        0%   { transform: translate(0, 1px); }
+        50%  { transform: translate(-1px, 1px); }
+        100% { transform: translate(-1px, 1px); }
+      }
+
+      /* The piece that moves. One cell left at frame 8, back at the wrap:
          `steps(1)` so it is never between cells, and a whole unit so it is
-         never between pixels. */
+         never between pixels. The `100%` is written out rather than left to
+         the implicit keyframe, which would take the element's underlying
+         `transform: none` — identical under `steps(1)`, but said out loud. */
       #fx-piece-moving {
         animation: nudge 2s infinite steps(1);
       }
 
       @keyframes nudge {
-        0%  { transform: translate(0, 0); }
-        50% { transform: translate(1px, 0); }
+        0%   { transform: translate(0, 0); }
+        50%  { transform: translate(-1px, 0); }
+        100% { transform: translate(-1px, 0); }
       }
     </style>
   </defs>
@@ -160,8 +186,19 @@
          are 1.61:1 against night sand and would vanish alone. Together one of
          them always carries. -->
     <g id="fx-board">
-      <rect id="fx-board-top" x="-2" y="13" width="5.5" height="1" fill="#C9D1D9"/>
-      <rect id="fx-board-edge" x="-2" y="14" width="5.5" height="1" fill="#000000"/>
+      <rect id="fx-board-top" x="-2.75" y="13" width="6.25" height="1" fill="#C9D1D9"/>
+      <rect id="fx-board-edge" x="-2.75" y="14" width="6.25" height="1" fill="#000000"/>
+      <!-- The mover steps *away* from the still piece. Stepping toward it, it
+           landed sharing an edge at x 0.5, and two rects of one fill sharing an
+           edge are one silhouette — §Articulation, and the same defect
+           `wizard`'s motes had. Rendered, frames 8-15 were a single 16px bar
+           where frames 0-7 had two 8px marks: for half the loop there was one
+           thing on a board whose whole point is that several things move.
+
+           The cells are constrained on the right, not the left: the board is
+           drawn after `#breathe`, and the torso reaches x 1.945 mid-breath, so
+           a piece further right is drawn over it as a black bite. The still
+           piece's right edge is 1.5, clearing that by 3.6 device pixels. -->
       <g id="fx-pieces" fill="#000000">
         <rect id="fx-piece-still" x="0.5" y="12" width="1" height="1"/>
         <g id="fx-piece-moving">
