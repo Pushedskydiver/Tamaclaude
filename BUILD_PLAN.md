@@ -495,7 +495,7 @@ than partially. Eight good screens beat nine plus four rough ones.
   a judgement that a tool automating a working loop is worth less than the
   days it costs, with 29 left. Nothing depends on it: the only reference in
   the tree was this line. Most of Stage 5's remaining art does not want it — a
-  pixel scene is a drawing and the logo is a `sharp` pipeline — but the pet
+  pixel scene is a drawing and the logo is a quantiser pass — but the pet
   sprite is a background prop _on idle and asleep_, so it lands inside two
   existing animated SVGs, and the spec calls it Tier A art rather than set
   dressing. That and the easter-egg idle are animation work.
@@ -685,7 +685,18 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       local date. Five minutes, and it exercises resolution, schema, the
       message band and the panel in one action.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
-- [ ] Company logo → pixel: SVG → nearest-neighbour → palette quantise (`sharp`)
+- [x] **Company logo → pixel.** `tools/logo2pixel.ts`: rasterise, snap to the
+      pack's palette, emit a PNG to look at or SVG rects to paste.
+      **No `sharp`, and none was needed** — the plan named a dependency the
+      repo already had both halves of. Playwright rasterises the SVG the way
+      `tools/svg2frames.ts` does, and `snapToPalette` was already
+      nearest-neighbour against a palette it is handed; it was written to snap
+      frames to an SVG's own colours, and the palette is a parameter.
+      **It warns when the palette merges two of the logo's colours**, which is
+      the failure that is otherwise silent: a four-entry palette cannot
+      represent an arbitrary logo, and the mark that loses simply is not in the
+      output. Found by looking at a test fixture whose disc had vanished.
+      The logo itself is pack content and is not in this repo.
 - [ ] Quips mapped to states, never randomised
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).

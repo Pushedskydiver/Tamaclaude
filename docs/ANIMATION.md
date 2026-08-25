@@ -47,8 +47,14 @@ without drowning in decimal path data.
 | `left-eye`         | 4,8 1x2        |                                                                  |
 | `right-eye`        | 10,8 1x2       |                                                                  |
 
-The two colour groups are why packs can stay thin — a pack recolours Clawd by
-overriding two `fill` attributes, not by shipping its own character.
+The two colour groups are an authoring convenience: one attribute changes the
+whole crab, so a palette decision is one edit rather than fourteen.
+
+**No pack uses them.** Sprites are baked to fixed RGB565 by
+`tools/bake-sprites.ts`, and no pack palette reaches a baked sprite —
+`packages/packs/src/index.ts` records that retraction. Recolouring Clawd means
+editing `assets/clawd/base.svg` and re-baking, which is a build step and not a
+runtime one.
 
 **`ground-shadow` is the one base element an animation must not carry.** Seven of the eight carried it at half opacity, which is what
 `snapToPalette` drops, and `bouldering` carried it at zero on purpose. Black at

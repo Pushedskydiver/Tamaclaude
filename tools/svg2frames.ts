@@ -69,6 +69,7 @@ import {
   shadowedAnimations,
   snapToPalette,
 } from './frame-palette.ts';
+import { viewBoxUnits } from './svg-viewbox.ts';
 
 /** Frames per second the panel plays sprites at. */
 const FPS = 8;
@@ -250,21 +251,9 @@ type Stage = { readonly width: number; readonly height: number };
  * message bands below it.
  */
 function stageDimensions(svg: string, scale: number): Stage {
-  const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1];
-  if (!viewBox) throw new Error('no viewBox in input SVG');
-  // SVG permits commas as well as whitespace between viewBox values, and
-  // leading whitespace is legal. Splitting on whitespace alone shifts the
-  // destructure by one and yields a negative width that dies inside Playwright
-  // instead of at this guard.
-  const parts = viewBox
-    .trim()
-    .split(/[\s,]+/)
-    .map(Number);
-  const [, , unitsWide, unitsTall] = parts;
-  if (parts.length !== 4 || !(unitsWide > 0) || !(unitsTall > 0)) {
-    throw new Error(`bad viewBox: "${viewBox}"`);
-  }
-
+  // Parsed by `tools/svg-viewbox.ts`, which the logo pixelator shares — the
+  // comma and leading-whitespace cases live there with their own tests.
+  const { width: unitsWide, height: unitsTall } = viewBoxUnits(svg);
   const width = Math.round(unitsWide * scale);
   const height = Math.round(unitsTall * scale);
   if (width > PANEL_WIDTH) {

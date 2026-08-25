@@ -13,10 +13,11 @@ inside it, and the logo and pet sprite will be its siblings. With no pack
 configured the daemon refuses to start; there is no bundled default to fall
 back to. Run `tamaclaude pack` to see which one is loaded.
 
-The character is **not** in the pack. Clawd is shared and recoloured via the
-two colour groups in `assets/clawd/base.svg` — making him swappable would mean
-a second animation set, and the calendar has no room for one. See
-`docs/ARCHITECTURE.md` §Packs.
+The character is **not** in the pack. Clawd is shared, and his colours are
+baked into the sprites — the two colour groups in `assets/clawd/base.svg` are
+where they are edited, but that is a re-bake rather than anything a pack does.
+Making him swappable would mean a second animation set, and the calendar has no
+room for one. See `docs/ARCHITECTURE.md` §Packs.
 
 ## `manifest.json`
 
