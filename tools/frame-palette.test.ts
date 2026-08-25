@@ -58,10 +58,16 @@ beforeAll(async () => {
     // install scripts, so Playwright never downloads a browser. Without this
     // the suite failed with `Command failed: node .../svg2frames.ts` and no
     // mention of Playwright anywhere, which is a bad hour on a machine that
-    // has never built this repo. Found by running the clean-checkout dry run
-    // early, which `BUILD_PLAN.md` Stage 6 asks for in bold.
+    // has never built this repo. Found while bringing forward `BUILD_PLAN.md`
+    // Stage 6's install dry run — though not by the clean clone itself, which
+    // passed: the browser cache is per-user, not per-checkout, so a fresh clone
+    // on a machine that has built before inherits one. It took pointing
+    // `PLAYWRIGHT_BROWSERS_PATH` at an empty directory. The clean *account*
+    // Stage 6 actually asks for would have caught it without the trick.
     const detail = String((failure as { stderr?: unknown }).stderr ?? failure);
-    const missing = /executable doesn't exist|Please run.*playwright install/i;
+    // One alternative, not two: Playwright prints "Please run" and the command
+    // on separate lines of an ASCII box, and `.` does not cross a newline.
+    const missing = /executable doesn't exist/i;
     throw new Error(
       missing.test(detail)
         ? 'headless Chromium is missing — run `pnpm exec playwright install ' +

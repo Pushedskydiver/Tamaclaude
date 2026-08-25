@@ -14,9 +14,13 @@
  * With both, the same SVG produces the same bytes on the same Chromium and
  * host: that is what has been verified, over repeated runs, under 20x and 50x
  * CPU throttling and against a dozen competing processes. Nothing checks it
- * across platforms, and CI never renders — the six gates do not run
- * Playwright — so a cross-platform difference would surface in a bake diff
- * rather than in a red build.
+ * across platforms. CI does render, and an earlier version of this paragraph
+ * said it did not: `pnpm test` is gate two of six, `vitest.config.ts` includes
+ * `tools/**`, and `tools/frame-palette.test.ts` spawns this script and launches
+ * its own browser — which is why `.github/actions/setup` installs Chromium.
+ * What CI does not render is the *animation catalogue*; the fixture it rasters
+ * is 4x4. So a cross-platform difference in the bakes would surface as a diff
+ * rather than as a red build, which is the point that survives.
  *
  * Seeking sets each animation's `currentTime` to the elapsed time and nothing
  * else. Do **not** compensate for `animation-delay` here, however tempting it

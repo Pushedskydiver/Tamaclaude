@@ -232,9 +232,12 @@ describe('the baked animations', () => {
     // through a full `animation-critic` review malformed and the critic did
     // not see it, because it was looking at frames.
     //
-    // A real parse is available — Playwright's `DOMParser` is ~100ms — but it
-    // needs a `playwright install` step in CI that does not exist, and this
-    // catches what has actually gone wrong.
+    // A real parse is available — Playwright's `DOMParser` is ~100ms. This used
+    // to justify not using it by saying CI had no `playwright install` step. CI
+    // has had one since 21 Aug, the day before that sentence was written, so
+    // the blocker was never there. What stands is the cheaper reason: parsing a
+    // string should not cost a browser, and this catches what has actually gone
+    // wrong.
     const broken = readdirSync('assets/clawd/animations')
       .filter((file) => file.endsWith('.svg'))
       .map((file) => ({
