@@ -400,7 +400,17 @@ than partially. Eight good screens beat nine plus four rough ones.
      reach above the head, which the geometry forbids, and `confused` wanted a
      6deg body tilt against a 2.5deg one already recorded as reading like a
      corrupted sprite
-  8. sweeping (PreCompact)
+  8. sweeping (PreCompact) — **art landed 25 Aug, wiring deliberately not.**
+     No ✅ because the item is not done: `sweeping` is in `SPRITE_NAMES` and
+     absent from `ANIMATIONS`, with no `COMPACTING` in `SESSION_STATES` and no
+     `PreCompact` registered in `hook-settings.ts`, which is
+     the "art first, wiring last" order this list asks for. Recorded because the
+     6 Sep gate above is read off this list and the character of it has
+     changed — the art is sunk cost now, so cutting saves only the wiring, which
+     `assets/clawd/animations/PLANS.md` §Sweeping costs as cross-package and
+     atomic. That section also holds the rank decision the wiring depends on:
+     `COMPACTING` ranks **below the attention states**, not at the frozen spec's
+     tier 1, because a two-minute tier-1 screen would cover a permission prompt
   9. dizzy ✅ (StopFailure) — **taken out of order, ahead of 6 and 8.** It is
      the last state that was on the fallback, so building it is Stage 3
      correctness (the `[x]` in Stage 3) rather than Stage 4 art, and the 6 Sep
@@ -417,7 +427,7 @@ than partially. Eight good screens beat nine plus four rough ones.
       `overheated`'s is measured too, at ~0.1% of sessions, which item 12 says
       leaves "no 'rarest catalogued' to be rarer than". An earlier version of
       this line said six, which no enumeration of the catalogue produces. Art landed 25 Aug at 11:07 and the
-      `TOOL_ANIMATIONS` entry at 11:59 — fifty-two minutes, the tightest of the
+      `TOOL_ANIMATIONS` entry at 12:23 — one hour sixteen, the tightest of the
       three art-then-wiring gaps against `overheated`'s three hours and the
       payoff's seven. That is this list's own "art first, wiring last" rule
       followed rather than broken. The trigger was
@@ -437,7 +447,7 @@ than partially. Eight good screens beat nine plus four rough ones.
       rather than leaving a state blank. **Art first, wiring last** — the
       wiring lands in `packages/daemon`, which Stage 3 marks done, so building
       it first means either reverting shipped code at the gate or leaving a
-      dead branch behind. Art landed at 08:58 and wiring at 11:32, both on 24 Aug — the order held,
+      dead branch behind. Art landed at 08:58 and wiring at 12:01, both on 24 Aug — the order held,
       which is the part that matters, but they were hours apart rather than
       days. Through `spec-grill` once; the first plan was found
       unbuildable and rewritten around a sploot pose, which is upstream's scene

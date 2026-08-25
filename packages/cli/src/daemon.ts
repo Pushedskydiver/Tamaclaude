@@ -437,10 +437,13 @@ export function animationForPanel(
  * `animationFor` maps every session state and every `PreToolUse.tool_name` onto
  * a name in `ANIMATIONS`, and every one of those is baked — so this guard
  * cannot fire today, and saying otherwise would be inventing a hazard. It
- * exists for the next animation rather than the current ones: `sweeping` is
- * `BUILD_PLAN.md` Stage 4 item 8, and the moment it is added to `ANIMATIONS`
- * it is reachable here before its art is baked. The payoff screen used to be
- * named here too and no longer is — its art landed on 24 Aug. An empty stage is
+ * exists for the next animation rather than the current ones — and the example
+ * it names is maintenance. `sweeping` stood here until 25 Aug, when its art
+ * landed; `payoff` until 24 Aug. Both are baked now, so neither illustrates the
+ * hazard any more, and naming the next one would only queue up the same edit —
+ * `assets/clawd/animations/PLANS.md` still lists unbuilt screens, and the moment
+ * any of them is added to `ANIMATIONS` it is reachable here before its art is
+ * baked. An empty stage is
  * the right answer to that; taking the panel down is not.
  *
  * Typed `AnimationName` rather than `string` on purpose. A `string` here is how
@@ -655,7 +658,7 @@ async function paintOnce(
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
   // before it is wired, which `overheated` did on 24 Aug (art 08:58, wiring
-  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 11:59). The
+  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 12:23). The
   // two lists are equal as of that wiring, which is exactly when this guard is
   // easiest to delete and worst to be without. Both gaps were hours, not days —
   // an earlier version of this line said "between 23 and 24 Aug", and there are

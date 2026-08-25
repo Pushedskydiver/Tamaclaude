@@ -50,11 +50,14 @@ type RegisteredEvent = {
  * someone else's machine, in a file we only touch at install time. It would
  * then drift the first time a state is added, and the symptom would be a panel
  * that quietly never shows the new one. The cost of matching everything is a
- * few percent more spawns of a binary that takes 30 ms.
+ * few percent more spawns of a binary measured at ~42 ms an event.
  *
- * `PreCompact` is deliberately absent: the sweeping animation it would drive is
- * Stage 4 work, and registering an event nothing consumes would be describing
- * behaviour that does not exist.
+ * `PreCompact` is deliberately absent, and still is now that its `sweeping`
+ * art has landed (25 Aug): the daemon has no `COMPACTING` state and nothing
+ * consumes the event, so registering it would describe behaviour that does not
+ * exist. The art and the wiring land in separate changes on purpose — see
+ * `BUILD_PLAN.md` Stage 4 item 8 — so this comment stays true until the daemon
+ * side moves, and it is the daemon side that should delete it.
  *
  * Every event in `HANDLED_HOOK_EVENTS` must appear below, and nothing else may.
  * The list lives in `protocol` because this package and the daemon cannot see
@@ -107,8 +110,10 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
 /**
  * Claude Code's own cap on the hook, in seconds.
  *
- * `tamaclaude-notify` gives itself 150 ms and is measured at 30 ms round trip,
- * so this is not the working timeout — it is the outer guard for the case its
+ * `tamaclaude-notify` gives itself 150 ms and costs ~42 ms an event end to end
+ * — 38 ms of which is Node starting (`index.test.ts`, measured 22 Aug). The
+ * socket write itself is estimated at hundreds of microseconds in `index.ts`,
+ * unmeasured. So this is not the working timeout — it is the outer guard for the case its
  * own deadline cannot cover, a process wedged before it runs any of its code.
  * Five seconds rather than one so a loaded machine cannot make a healthy
  * install look broken, and rather than the 600 s default so a broken one cannot

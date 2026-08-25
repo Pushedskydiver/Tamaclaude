@@ -1328,15 +1328,18 @@ The context is filling up and Clawd is tidying it.
 `BUILD_PLAN.md` Stage 4 item 8, and **Tier B per `spec.md` — the third owed
 screen, which the first draft of this section replaced with `road bike`.**
 `road bike` is Tier C: "cut without regret". Promoting it was reopening a
-settled decision on the most expensive of the three, twenty days before the
+settled decision on the most expensive of the three, nineteen days before the
 13 Sep feature freeze — the original said seventeen, which reproduces against
 no date in the plan.
 
-**Nothing can draw this yet.** `COMPACTING` is absent from `SESSION_STATES`,
-deliberately — `state.ts` records tier 1 as empty because `PreCompact`'s art
-does not exist — and `hook-settings.ts` does not register the hook, because
-"registering an event nothing consumes would be describing behaviour that does
-not exist". Each absence cites the other, so the two have to move together or
+**Nothing can reach this yet — though as of 25 Aug it can be drawn.** The art
+is baked and `loadSprite('sweeping')` works; what is missing is every path to
+it. `COMPACTING` is absent from `SESSION_STATES`, deliberately, and `state.ts`
+records tier 1 as empty — for a reason that has now changed while the conclusion
+has not: the blocker used to be that the art did not exist, and is now that
+nothing consumes it. `hook-settings.ts` likewise does not register the hook,
+because "nothing consumes the event, so registering it would describe behaviour
+that does not exist". Each absence cites the other, so the two have to move together or
 the art lands unreachable. `board-game` showed the way through: the art can
 enter `SPRITE_NAMES` without entering `ANIMATIONS`, and the wiring follows.
 
@@ -1380,6 +1383,16 @@ records carrying `compactMetadata.durationMs`:
 | 2.1.234     | 1     | 125.9s     | 125.9s     |
 | **2.1.237** | **5** | **108.6s** | **123.4s** |
 
+**Almost none of it is asked for.** The same records carry
+`compactMetadata.trigger`, a string that is `auto` or `manual`. Across the 19 in
+the census above: **18 auto, 1 manual** — the single manual one on 20 Aug. (The
+corpus has since reached 20 records, 19 auto and 1 manual; the table above is the
+census as taken.) That is the ground for the screen being calm rather than busy:
+nobody asked for it, so it should not read as an alarm. Recorded here because a
+draft of `sweeping.svg` asserted the split with no source in the tree, and a
+review was right to call it unsupported — the fix is the field name, not the
+removal.
+
 **The pooled median of 150s describes no version.** Compaction is getting
 faster release over release, and the newest — which is what will be running on
 23 September — is 109s median with a 123s maximum. The 268s the first draft used
@@ -1389,7 +1402,12 @@ changing is the wrong move.
 
 **Two exposure numbers, and they say opposite things.** Per occurrence this
 holds for minutes. In aggregate it is 0.62 compactions a day and 49.5 minutes
-total across a 30.9-day corpus — a **0.52% duty cycle**, taking "awake" as the
+total across a 30.9-day corpus — a duty cycle **between 0.33% and 0.58%** depending on how "awake" is counted —
+stated as a range because the single figure this line carried, 0.52%, does not
+reproduce under the method the same sentence gives. Union of activity with
+blocks broken at 10 minutes idle gives 0.58%; summing per-file blocks gives
+0.33%. Nothing turns on which, and the 0.62/day and 49.5 min beside it are exact.
+The method is "awake" as the
 union of activity with blocks broken at 10 minutes idle, which is the same
 definition §Board game uses. That very likely makes sweeping the _rarest_
 screen on the panel, not the longest-lived; the first draft claimed the latter
@@ -1427,9 +1445,14 @@ case and calls it "not worth a special case". Across all 19 boundaries the
 session id is unchanged either side, so the clearing event lands on the same
 record. `PostCompact` exists too. Nothing needs building.
 
-And the "nothing to borrow" quoted half a sentence: `state.ts` continues "This
-state needs none: the window has two bounds, so crossing the upper one _is_ the
-expiry". That field-free idiom is the belt-and-braces for a daemon restarting
+And the "nothing to borrow" quoted half a sentence: `state.ts` says of `DONE`
+that it "needs no oneshot expiry of its own: its window has two bounds, so
+crossing the upper one _is_ the expiry". (Quoted here as it reads now. The
+sentence used to open "This state needs none", and on 25 Aug an edit put eight
+lines about `COMPACTING` between it and its antecedent, so it briefly read as a
+claim about `COMPACTING` — which has no window in the daemon at all. This
+paragraph is the one place in the repo that borrows the idiom _for_
+`COMPACTING`, so it is the passage that would have inherited the misreading.) That field-free idiom is the belt-and-braces for a daemon restarting
 mid-compaction — sized off the current version's maximum with headroom, not off
 a 268s outlier, and with a stated relationship to `ASLEEP_AFTER_MS`, which the
 proposed five minutes silently equalled.
@@ -1486,16 +1509,32 @@ that way: the long-exposure screens are `idle` at 16s and `asleep`, `confused`,
 backwards: there the measurement changed the loop, here the first draft
 measured the window, stated the implication and changed nothing.
 
-- **Action.** Clawd sweeping something off the stage with an extended claw.
-  What he sweeps should read as _removed_, not destroyed.
-- **Body mechanics.** Breath, legs outside it. One claw rotated and extended at
-  the shoulder, moving rather than held — this is the one screen of the three
-  where the claw's travel carries the reading, so it is the `overheated` fan
-  idiom rather than the `permission-sign` hold.
-- **Eyes.** Following the sweep.
+- **Action.** Clawd sweeping. **Amended 25 Aug: not with an extended claw** —
+  the claw rotates and the broom supplies the length; §As built item 2. This
+  bullet said "with an extended claw" until a review caught it contradicting the
+  bullet four lines below. **Amended 25 Aug: nothing
+  is swept.** §Props below permits choosing the broom _or_ the material, and the
+  broom was chosen, so there is no swept material on any of the 96 frames and
+  "should read as _removed_" has nothing to attach to. A broom travelling over
+  empty sand is what shipped; whether that reads as tidying is the judgement
+  §As built records.
+- **Body mechanics.** Breath, legs outside it. One claw rotated at the shoulder — **the shoulder is
+  the arm's pivot, not the broom's**, which §As built item 1 records being
+  misread the other way and costing a rebuild.
+  moving rather than held — this is the one screen of the three where travel
+  carries the reading, so it is the `overheated` fan idiom rather than the
+  `permission-sign` hold. **Amended 25 Aug: the claw rotates and does not
+  extend**, because the broom supplies the length instead; see §As built. Breath
+  is `1.5s`, not the corpus `2s` — at `2s alternate` its cycle is the stroke
+  exactly and the loop rendered 19 distinct frames of 96.
+- **Eyes.** Following the sweep. **Amended 25 Aug: static.** Built both ways and
+  the tracking version reads worse; §As built has the measurements and the
+  reason.
 - **Props.** A broom or the swept material — decide which, because both is two
   props. Whatever it is has to touch the claw on every frame of the stroke.
-- **Effects.** None beyond the swept material itself.
+- **Effects.** None beyond the swept material itself — so, none. A blink was
+  added instead, which the brief did not ask for and which is the screen's only
+  second beat.
 
 **Not wanted:** dust clouds, which are the small-pale-things failure again.
 A stage that visibly empties, since the loop repeats and it would refill.
@@ -1508,11 +1547,149 @@ section above records as reading like a rubber stamp. And **do not start the
 wiring after 13 Sep**: it is atomic and cross-package, so it cannot be
 half-landed.
 
+**Corrected 25 Aug — that last clause bound nothing.** 13 Sep _is_ the feature
+freeze (`BUILD_PLAN.md`), so nothing may start after it in any case, and as
+written the rule permitted beginning an atomic cross-package change on freeze
+day. What was missing is a **start-by**, so: **start the wiring by Mon 8 Sep or
+cut it.** Two days after the decision, which is what an atomic change needs to
+land with room to revert.
+
+**And the 6 Sep decision needs a stop condition, which it did not have.**
+§Payoff's gate names one ("stop if it does not read as a vehicle"); this one
+named only a date, so on 6 Sep it would be decided by whoever was least tired.
+The condition is the assumption three paragraphs up, which is stated candidly
+and then left: the evidence that `PreCompact` fires at the _start_ of the window
+is transcript-layer and the claim is hook-layer. No transcript can show it, and
+it decides whether the screen is ever seen for its two minutes — which is the
+entire return on the wiring.
+
+**So: capture it before 6 Sep.** It needs no repo change — a throwaway hook
+settings entry pointing at a logging script, one manual compaction, and read
+whether `PreCompact` arrives at the start and whether anything else fires inside
+the window and takes the hero. **If the capture does not happen, cut the screen**
+rather than buying the wiring on a plausible premise. The art is already sunk and
+inert — `sweeping` is in `SPRITE_NAMES` and out of `ANIMATIONS` — so cutting
+costs nothing and reverts nothing.
+
+### As built, 25 Aug — where the art differs from the brief above
+
+The brief's own bullets are amended in place; this is the reasoning, each item
+measured rather than argued. Six things differ, and the count is stated because
+an earlier version of this heading said "three" over a list of four.
+
+**1. The broom does not hang off the shoulder.** The first draft read §Body
+mechanics' "at the shoulder" as the broom sharing the arm's pivot. A prop at a
+fixed radius travels an arc that lifts as it extends: the head was buried four
+device pixels in the sand for 57 of 96 frames and up to five above it for 35
+more, an unbroken airborne run of 4.38 seconds. A compensating slide along the
+handle fixes the tip and leaves the corners, because a tilted bristle block dips.
+
+So the broom is authored **in floor coordinates and pivoted at its own head**:
+the head translates along x only, the handle leans about the head's centre, and
+the arm rotates to exactly `tilt - 90deg` so it lies along the handle. Contact
+became exact on all 96 frames — the head occupies device rows 184 to 191 on
+every one, and 191 is the legs' own lowest row. The angle identity means the
+claw cannot come off the handle, though the _grip_ still drifts 0.10 to 2.01
+device pixels because the arm breathes and the handle does not; that number is
+stated in the SVG rather than argued away.
+
+**2. The claw rotates but does not extend — and the first defence of that was
+wrong.** Checklist §5 asks for rotation _and_ extension because "a bare rotation
+cannot clear the silhouette", so the first draft answered with clearance: the
+claw protrudes 11 to 16 device pixels past the torso.
+
+That answer is worthless, for two reasons found in review. The metric does not
+discriminate — `thinking`'s left arm has no rotation at all and scores 16 to 17
+on the same measure, because the base arm already sits two units left of the
+torso; sweeping's rotation _spends_ clearance rather than buying it. And the
+premise is a paraphrase that inverts its own authority: `docs/ANIMATION.md`
+says "**Rotation gets it out of the silhouette. It does not, on its own, make it
+read**", and "what makes a raised claw read is **length**".
+
+The real answer is the one sentence that carried no number: the handle is
+collinear with the arm by construction and over four units long, so the composite
+_is_ the length. That is `gym`'s rotation-plus-axial-scale achieved with a prop
+instead of `scaleX`, and it satisfies the doc's actual closing instruction —
+"extend a claw as well as turning it, and give it something to hold". Upstream's
+own sweeping animation does the same: a rotated, unscaled claw holding a broom.
+`docs/ANIMATION.md`'s `gym` example is about reaching _above the head_, which a
+down-and-left claw never needs. **Checklist §5 is amended to match**, because it
+is the item that made the wrong answer feel right.
+
+**3. The eyes are static, and this is a judgement, not a constraint.** §Eyes asks
+for a gaze that follows. Tracking _further left_ is genuinely blocked — the left
+eye sits at unit x 3 to 4 and the arm's near corner reaches 2.976, leaving 0.02
+of a unit. But tracking the other way is free, and a review was right to say so:
+hold the eye at its base x 4 to 5 at the near end and step left at the far end,
+clearing the arm by 1.02 and 0.21 units, whole-unit, on a period that divides the
+loop.
+
+So it was built and rendered rather than argued about. It reads worse. At the
+near end the eye centres in the head and Clawd looks straight ahead — at the one
+moment when the broom is closest and the gaze has least excuse — and a gaze that
+tracks for two thirds of a stroke then abandons the prop is worse than one that
+never leaves it.
+
+**4. The loop is three strokes, not one.** Twelve seconds on a single
+out-and-back put peak head speed at 1.24 device pixels per frame, which does not
+read as travel at true size. Three four-second strokes give 1.25 mean, and 3 on
+the push against 2 on the recover.
+
+**5. The stroke is asymmetric and the breath is `1.5s`, because the loop was
+buying nothing.** This is the finding that would have shipped: at `2s alternate`
+the breath's full cycle is four seconds — the stroke exactly, and in phase — so
+frames 0-31 were byte-identical to 32-63 and the file rendered **19 distinct
+images of 96** — the lowest _ratio_ in the corpus, though not the lowest count,
+since `permission-sign` holds 16 of 64 as a deliberately still screen. Against
+the screens that also move continuously: `asleep` 96/96, `idle` 123/128. Twelve
+seconds of loop bought two frames of content over four.
+
+A `1.5s` breath (three second cycle, eight even iterations) plus a stroke that
+pushes in 1.6s and recovers in 2.4s takes it to **88 of 96**. `3s` was tried
+first and scores 92, but it made this the slowest-breathing screen in the corpus
+— slower than `asleep`, which a crab doing manual work should not be. Measured
+across all fourteen animations as mean absolute travel of the **torso band's**
+top row per second — the metric matters, because "topmost drawn pixel anywhere"
+ranks `permission-sign` at zero by catching its held sign arm — 1.5s puts
+sweeping **sixth of fourteen at 3.33 px/s**, between `idle` at 3.75 and
+`board-game` at 3.00. At 3s it halves to 1.67 and ranks thirteenth, above only
+`permission-sign`. Four frames of distinctness lose to that, and all eight
+duplicate frames are a whole stroke period apart, where no viewer can pair
+them.
+
+The general rule: **loop length only buys variety if two tracks have different
+periods.** Length against a single period is the same picture for longer. It is
+checklist item 9 as of this commit, answerable with a frame count rather than an
+argument.
+
+**And the judgement the brief forwards here, taken rather than deferred: it
+reads as sweeping, not as removing.** §Action wanted what he sweeps to read as
+_removed_; §Props allowed choosing the broom instead of the material, and the
+broom was chosen, so there is nothing on the sand to remove. Rendered at true
+size on all four grounds, what the screen says is "a crab is sweeping" — the
+head is flat on the floor, travels a fifth of the panel, and the arm lies along
+the handle throughout. What it does not say on its own is _tidying up after
+something_. That last step is carried by context rather than by the frame: this
+screen only ever appears while the context is being compacted, and the panel is
+glanceable rather than read.
+
+The alternative was a second prop, which §Props rules out as two props, and
+which §Not wanted rules out again for the specific case of a stage that visibly
+empties on a loop that repeats. So this is the intended trade rather than a
+shortfall — but it is the screen's weakest link, and if anything about it is
+revisited before 13 Sep, this is the thing to revisit, not the stroke.
+
+**6. There is a blink.** `#eyes-blink` carried an id and no rule at all, so
+nothing blinked across a screen that holds for minutes. It is the only beat the
+stroke does not supply. Its `transform-origin` is `7.5px 10px` rather than the
+corpus `7.5px 9px`, because `#fx-eyes-look` nests inside it and moves the eyes a
+unit down; at 9 the lid collapsed into the brow with a measured 7 pixel drift.
+
 ---
 
 ## What every plan has to answer
 
-Eight constraints, each one a place an animation has already gone wrong on this
+Nine constraints, each one a place an animation has already gone wrong on this
 project. Checking a plan against them costs minutes; discovering them from a
 critic's render costs a rebuild.
 
@@ -1545,11 +1722,31 @@ critic's render costs a rebuild.
    against its top**. One flat tone
    does not survive four times of day at head height, which is why `dizzy` ended
    up a dark mass with a pale core.
-5. **Is the claw rotating _and_ extending, pivoted at the shoulder — and does
-   it hold something?** A bare rotation cannot clear the silhouette; a pivot at
-   the claw's own tip extends it inward under the torso.
+5. **Does the raised claw read as a limb — and does it hold something?**
+   **The property is length, not clearance.** `docs/ANIMATION.md`: "Rotation
+   gets it out of the silhouette. It does not, on its own, make it read", and
+   "what makes a raised claw read is **length**". So do not answer this item
+   with a protrusion measurement — it cannot fail. `thinking`'s left arm has no
+   rotation at all and clears the torso by 16 to 17 device pixels, because the
+   base arm is already two units left of it.
+
+   Buy the length either way: with `scaleX`, as `gym` does at -73deg and 2.85;
+   or with a prop held collinear with the arm, as `sweeping` does with a broom
+   on a `tilt - 90deg` identity. **Either way, state the composite length in
+   units**, because a mechanism test alone still passes a 1.5-unit collinear
+   prop that reads as a stub. The two poles are the bare claw at **2 units**,
+   which `docs/ANIMATION.md` records failing at true size in three separate
+   positions, and `gym`'s **6.8-unit** limb. `sweeping`'s handle is 6.7. A pivot at the claw's own tip extends it inward
+   under the torso instead, which is the failure this item exists to catch.
    `docs/ANIMATION.md` adds the third clause: "give it something to hold".
    Every extended claw in the corpus holds a prop or moves.
+
+   Until 25 Aug this item read "Is the claw rotating _and_ extending ... a bare
+   rotation cannot clear the silhouette", which is the inverse of the sentence
+   it defers to — and §Sweeping duly answered it with a clearance number that
+   proved nothing. A checklist item that misquotes its own authority is worse
+   than no item, because it gets answered.
+
 6. **Are the legs outside the breathing group, and is `ground-shadow` absent?**
    Legs inside it make the whole sprite bob and the feet sink into their own
    contact shadow. There is **no seated pose in the corpus** — `typing` looks
@@ -1591,6 +1788,48 @@ render as 2, 3, 1 repeating — `dizzy.svg` §Why nothing rotates measures it, a
 §Dizzy above records the even-spacing claim being asserted and retracted once
 already. The rule is also unsatisfiable as stated alongside thirds-of-track
 phasing, which forces the delays to be multiples of the step.
+
+9. **Do two tracks have different periods — and how many distinct frames does
+   the bake actually contain?** Loop length buys variety only if something has a
+   second period. Length against a single period is the same picture for longer,
+   and nothing in the SVG looks wrong when it happens.
+
+   The trap is the corpus breath. `2s alternate` is a **four** second cycle, so
+   on any screen whose main track is also four seconds the two are in phase and
+   half the loop is a byte-identical repeat of the other half. `sweeping` shipped
+   into review that way: three four-second strokes against a `2s` breath rendered
+   **19 distinct images of 96**, against `asleep` 96/96, `idle` 123/128, `dizzy`
+   89/96 and `wizard` 87/96. Twelve seconds of loop bought two frames of content
+   over four.
+
+   **Do not decide it on the ratio.** 19 of 96 is 19.8%, but `confused` is 27.1%
+   and `permission-sign` 25%, and both are deliberately still screens — there is
+   no threshold that separates the defect from the intended cases, and a ratio
+   test hands the reader the number that would not have caught it. The
+   discriminating test is structural: **no half or third of the loop may be a
+   byte-identical copy of another.** §Overheated records that exact check finding
+   that exact defect once already ("frames 32-95 were byte-for-byte copies of
+   0-31"), which makes `sweeping` the second time.
+
+   A mirror-symmetric main track costs the other half again — the return stroke
+   is the push played backwards — so an asymmetric one (`sweeping` pushes in
+   1.6s and recovers in 2.4s) is where the rest comes from. Both fixed took it to
+   88 of 96.
+
+   Choosing the second period is not free: pick it against the corpus, not just
+   against the arithmetic. `sweeping` first took `3s`, which decouples the
+   periods and scores 92 — and made a working crab breathe slower than `asleep`.
+
+   Answer it with a count, not an argument — and render first, because `out/`
+   is gitignored, so a fresh clone has none and an existing one may hold
+   yesterday's frames:
+
+   ```bash
+   node tools/svg2frames.ts assets/clawd/animations/<name>.svg out/<name> &&
+     shasum out/<name>/frame_*.png | cut -d' ' -f1 | sort -u | wc -l
+   ```
+
+   `shasum` rather than `md5 -q`, which is BSD-only and not on the Linux runner.
 
 Two of these were stated backwards in the first draft of this section: that a
 hex in a comment is never a declaration, and that the claw mistakes had
