@@ -181,9 +181,11 @@ function clockText(now: number): string {
  *
  * A total `Record` rather than a chain of ternaries, because the chain ended in
  * a default: any state added to `SESSION_STATES` compiled clean and silently
- * became an ordinary working chip. `state.ts` says `COMPACTING` is
- * expected back, and a future `FAILED`-class state arriving as "nothing to see"
- * would lose exactly the signal the strip exists for. Now it will not build.
+ * became an ordinary working chip. `COMPACTING` arrived on 25 Aug and this
+ * table is what made `tsc` ask for its tone instead of defaulting one — the
+ * argument working rather than a prediction about it. A future `FAILED`-class
+ * state arriving as "nothing to see" would lose exactly the signal the strip
+ * exists for. It will not build.
  *
  * The *decision* to collapse lives in `packages/renderer/src/strip.ts`: a pack
  * carries a handful of colours, so spec §5's ten states cannot each have a
@@ -499,11 +501,12 @@ async function paintOnce(
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
   // before it is wired, which `overheated` did on 24 Aug (art 08:58, wiring
-  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 12:23). Each
-  // gap was hours. **The lists are not equal at HEAD** — `sweeping` baked on 25
-  // Aug at 16:15 and is not in `ANIMATIONS`, because its state does not exist
-  // yet. A moment when they *are* equal is exactly when this guard looks
-  // deletable and is worst to be without. They are kept because the two lists are
+  // 12:01), `board-game` did again on 25 Aug (art 11:07, wiring 12:23), and
+  // `sweeping` did the same day at a 5h40m gap (art 16:15, wiring 21:55).
+  // **The lists are equal at HEAD, all fourteen names**, which is exactly the
+  // moment this guard looks deletable and is worst to be without — an earlier
+  // version of this comment said so while they were unequal, and the sentence
+  // it warned about is now the state of the tree. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what

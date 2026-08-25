@@ -17,8 +17,8 @@
  * and the animation falls through to `dizzy`. `packs/example/README.md` carries
  * the same note, because that is the file a pack author copies from.
  *
- * Eight of the screen spec's ten §5 states. `COMPACTING` is absent for the
- * reason in `STATE_RANK`; `DISCONNECTED` is absent because it is not a property
+ * Nine of the screen spec's ten §5 states. `DISCONNECTED` is absent because it
+ * is not a property
  * of a session at all — it says the panel has no host, which the transport
  * knows and a session record cannot.
  */
@@ -78,16 +78,38 @@ export const ATTENTION_RANK = 2;
  * Tier 1 stays empty, and `DONE` needs no oneshot expiry of its own: its
  * window has two bounds, so crossing the upper one *is* the expiry.
  *
- * `COMPACTING` is the spec's other tier 1 occupant. Its `sweeping` art landed
- * on 25 Aug, but `COMPACTING` is still absent from `SESSION_STATES` here and
- * `sweeping` from `ANIMATIONS` in `animation.ts`, so building oneshot expiry
- * for it would still be dead code with no way to fail. The reason has changed
- * and the conclusion has not: the blocker used to be that the art did not
- * exist. When the wiring does land, `assets/clawd/animations/PLANS.md`
- * §Sweeping ranks `COMPACTING` **below** the attention states rather than at
- * the frozen spec's tier 1 — compaction runs for minutes, and tier 1 there
- * would cover a permission prompt for all of them. Wired 25 Aug at rank 5,
- * between `THINKING` and `DONE`; the spec's §4 and §9 carry the departure.
+ * `COMPACTING` was the spec's other tier 1 occupant and is not any more. It
+ * needs no oneshot expiry either, for a different reason: `SessionStart` fires
+ * at the far end of the compaction and already clears to `IDLE`, so the window
+ * closes on an event rather than on a clock.
+ *
+ * It sits at 5 — below `WORKING` and `THINKING`, above `DONE`. Tier 1 was
+ * rejected because compaction runs about two minutes and covering a permission
+ * prompt for two minutes breaks the one promise the panel makes;
+ * `assets/clawd/animations/PLANS.md` §Sweeping and the spec's §4 carry that; §9
+ * records only the oneshot removal.
+ *
+ * **The rank that binds is the one against `DONE`, and it binds mechanically.**
+ * A compacting session emits no hook events for the whole window — that is the
+ * premise of the screen — so its `lastEventAt` ages, while a `DONE` session's
+ * is pinned between 45s and 60s stale by the payoff's two bounds. At equal rank
+ * `byPriority` falls to `newestFirst`, so from roughly a minute into a
+ * 109-second compaction a shared rank would hand the stage to the payoff and
+ * take it off live work — the defect this file records for `DONE` at :60,
+ * relabelled. A rank distinctly above `DONE` is required, not preferred.
+ *
+ * Against `WORKING` the rank barely matters: a working session emits events
+ * constantly and a compacting one emits none, so `newestFirst` would settle it
+ * the same way at equal rank. Keeping compaction below the two states that
+ * serve a live request costs nothing and reads right — and where a compacting
+ * session *loses* the stage, the stage already holds a truthful answer, so the
+ * screen's explain-the-pause value survives in every case where that value
+ * exists.
+ *
+ * Not ranked on "nobody asked for it". 18 of 19 measured compactions were
+ * automatic, but this file's axis is which session most needs a human, and
+ * `HookEvent` does not carry `trigger`, so the daemon could not act on it per
+ * compaction even if it were the axis.
  */
 const STATE_RANK: Readonly<Record<SessionState, number>> = {
   NEEDS_PERMISSION: ATTENTION_RANK,

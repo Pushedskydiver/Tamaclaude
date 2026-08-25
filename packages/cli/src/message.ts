@@ -26,8 +26,8 @@ import { isBirthday } from '@tamaclaude/packs';
  * the day nobody is watching it for status.
  *
  * **This is not the rule `DONE` is ranked by**, and the first version of this
- * comment claimed it was — twice, here and in `BUILD_PLAN.md`. `DONE` sits at
- * rank 5, below `WORKING` and `THINKING`, and `state.ts` gives the reason as
+ * comment claimed it was — twice, here and in `BUILD_PLAN.md`. `DONE` sits
+ * below `WORKING` and `THINKING`, and `state.ts` gives the reason as
  * "A payoff belongs on a quiet desk". The birthday line covers both. Two
  * independent reviews caught the same sentence, one of them noting that the
  * paragraph cited as support argues the opposite — and a third caught the
@@ -117,10 +117,11 @@ function refinedFailureLine(
  * blacklist, not about the table as it stands: with `ASLEEP: false` below, such
  * a session would set `panel.tool` and still put nothing on the message band.
  *
- * A total `Record` rather than a `Set`, for the reason `TONE` above gives: a
+ * A total `Record` rather than a `Set`, for the reason `TONE` gives in
+ * `daemon.ts` — it was directly above this until the two were split: a
  * `Set` compiles clean when a state is added to `SESSION_STATES` and silently
  * puts it outside. Here that defaults safe, so the stake is lower than
- * `TONE`'s — but "safe by absence" and "decided" are different things, and
+ * `TONE`'s in `daemon.ts` — but "safe by absence" and "decided" are different things, and
  * only one of them survives someone reading the table later.
  */
 const TOOL_STATES: Readonly<Record<SessionState, boolean>> = {

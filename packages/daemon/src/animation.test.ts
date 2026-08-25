@@ -135,7 +135,7 @@ describe('animationFor', () => {
     // is deliberately not a screen anybody intends to draw: it is not in
     // `assets/clawd/animations/PLANS.md`, and it is not meant to be.
     //
-    // Re-planted rather than assumed, both ways: `'sweeping'` leaves all 17
+    // Re-planted rather than assumed, both ways: `'sweeping'` leaves the file
     // green, `'no-such-screen'` gives
     // `expected [ 'no-such-screen' ] to deeply equal []`.
     //

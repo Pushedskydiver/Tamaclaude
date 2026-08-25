@@ -392,6 +392,44 @@ describe('the compaction window', () => {
     expect(after.state).toBe('IDLE');
   });
 
+  it('never covers a state that is asking for a human', () => {
+    // The demotion out of the spec's tier 1 was argued on exactly this — a
+    // two-minute screen must not hide a permission prompt. But a rank only
+    // decides between *sessions*, and the transition would have overwritten the
+    // state of the one it lands on, so the rank was never consulted. All three
+    // were measured going wrong before this guard existed.
+    const permission = applyEvent(
+      start,
+      event('PermissionRequest', { tool: 'Bash' }),
+      T0,
+    );
+    expect(applyEvent(permission, event('PreCompact'), T0 + 1).state).toBe(
+      'NEEDS_PERMISSION',
+    );
+
+    const failed = applyEvent(
+      start,
+      event('StopFailure', { errorType: 'rate_limit' }),
+      T0,
+    );
+    expect(applyEvent(failed, event('PreCompact'), T0 + 1).state).toBe(
+      'FAILED',
+    );
+
+    // `WAITING` is the one a guard on the stored state misses, because it is a
+    // promotion from `IDLE` rather than anything stored.
+    const asked = applyEvent(
+      applyEvent(start, event('Stop'), T0),
+      event('Notification'),
+      T0,
+    );
+    const late = T0 + WAITING_AFTER_MS;
+    expect(effectiveState(asked, late)).toBe('WAITING');
+    expect(
+      effectiveState(applyEvent(asked, event('PreCompact'), late), late),
+    ).toBe('WAITING');
+  });
+
   it('keeps the tool and any unanswered question', () => {
     // `PreCompact` fires mid-turn, so the turn is still the turn it was.
     // Clearing `tool` would be a lie about what the session was doing, and
@@ -409,10 +447,15 @@ describe('the compaction window', () => {
   });
 
   it('does not age out of the window while it is open', () => {
-    // `effectiveState` promotes only from `IDLE`, so a compaction longer than
-    // the sleep threshold still shows as compacting rather than asleep. The
-    // longest measured was 268s; `ASLEEP_AFTER_MS` is five minutes, so this is
-    // reachable on a slow one.
+    // `effectiveState` promotes only from `IDLE`, so a compaction outlasting
+    // the sleep threshold still shows as compacting rather than asleep.
+    //
+    // **No measured compaction gets near it**, which is the reassuring half and
+    // the opposite of what a first version of this comment said: the longest
+    // observation is 268s against a 300s threshold, and that one is four
+    // releases back — the current release's maximum is 123.4s. What this
+    // actually guards is the aborted path, where `SessionStart` never arrives
+    // and the session sits in `COMPACTING` until eviction at ten minutes.
     const compacting = applyEvent(start, event('PreCompact'), T0);
     expect(effectiveState(compacting, T0 + ASLEEP_AFTER_MS + 1000)).toBe(
       'COMPACTING',
