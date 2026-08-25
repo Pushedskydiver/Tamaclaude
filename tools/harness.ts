@@ -4,10 +4,14 @@
  *
  * `tools/panel-mock.ts` renders a fixed comparison image, which is the right
  * artefact for a pull request and the wrong one for judging motion. The
- * harness animates, and lets the layout questions the screen spec leaves open
- * be answered by switching between candidates while watching the same frames —
- * hero against two-up, portrait against landscape, and whether the message and
- * strip bands earn their height.
+ * harness animates, and scrubs sprites against real slot geometry — hero
+ * against two-up, portrait against landscape, frame by frame.
+ *
+ * **It can no longer answer whether a band earns its height**, because it no
+ * longer draws band contents; that needs `tools/panel-mock.ts`, which composes
+ * through `render()` but only in the shipping configuration. So the band-height
+ * question is currently answerable in neither tool, which is a real gap this
+ * page's rewrite opened and `BUILD_PLAN.md` records as open.
  *
  * **What it draws is a subset of what the panel draws, and the subset is the
  * design.** It scrubs sprites; it does not compose a panel. See below.
@@ -39,11 +43,29 @@
  * geometry comes from `panelBands()` and so cannot drift — but they are
  * outlines, not contents.
  *
- * **One judgement made from the old page needs re-checking.** The message
- * band's height was assessed on 24 Aug from a long MCP tool name wrapped by
- * CSS `overflow-wrap:anywhere`. The renderer wraps with `drawTextBlock` and
- * `fitted()`, which is a different algorithm, so whatever that session
- * concluded was concluded from the wrong wrapper.
+ * **The evidence this page used to carry was never a fair test, and deleting
+ * it does not settle the question.** A long MCP tool name was shown here
+ * wrapped by CSS `overflow-wrap:anywhere`; the renderer wraps the message band
+ * with `drawTextBlock` -> `wrapText`, a different algorithm. (`fitted()` is
+ * the status band's, and it truncates with an ellipsis rather than wrapping —
+ * an earlier version of this note named it here and was wrong twice.)
+ *
+ * **The failure this page recorded is kept here on purpose**, because
+ * `packages/renderer/src/text.ts` cites this file for it and the CSS that
+ * produced it is gone: a long MCP tool name rendered as one 207px line inside
+ * a 172px panel and lost five characters to `overflow: hidden` with no marker,
+ * while the band still looked like one short line in a large box — which then
+ * argued for making the band *smaller*. That is why `wrapText` wraps and marks
+ * rather than truncating silently. It is also why the measurement is not
+ * evidence about band height: 207px is what CSS did, not what the renderer
+ * does.
+ *
+ * The screen spec still reads "**Book** the afternoon of Mon 24 Aug in the dev
+ * harness" and `BAND_HEIGHTS.message` has not moved since 18 Aug, so as far as
+ * the repo records that session did not happen. An earlier version of this
+ * note asserted it had and that its conclusion was unsound — inventing both an
+ * event and a verdict. What is true is narrower: the band height is unjudged,
+ * and the page that was going to judge it would have judged it wrongly.
  *
  * It is driven by rendered frames, not by Claude Code. Injecting synthetic
  * events is a separate unchecked Stage 1 line; Stage 3 has landed for the
@@ -117,6 +139,12 @@ const PAGE_STYLE = `
                   border-radius:4px; padding:3px 7px; font:inherit }
   button { cursor:pointer }
   .stage { display:flex; gap:36px; align-items:flex-start }
+  /* A backdrop, not the panel's ground. The daemon sets extent:'panel', so
+     the rock pool covers the whole framebuffer and the device never shows a
+     flat background at all — see tools/panel-mock.ts for the real thing. This
+     value is packs/example palette[0], and the honest reason it is written
+     here rather than read from the pack is that this page composites
+     transparent PNGs and needs *something* behind them. */
   .panel { position:relative; background:#0d1117; overflow:hidden;
            image-rendering:pixelated; outline:1px solid #30363d }
   .band { position:absolute }

@@ -10,9 +10,15 @@
  *
  * It now composes through `render()` in Node — the same `composePanels` that
  * `tools/blit.ts` sends to the panel — and the page does nothing but blit the
- * pixels it is handed. **That is what makes `BUILD_PLAN.md`'s Stage 2 exit
- * ("browser and panel show the same thing") true by construction rather than
- * by inspection: there is no second panel-drawing code path left to diverge.**
+ * pixels it is handed. **No tool composes a scene outside `render()` any
+ * more**, which is most of `BUILD_PLAN.md`'s Stage 2 exit.
+ *
+ * Not all of it, and the first draft of this paragraph overclaimed: whole
+ * panels are still drawn outside `render()` by `tools/bake-splash.ts` (which
+ * rasterises the splash the firmware owns) and `tools/colour-bars.ts` (a test
+ * pattern), both deliberately; and `tools/contact-sheet.ts` and the harness
+ * still paint a flat backdrop behind transparent frames where the device
+ * paints scenery. The narrow claim is the true one.
  *
  *   node tools/panel-mock.ts out/typing [out/thinking ...]
  *
@@ -29,39 +35,58 @@
  * real states of the shipping panel, and `BUILD_PLAN.md` names judging an
  * animation against the wrong sky as a thing worth catching.
  *
- * The one thing here with no device counterpart is the RGB565 unpack below —
- * the panel writes those bytes straight to SPI and never expands them. It is
- * the single place this file can be wrong while the device is right, which is
- * why it is six lines and commented rather than folded into something clever.
+ * The one thing here with no device counterpart is `toRgba` — see its own
+ * note. It is exported and tested rather than buried in the page function,
+ * because it is the single place this file can be wrong while the device is
+ * right.
+ *
+ * Pass `--message <text>` to put something other than the animation's name in
+ * the message band. That band's height is unjudged and a long MCP tool name is
+ * the case it has to survive, so the flag is the instrument for answering it.
  */
 import type { SessionChip } from '@tamaclaude/renderer';
 
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import process from 'node:process';
 
 import { chromium } from 'playwright';
 
-import { panelSize } from '@tamaclaude/renderer';
+import { TIMES_OF_DAY } from '@tamaclaude/renderer';
 
 import { composePanels, loadPack } from './blit-scene.ts';
 import { loadFrames } from './png-rgb565.ts';
+import { toRgba } from './rgb565-rgba.ts';
 
-/** The sky states the daemon can actually be in, and both are worth seeing. */
-const SKIES = ['day', 'night'] as const;
+/**
+ * Every sky, not a chosen pair.
+ *
+ * A first version hardcoded `['day', 'night']` and called them "the variable
+ * that is still live", which was the same drift this file exists to remove:
+ * `TIMES_OF_DAY` is exported, `timeOfDay()` returns all four, and dawn and dusk
+ * are six hours of every twenty-four. Dusk in particular is the second-darkest
+ * scheme and so the second-worst case for a pale prop against its ground.
+ */
+const SKIES = TIMES_OF_DAY;
 
 /**
  * Chips for the strip, so the band is judgeable rather than a 32px void.
  *
- * Three rather than one, and mixed tones rather than uniform, because the
- * question this band raises is whether several sessions at different states
- * read apart at 15px wide — so it is one chip of each of the three tones. The old CSS mock drew three minis plus a `+2`
- * overflow badge; the overflow needs six sessions and `paintStrip` owns that
- * rule, so it is left to the renderer rather than staged here.
+ * Every tone appears, in both origins, because the question this band raises
+ * is whether several sessions at different states read apart at 15px wide.
+ *
+ * **Six, because `MAX_CHIPS` is five.** The strip's worst case is five chips
+ * plus an overflow badge, which is exactly what the deleted harness sessions
+ * control existed to make viewable. A first draft passed three and deferred
+ * the overflow to `paintStrip`, which left no artefact in the repo able to
+ * show the badge at all.
  */
 const CHIPS: readonly SessionChip[] = [
   { tone: 'active', origin: 'local' },
   { tone: 'attention', origin: 'local' },
   { tone: 'resting', origin: 'remote' },
+  { tone: 'active', origin: 'remote' },
+  { tone: 'resting', origin: 'local' },
+  { tone: 'attention', origin: 'remote' },
 ];
 
 /** How much the enlarged copy is blown up, for inspecting individual pixels. */
@@ -71,7 +96,16 @@ type Panel = {
   readonly label: string;
   readonly width: number;
   readonly height: number;
-  readonly pixels: readonly number[];
+  /**
+   * The composed panel, already unpacked to RGBA.
+   *
+   * A typed array rather than a spread `number[]`, because Playwright
+   * serialises typed arrays natively as base64 and walks a plain array
+   * element-by-element through its full recursion — measured at 23ms against
+   * 345ms for the same output. Unpacked in Node rather than in the page so
+   * `toRgba` can be imported and tested; see `panel-mock.test.ts`.
+   */
+  readonly rgba: Uint8ClampedArray;
 };
 
 /**
@@ -81,12 +115,13 @@ type Panel = {
  * comparison image — `tools/contact-sheet.ts` is the artefact for judging
  * motion, and `pnpm harness` is the one for scrubbing it.
  */
-function panelsFor(
-  name: string,
-  raster: Parameters<typeof composePanels>[0][number],
-  pack: Awaited<ReturnType<typeof loadPack>>,
-): readonly Panel[] {
-  const size = panelSize('landscape');
+function panelsFor(options: {
+  readonly name: string;
+  readonly raster: Parameters<typeof composePanels>[0][number];
+  readonly pack: Awaited<ReturnType<typeof loadPack>>;
+  readonly message: string | undefined;
+}): readonly Panel[] {
+  const { name, raster, pack, message } = options;
   return SKIES.map((sky) => {
     const [composed] = composePanels([raster], {
       orientation: 'landscape',
@@ -94,15 +129,18 @@ function panelsFor(
       name,
       time: sky,
       sessions: CHIPS,
+      message,
     });
     if (composed === undefined) {
       throw new Error(`composePanels returned nothing for ${name}`);
     }
     return {
+      // Shape off the frame itself rather than off `panelSize` again — the
+      // pixels and their dimensions should not come from two places.
       label: `${name} — ${sky}`,
-      width: size.width,
-      height: size.height,
-      pixels: [...composed.pixels],
+      width: composed.width,
+      height: composed.pixels.length / composed.width,
+      rgba: toRgba(composed.pixels),
     };
   });
 }
@@ -133,24 +171,11 @@ function paintSheet({
   const sheet = document.getElementById('sheet');
   if (sheet === null) throw new Error('no #sheet');
   for (const panel of panels) {
-    // RGB565 -> RGBA, and the one operation here with no device counterpart:
-    // the panel writes these bytes straight to SPI and never expands them.
-    // Each channel's high bits are replicated into the low ones, which is what
-    // puts 0b11111 on 255 rather than 248. Any other widening shifts every
-    // colour on the sheet away from what the panel shows.
+    // Allocated then filled, rather than constructed from `panel.rgba`
+    // directly: the `ImageData` overload wants a buffer it owns, and what
+    // arrives here has crossed a serialisation boundary.
     const image = new ImageData(panel.width, panel.height);
-    for (const [i, value] of panel.pixels.entries()) {
-      const r = (value >> 11) & 0x1f;
-      const g = (value >> 5) & 0x3f;
-      const b = value & 0x1f;
-      const rgba = [
-        (r << 3) | (r >> 2),
-        (g << 2) | (g >> 4),
-        (b << 3) | (b >> 2),
-        255,
-      ];
-      image.data.set(rgba, i * 4);
-    }
+    image.data.set(panel.rgba);
     const row = document.createElement('div');
     row.className = 'row';
     for (const scale of [1, zoom]) {
@@ -164,7 +189,9 @@ function paintSheet({
       canvas.height = panel.height;
       canvas.style.width = `${panel.width * scale}px`;
       canvas.style.height = `${panel.height * scale}px`;
-      canvas.getContext('2d')?.putImageData(image, 0, 0);
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('no 2d context');
+      context.putImageData(image, 0, 0);
       wrap.append(label, canvas);
       row.append(wrap);
     }
@@ -178,13 +205,22 @@ async function shoot(panels: readonly Panel[], outPath: string) {
   const page = await browser.newPage({
     viewport: { width: 1200, height: 900 },
   });
-  await page.setContent(`<style>${SHEET_STYLE}</style><div id="sheet"></div>`);
-  await page.evaluate(paintSheet, { panels, zoom: ZOOM });
-  await page.locator('body').screenshot({ path: outPath });
-  await browser.close();
+  try {
+    await page.setContent(
+      `<style>${SHEET_STYLE}</style><div id="sheet"></div>`,
+    );
+    await page.evaluate(paintSheet, { panels, zoom: ZOOM });
+    await page.locator('body').screenshot({ path: outPath });
+  } finally {
+    await browser.close();
+  }
 }
 
-async function compose(frameDirs: readonly string[], outPath: string) {
+async function compose(
+  frameDirs: readonly string[],
+  outPath: string,
+  message: string | undefined,
+) {
   const pack = await loadPack(resolve('packs/example'));
   const browser = await chromium.launch();
   const page = await browser.newPage();
@@ -194,10 +230,16 @@ async function compose(frameDirs: readonly string[], outPath: string) {
       const rasters = await loadFrames(page, dir);
       const first = rasters[0];
       if (first === undefined) throw new Error(`no frames in ${dir}`);
-      // The directory name is the animation name, which `composePanels` needs
-      // for `castsShadow` — `bouldering` is on a wall and casts none.
+      // The directory name is the animation name. `composePanels` uses it
+      // twice: for `castsShadow` — `bouldering` is on a wall and casts none —
+      // and as the message band's text unless `--message` overrides it.
       panels.push(
-        ...panelsFor(resolve(dir).split('/').at(-1) ?? dir, first, pack),
+        ...panelsFor({
+          name: basename(resolve(dir)),
+          raster: first,
+          pack,
+          message,
+        }),
       );
     }
   } finally {
@@ -206,10 +248,24 @@ async function compose(frameDirs: readonly string[], outPath: string) {
   await shoot(panels, outPath);
 }
 
-const dirs = process.argv.slice(2);
-if (dirs.length === 0) {
-  console.error('usage: node tools/panel-mock.ts <frameDir> [frameDir2]');
+const argv = process.argv.slice(2);
+const flag = argv.indexOf('--message');
+// `--message <text>` puts something other than the animation's name in the
+// band. The case worth passing is a long MCP tool name: the band's height is
+// unjudged, and this is the only way in the repo to put one through the real
+// `wrapText` at true size.
+const message = flag === -1 ? undefined : argv[flag + 1];
+if (flag !== -1 && message === undefined) {
+  console.error('--message needs a value');
   process.exit(1);
 }
-await compose(dirs, resolve('out/panel-mock.png'));
+const dirs =
+  flag === -1 ? argv : [...argv.slice(0, flag), ...argv.slice(flag + 2)];
+if (dirs.length === 0) {
+  console.error(
+    'usage: node tools/panel-mock.ts <frameDir> [frameDir2] [--message <text>]',
+  );
+  process.exit(1);
+}
+await compose(dirs, resolve('out/panel-mock.png'), message);
 console.log('panel mock -> out/panel-mock.png');

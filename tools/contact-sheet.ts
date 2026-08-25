@@ -20,8 +20,21 @@ import process from 'node:process';
 
 import { chromium } from 'playwright';
 
-/** The panel's background — frames are transparent, so review on the real ground. */
-const PANEL_BACKGROUND = '#0d1117';
+/**
+ * A neutral backdrop for transparent frames. **Not the panel's ground.**
+ *
+ * It said "the panel's background — review on the real ground" and was neither.
+ * The daemon sets `extent: 'panel'`, so the rock pool covers the whole
+ * framebuffer and the device never shows the pack background anywhere; and the
+ * value was `packs/example` palette[0] hand-copied, so a pack swap changed the
+ * device and not this sheet.
+ *
+ * A contact sheet judges motion, loop seam and silhouette, and a flat backdrop
+ * is the right thing for that. For an animation in its real context — sky,
+ * ground, shadow — use `tools/panel-mock.ts`, which composes through
+ * `render()`. `docs/ANIMATION.md` routes the critic to both.
+ */
+const SHEET_BACKDROP = '#0d1117';
 const INSPECT_SCALE = 3;
 
 type Frame = { readonly uri: string; readonly width: number };
@@ -69,7 +82,7 @@ function sheetHtml(frames: readonly Frame[]): string {
       h2 { color: #c9d1d9; font-size: 13px; font-weight: 400; margin: 0 0 12px; }
       .row { display: flex; gap: 8px; align-items: flex-start; }
       figure { margin: 0; }
-      img { display: block; background: ${PANEL_BACKGROUND};
+      img { display: block; background: ${SHEET_BACKDROP};
             image-rendering: pixelated; }
       figcaption { text-align: center; padding-top: 6px; }
       .big { width: ${frameWidth * INSPECT_SCALE}px; }

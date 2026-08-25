@@ -16,9 +16,14 @@
  *
  * It closed by deletion, not by bundling the renderer into a page. `panel-mock`
  * composes through this function and blits the pixels; `harness` stopped
- * drawing band contents at all. So there is no second panel-drawing path left
- * to diverge — which is a stronger guarantee than two paths agreeing, and it
- * needs no bundler, no new dependency and no build step.
+ * drawing band contents at all. So no second path composes a *scene* — a
+ * stronger guarantee than two paths agreeing, and it needs no bundler, no new
+ * dependency and no build step.
+ *
+ * Whole *panels* are still drawn elsewhere on purpose — `bake-splash.ts` owns
+ * the firmware's splash, `colour-bars.ts` is a test pattern — and two review
+ * artefacts still paint a flat backdrop behind transparent frames. Those are
+ * named in `BUILD_PLAN.md` rather than swept under an absolute here.
  *
  * It also deletes arithmetic rather than adding it. Slot placement and the
  * landscape safe-area crop are `paintStage`'s job, and having them here as
@@ -121,6 +126,17 @@ export function composePanels(
      * could, and was the one thing that version did better.
      */
     readonly sessions?: readonly SessionChip[];
+    /**
+     * Message-band text, when the animation's own name is not the case worth
+     * seeing. Defaults to the name, which is what the device-facing caller
+     * wants.
+     *
+     * It exists because the band's height is an open question and the longest
+     * string any artefact could otherwise show is `"permission-sign"`. A long
+     * MCP tool name is the case the band has to survive, and the page that used
+     * to display one wrapped it with CSS rather than with `wrapText`.
+     */
+    readonly message?: string;
   },
 ): readonly Frame[] {
   // The crop `paintStage` applies is derived from the *layout's* scale, and
@@ -154,7 +170,7 @@ export function composePanels(
       pack: options.pack,
       sprites: [raster],
       sessions: options.sessions ?? [],
-      ...placeholderBands(options.name),
+      ...placeholderBands(options.message ?? options.name),
       environment: {
         time: options.time ?? 'day',
         extent: options.extent ?? 'panel',
