@@ -59,7 +59,9 @@
     ── Three strokes in the twelve, not one ──────────────────────────────
 
     The first draft spent all twelve seconds on a single out-and-back, arguing
-    that a screen nobody asked for is an argument for calm. Right about the mood,
+    that a screen nobody asked for is an argument for calm — which is measured
+    rather than assumed: 18 of the 19 compactions in the census fired with
+    `compactMetadata.trigger` set to `auto`, and PLANS.md §Sweeping carries it. Right about the mood,
     wrong about the arithmetic: a critic measured peak head speed at 1.24 device
     pixels per frame, so the twelve seconds were spent slowing the only thing
     that moved, and at true size the broom did not read as travelling.
@@ -147,9 +149,19 @@
     stays exactly parallel to the handle at every instant, so "at the grip" and
     "at the shoulder" are one number rather than two.
 
-    An earlier draft published 0.38 px here, computed against a lever arm of
-    `d - 2` and a nine-sample track. Three independent measurements returned
-    0.131 for that track; the figure above is this one, remeasured.
+    An earlier draft published 0.38 px here for a nine-sample track whose real
+    figure was 0.131, and the interesting part is *why*, because the first
+    explanation offered for it was also wrong. It is not the lever arm. 0.38 is
+    a hybrid: it measures the linear track against the **ideally eased** curve —
+    a timing difference — and then converts it with the shortest lever. Under
+    that reading 0.38 is not even the worst value, since the same comparison
+    gives 0.97 px at the handle tip. And it cannot show up as a gap at the grip
+    at all, because the arm is the tilt minus a constant, so the claw's axis is
+    exactly parallel to the handle's and the two share a polyline.
+
+    The head's own path does part from the ideal cosine, by 0.70 px on that
+    track. That is a ripple in speed, not a joint coming apart, which is why the
+    figure quoted above is the coherence one.
 
     ── Two tones, because one is invisible at some hour ──────────────────
 

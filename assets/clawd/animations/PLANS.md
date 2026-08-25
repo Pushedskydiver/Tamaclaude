@@ -1380,6 +1380,16 @@ records carrying `compactMetadata.durationMs`:
 | 2.1.234     | 1     | 125.9s     | 125.9s     |
 | **2.1.237** | **5** | **108.6s** | **123.4s** |
 
+**Almost none of it is asked for.** The same records carry
+`compactMetadata.trigger`, a string that is `auto` or `manual`. Across the 19 in
+the census above: **18 auto, 1 manual** — the single manual one on 20 Aug. (The
+corpus has since reached 20 records, 19 auto and 1 manual; the table above is the
+census as taken.) That is the ground for the screen being calm rather than busy:
+nobody asked for it, so it should not read as an alarm. Recorded here because a
+draft of `sweeping.svg` asserted the split with no source in the tree, and a
+review was right to call it unsupported — the fix is the field name, not the
+removal.
+
 **The pooled median of 150s describes no version.** Compaction is getting
 faster release over release, and the newest — which is what will be running on
 23 September — is 109s median with a 123s maximum. The 268s the first draft used
