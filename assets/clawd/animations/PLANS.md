@@ -1237,7 +1237,10 @@ that assumption gets tested on 23 September in front of them. Two seconds and
 one map entry is the cheap hedge: guessing wrong costs a screen nobody notices
 rather than a screen that eats the panel.
 
-**Known and accepted:** an `Agent`-keyed trigger fires on 93 of the 168 subagent
+**Known and accepted** (and note the denominator moves: 168 transcripts existed
+when the spawn split was counted against 167 when the timings were, because the
+session doing the measuring was itself spawning subagents): an `Agent`-keyed
+trigger fires on 93 of the 168 subagent
 runs measured here. The other 75 were spawned by `Workflow` and by a session
 tool, and whether `SubagentStart` fires for those is unverified in either
 direction — so the rejected trigger is not known to cover them either.
@@ -1292,16 +1295,26 @@ bakes, so the gate catches nothing anywhere until a defect exists, and the
 replacement is _sketched_ in `tools/bake-sprites.test.ts` — a discriminator
 named and not validated — rather than designed.
 
-**Fallback: cut the art, keep nothing.** With the trigger as a single map entry
-there is no wiring to strand, which is the trap the payoff screen hit — "a
-parked frame with no trigger has nowhere to be shown". So this is cuttable at
-any point up to the freeze at no cost.
+**Fallback: cut the art and the row.** Written before the wiring landed, this
+said there was "no wiring to strand" and that the screen was cuttable "at no
+cost" — true then, false the moment the `TOOL_ANIMATIONS` entry shipped on
+25 Aug. Cutting now touches `animation.ts`, its test, `sprites/index.ts`, the
+bake and three references in `tools/bake-sprites.test.ts`. Still cheap, and
+still far cheaper than the payoff screen's trap — "a parked frame with no
+trigger has nowhere to be shown" — because the trigger is one row rather than a
+resolver change. But it is not free, and a fallback that understates its own
+cost is the kind that does not get taken.
 
-| date           | what has to be true                                             |
-| -------------- | --------------------------------------------------------------- |
-| **Wed 3 Sep**  | board and pieces drawn, rendered at true size on all four sands |
-| **Sat 6 Sep**  | `animation-critic` has passed it, or it is cut                  |
-| **Sat 13 Sep** | `TOOL_ANIMATIONS` entry merged, or the art is cut with it       |
+All three dates below were met on 25 Aug, the day the section was written — the
+art and the `TOOL_ANIMATIONS` row landed together. Kept as a record of what the
+gates were rather than as a schedule, because a table of future decisions for a
+finished item reads as work outstanding.
+
+| date           | what had to be true                                                |
+| -------------- | ------------------------------------------------------------------ |
+| ~~Wed 3 Sep~~  | board and pieces drawn, rendered at true size on all four sands ✅ |
+| ~~Sat 6 Sep~~  | `animation-critic` has passed it, or it is cut ✅                  |
+| ~~Sat 13 Sep~~ | `TOOL_ANIMATIONS` entry merged, or the art is cut with it ✅       |
 
 The 6 Sep Tier A gate this used to hang off has already fired green — all nine
 Tier A screens are baked as of 25 Aug, twelve days early — so "decide by 6 Sep

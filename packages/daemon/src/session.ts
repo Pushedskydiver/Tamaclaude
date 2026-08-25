@@ -208,6 +208,19 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * and would need the counter back as a fallback, which is two mechanisms for
  * one badge. The cost of getting it wrong is one digit in the status bar until
  * the next start, and the floor below is what stops it going negative.
+ *
+ * **What is verified, and what is not.** Captured from a listener on the hook
+ * socket on 25 Aug: a subagent spawned by the `Agent` tool does produce both
+ * events, each carrying `agentId` and `agentType`, so the count moves for
+ * those. Not verified: whether the same pair fires for a subagent spawned by
+ * `Workflow` or by a session tool rather than by `Agent`. On the machine this
+ * was measured those are roughly half of all subagent runs — 75 of 168 — and
+ * if they are silent the badge under-counts by about half without saying so.
+ *
+ * This was first written down as a caveat on the board game screen's trigger,
+ * which no longer needs it: that screen keys on the `Agent` tool call and never
+ * reads this count. The badge does, so the question belongs here. One capture
+ * with a workflow-spawned subagent settles it.
  */
 const SUBAGENT_DELTA: ReadonlyMap<string, number> = new Map([
   ['SubagentStart', 1],

@@ -97,7 +97,7 @@ export function triggers(patterns: readonly string[]): readonly Trigger[] {
         ),
     },
     {
-      what: 'a spec or plan, before code moves against it',
+      what: 'a spec or plan changed in this diff',
       reviews: ['spec-grill'],
       // `CLAUDE.md`'s table has had this row since the table existed; this
       // tool never implemented it, so the one review the table asks for
