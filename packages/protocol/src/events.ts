@@ -53,7 +53,7 @@ export type HookEvent = {
   /** `agent_type` — `Explore`, `Plan`, or a custom agent's name. */
   readonly agentType?: string;
   /**
-   * `error_type` on `StopFailure`. Ten documented values, verified against
+   * The error on `StopFailure`. Ten documented values, verified against
    * code.claude.com/docs/en/hooks.md rather than inferred from the three this
    * comment used to name followed by "and so on": `rate_limit`, `overloaded`,
    * `authentication_failed`, `oauth_org_not_allowed`, `billing_error`,

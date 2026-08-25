@@ -2,10 +2,10 @@
  * One session's record, and the transitions that move it.
  *
  * Everything here is pure and takes `now` as an argument. There is no clock in
- * this package at all — not an injectable one, not a default one — because a
- * function that can read the time is a function a test has to control, and the
- * whole point of five- and ten-minute thresholds is that they must be provable
- * in microseconds. The socket slice supplies `Date.now()` at the edge.
+ * this module — because a function that can read the time is a function a test
+ * has to control, and the whole point of five- and ten-minute thresholds is
+ * that they must be provable in microseconds. The package's one clock is at its
+ * edge, in `socket-server.ts`, injectable and defaulting to `Date.now`.
  */
 
 import type { SessionState } from './state.js';
@@ -75,10 +75,19 @@ export type Session = {
   /** First sight of this session. Spec §4's tie-break within "needs you". */
   readonly startedAt: number;
   /**
-   * Last proof of life. Drives sleep and eviction.
+   * Last proof of life. Read at five places, which is more than the two this
+   * used to name: the payoff window, sleep and eviction in `effectiveState`
+   * and `isLive`, the cap's flood victim in `registry.withoutQuietest`, and
+   * **`newestFirst` in `resolve` — which session takes the stage**.
    *
-   * Of any kind but one: a subagent event carrying no `agentType` leaves this
-   * alone — see the gate in `applyEvent`. It used to be every kind.
+   * That last one is why the gate below is worth reading carefully. A subagent
+   * event carrying no `agentType` leaves this field alone, and it used to be
+   * every kind of event that moved it. So among two live sessions the gate
+   * decides the hero as well as the badge: before it, a stray arriving for the
+   * older session flipped the stage to it and changed the animation on the
+   * glass. The direction is right — a stray is not activity and should not win
+   * the stage — but it is a consequence of a badge fix, not an intended part
+   * of one, and a review found it rather than the author.
    */
   readonly lastEventAt: number;
   /** When Claude Code last asked for input, if it is still unanswered. */

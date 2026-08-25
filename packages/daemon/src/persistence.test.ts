@@ -57,11 +57,17 @@ describe('encodeRegistry / decodeRegistry', () => {
     const now = NOW;
     // Not literally every optional field: `Session` has five, and these three
     // events reach `notifiedAt` and `errorType` (plus the non-optional
-    // `subagents`). `tool` and `workedAt` are only ever set by
-    // `PreToolUse`/`PostToolUse` and `endedAt` only by `SessionEnd`, none of
-    // which appear here, so those three are never set rather than cleared —
-    // `workedAt` has the test above to itself for that reason. The title used
-    // to claim all of them.
+    // `subagents`). In `TRANSITIONS`, `workedAt` is set only by `PreToolUse`
+    // and `endedAt` only by `SessionEnd`, while `tool` is set by `PreToolUse`
+    // and `PermissionRequest` — none of which appear here, so those three are
+    // never set rather than cleared. `workedAt` has the test above to itself
+    // for that reason. The title used to claim all of them.
+    //
+    // An earlier version of this note said `PostToolUse` sets `tool` and
+    // `workedAt` and omitted `PermissionRequest`. `PostToolUse` has no entry in
+    // `TRANSITIONS` at all, and the omission mattered: `NEEDS_PERMISSION`
+    // legitimately carries a tool, which is why it is one of the two `true`
+    // rows in `TOOL_STATES`.
     const withEverything = [
       { sessionId: 'a', kind: 'Notification' },
       { sessionId: 'a', kind: 'SubagentStart', agentType: 'Explore' },

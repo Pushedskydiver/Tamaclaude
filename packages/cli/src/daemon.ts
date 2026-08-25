@@ -5,13 +5,14 @@
  * "the listener holds the registry and offers a snapshot; nothing yet renders
  * it or pushes a frame down the wire". Every piece existed and was tested in
  * isolation. This is the composition, and it is deliberately the only file in
- * the repo that imports all five:
+ * the repo that imports every other workspace package:
  *
  *   socket  ->  registry  ->  resolution  ->  scene  ->  pixels  ->  rect  ->  wire
  *   daemon      daemon        daemon          cli       renderer   protocol   device
  *
- * (`packs` is the sixth import and sits under `scene` — the pack is what the
- * renderer draws with.)
+ * (`packs` is not on that row but is imported too, sitting under `scene` — the
+ * pack is what the renderer draws with. `cli` is on the row and is not an
+ * import, because this file *is* `cli`.)
  *
  * Nothing here is clever, and that is the intent — every decision worth making
  * was made in the package that owns it. What lives here is the glue that has no
@@ -396,10 +397,9 @@ const TOOL_STATES: Readonly<Record<SessionState, boolean>> = {
  * only on states that have no mapped entry in the one pack written so far, so
  * what it actually steps in front of is everything below: `panel.tool` for
  * `WORKING`, the idle rotation for `IDLE`, and the last-resort lowercased
- * state name for `THINKING`, `ASLEEP` and `DONE`, which reach neither. An
- * earlier version put `DONE` in the first group; `Stop` clears `tool`, so a
- * payoff never has one — and the commit that established that fact left this
- * sentence contradicting it eleven lines further down.
+ * state name for `THINKING`, `ASLEEP` and `DONE`, which reach neither. `DONE`
+ * belongs in the second group because `Stop` clears `tool` in `TRANSITIONS`, so
+ * a payoff never has one to show.
  *
  * That distinction is not academic: `BUILD_PLAN.md` schedules mapped quips for
  * more states in Stage 5, and on the day the birthday will take precedence
@@ -678,11 +678,11 @@ async function paintOnce(
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
   // before it is wired, which `overheated` did on 24 Aug (art 08:58, wiring
-  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 12:23). The
-  // two lists are equal as of that wiring, which is exactly when this guard is
-  // easiest to delete and worst to be without. Both gaps were hours, not days —
-  // an earlier version of this line said "between 23 and 24 Aug", and there are
-  // no commits at all on 23 Aug. They are kept because the two lists are
+  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 12:23). Each
+  // gap was hours. **The lists are not equal at HEAD** — `sweeping` baked on 25
+  // Aug at 16:15 and is not in `ANIMATIONS`, because its state does not exist
+  // yet. A moment when they *are* equal is exactly when this guard looks
+  // deletable and is worst to be without. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what

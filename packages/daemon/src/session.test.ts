@@ -295,6 +295,15 @@ describe('subagents', () => {
     expect(
       applyEvent(start, event('SubagentStart'), T0 + 1000).lastEventAt,
     ).toBe(T0);
+    // And the positive direction, which nothing pinned until a review planted
+    // the mutant: dropping the refresh for *typed* subagent events as well — so
+    // that no subagent event ever moves the clock — left the whole suite green.
+    // Every other `lastEventAt` assertion on this branch is a negative one, so
+    // the gate had a specified floor and no ceiling.
+    expect(
+      applyEvent(start, event('SubagentStart', DISPATCHED), T0 + 1000)
+        .lastEventAt,
+    ).toBe(T0 + 1000);
   });
 
   it('does not let a stray push the payoff window back', () => {

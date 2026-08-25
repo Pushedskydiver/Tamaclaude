@@ -22,9 +22,12 @@ import { z } from 'zod';
  * How long any one field may be.
  *
  * Not arbitrary caution. `sessionId` becomes a key in a map the daemon holds
- * for ten minutes, and `tool` and `agentType` are rendered onto a 172-pixel
- * panel — so an unbounded string is both a retained allocation and a display
- * somebody else controls. Claude Code's own session ids are UUIDs and its tool
+ * for ten minutes, and `tool` is rendered onto a 172-pixel panel — so an
+ * unbounded string is both a retained allocation and a display somebody else
+ * controls. `agentType` was named here as a second rendered field and is not
+ * one: nothing in `renderer` reads it, and the status band's right end is a
+ * count. What it does now is decide the subagent gate below, so its length
+ * cap guards an input rather than a display. Claude Code's own session ids are UUIDs and its tool
  * names are short identifiers; 256 leaves room for an MCP server with a long
  * namespace and refuses everything that is not a name at all.
  */
