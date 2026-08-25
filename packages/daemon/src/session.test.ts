@@ -29,12 +29,23 @@ function event(kind: string, extra: Partial<HookEvent> = {}): HookEvent {
 }
 
 /** Fold a list of events in at one instant, which is the same-tick case. */
-function foldAt(kinds: readonly string[], now: number) {
+function foldAt(
+  kinds: readonly string[],
+  now: number,
+  extra: Partial<HookEvent> = {},
+) {
   return kinds.reduce(
-    (session, kind) => applyEvent(session, event(kind), now),
+    (session, kind) => applyEvent(session, event(kind, extra), now),
     start,
   );
 }
+
+/**
+ * What a real dispatched subagent carries. Both spawn paths send a non-empty
+ * `agent_type` — see `SUBAGENT_DELTA` — and without it the count deliberately
+ * does not move, so a subagent test that omits it is testing the stray path.
+ */
+const DISPATCHED = { agentType: 'Explore' } as const;
 
 describe('the payoff window', () => {
   it('shows DONE once a session that did work has been quiet long enough', () => {
@@ -201,13 +212,16 @@ describe('applyEvent', () => {
 
 describe('subagents', () => {
   it('counts nested starts and unwinds them', () => {
-    const two = foldAt(['SubagentStart', 'SubagentStart'], T0);
+    const two = foldAt(['SubagentStart', 'SubagentStart'], T0, DISPATCHED);
     expect(two.subagents).toBe(2);
-    expect(applyEvent(two, event('SubagentStop'), T0).subagents).toBe(1);
+    expect(
+      applyEvent(two, event('SubagentStop', DISPATCHED), T0).subagents,
+    ).toBe(1);
     expect(
       foldAt(
         ['SubagentStart', 'SubagentStart', 'SubagentStop', 'SubagentStop'],
         T0,
+        DISPATCHED,
       ).subagents,
     ).toBe(0);
   });
@@ -216,7 +230,51 @@ describe('subagents', () => {
     // The eviction case: a subagent outlives the ten minutes of silence that
     // removed its session, and its stop lands on a session created fresh by
     // that very event. A negative badge would be the visible symptom.
-    expect(applyEvent(start, event('SubagentStop'), T0).subagents).toBe(0);
+    expect(
+      applyEvent(start, event('SubagentStop', DISPATCHED), T0).subagents,
+    ).toBe(0);
+  });
+
+  it('ignores a subagent event that carries no agent type', () => {
+    // **Unpaired stops are ordinary, not an edge case.** Captured from a
+    // listener on the hook socket on 25 Aug, over 13 minutes of one session:
+    // six `SubagentStop`s arrived and only one had a matching `SubagentStart`.
+    // The five strays each carried a distinct `agent_id` and an *empty*
+    // `agent_type`, and came from machinery nobody dispatched — one 3.9s after
+    // a `Stop`, one 3.0s after `SessionStart(source=compact)`.
+    //
+    // The floor below is not enough on its own. It stops the badge going
+    // negative, which is the harmless direction; the damaging one is a stray
+    // landing while a real subagent runs, taking a true count of 1 down to 0
+    // and blanking the badge with work still in flight. At roughly one stray
+    // every two to three minutes, anything longer than that is likely to be
+    // hit — which is every `da-review` and `animation-critic` run.
+    //
+    // `agent_type` is the discriminator and it costs nothing: `optionalString`
+    // in `packages/hooks` already maps an empty string to absent, so a stray
+    // reaches us as `agentType: undefined` while both real spawn paths carry a
+    // non-empty one — `Agent` sends the agent's own type, `Workflow` sends
+    // `workflow-subagent`. Both verified on the same capture.
+    const running = applyEvent(
+      start,
+      event('SubagentStart', { agentType: 'Explore' }),
+      T0,
+    );
+    expect(running.subagents).toBe(1);
+    const stray = applyEvent(running, event('SubagentStop'), T0 + 1000);
+    expect(stray.subagents).toBe(1);
+    // Still proof of life: the event is ignored for the count, not dropped.
+    expect(stray.lastEventAt).toBe(T0 + 1000);
+  });
+
+  it('gates starts by the same rule, so pairs stay balanced', () => {
+    // Symmetric on purpose. Gating only the stop would let an untyped start
+    // inflate the count with nothing able to bring it down — a permanent
+    // over-count, which is worse than the floor case it replaces. Gating both
+    // means a pair is either counted at both ends or ignored at both, so the
+    // worst a missing `agent_type` can do is one badge digit, self-healing on
+    // the next real pair.
+    expect(foldAt(['SubagentStart', 'SubagentStart'], T0).subagents).toBe(0);
   });
 
   it('does not disturb the state its parent is in', () => {
@@ -225,7 +283,11 @@ describe('subagents', () => {
       event('PreToolUse', { tool: 'Bash' }),
       T0,
     );
-    const spawned = applyEvent(working, event('SubagentStart'), T0 + 1);
+    const spawned = applyEvent(
+      working,
+      event('SubagentStart', DISPATCHED),
+      T0 + 1,
+    );
     expect(spawned.state).toBe('WORKING');
     expect(spawned.tool).toBe('Bash');
     expect(spawned.subagents).toBe(1);

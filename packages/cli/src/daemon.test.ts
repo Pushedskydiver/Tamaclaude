@@ -631,7 +631,14 @@ describe('what the panel says', () => {
       sceneFor({ registry: createRegistry(NOW), pack, now: NOW }).status.right,
     ).toBe('');
     const busy = sceneFor({
-      registry: after({ sessionId: 's', kind: 'SubagentStart' }),
+      // `agentType` is load-bearing, not decoration: an event without one is
+      // machinery rather than a dispatch and does not move the count, so
+      // omitting it here asserted `+1` against a band that would render ''.
+      registry: after({
+        sessionId: 's',
+        kind: 'SubagentStart',
+        agentType: 'Explore',
+      }),
       pack,
       now: NOW,
     });

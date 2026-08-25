@@ -57,7 +57,7 @@ describe('encodeRegistry / decodeRegistry', () => {
     const now = NOW;
     const withEverything = [
       { sessionId: 'a', kind: 'Notification' },
-      { sessionId: 'a', kind: 'SubagentStart' },
+      { sessionId: 'a', kind: 'SubagentStart', agentType: 'Explore' },
       { sessionId: 'a', kind: 'StopFailure', errorType: 'rate_limit' },
     ].reduce(
       (registry, event) => observe(registry, event, now),

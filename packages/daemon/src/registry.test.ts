@@ -47,7 +47,9 @@ describe('observe', () => {
     const registry = [
       event('s1', 'PreToolUse', { tool: 'Bash' }),
       event('s2', 'UserPromptSubmit'),
-      event('s1', 'SubagentStart'),
+      // A real dispatch carries `agentType`; without it the count deliberately
+      // does not move. See `SUBAGENT_DELTA` in `session.ts`.
+      event('s1', 'SubagentStart', { agentType: 'Explore' }),
     ].reduce((acc, next) => observe(acc, next, T0), createRegistry(T0));
 
     expect(registry.sessions.get('s1')?.subagents).toBe(1);
@@ -61,7 +63,11 @@ describe('observe', () => {
     // parent. The stop recreates the session — it is proof something is alive
     // — and the count floors at zero instead of going negative.
     const evicted = createRegistry(T0);
-    const registry = observe(evicted, event('gone', 'SubagentStop'), T0);
+    const registry = observe(
+      evicted,
+      event('gone', 'SubagentStop', { agentType: 'Explore' }),
+      T0,
+    );
     expect(registry.sessions.get('gone')?.subagents).toBe(0);
   });
 });

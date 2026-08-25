@@ -203,24 +203,40 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * `SubagentStart` and `SubagentStop`, which move the count and nothing else —
  * a subagent starting does not stop its parent being `WORKING`.
  *
- * A count rather than a set of `agent_id`s. A set would make an unmatched stop
- * exactly free instead of merely cheap, but `agent_id` is optional on the wire
- * and would need the counter back as a fallback, which is two mechanisms for
- * one badge. The cost of getting it wrong is one digit in the status bar until
- * the next start, and the floor below is what stops it going negative.
+ * A count rather than a set of `agent_id`s, and `applyEvent` ignores either
+ * event when it carries no `agentType`. That gate is what makes the count
+ * survivable, so it is not an optimisation to tidy away later.
  *
- * **What is verified, and what is not.** Captured from a listener on the hook
- * socket on 25 Aug: a subagent spawned by the `Agent` tool does produce both
- * events, each carrying `agentId` and `agentType`, so the count moves for
- * those. Not verified: whether the same pair fires for a subagent spawned by
- * `Workflow` or by a session tool rather than by `Agent`. On the machine this
- * was measured those are roughly half of all subagent runs — 75 of 168 — and
- * if they are silent the badge under-counts by about half without saying so.
+ * **Unpaired stops are ordinary.** A second capture on 25 Aug, 13 minutes of
+ * one session, logged six `SubagentStop`s against a single `SubagentStart`.
+ * The five strays each had a distinct `agent_id` and an empty `agent_type`,
+ * and none came from a dispatch — one arrived 3.9s after a `Stop`, one 3.0s
+ * after `SessionStart(source=compact)`. Roughly one every two to three
+ * minutes.
  *
- * This was first written down as a caveat on the board game screen's trigger,
- * which no longer needs it: that screen keys on the `Agent` tool call and never
- * reads this count. The badge does, so the question belongs here. One capture
- * with a workflow-spawned subagent settles it.
+ * The floor below only stops the badge going negative, which is the harmless
+ * direction. The damaging one is a stray landing while a real subagent runs:
+ * a true count of 1 goes to 0 and the badge blanks with work still in flight,
+ * for every run longer than the gap between strays — which is every
+ * `da-review` and `animation-critic`.
+ *
+ * **Why `agentType` and not `agentId`.** Both are optional on the wire, but
+ * `optionalString` in `packages/hooks` maps an empty string to absent, so a
+ * stray arrives as `agentType: undefined` for free while a real one never
+ * does. `agentId` cannot discriminate: the strays carry one. So this is one
+ * mechanism, not the two a set of ids would have needed.
+ *
+ * **What is verified.** Both spawn paths emit a matched pair carrying
+ * `agentId` and `agentType`: the `Agent` tool sends the agent's own type
+ * (`Explore`), and `Workflow` sends `workflow-subagent`. That settles the
+ * question this comment used to leave open — workflow-spawned subagents are
+ * not silent, so the badge does not under-count by half. Still unverified: a
+ * subagent spawned by a session tool rather than by either of those.
+ *
+ * The gate's own failure mode is bounded. If a real event ever arrives without
+ * an `agentType`, its pair is ignored at both ends rather than at one, so the
+ * badge reads one low and self-heals on the next pair — never drifting, which
+ * gating only the stop would have allowed.
  */
 const SUBAGENT_DELTA: ReadonlyMap<string, number> = new Map([
   ['SubagentStart', 1],
@@ -255,6 +271,10 @@ export function applyEvent(
   const seen = { ...session, lastEventAt: Math.max(session.lastEventAt, now) };
   const delta = SUBAGENT_DELTA.get(event.kind);
   if (delta !== undefined) {
+    // No `agentType` means this is not a dispatched subagent — see
+    // `SUBAGENT_DELTA`. Returning `seen` rather than dropping the event is
+    // deliberate: it is still proof of life and must still refresh the clock.
+    if (event.agentType === undefined) return seen;
     return { ...seen, subagents: Math.max(0, seen.subagents + delta) };
   }
   return { ...seen, ...TRANSITIONS.get(event.kind)?.(event, now) };
