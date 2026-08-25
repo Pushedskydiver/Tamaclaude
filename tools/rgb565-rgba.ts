@@ -2,9 +2,15 @@
  * RGB565 back to RGBA, for the tools that have to show a panel to a person.
  *
  * Its own module, and not part of `tools/panel-mock.ts`, for the reason
- * `tools/blit-types.ts` gives: `panel-mock.ts` is a script with a CLI at module
- * scope, so importing it to reach one function runs the tool. Its own module is
- * also what lets this be tested at all.
+ * `tools/splash-source.ts` gives about the baker: that is a script with
+ * top-level `await`, so importing it to reach one function runs it. Its own
+ * module is what lets this be tested at all.
+ *
+ * Not in `packages/protocol` beside `rgb565()`, which it inverts, because
+ * nothing that ships ever unpacks — the device writes RGB565 straight to SPI.
+ * `protocol` calls itself the vocabulary every package speaks, and this is a
+ * build-time concern. If a package ever needs it, that is the moment to move
+ * it, and the round-trip test should move with it.
  */
 import type { Frame } from '@tamaclaude/protocol';
 

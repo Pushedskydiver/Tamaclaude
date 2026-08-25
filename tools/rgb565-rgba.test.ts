@@ -5,41 +5,72 @@ import { rgb565 } from '@tamaclaude/protocol';
 import { toRgba } from './rgb565-rgba.ts';
 
 /**
- * The unpack is the one thing in `panel-mock.ts` with no device counterpart.
+ * Values that survive 8 -> n -> 8 exactly, per channel.
  *
- * The panel writes RGB565 straight to SPI and never expands it, so nothing on
- * the hardware can disagree with this and nothing downstream can catch it — a
- * wrong widening would tint every review artefact uniformly, which is the kind
- * of error the eye calibrates to rather than notices. `tools/frame-palette.ts`
- * exists because exactly that shipped once: a colour key became a black key
- * and gave Clawd windows for eyes, invisible because the background was black
- * too.
+ * `toRgba` is the one operation in the review path with no device counterpart:
+ * the panel writes RGB565 straight to SPI and never expands it, so nothing on
+ * the hardware can disagree and nothing downstream can catch a wrong widening.
+ * It would tint every review artefact uniformly, which is the kind of error an
+ * eye calibrates to rather than notices — and the artefact is the sole input to
+ * the mandatory `animation-critic`.
  *
- * Round-tripped against `rgb565` rather than against a table of expected
- * bytes, so the test cannot drift from the packer it is the inverse of.
+ * **Separate lists, because the channels are not the same width.** A shared
+ * list plus a tolerance is how the first version of this asserted nothing:
+ * four plausible one-token mutants passed it, including one that shifts nine
+ * tenths of representable colours by up to 3%. Three of that list's seven
+ * values are also inexact in green — 33 lands on 32, 66 on 65, 132 on 134.
+ *
+ * Round-tripped against `rgb565` rather than a table of bytes, so this cannot
+ * drift from the packer it inverts.
  */
-describe('toRgba', () => {
-  it('round-trips every colour the packer can represent losslessly', () => {
-    // The values that survive 8->5/6->8 exactly are those whose low bits are
-    // the replication of their high ones — which is what the packer keeps.
-    const exact = [0, 8, 16, 33, 66, 132, 255];
-    const cases = exact.flatMap((r) =>
-      exact.flatMap((g) => exact.map((b) => [r, g, b] as const)),
-    );
-    for (const [r, g, b] of cases) {
-      const packed = Uint16Array.of(rgb565(r, g, b));
-      const [outR, outG, outB, alpha] = toRgba(packed);
-      // Not asserted against the input: 5- and 6-bit channels cannot hold
-      // every 8-bit value, so the contract is "as close as the format allows"
-      // — within half a step of the quantiser, which is 8 for red and blue
-      // and 4 for green.
-      expect(Math.abs((outR ?? -1) - r)).toBeLessThanOrEqual(8);
-      expect(Math.abs((outG ?? -1) - g)).toBeLessThanOrEqual(4);
-      expect(Math.abs((outB ?? -1) - b)).toBeLessThanOrEqual(8);
-      expect(alpha).toBe(255);
+const EXACT_5_BIT = [0, 8, 16, 33, 66, 132, 255];
+const EXACT_6_BIT = [0, 4, 16, 32, 65, 130, 195, 255];
+
+describe('toRgba, exact widening', () => {
+  it('returns 5-bit channels exactly, not merely close', () => {
+    for (const value of EXACT_5_BIT) {
+      const [r, , ,] = toRgba(Uint16Array.of(rgb565(value, 0, 0)));
+      const [, , b] = toRgba(Uint16Array.of(rgb565(0, 0, value)));
+      expect({ channel: 'red', value, got: r }).toEqual({
+        channel: 'red',
+        value,
+        got: value,
+      });
+      expect({ channel: 'blue', value, got: b }).toEqual({
+        channel: 'blue',
+        value,
+        got: value,
+      });
     }
   });
 
+  it('returns 6-bit green exactly, on the values green can hold', () => {
+    for (const value of EXACT_6_BIT) {
+      const [, g] = toRgba(Uint16Array.of(rgb565(0, value, 0)));
+      expect({ value, got: g }).toEqual({ value, got: value });
+    }
+  });
+
+  it('never drifts further than the format forces, on every value', () => {
+    // The exact lists above pin the widening; this pins that nothing else is
+    // wrong across the whole 8-bit range.
+    //
+    // 7 and 3, not 4 and 2, and the reason is worth knowing: `rgb565` *masks*
+    // — `r & 0xf8`, `g & 0xfc` — so it truncates rather than rounds. A
+    // rounding quantiser would cost at most half a step; truncation costs a
+    // full step minus one. A first version of this bound said "half a step"
+    // and used the full step; this one says truncation and uses it.
+    for (let value = 0; value < 256; value += 1) {
+      const [r, , b] = toRgba(Uint16Array.of(rgb565(value, 0, value)));
+      const [, g] = toRgba(Uint16Array.of(rgb565(0, value, 0)));
+      expect(Math.abs((r ?? -1) - value)).toBeLessThanOrEqual(7);
+      expect(Math.abs((b ?? -1) - value)).toBeLessThanOrEqual(7);
+      expect(Math.abs((g ?? -1) - value)).toBeLessThanOrEqual(3);
+    }
+  });
+});
+
+describe('toRgba, shape and order', () => {
   it('puts a saturated channel on 255, not 248', () => {
     // The whole reason for replicating high bits into low ones. Plain shifting
     // gives 248/252/248 — a 3% darkening applied to every pixel of every
@@ -51,9 +82,11 @@ describe('toRgba', () => {
   });
 
   it('keeps the channels in the right order', () => {
-    // A swapped pair survives every symmetric test above, and `docs/GIT.md`'s
-    // own example commit is "correct RGB565 channel order" — this repo has
-    // made that mistake before.
+    // A swapped pair survives every symmetric test above. `docs/GIT.md` uses
+    // "correct RGB565 channel order" as an example commit *subject*, which is
+    // a format illustration rather than history — the repo's one real packing
+    // bug was an unmasked blue channel. Both are the same class: silent, and
+    // only visible against a reference.
     expect([...toRgba(Uint16Array.of(rgb565(255, 0, 0)))]).toEqual([
       255, 0, 0, 255,
     ]);

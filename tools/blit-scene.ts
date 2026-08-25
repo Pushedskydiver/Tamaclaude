@@ -8,8 +8,8 @@
  * This routes the same rasters through `render()` instead, so the panel is
  * composed by the renderer rather than by this file.
  *
- * **Everything that draws a panel now goes through here, which is what makes
- * Stage 2's exit true.** `BUILD_PLAN.md` makes that exit "browser and panel
+ * **Every tool that composes a _scene_ goes through here**, which is most of
+ * Stage 2's exit and not all of it — see the qualification below. `BUILD_PLAN.md` makes that exit "browser and panel
  * show the same thing", and a review once caught this file claiming to satisfy
  * it while `tools/harness.ts` and `tools/panel-mock.ts` each composed their own
  * panel in browser CSS.
@@ -22,8 +22,9 @@
  *
  * Whole *panels* are still drawn elsewhere on purpose — `bake-splash.ts` owns
  * the firmware's splash, `colour-bars.ts` is a test pattern — and two review
- * artefacts still paint a flat backdrop behind transparent frames. Those are
- * named in `BUILD_PLAN.md` rather than swept under an absolute here.
+ * artefacts still paint a flat backdrop behind transparent frames.
+ * `tools/panel-mock.ts`'s header lists all four; `BUILD_PLAN.md` carries the
+ * two that are open rather than deliberate.
  *
  * It also deletes arithmetic rather than adding it. Slot placement and the
  * landscape safe-area crop are `paintStage`'s job, and having them here as

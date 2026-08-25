@@ -129,22 +129,39 @@ The whole product, minus hardware.
   all four skies, the strip's five-plus-overflow worst case, and takes
   `--message` so a long MCP tool name can be put through the real wrapper.
   `tools/harness.ts` keeps sprite scrubbing and draws band _outlines_ from
-  `panelBands()`, with no contents. No new dependency; the three tool files
-  lose 43 non-comment lines and gain 14 total.
-  **Open, and why this is `[~]`:** 1. **Two review artefacts still paint a flat backdrop** — `contact-sheet.ts`
-  and the harness — where the device paints the environment edge to edge
-  (`ENVIRONMENT_EXTENT = 'panel'`), so it shows a colour the panel never
-  displays. Both now say so in place of claiming to be the panel's
-  ground, but `docs/ANIMATION.md` still routes the mandatory
-  `animation-critic` to them and names neither `panel-mock`. 2. **Band heights are unjudged and two-up has no artefact.** The screen
-  spec still reads "**Book** the afternoon of Mon 24 Aug in the dev
-  harness"; `BAND_HEIGHTS.message` has not moved since 18 Aug. An earlier
-  version of this entry asserted that session had happened and that its
-  conclusion was unsound — inventing both. `composePanels` hardcodes
-  `layout: 'hero'`, so no tool can now render two-up at true size, which
-  the spec calls "a genuine trade rather than a settled rejection".
-  `daemon.ts`'s `layout: 'hero'` is a bare literal with no rationale
-  anywhere, unlike `landscape` next to it, which carries a dated record.
+  `panelBands()`, with no contents. No new dependency, and no bundler.
+  A line count was quoted here across three revisions and was wrong in two of
+  them, because the set of files it covered kept changing under it; what is
+  true and stable is that the panel-drawing code shrank and the comment around
+  it grew.
+  **Open, and why this is `[~]`:**
+
+  1. **Two review artefacts still paint a flat backdrop** — `contact-sheet.ts`
+     and the harness — where the device paints the environment edge to edge
+     (`ENVIRONMENT_EXTENT = 'panel'`), so both show a colour the panel never
+     displays. Both now say so instead of claiming to be the panel's ground,
+     and `docs/ANIMATION.md` §Judging now sends a reviewer to `panel-mock`.
+     What is still wrong is the _procedure_ rather than the prose:
+     `.claude/agents/animation-critic.md` step 4 and `docs/ANIMATION.md`'s
+     authoring loop both still say "build a contact sheet", and the agent
+     follows its own numbered steps. Nothing gates this either — no test fails
+     if a tool starts painting a panel colour again, which is how
+     `contact-sheet.ts` held one through three review passes.
+  2. **Hero versus two-up is open; the band heights that ship are not.**
+     `composePanels` hardcodes `layout: 'hero'`, so no tool composes a two-up
+     _panel_ through `render()` — the harness still scrubs two-up sprites at
+     true size against real slots, with empty bands. `daemon.ts`'s
+     `layout: 'hero'` is a bare literal with no rationale anywhere, unlike the
+     `landscape` beside it, which carries a dated record.
+     The band heights are in better shape than an earlier version of this entry
+     claimed. Landscape derives its message band as `height - (status + strip)`
+     = 116px and consumes only `BAND_HEIGHTS.status` and `.strip`;
+     `BAND_HEIGHTS.message` = 64 reaches `portraitBands()` alone and so ships
+     nowhere. `panel-mock` shows both shipping bands, at the strip's
+     five-plus-overflow worst case, and `--message` puts a long MCP name
+     through the real wrapper. So the freeze's landscape inputs are judgeable
+     today; what is unjudged is a portrait constant that does not ship.
+
 - [x] Manifest schema (zod) in `packages/packs`; pack resolution in
       `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
       `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still
@@ -202,8 +219,8 @@ that composes a _scene_ now does it through `render()` — see the Stage 1 entry
 above, which landed 25 Aug by deleting the competing draws rather than by
 bundling the renderer into a page, the fix this paragraph used to prescribe.
 What is left is that two review artefacts still paint a flat backdrop behind
-transparent frames where the device paints scenery, and that `docs/ANIMATION.md`
-still routes the animation critic to them. That is a smaller and more specific
+transparent frames where the device paints scenery, and that the
+`animation-critic` agent's own numbered steps still send it to one of them. That is a smaller and more specific
 gap than "the harness approximates the bands", but it is not nothing, and it is
 the one an art review actually walks into.
 

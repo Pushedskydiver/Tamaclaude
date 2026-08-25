@@ -7,11 +7,11 @@
  * harness animates, and scrubs sprites against real slot geometry — hero
  * against two-up, portrait against landscape, frame by frame.
  *
- * **It can no longer answer whether a band earns its height**, because it no
- * longer draws band contents; that needs `tools/panel-mock.ts`, which composes
- * through `render()` but only in the shipping configuration. So the band-height
- * question is currently answerable in neither tool, which is a real gap this
- * page's rewrite opened and `BUILD_PLAN.md` records as open.
+ * **It cannot answer whether a band earns its height**, because it no longer
+ * draws band contents. `tools/panel-mock.ts` can, for the configuration that
+ * ships: landscape, where the message band is derived as 116px. Neither can
+ * for portrait, whose `BAND_HEIGHTS.message` = 64 reaches nothing on the
+ * device — `BUILD_PLAN.md` carries that split.
  *
  * **What it draws is a subset of what the panel draws, and the subset is the
  * design.** It scrubs sprites; it does not compose a panel. See below.
@@ -43,12 +43,11 @@
  * geometry comes from `panelBands()` and so cannot drift — but they are
  * outlines, not contents.
  *
- * **The evidence this page used to carry was never a fair test, and deleting
- * it does not settle the question.** A long MCP tool name was shown here
- * wrapped by CSS `overflow-wrap:anywhere`; the renderer wraps the message band
- * with `drawTextBlock` -> `wrapText`, a different algorithm. (`fitted()` is
- * the status band's, and it truncates with an ellipsis rather than wrapping —
- * an earlier version of this note named it here and was wrong twice.)
+ * **The evidence this page used to carry was never a fair test.** A long MCP
+ * tool name was shown here wrapped by CSS `overflow-wrap:anywhere`; the
+ * renderer wraps the message band with `drawTextBlock` -> `wrapText`, a
+ * different algorithm. (`fitted()` is the status band's and truncates with an
+ * ellipsis; it never touches this band.)
  *
  * **The failure this page recorded is kept here on purpose**, because
  * `packages/renderer/src/text.ts` cites this file for it and the CSS that
@@ -60,12 +59,11 @@
  * evidence about band height: 207px is what CSS did, not what the renderer
  * does.
  *
- * The screen spec still reads "**Book** the afternoon of Mon 24 Aug in the dev
+ * The screen spec still reads "Book the afternoon of Mon 24 Aug in the dev
  * harness" and `BAND_HEIGHTS.message` has not moved since 18 Aug, so as far as
- * the repo records that session did not happen. An earlier version of this
- * note asserted it had and that its conclusion was unsound — inventing both an
- * event and a verdict. What is true is narrower: the band height is unjudged,
- * and the page that was going to judge it would have judged it wrongly.
+ * the repo records, that session has not happened. The band height is
+ * unjudged, and the page that was going to judge it would have judged it with
+ * the wrong wrapper.
  *
  * It is driven by rendered frames, not by Claude Code. Injecting synthetic
  * events is a separate unchecked Stage 1 line; Stage 3 has landed for the

@@ -2,47 +2,36 @@
 /**
  * Compose the panel the way the device does, and screenshot it for review.
  *
- * This is the artefact that goes into a pull request, which is exactly why it
- * used to be the most dangerous file in `tools/`: it drew its own panel in
- * browser CSS, with its own hardcoded `#0d1117` background and `#c9d1d9` ink,
- * hand-synced to `packs/example`'s palette. A pack swap changed the panel and
- * did not change the mock. Reviewers looked at the mock.
+ * This is the artefact that goes into a pull request, and it used to draw its
+ * own panel in browser CSS with `#0d1117` and `#c9d1d9` hardcoded, hand-synced
+ * to `packs/example`'s palette — so a pack swap changed the device and not the
+ * mock, and reviewers looked at the mock.
  *
- * It now composes through `render()` in Node — the same `composePanels` that
- * `tools/blit.ts` sends to the panel — and the page does nothing but blit the
- * pixels it is handed. **No tool composes a scene outside `render()` any
- * more**, which is most of `BUILD_PLAN.md`'s Stage 2 exit.
+ * It composes through `render()` in Node, via the same `composePanels` that
+ * `tools/blit.ts` sends to the panel, and the page only blits the RGBA it is
+ * handed. **No tool composes a `Scene` outside `render()`**, which is most of
+ * `BUILD_PLAN.md`'s Stage 2 exit. Not all: `bake-splash.ts` and
+ * `colour-bars.ts` draw whole panels deliberately, and `contact-sheet.ts` and
+ * the harness still paint a flat backdrop behind transparent frames.
  *
- * Not all of it, and the first draft of this paragraph overclaimed: whole
- * panels are still drawn outside `render()` by `tools/bake-splash.ts` (which
- * rasterises the splash the firmware owns) and `tools/colour-bars.ts` (a test
- * pattern), both deliberately; and `tools/contact-sheet.ts` and the harness
- * still paint a flat backdrop behind transparent frames where the device
- * paints scenery. The narrow claim is the true one.
+ *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
  *
- *   node tools/panel-mock.ts out/typing [out/thinking ...]
+ * **Landscape hero only.** The daemon hardcodes both (`packages/cli/src/daemon.ts`),
+ * and portrait is refused by a `_Static_assert` in the firmware until portrait
+ * splash art exists. Landscape two-up is not refused — nothing selects it, and
+ * `BUILD_PLAN.md` carries that as open rather than settled.
  *
- * **Landscape hero only, and that is a narrowing rather than a regression.**
- * The old mock drew four panels — portrait and landscape, hero and two-up. The
- * daemon hardcodes `landscape` and `'hero'` (`packages/cli/src/daemon.ts`), and
- * a portrait firmware build is refused by a `_Static_assert` until portrait
- * splash art exists. So three of those four panels showed a configuration that
- * cannot ship, and comparing candidates was the job of a design freeze that has
- * since happened.
+ * What it varies instead is what the shipping panel actually varies: all four
+ * skies, since the daemon passes `timeOfDay(now)`; the strip at its
+ * five-chips-plus-badge limit; and `--message`, so a long MCP tool name can be
+ * put through the real `wrapText`. That last answers the question for
+ * landscape, whose message band is derived as `height - (status + strip)` =
+ * 116px. `BAND_HEIGHTS.message` = 64 reaches `portraitBands()` alone, so the
+ * constant `BUILD_PLAN.md` calls unjudged is not the band this renders.
  *
- * What replaces them is the variable that is still live: the same frame against
- * `day` and against `night`. The daemon passes `timeOfDay(now)`, so both are
- * real states of the shipping panel, and `BUILD_PLAN.md` names judging an
- * animation against the wrong sky as a thing worth catching.
- *
- * The one thing here with no device counterpart is `toRgba` — see its own
- * note. It is exported and tested rather than buried in the page function,
- * because it is the single place this file can be wrong while the device is
- * right.
- *
- * Pass `--message <text>` to put something other than the animation's name in
- * the message band. That band's height is unjudged and a long MCP tool name is
- * the case it has to survive, so the flag is the instrument for answering it.
+ * It composes frame 0 only. That answers "does this read against its ground",
+ * not "does this move" — `tools/contact-sheet.ts` is still the artefact for
+ * motion and the loop seam.
  */
 import type { SessionChip } from '@tamaclaude/renderer';
 
@@ -58,27 +47,26 @@ import { loadFrames } from './png-rgb565.ts';
 import { toRgba } from './rgb565-rgba.ts';
 
 /**
- * Every sky, not a chosen pair.
+ * Every sky the daemon can pass, read from the renderer rather than listed.
  *
- * A first version hardcoded `['day', 'night']` and called them "the variable
- * that is still live", which was the same drift this file exists to remove:
- * `TIMES_OF_DAY` is exported, `timeOfDay()` returns all four, and dawn and dusk
- * are six hours of every twenty-four. Dusk in particular is the second-darkest
- * scheme and so the second-worst case for a pale prop against its ground.
+ * `timeOfDay()` returns all four and dawn plus dusk are six hours of every
+ * twenty-four. Dusk matters most: it is the second-darkest scheme, so it is
+ * the second-worst case for a pale prop against its ground.
  */
 const SKIES = TIMES_OF_DAY;
 
 /**
- * Chips for the strip, so the band is judgeable rather than a 32px void.
+ * Chips for the strip, at the limit `paintStrip` imposes.
  *
- * Every tone appears, in both origins, because the question this band raises
- * is whether several sessions at different states read apart at 15px wide.
+ * `MAX_CHIPS` is five, so a sixth session becomes a `+1` badge rather than a
+ * chip — which is the case worth seeing, and the case no artefact in the repo
+ * could show before. **Only the first five are drawn**, so the sixth entry's
+ * tone and origin never appear; the five that do cover every tone, with
+ * `remote` among them, which is what the band has to make distinguishable.
  *
- * **Six, because `MAX_CHIPS` is five.** The strip's worst case is five chips
- * plus an overflow badge, which is exactly what the deleted harness sessions
- * control existed to make viewable. A first draft passed three and deferred
- * the overflow to `paintStrip`, which left no artefact in the repo able to
- * show the badge at all.
+ * Hardcoded at six, so the ordinary one-to-five case has no artefact. That is
+ * the same gap this closed, rotated: `composePanels` already takes `sessions`,
+ * so a `--sessions <n>` flag is three lines when someone wants it.
  */
 const CHIPS: readonly SessionChip[] = [
   { tone: 'active', origin: 'local' },
@@ -103,7 +91,7 @@ type Panel = {
    * serialises typed arrays natively as base64 and walks a plain array
    * element-by-element through its full recursion — measured at 23ms against
    * 345ms for the same output. Unpacked in Node rather than in the page so
-   * `toRgba` can be imported and tested; see `panel-mock.test.ts`.
+   * `toRgba` can be imported and tested; see `rgb565-rgba.test.ts`.
    */
   readonly rgba: Uint8ClampedArray;
 };
@@ -251,9 +239,9 @@ async function compose(
 const argv = process.argv.slice(2);
 const flag = argv.indexOf('--message');
 // `--message <text>` puts something other than the animation's name in the
-// band. The case worth passing is a long MCP tool name: the band's height is
-// unjudged, and this is the only way in the repo to put one through the real
-// `wrapText` at true size.
+// band. The case worth passing is a long MCP tool name — the only *review
+// artefact* that puts one through the real `wrapText` at true size. The
+// shipping daemon does it on the panel every time such a tool runs.
 const message = flag === -1 ? undefined : argv[flag + 1];
 if (flag !== -1 && message === undefined) {
   console.error('--message needs a value');
