@@ -237,8 +237,8 @@ describe('subagents', () => {
 
   it('ignores a subagent event that carries no agent type', () => {
     // **Unpaired stops are ordinary, not an edge case.** Captured from a
-    // listener on the hook socket on 25 Aug, over 30 minutes of one session:
-    // eight `SubagentStop`s arrived and six had no matching `SubagentStart`.
+    // listener on the hook socket on 25 Aug, over 38 minutes of one session:
+    // ten `SubagentStop`s arrived and seven had no matching `SubagentStart`.
     // Each stray carried a distinct `agent_id` and came from machinery nobody
     // dispatched — one 3.9s after a `Stop`, one 3.0s after
     // `SessionStart(source=compact)`. About one every five minutes.
@@ -251,10 +251,14 @@ describe('subagents', () => {
     // though not a quick `Explore`.
     //
     // `agent_type` is the discriminator and it costs nothing: `optionalString`
-    // in `packages/hooks` already maps an empty string to absent, so a stray
-    // reaches us as `agentType: undefined` while both real spawn paths carry a
-    // non-empty one — `Agent` sends the agent's own type, `Workflow` sends
-    // `workflow-subagent`. Both verified on the same capture.
+    // in `packages/hooks` maps an empty string to absent, so a stray reaches us
+    // as `agentType: undefined` while all three dispatched pairs in the capture
+    // carried a non-empty one at both ends — `Agent` sends the agent's own
+    // type, `Workflow` sends `workflow-subagent`. Four of the seven strays were
+    // observed empty; the other three predate a fix to the capture script's own
+    // whitelist and were never observed either way. `SUBAGENT_DELTA` in
+    // `session.ts` carries the full account, including what the gate still gets
+    // wrong.
     const running = applyEvent(
       start,
       event('SubagentStart', { agentType: 'Explore' }),
@@ -269,11 +273,16 @@ describe('subagents', () => {
 
   it('gates starts by the same rule, so pairs stay balanced', () => {
     // Symmetric on purpose. Gating only the stop would let an untyped start
-    // inflate the count with nothing able to bring it down — a permanent
-    // over-count, which is worse than the floor case it replaces. Gating both
-    // means a pair is either counted at both ends or ignored at both, so the
-    // worst a missing `agent_type` can do is one badge digit, self-healing on
-    // the next real pair.
+    // inflate the count with nothing able to bring it down, and gating both
+    // means a pair untyped at *both* ends is ignored at both — one badge digit,
+    // recovered on the next pair.
+    //
+    // It is not a cure. A pair typed at the start and untyped at the stop still
+    // sticks one high until eviction, and symmetry does not reach that; it
+    // reaches the all-untyped pair, which stop-only gating would also have left
+    // stuck. Neither case was observed. See `SUBAGENT_DELTA` — an earlier
+    // version of this comment claimed the gate never drifts, which a review
+    // showed to be false.
     expect(foldAt(['SubagentStart', 'SubagentStart'], T0).subagents).toBe(0);
   });
 

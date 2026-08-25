@@ -58,6 +58,39 @@ describe('observe', () => {
     expect(registry.sessions.get('s2')?.state).toBe('THINKING');
   });
 
+  it('lets a stray stop create a session without putting a count on it', () => {
+    // Giving the test above an `agentType` moved what it covers, and this is
+    // the case it left behind: an untyped `SubagentStop` is machinery rather
+    // than a dispatch — `SUBAGENT_DELTA` in `session.ts` has the capture — so
+    // it must not move the badge. It does still create the session, because
+    // `observe` creates one for any event and the daemon can start mid-session.
+    //
+    // That is the honest reading rather than a happy one: a stray puts a chip
+    // on the strip for a session nobody is using, and it stays for the ten
+    // minutes of `EVICT_AFTER_MS`. Asserted here so the behaviour is chosen
+    // rather than merely current.
+    const registry = observe(
+      createRegistry(T0),
+      event('stray', 'SubagentStop'),
+      T0,
+    );
+    expect(registry.sessions.get('stray')?.subagents).toBe(0);
+    expect(registry.sessions.has('stray')).toBe(true);
+
+    // The two assertions above are characterisation and cannot fail — the
+    // floor reaches zero from an empty registry with or without the gate. This
+    // one is the guard: a stray arriving at a session that really is running a
+    // subagent must leave the count alone, which is the whole defect, observed
+    // here through `observe` rather than `applyEvent`.
+    const running = observe(
+      createRegistry(T0),
+      event('a', 'SubagentStart', { agentType: 'Explore' }),
+      T0,
+    );
+    const strayed = observe(running, event('a', 'SubagentStop'), T0 + 1000);
+    expect(strayed.sessions.get('a')?.subagents).toBe(1);
+  });
+
   it('survives a subagent stop for a session it has already evicted', () => {
     // The subagent outlived the ten minutes of silence that removed its
     // parent. The stop recreates the session — it is proof something is alive

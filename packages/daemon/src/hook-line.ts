@@ -33,13 +33,21 @@ export const MAX_FIELD_LENGTH = 256;
 const field = z.string().min(1).max(MAX_FIELD_LENGTH);
 
 /**
- * A field the daemon decorates with rather than keys on.
+ * A field the daemon mostly decorates with rather than keys on.
  *
  * `.catch` degrades instead of rejecting: an empty, over-long or wrongly typed
  * `tool` costs the tool name, not the event. Losing the event would be the
  * worse failure by a distance — a `PreToolUse` that never lands leaves the
  * panel claiming the session is idle while it runs, which is the one direction
  * this display must never be wrong in.
+ *
+ * **`agentType` is the exception and is load-bearing**, since `SUBAGENT_DELTA`
+ * in `session.ts` began keying the subagent count on its presence. Degrading it
+ * here turns a real dispatch into a stray at both ends, so an over-long or
+ * wrongly typed one costs a badge digit rather than a label. That is still the
+ * right trade against dropping the event, and the risk is small — Claude Code's
+ * agent types are short identifiers well inside `MAX_FIELD_LENGTH` — but the
+ * two files should agree on which fields carry weight.
  */
 const optionalField = field.optional().catch(undefined);
 

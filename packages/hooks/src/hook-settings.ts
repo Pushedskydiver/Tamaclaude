@@ -98,8 +98,16 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
     event: 'Notification',
     why: 'Claude is waiting on the person — the WAITING state',
   },
-  { event: 'SubagentStart', matcher: '*', why: 'the subagent badge counts up' },
-  { event: 'SubagentStop', matcher: '*', why: 'and down' },
+  {
+    event: 'SubagentStart',
+    matcher: '*',
+    why: 'the subagent badge counts up — when the event names an agent type',
+  },
+  {
+    event: 'SubagentStop',
+    matcher: '*',
+    why: 'and down. Untyped ones are machinery: proof of life, not a count',
+  },
   {
     event: 'SessionEnd',
     matcher: '*',

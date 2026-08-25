@@ -207,19 +207,25 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * event when it carries no `agentType`. That gate is what makes the count
  * survivable, so it is not an optimisation to tidy away later.
  *
- * **Unpaired stops are ordinary.** A second capture on 25 Aug, 30 minutes of
- * one session: eight `SubagentStop`s, of which six had no matching
- * `SubagentStart`. Each stray had a distinct `agent_id` and none came from a
- * dispatch — one arrived 3.9s after a `Stop`, one 3.0s after
+ * **Unpaired stops are ordinary.** A capture on the hook socket on 25 Aug,
+ * 38 minutes of one session: ten `SubagentStop`s, of which seven had no
+ * matching `SubagentStart`. Each stray had a distinct `agent_id` and none came
+ * from a dispatch — one arrived 3.9s after a `Stop`, one 3.0s after
  * `SessionStart(source=compact)`. That is one roughly every five minutes.
  *
- * Three of the six were observed to carry an *empty* `agent_type`. The other
+ * Four of the seven were observed to carry an *empty* `agent_type`. The other
  * three predate a fix to the capture script's own field whitelist, which was
- * dropping the key, so for those the wire value was not observed at all —
- * recorded here rather than rounded up to six, because the whole rule below
- * rests on it. What the full sample does support is the absence of a
- * counterexample in either direction: no stray carried a non-empty
- * `agent_type`, and no paired stop lacked one.
+ * dropping the key, so for those the wire value was not observed at all. What
+ * the sample does support is the absence of a counterexample either way: no
+ * stray carried a non-empty `agent_type`, and none of the three dispatched
+ * pairs lacked one at either end.
+ *
+ * **The capture was scratch work and left no artefact in the tree**, the same
+ * standing as the measurement above. The figures moved twice while this branch
+ * was open — once because a rate was read off the first thirteen minutes, once
+ * because a review caught them mid-run with a dispatched subagent still live —
+ * so treat them as the reason for the gate rather than as numbers anybody can
+ * re-derive.
  *
  * The floor below only stops the badge going negative, which is the harmless
  * direction. The damaging one is a stray landing while a real subagent runs:
@@ -227,23 +233,40 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * Any run outlasting the gap between strays is exposed, which at five minutes
  * covers a `da-review` or an `animation-critic` but not a quick `Explore`.
  *
- * **Why `agentType` and not `agentId`.** Both are optional on the wire, but
- * `optionalString` in `packages/hooks` maps an empty string to absent, so a
- * stray arrives as `agentType: undefined` for free while a real one never
- * does. `agentId` cannot discriminate: the strays carry one. So this is one
- * mechanism, not the two a set of ids would have needed.
+ * **Why `agentType` and not a set of `agent_id`s.** Not because ids cannot
+ * discriminate — they can, and better: a set discriminates on *membership*,
+ * so every stray in the capture, each carrying an id no start had introduced,
+ * would have been rejected without resting on the empty-`agent_type` claim at
+ * all. The reason is the one the pre-gate version of this comment gave and
+ * which still holds: `agentId` is optional on the wire, so a set needs the
+ * counter back as a fallback, which is two mechanisms for one badge. The gate
+ * keeps it at one. If `agent_id` ever becomes guaranteed, the set is the
+ * better design and this paragraph is the argument for switching.
  *
  * **What is verified.** Both spawn paths emit a matched pair carrying
  * `agentId` and `agentType`: the `Agent` tool sends the agent's own type
- * (`Explore`), and `Workflow` sends `workflow-subagent`. That settles the
- * question this comment used to leave open — workflow-spawned subagents are
- * not silent, so the badge does not under-count by half. Still unverified: a
- * subagent spawned by a session tool rather than by either of those.
+ * (`Explore`, `da-review`), and `Workflow` sends `workflow-subagent`. That
+ * settles the question this comment used to leave open — workflow-spawned
+ * subagents are not silent, so the badge does not under-count by half. Still
+ * unverified: a subagent spawned by a session tool rather than by either.
  *
- * The gate's own failure mode is bounded. If a real event ever arrives without
- * an `agentType`, its pair is ignored at both ends rather than at one, so the
- * badge reads one low and self-heals on the next pair — never drifting, which
- * gating only the stop would have allowed.
+ * **Where the gate is still wrong, stated plainly.** A pair typed at both ends
+ * balances, and a pair typed at neither is ignored at both ends and costs one
+ * badge digit until the next pair. A *mixed* pair does not: a typed start with
+ * an untyped stop adds 1 that nothing takes away, because the floor can only
+ * absorb an offset once the count reaches zero and the offset is what prevents
+ * that. It reads one high until the session is evicted. Unobserved — every
+ * start in the capture was typed — but not impossible, and gating only the
+ * stop would have left both that case and the untyped pair stuck the same way.
+ * An earlier version of this comment claimed the gate never drifts; a review
+ * found the mixed case, and it does.
+ *
+ * `packages/protocol/src/events.ts` warns against keying on the *presence* of
+ * `agentId`, which is a different trap — a `--agent` top-level run carries one
+ * on ordinary events — but a reader arriving from there will bounce off this,
+ * so: that warning is about identifying a subagent from an arbitrary event.
+ * This keys on a field of the two events that are already only about
+ * subagents.
  */
 const SUBAGENT_DELTA: ReadonlyMap<string, number> = new Map([
   ['SubagentStart', 1],
@@ -279,8 +302,18 @@ export function applyEvent(
   const delta = SUBAGENT_DELTA.get(event.kind);
   if (delta !== undefined) {
     // No `agentType` means this is not a dispatched subagent — see
-    // `SUBAGENT_DELTA`. Returning `seen` rather than dropping the event is
-    // deliberate: it is still proof of life and must still refresh the clock.
+    // `SUBAGENT_DELTA`. Returning `seen` rather than dropping the event keeps
+    // the clock refresh, which is not free and is worth naming: `quiet` in
+    // `effectiveState` is measured off `lastEventAt`, so a stray re-arms the
+    // payoff window. One landing inside the fifteen seconds `DONE` is on screen
+    // sends the panel back to `IDLE` and the payoff returns forty-five seconds
+    // later, and the capture's own 3.9s-after-`Stop` stray delays most payoffs
+    // by about that much. At one stray per five minutes against a fifteen
+    // second window that is a small minority of payoffs, and it is unchanged
+    // from before the gate — a stray refreshed the clock then too. Kept rather
+    // than fixed here because the alternative, ignoring these for freshness as
+    // well, decides that machinery traffic is not proof a session exists, and
+    // that question belongs with eviction rather than with the badge.
     if (event.agentType === undefined) return seen;
     return { ...seen, subagents: Math.max(0, seen.subagents + delta) };
   }
