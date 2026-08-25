@@ -17,7 +17,7 @@
  * composes through `render()` like this one.
  *
  *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
- *                             [--layout hero|twoUp]
+ *                             [--layout hero|twoUp] [--pack packs/other]
  *
  * **Landscape, and hero unless `--layout twoUp`.** The daemon hardcodes both
  * (`packages/cli/src/daemon.ts`), and portrait is refused by a
@@ -228,9 +228,10 @@ async function compose(
   options: {
     readonly message: string | undefined;
     readonly layout: StageLayout;
+    readonly pack: string;
   },
 ) {
-  const pack = await loadPack(resolve('packs/example'));
+  const pack = await loadPack(resolve(options.pack));
   const browser = await chromium.launch();
   const page = await browser.newPage();
   const panels: Panel[] = [];
@@ -279,6 +280,10 @@ const { values, positionals } = parseArgs({
     // `hero` or `twoUp`. See the header: two-up is an open question that no
     // tool could show a picture of until now.
     layout: { type: 'string', default: 'hero' },
+    // Which pack to compose with. Every tool here hardcoded `packs/example`
+    // until 26 Aug, so no artefact could show a pack swap — the thing the
+    // pack mechanism exists for.
+    pack: { type: 'string', default: 'packs/example' },
   },
 });
 
@@ -296,5 +301,6 @@ if (positionals.length === 0) {
 await compose(positionals, resolve('out/panel-mock.png'), {
   message: values.message,
   layout: values.layout,
+  pack: values.pack,
 });
 console.log('panel mock -> out/panel-mock.png');

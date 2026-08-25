@@ -621,6 +621,18 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
       sprite. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
       points; `tamaclaude pack` confirms which, and prints the countdown.
+      **The palette is nearly inert in the shipping configuration, measured
+      26 Aug.** `packages/cli` composes with `extent: 'panel'`, and
+      `withEnvironment` then paints the environment across the whole
+      framebuffer and replaces the painter's ink with `environmentInk(time)`.
+      So `palette[0]` and `palette[1]` reach no shipping pixel at all. Swapping
+      a pack for one that agrees on nothing — magenta background, yellow ink —
+      changes **zero** pixels with an empty session strip, and 240 per chip
+      once one is on it: the tone entries, and nothing else.
+      Quips and `birthday` are text and do reach the glass.
+      `packages/renderer/src/pack-swap.test.ts` holds the measurement, and
+      `panel-mock --pack <dir>` renders any pack, which no tool could do
+      before. The consequence is the item below.
 - [ ] **Set the Mac's clock to 23 Sep during the dry run and watch the panel.**
       The only end-to-end test the birthday can ever have: the recipient's pack
       is gitignored, so CI will never load it, and `isBirthday` reads the host's
@@ -685,12 +697,18 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       header left stale after an edit can pass — both of which an earlier
       version of it did.
 
-- [ ] Environment as a pack field — extent (`stage` or `panel`) and eventually
-      the schemes. `docs/ANIMATION.md` gives "a pack can change it" as one of
-      the four reasons scenery is a renderer layer, and today a pack can change
-      nothing about it: `ENVIRONMENT_EXTENT` is a constant in
+- [ ] **Environment as a pack field — the item that makes a palette mean
+      anything.** Extent (`stage` or `panel`) and eventually the schemes.
+      `docs/ANIMATION.md` gives "a pack can change it" as one of the four
+      reasons scenery is a renderer layer, and today a pack can change nothing
+      about it: `ENVIRONMENT_EXTENT` is a constant in
       `packages/cli/src/daemon.ts`. Deferred there deliberately rather than
-      taken in the same pass as wiring the scenery on at all
+      taken in the same pass as wiring the scenery on at all.
+      Promoted 26 Aug on a measurement rather than a preference: with
+      `extent: 'panel'` the environment covers the pack's background and
+      substitutes its ink, so until this lands the recipient's palette shows up
+      only on session chips. Either this ships, or the pack item above should
+      stop listing a palette among what the recipient gets.
 - [ ] `packs/alex/` — proves the pack swap works
 
 ## Stage 6 — Hardening + gift prep (Mon 14 – Sat 19 Sep)
