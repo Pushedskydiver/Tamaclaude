@@ -1,0 +1,195 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="12">
+  <!--
+    Clawd: sweeping (COMPACTING)
+
+    The context is filling up and he is tidying it. Plan:
+    assets/clawd/animations/PLANS.md §Sweeping.
+
+    Generated against assets/clawd/base.svg. Every base element appears below at
+    its original coordinates and colours except `ground-shadow`, which
+    §Clawd lives somewhere forbids carrying. All motion, including the eyes'
+    look down and left, is CSS applied by ID.
+
+    ── Twelve seconds, because the window is two minutes ─────────────────
+
+    Measured from `compact_boundary` records: compaction runs 109s median on
+    current Claude Code and up to 268s on older releases. So this loop is seen
+    about thirteen times over, which is the opposite of `board-game` — that
+    screen is replaced after 3.2 seconds and had to become a two second
+    punctuation mark. §Sweeping carries both measurements and the rule they
+    make: measure the window before choosing the loop.
+
+    Twelve rather than eight because `docs/ANIMATION.md` says length is the
+    cheap way to buy variety and the corpus splits that way — `idle` at 16s and
+    `asleep`, `confused`, `dizzy` and `wizard` at 12s are the long-exposure
+    screens; 8s is where `thinking` and `payoff` sit.
+
+    It also fires unbidden — 18 of 19 compactions measured were automatic — so
+    the stroke is slow. Nobody asked for this screen, which is an argument for
+    calm rather than busy.
+
+    ── A broom, not the swept material ───────────────────────────────────
+
+    §Sweeping says to pick one because both is two props, and the geometry
+    picks it: the arm pivots at the shoulder, so its tip travels an *arc* that
+    lifts as it extends. Material pushed along the ground would part company
+    with the claw within a unit. A broom held at a fixed radius cannot, because
+    it shares the pivot.
+
+    That is also what satisfies §Props need contact on every frame of the
+    stroke without measuring anything: `#fx-broom` and `#left-arm-joint` carry
+    the same `transform-origin` and the same keyframes at the same times, so
+    they rotate as one body. The claw sits at 2.8 units along the handle, which
+    spans 1.5 to 4.5, so the grip is inside the handle at every angle by
+    construction rather than by luck.
+
+    The broom is authored pointing along the unrotated arm and swung into place
+    by the animation, which is why its raw coordinates read as off-stage. The
+    safe-area walk uses `getBoundingClientRect`, so it sees where the rects
+    land rather than where they are written.
+
+    ── The stroke ───────────────────────────────────────────────────────
+
+    -90 to -45 degrees and back, one full pass per loop. That puts the head at
+    (2.00, 15.00) at the start and (-1.54, 13.54) at the end — on the ground
+    line at 15, and three and a half units of travel. A 30 degree stroke was
+    tried first and read as a twitch at true size. `ease-in-out` rather than
+    `steps`, because a broom is not in a cell: this is the one screen of the
+    three where the claw's travel carries the reading, so it is `overheated`'s
+    fan idiom rather than `permission-sign`'s hold.
+
+    The sweep stays left of the legs at x 3 and well clear of the pool at
+    x 11.25, and the rock sits at y 6.63 to 8.75 — mid-distance, above all of
+    this.
+
+    ── Two tones, because one is invisible at some hour ──────────────────
+
+    Head `#C9D1D9`, handle `#000000`, measured against sand, which is what this
+    prop sits on: the pale is 3.32 / 1.71 / 4.27 / 8.68 at dawn, day, dusk and
+    night, and the dark is 4.21 / 8.19 / 3.28 / 1.61. The head carries at night
+    where the handle is 1.61:1; the handle carries by day where the head is
+    1.71:1. Either alone disappears at some hour.
+
+    No new colour: only `#000000`, `#C9D1D9` and `#DE886D`.
+
+    ── The head fringes, and it is measured rather than argued ───────────
+
+    Checklist §7 is about a scaling group; a **rotating** one is worse, because
+    a rotated edge cannot be axis-aligned at any angle. The head is pale and it
+    turns, so its antialiased edge blends toward the background — which is
+    black — and (100,104,108) is nearer `#DE886D` than either parent.
+
+    Measured against a variant with the broom deleted: **89 of 96 frames carry
+    peach the broom creates, at most 25 pixels**, and on the frame checked it
+    lands at unit x -0.75..0.88, y 13.88..15.25 — a rim on the head itself,
+    not a line adrift on the body. That is the shape `payoff` accepted as a
+    contour rather than the detached line `bouldering` was reverted for.
+
+    The remedy if it does not read is known and deliberately not taken yet:
+    declaring `#6F4436` puts a colour in the peach-to-black ramp, so the blend
+    snaps there instead and the rim becomes brown — which is why `payoff` and
+    `typing` declare it. The cost is that every peach-over-background edge on
+    the crab then snaps there too, so it buys a contour on the whole body to
+    fix a rim on one prop. Judged at true size first; the numbers above are
+    what to re-measure against.
+
+    ── The eyes do not follow ────────────────────────────────────────────
+
+    §Sweeping asks for a gaze that follows the stroke and this is a deliberate
+    departure. `board-game` tried exactly that and a critic sent it back: eyes
+    are 8x16 device pixels each, so stepping them repaints 512 pixels against
+    the beat's own 128, and the subject of the beat becomes the crab's face.
+    Here the broom is the largest moving thing on the panel, so the arithmetic
+    is less brutal — but the gaze is still static, down and left on the head,
+    and it reads on every frame rather than half of them.
+  -->
+  <defs>
+    <style>
+      /* One frame of the twelve second loop is 1.0416667%. */
+
+      /* `idle`'s breath: 2s alternating is six iterations of a twelve second
+         loop, which is even, so the wrap lands where the cycle started. Legs
+         are a sibling of this group so they stay planted. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite alternate ease-in-out;
+      }
+
+      @keyframes breathe {
+        from { transform: scale(1, 1) translate(0, 0); }
+        to   { transform: scale(1.02, 0.98) translate(0, 0.5px); }
+      }
+
+      /* The sweeping arm. Rotation carries the stroke and the axial scale makes
+         it long enough to reach the handle — the pair `gym` established. */
+      #left-arm-joint {
+        transform-origin: 2px 10px;
+        animation: sweep-arm 12s infinite ease-in-out;
+      }
+
+      @keyframes sweep-arm {
+        0%, 100% { transform: rotate(-90deg) scaleX(1.4); }
+        50%      { transform: rotate(-45deg) scaleX(1.4); }
+      }
+
+      /* The broom, on the same origin and the same times as the arm, so the two
+         rotate as one body and the grip cannot drift. No `scaleX`: stretching
+         the broom along its own axis would slide the head away from the tip. */
+      #fx-broom {
+        transform-origin: 2px 10px;
+        animation: sweep 12s infinite ease-in-out;
+      }
+
+      @keyframes sweep {
+        0%, 100% { transform: rotate(-90deg); }
+        50%      { transform: rotate(-45deg); }
+      }
+
+      /* Down and left, onto the head, and static — see the note above on why
+         it does not follow. On its own wrapper, which is `idle`'s convention,
+         rather than on `#eyes-color-group`, whose job is the pack recolour
+         hook. A whole unit, so it cannot land off the grid. */
+      #fx-eyes-look {
+        transform: translate(-1px, 1px);
+      }
+    </style>
+  </defs>
+
+  <g id="master-group">
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+
+      <g id="eyes-blink">
+        <g id="fx-eyes-look">
+          <g id="eyes-color-group" fill="#000000">
+            <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+            <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- The broom, drawn after the body so the claw reads as holding it rather
+         than behind it. Authored along the unrotated arm and swung into place
+         by `sweep`; the handle spans 1.5 to 4.5 units from the pivot and the
+         claw sits at 2.8, so the grip is inside it at every angle. -->
+    <g id="fx-broom">
+      <rect id="fx-broom-handle" x="-2.5" y="9.75" width="3" height="0.5" fill="#000000"/>
+      <rect id="fx-broom-head" x="-3.5" y="9.25" width="1" height="1.5" fill="#C9D1D9"/>
+    </g>
+  </g>
+</svg>

@@ -15,6 +15,7 @@ import { loadSprite } from '../packages/renderer/src/sprites/index.ts';
 import { SOURCE as OVERHEATED } from '../packages/renderer/src/sprites/overheated.data.ts';
 import { SOURCE as PAYOFF } from '../packages/renderer/src/sprites/payoff.data.ts';
 import { SOURCE as PERMISSION_SIGN } from '../packages/renderer/src/sprites/permission-sign.data.ts';
+import { SOURCE as SWEEPING } from '../packages/renderer/src/sprites/sweeping.data.ts';
 import { SOURCE as THINKING } from '../packages/renderer/src/sprites/thinking.data.ts';
 import { SOURCE as TYPING } from '../packages/renderer/src/sprites/typing.data.ts';
 import { SOURCE as WIZARD } from '../packages/renderer/src/sprites/wizard.data.ts';
@@ -58,6 +59,7 @@ const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['overheated', OVERHEATED],
   ['payoff', PAYOFF],
   ['permission-sign', PERMISSION_SIGN],
+  ['sweeping', SWEEPING],
   ['thinking', THINKING],
   ['typing', TYPING],
   ['wizard', WIZARD],
