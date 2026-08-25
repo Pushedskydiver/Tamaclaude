@@ -29,11 +29,15 @@
 
     ── The breath is half amplitude, and that is not a shortcut ──────────
 
-    The corpus breath is `2s alternate`, which is a **four** second full cycle —
-    in for two, out for two. On a two second loop that ends the wrap at the far
-    end of the cycle and seams hard, twice a second, which §Timing is explicit
-    about. So the breath here is one full cycle in 2s with its own keyframes and
-    no `alternate`.
+    Six of the nine animations that breathe use `2s alternate`, which is a
+    **four** second full cycle — in for two, out for two. On a two second loop
+    that ends the wrap at the far end of the cycle, and seams once per loop:
+    every two seconds, which §Timing is explicit about. So the breath here is
+    one full cycle in 2s with its own keyframes and no `alternate`.
+
+    That form is not novel — `asleep` and `thinking` already write the breath as
+    explicit `0%/50%/100%` keyframes without `alternate`, at 4s. What is new
+    here is only the amplitude.
 
     That is twice the corpus rate, so the amplitude is halved to match its
     *velocity* rather than its numbers: the corpus moves 0.02 of scale across
@@ -56,11 +60,15 @@
     board standing in front of the near foot, which is what a prop on the ground
     in front of him should do.
 
-    Six and a quarter units wide and two tall. The first draft was four and a
-    half by one, on the reasoning that a flat slab needs less than the payoff's
-    vehicle — that vehicle needed wheels, a cabin and a window to read. True,
-    and it still rendered as a smudge on the sand: a board seen from a desk is
-    a surface with a thickness, and one row has no thickness.
+    Six and a quarter units wide and two tall — **wider than the payoff's
+    vehicle body, which is five**, and the plan expected the opposite. It said
+    to measure rather than inherit five units because a flat slab with pieces
+    "may read at 3 or 4". Measured, it read at neither: the first draft was four
+    and a half by one and rendered as a smudge on the sand. A board seen from a
+    desk is a surface with a thickness, and one row has no thickness — so the
+    height went to two and the width followed, to keep the mover a whole unit
+    clear of the still piece at both ends. The plan's instinct to measure was
+    right; its guess at the answer was low.
 
     Board and pieces sit outside `#breathe`. Anything with two colours inside a
     scaling group fringes to the body colour — checklist §7, and the `wizard`
@@ -110,10 +118,12 @@
 
       /* Down and left, onto the board, and **static**.
 
-         On its own wrapper — `idle`'s `#fx-eyes-look` is the convention — not
-         on `#eyes-color-group`, whose documented job is the pack recolour hook,
-         and not on `#eyes-blink`, where an `animation` added later would
-         silently replace it.
+         On its own wrapper, named for `idle`'s `#fx-eyes-look`. Not on
+         `#eyes-color-group`, whose documented job is the pack recolour hook —
+         though note `wizard` does exactly that, so this is a preference the
+         corpus does not hold uniformly — and not on `#eyes-blink`, where an
+         `animation` added later would silently replace a transform, which is
+         a real hazard on a file that declares it has no blink.
 
          A draft stepped this one unit on the piece's beat, on the theory that a
          static gaze is only legible against a rest pose the screen never shows.
