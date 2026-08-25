@@ -25,8 +25,10 @@ import {
  *
  * `origin` (local, or the host a remote session came from) is knowledge the
  * transport that accepted the event has and the event itself does not, so it
- * belongs with whatever accepts the connection. A field this module could
- * never fill would be worse than its absence. `oneshotUntil` goes with the
+ * belonged with whatever accepts the connection. A field this module could
+ * never fill would be worse than its absence — and that reasoning outlived
+ * the feature: the remote transport was cut on 25 Aug, so every session is
+ * local and `packages/cli`'s `chipFor` says so in one place. `oneshotUntil` goes with the
  * tier it exists for — see `STATE_RANK`.
  *
  * `errorType`, `notifiedAt`, `endedAt` and `workedAt` are the additions. The

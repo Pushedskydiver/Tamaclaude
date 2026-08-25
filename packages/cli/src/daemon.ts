@@ -221,9 +221,10 @@ const TONE: Readonly<Record<SessionState, SessionChip['tone']>> = {
  */
 function chipFor(session: Session, now: number): SessionChip {
   // Always local, and now permanently so: the remote transport `origin` was
-  // built for was cut on 25 Aug (`BUILD_PLAN.md` §Stage 3). Nothing on this
-  // device can produce a remote session, so `paintStrip`'s hollow-chip branch
-  // is unreachable in production — kept because it is built and tested and
+  // built for was cut on 25 Aug (`BUILD_PLAN.md` §Stage 3). Nothing on the
+  // *host* produces a remote session — the panel could never produce any
+  // session, it has no knowledge of Claude Code — so `paintStrip`'s
+  // hollow-chip branch is unreachable in production — kept because it is built and tested and
   // the panel can show the distinction the day something produces one, not
   // because anything is coming. A `Session` still carries no origin of its
   // own; this is the only place one is decided.

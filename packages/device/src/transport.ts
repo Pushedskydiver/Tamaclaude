@@ -1,11 +1,11 @@
 /**
  * Anything that can receive dirty rectangles.
  *
- * Implemented by the USB-CDC transport in `panel.ts`. Nothing else implements
- * it yet, and Stage 3's cuttable TCP item is *not* a second implementation —
- * that one carries session events from a remote agent towards the daemon,
- * which is the opposite direction to this type. A TCP `Transport` would mean a
- * remote panel, which nobody has asked for.
+ * Implemented by the USB-CDC transport in `panel.ts`, and by nothing else.
+ * Stage 3's TCP item — cut on 25 Aug — would not have been a second
+ * implementation either: it carried session events from a remote agent
+ * *towards* the daemon, the opposite direction to this type. A TCP
+ * `Transport` would mean a remote panel, which nobody has asked for.
  */
 
 import type { LinkStatus } from './link.js';

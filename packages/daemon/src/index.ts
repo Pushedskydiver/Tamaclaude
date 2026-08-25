@@ -2,8 +2,9 @@
  * The daemon: session state, tool-to-animation mapping, and transports.
  *
  * Owns the answer to "what should the panel show right now?" given every
- * Claude Code session currently running — including, if BUILD_PLAN Stage 3
- * allows, sessions on a remote host.
+ * Claude Code session currently running. Local sessions only: the remote
+ * transport that would have carried others was cut on 25 Aug (`BUILD_PLAN.md`
+ * §Stage 3).
  */
 
 import type { Transport } from '@tamaclaude/device';

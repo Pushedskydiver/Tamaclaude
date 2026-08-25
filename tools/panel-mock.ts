@@ -59,10 +59,16 @@ const SKIES = TIMES_OF_DAY;
  * Chips for the strip, at the limit `paintStrip` imposes.
  *
  * `MAX_CHIPS` is five, so a sixth session becomes a `+1` badge rather than a
- * chip — which is the case worth seeing, and the case no artefact in the repo
- * could show before. **Only the first five are drawn**, so the sixth entry's
- * tone and origin never appear; the five that do cover every tone, with
- * `remote` among them, which is what the band has to make distinguishable.
+ * chip — the case worth seeing, and the case no artefact in the repo could
+ * show before. **Only the first five are drawn**, so the sixth entry never
+ * appears; the five that do cover every tone.
+ *
+ * **All local, because that is all the device can produce.** These were mixed
+ * local and remote until the TCP transport was cut on 25 Aug. Drawing remote
+ * chips now would put a state no panel can reach into the artefact people
+ * judge the panel from, which is the exact defect this file was rewritten to
+ * remove. `packages/renderer/src/strip.test.ts` pins the hollow-chip branch
+ * instead — a test is the right place for a shape nothing ships.
  *
  * Hardcoded at six, so the ordinary one-to-five case has no artefact. That is
  * the same gap this closed, rotated: `composePanels` already takes `sessions`,
@@ -71,10 +77,10 @@ const SKIES = TIMES_OF_DAY;
 const CHIPS: readonly SessionChip[] = [
   { tone: 'active', origin: 'local' },
   { tone: 'attention', origin: 'local' },
-  { tone: 'resting', origin: 'remote' },
-  { tone: 'active', origin: 'remote' },
   { tone: 'resting', origin: 'local' },
-  { tone: 'attention', origin: 'remote' },
+  { tone: 'active', origin: 'local' },
+  { tone: 'attention', origin: 'local' },
+  { tone: 'resting', origin: 'local' },
 ];
 
 /** How much the enlarged copy is blown up, for inspecting individual pixels. */

@@ -32,13 +32,22 @@ type SessionTone = 'attention' | 'active' | 'resting';
  * has nowhere to put one — local-versus-remote is all that survives at this
  * size, and all the strip needs to say. Not exported, for the reason above.
  *
- * **`remote` has no producer, deliberately.** It was built for the TCP
- * transport in `BUILD_PLAN.md` §Stage 3, cut on 25 Aug, and `chipFor` in
- * `packages/cli` hardcodes `local`. `paintStrip`'s hollow-chip branch is kept
- * rather than deleted because it is built, tested and one line, and because
- * the distinction is the sort a strip exists to draw — not because a producer
- * is planned. If one never arrives it is dead weight worth deleting, and that
- * is a decision for after 23 Sep rather than before it.
+ * **Nothing produces `remote` outside a test, deliberately.** It was built
+ * for the TCP transport in `BUILD_PLAN.md` §Stage 3, cut on 25 Aug, and
+ * `packages/cli`'s `chipFor` hardcodes `local`. `tools/panel-mock.ts` drew
+ * remote chips briefly and stopped: an artefact people judge the panel from
+ * should not depict a state the panel cannot reach.
+ *
+ * `paintStrip`'s hollow-chip branch is kept rather than deleted because the
+ * field costs one word at each construction site, and because the strip has
+ * few spare visual axes — discarding one is harder to undo than discarding a
+ * branch. `strip.test.ts` pins it, which is what makes "tested" true: until
+ * 25 Aug nothing asserted border-versus-fill and three comments said
+ * otherwise.
+ *
+ * **Treat this as permanent, not provisional.** `docs/DA-REVIEW.md` is blunt
+ * that "we'll fix it after" has no after on a dated gift. `BUILD_PLAN.md`'s
+ * deferred table carries the re-entry condition if one ever applies.
  */
 type SessionOrigin = 'local' | 'remote';
 
