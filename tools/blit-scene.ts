@@ -37,6 +37,7 @@ import type {
   Orientation,
   Scene,
   SessionChip,
+  StageLayout,
   StageSprite,
   TimeOfDay,
 } from '@tamaclaude/renderer';
@@ -54,10 +55,17 @@ import {
   stageScale,
 } from '@tamaclaude/renderer';
 
-/** Rows the stage crops off the top, in device pixels. */
-function cropRows(orientation: Orientation): number {
+/**
+ * Rows the stage crops off the top, in device pixels.
+ *
+ * Takes the layout because the crop is derived from the scale the layout
+ * actually draws at — `layout.ts` warns about exactly this in
+ * `safeAreaCropUnits`' own docstring, and a two-up sprite drawn at a hero crop
+ * loses twice the rows it should.
+ */
+function cropRows(orientation: Orientation, layout: StageLayout): number {
   return orientation === 'landscape'
-    ? safeAreaCropUnits() * stageScale('hero')
+    ? safeAreaCropUnits() * stageScale(layout)
     : 0;
 }
 
@@ -138,6 +146,21 @@ export function composePanels(
      * to display one wrapped it with CSS rather than with `wrapText`.
      */
     readonly message?: string;
+    /**
+     * Which stage layout to compose. Defaults to `hero`, which is what
+     * `packages/cli` selects and therefore what ships.
+     *
+     * It is an option because hero-versus-two-up is an open question that no
+     * tool could show: `BUILD_PLAN.md` records that `daemon.ts` picks `hero`
+     * with a bare literal and no rationale, while the screen spec calls two-up
+     * "a genuine trade rather than a settled rejection". A decision needs a
+     * picture of both, and this is how one gets made.
+     *
+     * Two-up has two slots and `paintStage` skips any it has no sprite for, so
+     * the one raster is repeated across them. That is the right shape for
+     * judging the *layout* — a half-empty stage would be judging a pairing.
+     */
+    readonly layout?: StageLayout;
   },
 ): readonly Frame[] {
   // The crop `paintStage` applies is derived from the *layout's* scale, and
@@ -149,27 +172,35 @@ export function composePanels(
   // silently. The version of this that lived in `blit.ts` derived the crop
   // from the raster's own height and could not be fooled; deleting it traded
   // that away, so the check moves here where the raster's size is known.
-  const slot = spriteSlots('hero', options.orientation)[0];
+  const layout = options.layout ?? 'hero';
+  const slot = spriteSlots(layout, options.orientation)[0];
   const authored = {
     width: slot.width,
-    height: slot.height + cropRows(options.orientation),
+    height: slot.height + cropRows(options.orientation, layout),
   };
   for (const raster of rasters) {
     const height = raster.frame.pixels.length / raster.frame.width;
     if (raster.frame.width !== authored.width || height !== authored.height) {
       throw new Error(
         `frames are ${raster.frame.width}x${height}, but a ${options.orientation} ` +
-          `hero stage expects ${authored.width}x${authored.height} — were they ` +
-          'rendered at a different scale?',
+          `${layout} stage expects ${authored.width}x${authored.height}. ` +
+          `Re-render at scale ${stageScale(layout)}: ` +
+          `node tools/svg2frames.ts <svg> <outDir> ${stageScale(layout)}`,
       );
     }
   }
   return rasters.map((raster) => {
     const panel = render({
       orientation: options.orientation,
-      layout: 'hero',
+      layout,
       pack: options.pack,
-      sprites: [raster],
+      // One per slot: `paintStage` draws nothing in a slot it has no sprite
+      // for, so a two-up stage given one raster would be half empty and the
+      // comparison would be of the wrong thing.
+      sprites: Array.from(
+        { length: spriteSlots(layout, options.orientation).length },
+        () => raster,
+      ),
       sessions: options.sessions ?? [],
       ...placeholderBands(options.message ?? options.name),
       environment: {

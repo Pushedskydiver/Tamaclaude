@@ -15,11 +15,18 @@
  * the harness still paint a flat backdrop behind transparent frames.
  *
  *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
+ *                             [--layout hero|twoUp]
  *
- * **Landscape hero only.** The daemon hardcodes both (`packages/cli/src/daemon.ts`),
- * and portrait is refused by a `_Static_assert` in the firmware until portrait
- * splash art exists. Landscape two-up is not refused — nothing selects it, and
- * `BUILD_PLAN.md` carries that as open rather than settled.
+ * **Landscape, and hero unless `--layout twoUp`.** The daemon hardcodes both
+ * (`packages/cli/src/daemon.ts`), and portrait is refused by a
+ * `_Static_assert` in the firmware until portrait splash art exists.
+ *
+ * Landscape two-up is not refused, though — nothing selects it, and the screen
+ * spec calls it "a genuine trade rather than a settled rejection". Until 25 Aug
+ * no tool could compose it, so the question could not be answered by looking.
+ * `--layout twoUp` is that picture. It is not a recommendation: `daemon.ts`
+ * still picks hero, with a bare literal and no rationale beside it, which is
+ * what `BUILD_PLAN.md` carries as open.
  *
  * What it varies instead is what the shipping panel actually varies: all four
  * skies, since the daemon passes `timeOfDay(now)`; the strip at its
@@ -33,10 +40,11 @@
  * not "does this move" — `tools/contact-sheet.ts` is still the artefact for
  * motion and the loop seam.
  */
-import type { SessionChip } from '@tamaclaude/renderer';
+import type { SessionChip, StageLayout } from '@tamaclaude/renderer';
 
 import { basename, resolve } from 'node:path';
 import process from 'node:process';
+import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
 
@@ -114,8 +122,9 @@ function panelsFor(options: {
   readonly raster: Parameters<typeof composePanels>[0][number];
   readonly pack: Awaited<ReturnType<typeof loadPack>>;
   readonly message: string | undefined;
+  readonly layout: StageLayout;
 }): readonly Panel[] {
-  const { name, raster, pack, message } = options;
+  const { name, raster, pack, message, layout } = options;
   return SKIES.map((sky) => {
     const [composed] = composePanels([raster], {
       orientation: 'landscape',
@@ -124,6 +133,7 @@ function panelsFor(options: {
       time: sky,
       sessions: CHIPS,
       message,
+      layout,
     });
     if (composed === undefined) {
       throw new Error(`composePanels returned nothing for ${name}`);
@@ -131,7 +141,7 @@ function panelsFor(options: {
     return {
       // Shape off the frame itself rather than off `panelSize` again — the
       // pixels and their dimensions should not come from two places.
-      label: `${name} — ${sky}`,
+      label: `${name} — ${sky}${layout === 'hero' ? '' : ` — ${layout}`}`,
       width: composed.width,
       height: composed.pixels.length / composed.width,
       rgba: toRgba(composed.pixels),
@@ -213,7 +223,10 @@ async function shoot(panels: readonly Panel[], outPath: string) {
 async function compose(
   frameDirs: readonly string[],
   outPath: string,
-  message: string | undefined,
+  options: {
+    readonly message: string | undefined;
+    readonly layout: StageLayout;
+  },
 ) {
   const pack = await loadPack(resolve('packs/example'));
   const browser = await chromium.launch();
@@ -232,7 +245,8 @@ async function compose(
           name: basename(resolve(dir)),
           raster: first,
           pack,
-          message,
+          message: options.message,
+          layout: options.layout,
         }),
       );
     }
@@ -242,24 +256,43 @@ async function compose(
   await shoot(panels, outPath);
 }
 
-const argv = process.argv.slice(2);
-const flag = argv.indexOf('--message');
-// `--message <text>` puts something other than the animation's name in the
-// band. The case worth passing is a long MCP tool name — the only *review
-// artefact* that puts one through the real `wrapText` at true size. The
-// shipping daemon does it on the panel every time such a tool runs.
-const message = flag === -1 ? undefined : argv[flag + 1];
-if (flag !== -1 && message === undefined) {
-  console.error('--message needs a value');
+/**
+ * Flags, via `node:util` rather than by hand.
+ *
+ * A hand-rolled `indexOf`/`slice` version shipped first and broke on three
+ * realistic inputs: `--message=text` fell through to the directory list, a
+ * repeated flag left the stray value there too, and both then reached
+ * `loadFrames` and died on an ENOENT naming a path nobody typed. `parseArgs`
+ * is a builtin, so this costs no dependency.
+ */
+const { values, positionals } = parseArgs({
+  args: process.argv.slice(2),
+  allowPositionals: true,
+  options: {
+    // Something other than the animation's name in the message band. The case
+    // worth passing is a long MCP tool name — this is the only *review
+    // artefact* that puts one through the real `wrapText` at true size; the
+    // shipping daemon does it on the panel whenever such a tool runs.
+    message: { type: 'string' },
+    // `hero` or `twoUp`. See the header: two-up is an open question that no
+    // tool could show a picture of until now.
+    layout: { type: 'string', default: 'hero' },
+  },
+});
+
+if (values.layout !== 'hero' && values.layout !== 'twoUp') {
+  console.error(`--layout takes 'hero' or 'twoUp', not '${values.layout}'`);
   process.exit(1);
 }
-const dirs =
-  flag === -1 ? argv : [...argv.slice(0, flag), ...argv.slice(flag + 2)];
-if (dirs.length === 0) {
+if (positionals.length === 0) {
   console.error(
-    'usage: node tools/panel-mock.ts <frameDir> [frameDir2] [--message <text>]',
+    'usage: node tools/panel-mock.ts <frameDir> [frameDir2] ' +
+      '[--message <text>] [--layout hero|twoUp]',
   );
   process.exit(1);
 }
-await compose(dirs, resolve('out/panel-mock.png'), message);
+await compose(positionals, resolve('out/panel-mock.png'), {
+  message: values.message,
+  layout: values.layout,
+});
 console.log('panel mock -> out/panel-mock.png');
