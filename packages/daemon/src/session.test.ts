@@ -29,12 +29,23 @@ function event(kind: string, extra: Partial<HookEvent> = {}): HookEvent {
 }
 
 /** Fold a list of events in at one instant, which is the same-tick case. */
-function foldAt(kinds: readonly string[], now: number) {
+function foldAt(
+  kinds: readonly string[],
+  now: number,
+  extra: Partial<HookEvent> = {},
+) {
   return kinds.reduce(
-    (session, kind) => applyEvent(session, event(kind), now),
+    (session, kind) => applyEvent(session, event(kind, extra), now),
     start,
   );
 }
+
+/**
+ * What a real dispatched subagent carries. Both spawn paths send a non-empty
+ * `agent_type` — see `SUBAGENT_DELTA` — and without it the count deliberately
+ * does not move, so a subagent test that omits it is testing the stray path.
+ */
+const DISPATCHED = { agentType: 'Explore' } as const;
 
 describe('the payoff window', () => {
   it('shows DONE once a session that did work has been quiet long enough', () => {
@@ -91,9 +102,11 @@ describe('the payoff window', () => {
 
   it('re-arms after another event, because the clock is lastEventAt', () => {
     // Not a leak, and worth pinning because a comment once claimed the
-    // opposite. Any event refreshes `lastEventAt`, so a session that goes
-    // quiet again gets another window off the same `workedAt` — only
-    // `UserPromptSubmit` and `SessionStart` spend it.
+    // opposite. Nearly any event refreshes `lastEventAt`, so a session that
+    // goes quiet again gets another window off the same `workedAt` — only
+    // `UserPromptSubmit` and `SessionStart` spend it. "Nearly" because an
+    // untyped subagent event is the one kind that does not; see the stray
+    // tests below, and the gate in `applyEvent`.
     const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
     const idle = applyEvent(worked, event('Stop'), T0);
     expect(effectiveState(idle, T0 + DONE_AFTER_MS)).toBe('DONE');
@@ -201,13 +214,16 @@ describe('applyEvent', () => {
 
 describe('subagents', () => {
   it('counts nested starts and unwinds them', () => {
-    const two = foldAt(['SubagentStart', 'SubagentStart'], T0);
+    const two = foldAt(['SubagentStart', 'SubagentStart'], T0, DISPATCHED);
     expect(two.subagents).toBe(2);
-    expect(applyEvent(two, event('SubagentStop'), T0).subagents).toBe(1);
+    expect(
+      applyEvent(two, event('SubagentStop', DISPATCHED), T0).subagents,
+    ).toBe(1);
     expect(
       foldAt(
         ['SubagentStart', 'SubagentStart', 'SubagentStop', 'SubagentStop'],
         T0,
+        DISPATCHED,
       ).subagents,
     ).toBe(0);
   });
@@ -216,7 +232,129 @@ describe('subagents', () => {
     // The eviction case: a subagent outlives the ten minutes of silence that
     // removed its session, and its stop lands on a session created fresh by
     // that very event. A negative badge would be the visible symptom.
-    expect(applyEvent(start, event('SubagentStop'), T0).subagents).toBe(0);
+    expect(
+      applyEvent(start, event('SubagentStop', DISPATCHED), T0).subagents,
+    ).toBe(0);
+  });
+
+  it('ignores a subagent event that carries no agent type', () => {
+    // **Unpaired stops are ordinary, not an edge case.** From one frozen
+    // snapshot of the hook socket, 25 Aug 15:17-16:24 UTC: fifteen
+    // `SubagentStop`s, of which ten had no matching `SubagentStart`. Each
+    // stray carried a distinct `agent_id` and came from machinery nobody
+    // dispatched, nine of the ten within 4s of a `Stop` or a `SessionStart`.
+    //
+    // The floor below is not enough on its own. It stops the badge going
+    // negative, which is the harmless direction; the damaging one is a stray
+    // landing while a real subagent runs, taking a true count of 1 down to 0
+    // and blanking the badge with work still in flight. What exposes a run is
+    // not elapsed time against a stray rate but `Stop` firing on the parent
+    // session underneath it — in the snapshot, all three dispatched runs over
+    // 400s took a stray mid-run and neither of the two under 20s did.
+    //
+    // `agent_type` is the discriminator and it costs nothing: `optionalString`
+    // in `packages/hooks` maps an empty string to absent, so a stray reaches us
+    // as `agentType: undefined` while all five dispatched pairs in the snapshot
+    // carried a non-empty one at both ends — `Agent` sends the agent's own
+    // type, `Workflow` sends `workflow-subagent`. Seven of the ten strays were
+    // observed empty; the other three predate a fix to the capture script's own
+    // whitelist and were never observed either way. `SUBAGENT_DELTA` in
+    // `session.ts` carries the full account, including what the gate still gets
+    // wrong.
+    const running = applyEvent(
+      start,
+      event('SubagentStart', { agentType: 'Explore' }),
+      T0,
+    );
+    expect(running.subagents).toBe(1);
+    const stray = applyEvent(running, event('SubagentStop'), T0 + 1000);
+    expect(stray.subagents).toBe(1);
+    // And ignored for freshness too — it does not claim the session did
+    // anything. See the payoff test below for why that second half matters.
+    expect(stray.lastEventAt).toBe(T0);
+  });
+
+  it('gates starts by the same rule, so pairs stay balanced', () => {
+    // Symmetric on purpose. Gating only the stop would let an untyped start
+    // inflate the count with nothing able to bring it down, and gating both
+    // means a pair untyped at *both* ends is ignored at both — one badge digit,
+    // recovered on the next pair.
+    //
+    // It is not a cure. A pair typed at the start and untyped at the stop still
+    // sticks one high until eviction, and symmetry does not reach that; it
+    // reaches the all-untyped pair, which stop-only gating would also have left
+    // stuck. Neither case was observed. See `SUBAGENT_DELTA` — an earlier
+    // version of this comment claimed the gate never drifts, which a review
+    // showed to be false.
+    expect(foldAt(['SubagentStart', 'SubagentStart'], T0).subagents).toBe(0);
+    // Freshness as well as the count, and pinned separately because folding at
+    // one instant cannot see it: gating the count for untyped starts while
+    // still letting them refresh the clock passes every other test here.
+    // Nothing in the capture was an untyped *start* — the sample for this half
+    // is empty — so it is symmetry that justifies it, not evidence.
+    expect(
+      applyEvent(start, event('SubagentStart'), T0 + 1000).lastEventAt,
+    ).toBe(T0);
+    // And the positive direction, which nothing pinned until a review planted
+    // the mutant: dropping the refresh for *typed* subagent events as well — so
+    // that no subagent event ever moves the clock — left the whole suite green.
+    // Every other `lastEventAt` assertion on this branch is a negative one, so
+    // the gate had a specified floor and no ceiling.
+    expect(
+      applyEvent(start, event('SubagentStart', DISPATCHED), T0 + 1000)
+        .lastEventAt,
+    ).toBe(T0 + 1000);
+  });
+
+  it('does not let a stray push the payoff window back', () => {
+    // Strays are not spread evenly — they follow the end of a turn. In the
+    // snapshot nine of ten landed within 4s of a `Stop` or a `SessionStart`
+    // and the tenth closed a compaction window, while two idle stretches of
+    // 474s and 246s held none at all. So the damage is not a lost payoff,
+    // which would need a stray to land in the fifteen seconds `DONE` is on
+    // screen and cannot happen at that timing. It is that a payoff is late by
+    // however long after the `Stop` the stray arrives — all eight `Stop`s in
+    // the snapshot were followed by one, which is a measurement of that
+    // workload and not a law.
+    //
+    // Small — a few seconds on a 45s timer — and the reason to fix it anyway
+    // is that `DONE_AFTER_MS` is meant to measure quiet since the session
+    // stopped working, and a stray is not the session working.
+    //
+    // The same shape is why ignoring these for freshness is safe: a session
+    // with nothing happening emits no strays — see the two idle stretches
+    // above — so nothing here can hold one awake or, now, fail to.
+    const worked = applyEvent(
+      applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0),
+      event('Stop'),
+      T0 + 1000,
+    );
+    const due = worked.lastEventAt + DONE_AFTER_MS;
+    expect(effectiveState(worked, due)).toBe('DONE');
+    const strayed = applyEvent(
+      worked,
+      event('SubagentStop'),
+      worked.lastEventAt + 2500,
+    );
+    // Was 'IDLE' before this change: the stray moved the window 2.5s later.
+    expect(effectiveState(strayed, due)).toBe('DONE');
+    expect(strayed.lastEventAt).toBe(worked.lastEventAt);
+  });
+
+  it('lets a session age past a stray, which is what the above costs', () => {
+    // The other half of the trade, and the local standard is that a chosen cost
+    // gets asserted rather than left to prose. Before the gate this session
+    // would still have been `IDLE` at the five-minute mark, because the stray
+    // reset the clock four minutes in; now the stray is not evidence the
+    // session did anything, so it sleeps on schedule.
+    //
+    // Safe for the reason `SUBAGENT_DELTA` gives: a subagent that is genuinely
+    // running rides its own `PreToolUse`/`PostToolUse` on the parent's session
+    // id, so a session with real work in flight is refreshed by that work and
+    // never depends on a stray to stay awake.
+    const idle = applyEvent(start, event('Stop'), T0);
+    const strayed = applyEvent(idle, event('SubagentStop'), T0 + 4 * 60_000);
+    expect(effectiveState(strayed, T0 + ASLEEP_AFTER_MS)).toBe('ASLEEP');
   });
 
   it('does not disturb the state its parent is in', () => {
@@ -225,7 +363,11 @@ describe('subagents', () => {
       event('PreToolUse', { tool: 'Bash' }),
       T0,
     );
-    const spawned = applyEvent(working, event('SubagentStart'), T0 + 1);
+    const spawned = applyEvent(
+      working,
+      event('SubagentStart', DISPATCHED),
+      T0 + 1,
+    );
     expect(spawned.state).toBe('WORKING');
     expect(spawned.tool).toBe('Bash');
     expect(spawned.subagents).toBe(1);

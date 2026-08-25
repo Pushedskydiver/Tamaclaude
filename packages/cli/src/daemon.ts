@@ -5,13 +5,14 @@
  * "the listener holds the registry and offers a snapshot; nothing yet renders
  * it or pushes a frame down the wire". Every piece existed and was tested in
  * isolation. This is the composition, and it is deliberately the only file in
- * the repo that imports all five:
+ * the repo that imports every other workspace package:
  *
  *   socket  ->  registry  ->  resolution  ->  scene  ->  pixels  ->  rect  ->  wire
  *   daemon      daemon        daemon          cli       renderer   protocol   device
  *
- * (`packs` is the sixth import and sits under `scene` — the pack is what the
- * renderer draws with.)
+ * (`packs` is not on that row but is imported too, sitting under `scene` — the
+ * pack is what the renderer draws with. `cli` is on the row and is not an
+ * import, because this file *is* `cli`.)
  *
  * Nothing here is clever, and that is the intent — every decision worth making
  * was made in the package that owns it. What lives here is the glue that has no
@@ -306,19 +307,39 @@ function refinedFailureLine(
 /**
  * The states where the tool is the interesting fact, rather than a leftover.
  *
- * **Two handlers leave `tool` set, not one.** `StopFailure` is the one that
- * reaches the glass. `SessionEnd` also leaves it — `session.ts` stores
- * `ASLEEP` with the tool the session died holding — and the only thing hiding
- * that is `isLive` dropping a session with `endedAt`. An earlier version of
- * this comment said `Stop` clearing `tool` was the reason `ASLEEP` was safe,
- * which is true of `ASLEEP` by promotion and false of `ASLEEP` by `SessionEnd`.
- * It was badged "measured, not assumed" and was neither.
+ * **Two handlers strand a tool, not one.** Plenty of events leave `tool`
+ * alone — every unmapped one does — but two leave it set while moving the
+ * session out of the state it belonged to: `StopFailure` at `FAILED`, and
+ * `SessionEnd` at `ASLEEP`, which `session.ts` stores with the tool the
+ * session died holding.
+ *
+ * Neither reaches the glass, and the reasons are different, which is the whole
+ * argument for this table. `resolve` copies `hero.tool` onto the panel
+ * unfiltered, so `panel.tool` really is `Bash` for a session that died running
+ * it. What stops it there depends on the pack: `refinedFailureLine` and the
+ * `mapped` lookup both run ahead of the line below, and the example pack
+ * defines `FAILED` and `FAILED:rate_limit`, so for that pack the tool never
+ * gets this far. **The `false` below is the only guard that does not depend on
+ * the pack** — which is why the test for it has to empty `mapped` to reach the
+ * defect at all. `ASLEEP` *carrying a tool* never gets here either, because
+ * `isLive` drops a session with `endedAt` before the panel is built; plain
+ * `ASLEEP` by promotion reaches the panel constantly and has no tool to
+ * strand.
+ *
+ * Said in the present tense here until 25 Aug, as though `StopFailure` still
+ * reached the glass — a description of the world immediately above the table
+ * that ended it. Before that, an earlier version said `Stop` clearing `tool`
+ * was the reason `ASLEEP` was safe, which is true of `ASLEEP` by promotion and
+ * false of `ASLEEP` by `SessionEnd`; it was badged "measured, not assumed" and
+ * was neither.
  *
  * That is also the argument for a whitelist over a blacklist on `FAILED`, and
  * it is stronger than the one first written here: a `FAILED`-only blacklist is
  * not merely risky for some future state, it already has a live state on the
  * wrong side of it. If eviction ever held an ended session on the strip for a
- * beat, `ASLEEP` would surface carrying `Bash`.
+ * beat, `ASLEEP` would surface carrying `Bash`. That is a claim about the
+ * blacklist, not about the table as it stands: with `ASLEEP: false` below, such
+ * a session would set `panel.tool` and still put nothing on the message band.
  *
  * A total `Record` rather than a `Set`, for the reason `TONE` above gives: a
  * `Set` compiles clean when a state is added to `SESSION_STATES` and silently
@@ -376,10 +397,9 @@ const TOOL_STATES: Readonly<Record<SessionState, boolean>> = {
  * only on states that have no mapped entry in the one pack written so far, so
  * what it actually steps in front of is everything below: `panel.tool` for
  * `WORKING`, the idle rotation for `IDLE`, and the last-resort lowercased
- * state name for `THINKING`, `ASLEEP` and `DONE`, which reach neither. An
- * earlier version put `DONE` in the first group; `Stop` clears `tool`, so a
- * payoff never has one — and the commit that established that fact left this
- * sentence contradicting it eleven lines further down.
+ * state name for `THINKING`, `ASLEEP` and `DONE`, which reach neither. `DONE`
+ * belongs in the second group because `Stop` clears `tool` in `TRANSITIONS`, so
+ * a payoff never has one to show.
  *
  * That distinction is not academic: `BUILD_PLAN.md` schedules mapped quips for
  * more states in Stage 5, and on the day the birthday will take precedence
@@ -658,11 +678,11 @@ async function paintOnce(
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
   // before it is wired, which `overheated` did on 24 Aug (art 08:58, wiring
-  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 12:23). The
-  // two lists are equal as of that wiring, which is exactly when this guard is
-  // easiest to delete and worst to be without. Both gaps were hours, not days —
-  // an earlier version of this line said "between 23 and 24 Aug", and there are
-  // no commits at all on 23 Aug. They are kept because the two lists are
+  // 12:01) and `board-game` did again on 25 Aug (art 11:07, wiring 12:23). Each
+  // gap was hours. **The lists are not equal at HEAD** — `sweeping` baked on 25
+  // Aug at 16:15 and is not in `ANIMATIONS`, because its state does not exist
+  // yet. A moment when they *are* equal is exactly when this guard looks
+  // deletable and is worst to be without. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what

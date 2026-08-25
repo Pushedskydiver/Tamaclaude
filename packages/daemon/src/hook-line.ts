@@ -22,9 +22,12 @@ import { z } from 'zod';
  * How long any one field may be.
  *
  * Not arbitrary caution. `sessionId` becomes a key in a map the daemon holds
- * for ten minutes, and `tool` and `agentType` are rendered onto a 172-pixel
- * panel — so an unbounded string is both a retained allocation and a display
- * somebody else controls. Claude Code's own session ids are UUIDs and its tool
+ * for ten minutes, and `tool` is rendered onto a 172-pixel panel — so an
+ * unbounded string is both a retained allocation and a display somebody else
+ * controls. `agentType` was named here as a second rendered field and is not
+ * one: nothing in `renderer` reads it, and the status band's right end is a
+ * count. What it does now is decide the subagent gate below, so its length
+ * cap guards an input rather than a display. Claude Code's own session ids are UUIDs and its tool
  * names are short identifiers; 256 leaves room for an MCP server with a long
  * namespace and refuses everything that is not a name at all.
  */
@@ -33,13 +36,21 @@ export const MAX_FIELD_LENGTH = 256;
 const field = z.string().min(1).max(MAX_FIELD_LENGTH);
 
 /**
- * A field the daemon decorates with rather than keys on.
+ * A field the daemon mostly decorates with rather than keys on.
  *
  * `.catch` degrades instead of rejecting: an empty, over-long or wrongly typed
  * `tool` costs the tool name, not the event. Losing the event would be the
  * worse failure by a distance — a `PreToolUse` that never lands leaves the
  * panel claiming the session is idle while it runs, which is the one direction
  * this display must never be wrong in.
+ *
+ * **`agentType` is the exception and is load-bearing**, since the gate in
+ * `applyEvent` began keying the subagent count on its presence. Degrading it
+ * here turns a real dispatch into a stray at both ends, so an over-long or
+ * wrongly typed one costs a badge digit rather than a label. That is still the
+ * right trade against dropping the event, and the risk is small — Claude Code's
+ * agent types are short identifiers well inside `MAX_FIELD_LENGTH` — but the
+ * two files should agree on which fields carry weight.
  */
 const optionalField = field.optional().catch(undefined);
 
@@ -48,7 +59,7 @@ const optionalField = field.optional().catch(undefined);
  *
  * `kind` is a plain bounded string rather than a union of
  * `HANDLED_HOOK_EVENTS`: Claude Code sends around thirty events, the daemon
- * acts on eleven, and an unhandled one is still proof that the session is
+ * acts on ten, and an unhandled one is still proof that the session is
  * alive. Narrowing here would discard that — `PostToolUse` is the case that
  * matters, since it fires between every two calls of a chain and refreshing
  * liveness is the whole of its job.

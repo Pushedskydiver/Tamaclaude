@@ -44,7 +44,7 @@ type RegisteredEvent = {
 /**
  * What we register, and nothing else.
  *
- * `PreToolUse` and `PostToolUse` match every tool rather than the five in the
+ * `PreToolUse` and `PostToolUse` match every tool rather than the eight in the
  * state table. The mapping from a tool to an animation belongs to the daemon —
  * putting a matcher list here would copy that table into a second place, on
  * someone else's machine, in a file we only touch at install time. It would
@@ -98,8 +98,16 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
     event: 'Notification',
     why: 'Claude is waiting on the person — the WAITING state',
   },
-  { event: 'SubagentStart', matcher: '*', why: 'the subagent badge counts up' },
-  { event: 'SubagentStop', matcher: '*', why: 'and down' },
+  {
+    event: 'SubagentStart',
+    matcher: '*',
+    why: 'the subagent badge counts up — when the event names an agent type',
+  },
+  {
+    event: 'SubagentStop',
+    matcher: '*',
+    why: 'and down. Untyped ones are machinery and the daemon ignores them',
+  },
   {
     event: 'SessionEnd',
     matcher: '*',

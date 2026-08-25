@@ -2,10 +2,10 @@
  * One session's record, and the transitions that move it.
  *
  * Everything here is pure and takes `now` as an argument. There is no clock in
- * this package at all — not an injectable one, not a default one — because a
- * function that can read the time is a function a test has to control, and the
- * whole point of five- and ten-minute thresholds is that they must be provable
- * in microseconds. The socket slice supplies `Date.now()` at the edge.
+ * this module — because a function that can read the time is a function a test
+ * has to control, and the whole point of five- and ten-minute thresholds is
+ * that they must be provable in microseconds. The package's one clock is at its
+ * edge, in `socket-server.ts`, injectable and defaulting to `Date.now`.
  */
 
 import type { SessionState } from './state.js';
@@ -74,7 +74,21 @@ export type Session = {
   readonly workedAt?: number;
   /** First sight of this session. Spec §4's tie-break within "needs you". */
   readonly startedAt: number;
-  /** Last proof of life, of any kind. Drives sleep and eviction. */
+  /**
+   * Last proof of life. Read at five places, which is more than the two this
+   * used to name: the payoff window, sleep and eviction in `effectiveState`
+   * and `isLive`, the cap's flood victim in `registry.withoutQuietest`, and
+   * **`newestFirst` in `resolve` — which session takes the stage**.
+   *
+   * That last one is why the gate below is worth reading carefully. A subagent
+   * event carrying no `agentType` leaves this field alone, and it used to be
+   * every kind of event that moved it. So among two live sessions the gate
+   * decides the hero as well as the badge: before it, a stray arriving for the
+   * older session flipped the stage to it and changed the animation on the
+   * glass. The direction is right — a stray is not activity and should not win
+   * the stage — but it is a consequence of a badge fix, not an intended part
+   * of one, and a review found it rather than the author.
+   */
   readonly lastEventAt: number;
   /** When Claude Code last asked for input, if it is still unanswered. */
   readonly notifiedAt?: number;
@@ -120,7 +134,8 @@ type Transition = (event: HookEvent, now: number) => Partial<Session>;
 
 /**
  * Hook event to state change. An event with no entry here is proof of life and
- * nothing more, which is deliberate: `PostToolUse` fires between every two
+ * nothing more — bar the untyped subagent events the gate in `applyEvent`
+ * drops, which are not even that. That is deliberate: `PostToolUse` fires between every two
  * calls of a chain, and clearing `WORKING` on it would flick the panel back to
  * idle in the gaps.
  *
@@ -203,24 +218,69 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * `SubagentStart` and `SubagentStop`, which move the count and nothing else —
  * a subagent starting does not stop its parent being `WORKING`.
  *
- * A count rather than a set of `agent_id`s. A set would make an unmatched stop
- * exactly free instead of merely cheap, but `agent_id` is optional on the wire
- * and would need the counter back as a fallback, which is two mechanisms for
- * one badge. The cost of getting it wrong is one digit in the status bar until
- * the next start, and the floor below is what stops it going negative.
+ * A count rather than a set of `agent_id`s, and `applyEvent` ignores either
+ * event when it carries no `agentType`. That gate is what makes the count
+ * survivable, so it is not an optimisation to tidy away later.
  *
- * **What is verified, and what is not.** Captured from a listener on the hook
- * socket on 25 Aug: a subagent spawned by the `Agent` tool does produce both
- * events, each carrying `agentId` and `agentType`, so the count moves for
- * those. Not verified: whether the same pair fires for a subagent spawned by
- * `Workflow` or by a session tool rather than by `Agent`. On the machine this
- * was measured those are roughly half of all subagent runs — 75 of 168 — and
- * if they are silent the badge under-counts by about half without saying so.
+ * **Unpaired stops are ordinary.** One capture on the hook socket, 25 Aug,
+ * 15:17-16:24 UTC of a single session — 67 minutes, and every figure in this
+ * comment is from that one frozen snapshot. Fifteen `SubagentStop`s, of which
+ * ten had no matching `SubagentStart`. Each stray had a distinct `agent_id`
+ * and none came from a dispatch: nine of the ten landed within 4s of a `Stop`
+ * or a `SessionStart`, and the tenth closed a compaction window.
  *
- * This was first written down as a caveat on the board game screen's trigger,
- * which no longer needs it: that screen keys on the `Agent` tool call and never
- * reads this count. The badge does, so the question belongs here. One capture
- * with a workflow-spawned subagent settles it.
+ * Seven of the ten were observed carrying an *empty* `agent_type`. The other
+ * three predate a fix to the capture script's own field whitelist, which was
+ * dropping the key, so their wire value was never observed either way. The
+ * claim the gate needs is therefore the negative one: across all fifteen stops
+ * and five dispatched pairs, no stray was seen with a non-empty `agent_type`
+ * and no paired stop was seen without one.
+ *
+ * **The capture left no artefact in the tree**, the same standing as the
+ * measurement above. Its figures moved three times while this branch was open
+ * — a rate read off the first thirteen minutes, a count taken with a subagent
+ * still live, and a second snapshot written into one paragraph while three
+ * others kept the first — which is why they are pinned to a timestamp here
+ * rather than described as "the capture" and left to drift again.
+ *
+ * **What the badge actually loses.** Not a rate argument: strays are not a
+ * stream with a mean gap, they follow the end of a turn, and all eight `Stop`s
+ * in the snapshot were followed by one within 10s. The exposure comes from
+ * `Stop` firing on the *parent* session while a dispatched agent is still
+ * running in the background — so the longer the agent runs, the likelier a
+ * turn ends underneath it. In the snapshot that is exact: all three runs over
+ * 400s took a stray mid-run, and neither of the two under 20s did. A stray
+ * arriving then takes a true count of 1 to 0 and blanks the badge with work
+ * still in flight, which the floor below cannot help with because zero is
+ * where the floor already is.
+ *
+ * **What is verified.** Both spawn paths emit a matched pair carrying
+ * `agentId` and `agentType`: the `Agent` tool sends the agent's own type
+ * (`Explore`, `da-review`), and `Workflow` sends `workflow-subagent`. That
+ * settles the question this comment used to leave open — workflow-spawned
+ * subagents are not silent, so the badge does not under-count by half. Still
+ * unverified: a subagent spawned by a session tool rather than by either.
+ *
+ * **Where the gate is still wrong, stated plainly.** A pair typed at both ends
+ * balances, and a pair typed at neither is ignored at both ends — the badge
+ * reads one low for that subagent's run and is right again the moment its own
+ * stop lands, with nothing waiting on a later pair. A *mixed* pair does not: a typed start with
+ * an untyped stop adds 1 that nothing takes away, because the floor can only
+ * absorb an offset once the count reaches zero and the offset is what prevents
+ * that. It reads one high until something else takes it down — a later
+ * *typed* unmatched stop consumes the offset, and eviction ends it either
+ * way — so this is sticky rather than strictly permanent. Unobserved — every
+ * start in the capture was typed — but not impossible, and gating only the
+ * stop would have left both that case and the untyped pair stuck the same way.
+ * An earlier version of this comment claimed the gate never drifts; a review
+ * found the mixed case, and it does.
+ *
+ * `packages/protocol/src/events.ts` warns against keying on the *presence* of
+ * `agentId`, which is a different trap — a `--agent` top-level run carries one
+ * on ordinary events — but a reader arriving from there will bounce off this,
+ * so: that warning is about identifying a subagent from an arbitrary event.
+ * This keys on a field of the two events that are already only about
+ * subagents.
  */
 const SUBAGENT_DELTA: ReadonlyMap<string, number> = new Map([
   ['SubagentStart', 1],
@@ -236,7 +296,8 @@ const SUBAGENT_DELTA: ReadonlyMap<string, number> = new Map([
  * `packages/hooks`, which cannot import each other.
  *
  * `PostToolUse` is absent on purpose: a tool finishing changes nothing but the
- * freshness that every event refreshes.
+ * freshness that every event refreshes — every event bar the untyped subagent
+ * ones the gate in `applyEvent` drops, which `PostToolUse` is not.
  */
 export const HANDLED_KINDS: ReadonlySet<string> = new Set([
   ...TRANSITIONS.keys(),
@@ -255,6 +316,33 @@ export function applyEvent(
   const seen = { ...session, lastEventAt: Math.max(session.lastEventAt, now) };
   const delta = SUBAGENT_DELTA.get(event.kind);
   if (delta !== undefined) {
+    // No `agentType` means this is not a dispatched subagent — see
+    // `SUBAGENT_DELTA`. Returned unchanged rather than as `seen`, so it does
+    // not refresh `lastEventAt` either: `quiet` in `effectiveState` is measured
+    // off that field, and a stray is not the session doing anything.
+    //
+    // **Why this is safe**, and the argument does not need this capture:
+    // `packages/protocol/src/events.ts` has subagents riding the ordinary
+    // events rather than forming their own stream, and `animation.ts` records
+    // the half that matters here — 15 tool calls inside three subagents all
+    // arriving on the *parent's* `sessionId`. So a session with a live subagent
+    // is refreshed by that subagent's own `PreToolUse`/`PostToolUse`, and one
+    // whose only traffic is untyped subagent events has nothing happening and
+    // ought to age.
+    //
+    // **What the capture adds** is the size of the win, and it is smaller than
+    // it first looks. Because strays land within seconds of a `Stop` and the
+    // payoff is on screen from 45s to 60s, none of the ten in the snapshot came
+    // near that window: a stray does not cost a payoff, it delays one by its
+    // own lag behind the `Stop`, a few seconds on a 45s timer.
+    //
+    // Eight of eight `Stop`s followed by a stray is the measurement, not a law.
+    // `Stop` fires once per response (`TRANSITIONS` above), so the count is a
+    // workload property — the older capture cited in `session.test.ts` saw nine
+    // `Stop`s in three hours against eight in this one hour. Read it as "every
+    // payoff-eligible boundary in this snapshot was followed by a stray", not
+    // as every payoff always being late.
+    if (event.agentType === undefined) return session;
     return { ...seen, subagents: Math.max(0, seen.subagents + delta) };
   }
   return { ...seen, ...TRANSITIONS.get(event.kind)?.(event, now) };
@@ -285,12 +373,17 @@ export function effectiveState(session: Session, now: number): SessionState {
   // a payoff. Crossing the upper bound is the expiry, so there is no stored
   // timer and nothing to tidy up.
   //
-  // **It can re-arm, and that is the behaviour rather than a leak.** Any event
-  // refreshes `lastEventAt`, so a session that goes quiet again after a
-  // `PostToolUse` or a `SubagentStop` gets another window off the same
-  // `workedAt`. An earlier version of this comment claimed a repeat "cannot
-  // re-trigger, because there is no trigger" — the arithmetic is on the one
-  // field every event resets. Only `UserPromptSubmit` and `SessionStart` spend
+  // **It can re-arm, and that is the behaviour rather than a leak.** Almost any
+  // event refreshes `lastEventAt`, so a session that goes quiet again after a
+  // `PostToolUse` gets another window off the same `workedAt`. An earlier
+  // version of this comment claimed a repeat "cannot re-trigger, because there
+  // is no trigger" — the arithmetic is on the one field nearly every event
+  // resets.
+  //
+  // This paragraph used to name `SubagentStop` alongside `PostToolUse`, and
+  // that is now exactly backwards: an untyped one is the single event the gate
+  // in `applyEvent` withholds the refresh from, and re-arming this window off
+  // machinery traffic was the reason for it. Only `UserPromptSubmit` and `SessionStart` spend
   // it, which is right: asking for something new is what acknowledges the last
   // thing, and either way the payoff needs a fresh quiet period to appear.
   if (session.workedAt !== undefined) {

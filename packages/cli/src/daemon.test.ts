@@ -292,10 +292,28 @@ describe('what the panel says', () => {
     // line. The session below fails with `rate_limit` on purpose — it is the
     // path with two shields, so emptying `mapped` is what reaches the defect.
     //
-    // `FAILED` is the only state that reaches the tool line with a stale tool.
+    // `FAILED` is the only live state that reaches the *panel* with a stale
+    // tool. The assertions below pin that it does, not that it is the only one,
+    // and the uniqueness needs two mechanisms rather than one: in `TRANSITIONS`
+    // every route into a toolless state clears `tool` on the way *except*
+    // `SessionEnd`, whose `ASLEEP` keeps the tool the session died holding, and
+    // that one is kept off the panel by `isLive` instead. Stating it as
+    // `TRANSITIONS` alone is what the paragraph above already corrects.
+    //
+    // It does not reach the message band. In this test that is down to the
+    // whitelist alone, because `bare` empties `mapped` — which is the point of
+    // emptying it. With the shipping pack, `refinedFailureLine` and the
+    // `mapped` lookup both answer first, as the paragraph above says.
+    //
+    // This comment said "reaches the tool line" until 25 Aug, flatly, which
+    // read as the opposite of what the assertions at the end of this test pin.
+    // Counting lines here would be a third stale claim in the same block, so
+    // this one points at the code by name instead.
+    //
     // `SessionEnd` also leaves `tool` set, at `ASLEEP` — the panel never sees
     // it because `isLive` drops a session with `endedAt`, which is a different
-    // reason from the one an earlier version of this comment gave.
+    // reason from the one an earlier version of this comment gave, and the
+    // reason a whitelist beats a `FAILED`-only blacklist.
     const bare = parsePackManifest({
       ...pack,
       quips: { ...pack.quips, mapped: {} },
@@ -371,7 +389,8 @@ describe('what the panel says', () => {
     const birthdayPack = parsePackManifest({
       ...pack,
       // A mapped quip on a *non-attention* state, which the example pack has
-      // none of — its three keys are all attention states. Without one, moving
+      // none of — its three keys are two attention states and one compound
+      // `state:errorType` key, `FAILED:rate_limit`. Without one, moving
       // the birthday lookup to sit after the mapped lookup left the whole
       // suite green, so the precedence this function exists to establish was
       // asserted nowhere.
@@ -403,8 +422,8 @@ describe('what the panel says', () => {
      * asserted only the message, and two of its rows silently did not produce
      * the state they named: `SessionEnd` sets `endedAt`, so the session is not
      * live and the panel is an empty desk resolving to `IDLE` with no sessions
-     * — the exact failure the comment above says the version before it fell
-     * into, four lines further down — and `PreToolUse` alone never promotes to
+     * — the same failure the doc block above records — and `PreToolUse` alone
+     * never promotes to
      * `DONE`, because `effectiveState` returns early for any stored state that
      * is not `IDLE`. The table claimed eight states and covered six, and a
      * mutant that made the birthday step aside for `DONE` and `ASLEEP` survived
@@ -631,7 +650,14 @@ describe('what the panel says', () => {
       sceneFor({ registry: createRegistry(NOW), pack, now: NOW }).status.right,
     ).toBe('');
     const busy = sceneFor({
-      registry: after({ sessionId: 's', kind: 'SubagentStart' }),
+      // `agentType` is load-bearing, not decoration: an event without one is
+      // machinery rather than a dispatch and does not move the count, so
+      // omitting it here asserted `+1` against a band that would render ''.
+      registry: after({
+        sessionId: 's',
+        kind: 'SubagentStart',
+        agentType: 'Explore',
+      }),
       pack,
       now: NOW,
     });

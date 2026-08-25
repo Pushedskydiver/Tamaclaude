@@ -7,8 +7,18 @@
  * and an upstream payload change lands in one file. That is now live:
  * `translate()` in `packages/hooks/src/index.ts` reads stdin and maps
  * `session_id`, `hook_event_name`, `tool_name`, `agent_id`, `agent_type` and
- * `error_type` onto the fields below. This block said the translation was
- * unwritten and the shape aspirational for as long as it has been neither.
+ * `error` onto the fields below. This block said the translation was unwritten
+ * and the shape aspirational for as long as it has been neither.
+ *
+ * It then said `error_type` after that stopped being true, which is worse:
+ * `errorType` below records that reading `error_type` was a real defect which
+ * emptied every `StopFailure` silently, and this header went on naming the
+ * wrong key while `errorType`'s own doc block, further down this file, spelt
+ * out that the wire name is `error`. Not a stale
+ * description of stale code — the header was accurate while `packages/hooks`
+ * still read `error_type`, and went wrong the moment that was fixed on 24 Aug.
+ * A file that corrects itself in one place and not the other is the shape a
+ * reader trusts least.
  *
  * Verified against code.claude.com/docs/en/hooks.md rather than assumed —
  * `BUILD_PLAN.md` Stage 3 gated the state machine on exactly that, because a
@@ -43,7 +53,7 @@ export type HookEvent = {
   /** `agent_type` — `Explore`, `Plan`, or a custom agent's name. */
   readonly agentType?: string;
   /**
-   * `error_type` on `StopFailure`. Ten documented values, verified against
+   * The error on `StopFailure`. Ten documented values, verified against
    * code.claude.com/docs/en/hooks.md rather than inferred from the three this
    * comment used to name followed by "and so on": `rate_limit`, `overloaded`,
    * `authentication_failed`, `oauth_org_not_allowed`, `billing_error`,
