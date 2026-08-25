@@ -83,8 +83,9 @@ export type Scene = {
    * stage keeps the pack's ink legible but makes the panel look like a picture
    * bolted to a terminal; letting the sky run behind the text is one coherent
    * object but needs the scheme's ink rather than the pack's, because white on
-   * a midday sky is invisible. Both are built; the 25 Aug design freeze picks
-   * one. Omitting this entirely is what tests mostly want — a scene on the
+   * a midday sky is invisible. Both are built; the 25 Aug design freeze chose
+   * `panel`, and `packages/cli` sets it as a constant — the pack field that
+   * would have exposed the other was cut the same day. Omitting this entirely is what tests mostly want — a scene on the
    * pack background is far easier to assert about than one on scenery.
    */
   readonly environment?: {

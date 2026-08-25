@@ -94,12 +94,16 @@ const ORIENTATION = 'landscape';
  * built (`ENVIRONMENT_EXTENTS` in the renderer); this picks one, the way
  * `ORIENTATION` above picks one.
  *
- * A constant rather than a pack field for now. A switch was asked for so the
- * owner or the recipient could change it later, and a pack manifest entry is
- * where that belongs — the pack is the personalisation layer. That is deferred, not
- * forgotten: it is a schema change to `@tamaclaude/packs` plus a migration for
- * a manifest that already exists, and it was explicitly not taken in the same
- * pass as wiring the scenery on at all.
+ * A constant, and not a pack field. A switch was asked for so the owner or the
+ * recipient could change it later, and a pack manifest entry is where that
+ * would belong — the pack is the personalisation layer.
+ *
+ * Cut on 25 Aug rather than deferred, and the reason is what the switch would
+ * control: the 25 Aug freeze chose `panel` over `stage` with the trade priced
+ * both ways, so the only thing a pack could select is the side that was
+ * rejected. An hour of code, a schema change and a migration for a manifest
+ * that already exists, to hand over a one-position lever.
+ * `BUILD_PLAN.md`'s deferred table carries the re-entry condition.
  */
 const ENVIRONMENT_EXTENT = 'panel';
 

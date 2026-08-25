@@ -258,7 +258,7 @@ of grass he stands on.
 
 Ours will not be that scene. The idea is worth taking; the picture is theirs.
 What to put behind him is a design decision that has not been made yet, and it
-belongs with the pack work rather than here — see `BUILD_PLAN.md` Stage 4.
+belongs with the pack work rather than here — see `BUILD_PLAN.md` Stage 5.
 
 What _is_ settled is where it lives, because that turns out to matter:
 
@@ -266,8 +266,13 @@ What _is_ settled is where it lives, because that turns out to matter:
 into each animation SVG. Four reasons, and the last is the one that decides it:
 
 - One definition, reused by every animation, so they cannot drift apart.
-- A pack can change it — which makes the environment a personalisation lever
-  rather than a fixed cost.
+- A pack could change it, which would make the environment a personalisation
+  lever rather than a fixed cost. Aspirational as of 25 Aug: the field was cut,
+  so `ENVIRONMENT_EXTENT` is a constant and no pack changes anything about the
+  scenery. Kept in the list because it is a property of putting scenery in the
+  renderer rather than in each SVG — the layer is where it would have to live
+  if the field is ever wanted — and because the last reason is the one that
+  decides this anyway.
 - Time of day, or any other ambient variation, becomes trivial.
 - It keeps the animation contract intact. An SVG carrying a sky would no longer
   be "the base geometry plus transforms", and the whole reason character
