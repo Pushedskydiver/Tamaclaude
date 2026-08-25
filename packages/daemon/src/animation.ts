@@ -32,6 +32,7 @@ export const ANIMATIONS = [
   'overheated',
   'payoff',
   'wizard',
+  'board-game',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -80,6 +81,14 @@ const TOOL_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
   // calls and fell through to `thinking` until now.
   ['WebSearch', 'wizard'],
   ['WebFetch', 'wizard'],
+  // Deliberately a short-lived screen. A subagent's own tool calls arrive on
+  // the *parent's* session — sidechains get their own transcript file but not
+  // their own id — so `Bash` or `Read` from inside it repaints over this at a
+  // measured median of 3.2 seconds. The art is two seconds for that reason, so
+  // the loop closes first; keyed instead on `session.subagents > 0` the screen
+  // would have held for 53% of the panel's waking life and buried `gym`.
+  // `assets/clawd/animations/PLANS.md` §Board game has the capture.
+  ['Agent', 'board-game'],
 ]);
 
 /**

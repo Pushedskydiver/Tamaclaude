@@ -655,9 +655,9 @@ async function paintOnce(
   // `ANIMATIONS` is a subset of `SPRITE_NAMES`, so every name this can produce
   // has data behind it. Subset and not equality: an animation can be baked
   // before it is wired, which `overheated` did between 23 and 24 Aug. The two
-  // lists are not equal — `board-game` is baked and unmapped, art ahead of its
-  // wiring — but they have been equal before, which is exactly when this guard is
-  // easiest to delete and worst to be without. They are kept because the two lists are
+  // two lists are equal again as of `board-game`'s wiring, which is exactly
+  // when this guard is easiest to delete and worst to be without — it was
+  // unequal for a day while that art sat baked and unmapped. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what
