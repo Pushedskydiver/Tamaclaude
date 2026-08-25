@@ -125,7 +125,8 @@ type Transition = (event: HookEvent, now: number) => Partial<Session>;
 
 /**
  * Hook event to state change. An event with no entry here is proof of life and
- * nothing more, which is deliberate: `PostToolUse` fires between every two
+ * nothing more — bar the untyped subagent events the gate in `applyEvent`
+ * drops, which are not even that. That is deliberate: `PostToolUse` fires between every two
  * calls of a chain, and clearing `WORKING` on it would flick the panel back to
  * idle in the gaps.
  *
@@ -212,41 +213,37 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * event when it carries no `agentType`. That gate is what makes the count
  * survivable, so it is not an optimisation to tidy away later.
  *
- * **Unpaired stops are ordinary.** A capture on the hook socket on 25 Aug,
- * 38 minutes of one session: ten `SubagentStop`s, of which seven had no
- * matching `SubagentStart`. Each stray had a distinct `agent_id` and none came
- * from a dispatch — one arrived 3.9s after a `Stop`, one 3.0s after
- * `SessionStart(source=compact)`. That is one roughly every five minutes.
+ * **Unpaired stops are ordinary.** One capture on the hook socket, 25 Aug,
+ * 15:17-16:24 UTC of a single session — 67 minutes, and every figure in this
+ * comment is from that one frozen snapshot. Fifteen `SubagentStop`s, of which
+ * ten had no matching `SubagentStart`. Each stray had a distinct `agent_id`
+ * and none came from a dispatch: nine of the ten landed within 4s of a `Stop`
+ * or a `SessionStart`, and the tenth closed a compaction window.
  *
- * Four of the seven were observed to carry an *empty* `agent_type`. The other
+ * Seven of the ten were observed carrying an *empty* `agent_type`. The other
  * three predate a fix to the capture script's own field whitelist, which was
- * dropping the key, so for those the wire value was not observed at all. What
- * the sample does support is the absence of a counterexample either way: no
- * stray carried a non-empty `agent_type`, and none of the three dispatched
- * pairs lacked one at either end.
+ * dropping the key, so their wire value was never observed either way. The
+ * claim the gate needs is therefore the negative one: across all fifteen stops
+ * and five dispatched pairs, no stray was seen with a non-empty `agent_type`
+ * and no paired stop was seen without one.
  *
- * **The capture was scratch work and left no artefact in the tree**, the same
- * standing as the measurement above. The figures moved twice while this branch
- * was open — once because a rate was read off the first thirteen minutes, once
- * because a review caught them mid-run with a dispatched subagent still live —
- * so treat them as the reason for the gate rather than as numbers anybody can
- * re-derive.
+ * **The capture left no artefact in the tree**, the same standing as the
+ * measurement above. Its figures moved three times while this branch was open
+ * — a rate read off the first thirteen minutes, a count taken with a subagent
+ * still live, and a second snapshot written into one paragraph while three
+ * others kept the first — which is why they are pinned to a timestamp here
+ * rather than described as "the capture" and left to drift again.
  *
- * The floor below only stops the badge going negative, which is the harmless
- * direction. The damaging one is a stray landing while a real subagent runs:
- * a true count of 1 goes to 0 and the badge blanks with work still in flight.
- * Any run outlasting the gap between strays is exposed, which at five minutes
- * covers a `da-review` or an `animation-critic` but not a quick `Explore`.
- *
- * **Why `agentType` and not a set of `agent_id`s.** Not because ids cannot
- * discriminate — they can, and better: a set discriminates on *membership*,
- * so every stray in the capture, each carrying an id no start had introduced,
- * would have been rejected without resting on the empty-`agent_type` claim at
- * all. The reason is the one the pre-gate version of this comment gave and
- * which still holds: `agentId` is optional on the wire, so a set needs the
- * counter back as a fallback, which is two mechanisms for one badge. The gate
- * keeps it at one. If `agent_id` ever becomes guaranteed, the set is the
- * better design and this paragraph is the argument for switching.
+ * **What the badge actually loses.** Not a rate argument: strays are not a
+ * stream with a mean gap, they follow the end of a turn, and all eight `Stop`s
+ * in the snapshot were followed by one within 10s. The exposure comes from
+ * `Stop` firing on the *parent* session while a dispatched agent is still
+ * running in the background — so the longer the agent runs, the likelier a
+ * turn ends underneath it. In the snapshot that is exact: all three runs over
+ * 400s took a stray mid-run, and neither of the two under 20s did. A stray
+ * arriving then takes a true count of 1 to 0 and blanks the badge with work
+ * still in flight, which the floor below cannot help with because zero is
+ * where the floor already is.
  *
  * **What is verified.** Both spawn paths emit a matched pair carrying
  * `agentId` and `agentType`: the `Agent` tool sends the agent's own type
@@ -256,11 +253,14 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * unverified: a subagent spawned by a session tool rather than by either.
  *
  * **Where the gate is still wrong, stated plainly.** A pair typed at both ends
- * balances, and a pair typed at neither is ignored at both ends and costs one
- * badge digit until the next pair. A *mixed* pair does not: a typed start with
+ * balances, and a pair typed at neither is ignored at both ends — the badge
+ * reads one low for that subagent's run and is right again the moment its own
+ * stop lands, with nothing waiting on a later pair. A *mixed* pair does not: a typed start with
  * an untyped stop adds 1 that nothing takes away, because the floor can only
  * absorb an offset once the count reaches zero and the offset is what prevents
- * that. It reads one high until the session is evicted. Unobserved — every
+ * that. It reads one high until something else takes it down — a later
+ * *typed* unmatched stop consumes the offset, and eviction ends it either
+ * way — so this is sticky rather than strictly permanent. Unobserved — every
  * start in the capture was typed — but not impossible, and gating only the
  * stop would have left both that case and the untyped pair stuck the same way.
  * An earlier version of this comment claimed the gate never drifts; a review
@@ -312,27 +312,27 @@ export function applyEvent(
     // not refresh `lastEventAt` either: `quiet` in `effectiveState` is measured
     // off that field, and a stray is not the session doing anything.
     //
-    // **Why this is safe**, and the argument does not need the capture:
-    // `packages/protocol/src/events.ts` records that subagents are not a
-    // separate event stream but ride the ordinary events under the parent's
-    // session id. So a session with a live subagent is being refreshed by that
-    // subagent's own `PreToolUse`/`PostToolUse`, and a session whose only
-    // traffic is untyped subagent events genuinely has nothing happening and
-    // ought to age. Anyone can check that; nobody can re-check the numbers
-    // below.
+    // **Why this is safe**, and the argument does not need this capture:
+    // `packages/protocol/src/events.ts` has subagents riding the ordinary
+    // events rather than forming their own stream, and `animation.ts` records
+    // the half that matters here — 15 tool calls inside three subagents all
+    // arriving on the *parent's* `sessionId`. So a session with a live subagent
+    // is refreshed by that subagent's own `PreToolUse`/`PostToolUse`, and one
+    // whose only traffic is untyped subagent events has nothing happening and
+    // ought to age.
     //
     // **What the capture adds** is the size of the win, and it is smaller than
-    // it first looks. Strays are not spread evenly: over 45 minutes, all six
-    // `Stop`s were followed by one within 4s, while none of the eight strays
-    // landed anywhere near the 45-60s the payoff is on screen. So a stray does
-    // not cost a payoff — it delays one, by its own lag behind the `Stop`.
+    // it first looks. Because strays land within seconds of a `Stop` and the
+    // payoff is on screen from 45s to 60s, none of the ten in the snapshot came
+    // near that window: a stray does not cost a payoff, it delays one by its
+    // own lag behind the `Stop`, a few seconds on a 45s timer.
     //
-    // Six of six is the measurement, not a law; `Stop` fires once per response
-    // (`TRANSITIONS` above) and a different workload gives a different rate —
-    // the capture cited in `session.test.ts` saw nine in three hours against
-    // six in forty-five minutes here. Read it as "in this capture, every
-    // payoff-eligible boundary was followed by a stray", which is what was
-    // seen, rather than as every payoff always being late.
+    // Eight of eight `Stop`s followed by a stray is the measurement, not a law.
+    // `Stop` fires once per response (`TRANSITIONS` above), so the count is a
+    // workload property — the older capture cited in `session.test.ts` saw nine
+    // `Stop`s in three hours against eight in this one hour. Read it as "every
+    // payoff-eligible boundary in this snapshot was followed by a stray", not
+    // as every payoff always being late.
     if (event.agentType === undefined) return session;
     return { ...seen, subagents: Math.max(0, seen.subagents + delta) };
   }

@@ -41,8 +41,8 @@ const field = z.string().min(1).max(MAX_FIELD_LENGTH);
  * panel claiming the session is idle while it runs, which is the one direction
  * this display must never be wrong in.
  *
- * **`agentType` is the exception and is load-bearing**, since `SUBAGENT_DELTA`
- * in `session.ts` began keying the subagent count on its presence. Degrading it
+ * **`agentType` is the exception and is load-bearing**, since the gate in
+ * `applyEvent` began keying the subagent count on its presence. Degrading it
  * here turns a real dispatch into a stray at both ends, so an over-long or
  * wrongly typed one costs a badge digit rather than a label. That is still the
  * right trade against dropping the event, and the risk is small — Claude Code's
@@ -56,7 +56,7 @@ const optionalField = field.optional().catch(undefined);
  *
  * `kind` is a plain bounded string rather than a union of
  * `HANDLED_HOOK_EVENTS`: Claude Code sends around thirty events, the daemon
- * acts on eleven, and an unhandled one is still proof that the session is
+ * acts on ten, and an unhandled one is still proof that the session is
  * alive. Narrowing here would discard that — `PostToolUse` is the case that
  * matters, since it fires between every two calls of a chain and refreshing
  * liveness is the whole of its job.

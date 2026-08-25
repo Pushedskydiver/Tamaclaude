@@ -53,8 +53,15 @@ describe('encodeRegistry / decodeRegistry', () => {
     );
   });
 
-  it('round-trips a session carrying every optional field', () => {
+  it('round-trips a session carrying the optional fields an event can set', () => {
     const now = NOW;
+    // Not literally every optional field: `Session` has five, and these three
+    // events reach `notifiedAt` and `errorType` (plus the non-optional
+    // `subagents`). `tool` and `workedAt` are only ever set by
+    // `PreToolUse`/`PostToolUse` and `endedAt` only by `SessionEnd`, none of
+    // which appear here, so those three are never set rather than cleared —
+    // `workedAt` has the test above to itself for that reason. The title used
+    // to claim all of them.
     const withEverything = [
       { sessionId: 'a', kind: 'Notification' },
       { sessionId: 'a', kind: 'SubagentStart', agentType: 'Explore' },

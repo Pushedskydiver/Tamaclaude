@@ -44,7 +44,7 @@ type RegisteredEvent = {
 /**
  * What we register, and nothing else.
  *
- * `PreToolUse` and `PostToolUse` match every tool rather than the five in the
+ * `PreToolUse` and `PostToolUse` match every tool rather than the eight in the
  * state table. The mapping from a tool to an animation belongs to the daemon —
  * putting a matcher list here would copy that table into a second place, on
  * someone else's machine, in a file we only touch at install time. It would

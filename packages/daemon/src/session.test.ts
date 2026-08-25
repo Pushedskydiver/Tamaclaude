@@ -102,9 +102,11 @@ describe('the payoff window', () => {
 
   it('re-arms after another event, because the clock is lastEventAt', () => {
     // Not a leak, and worth pinning because a comment once claimed the
-    // opposite. Any event refreshes `lastEventAt`, so a session that goes
-    // quiet again gets another window off the same `workedAt` — only
-    // `UserPromptSubmit` and `SessionStart` spend it.
+    // opposite. Nearly any event refreshes `lastEventAt`, so a session that
+    // goes quiet again gets another window off the same `workedAt` — only
+    // `UserPromptSubmit` and `SessionStart` spend it. "Nearly" because an
+    // untyped subagent event is the one kind that does not; see the stray
+    // tests below, and the gate in `applyEvent`.
     const worked = applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0);
     const idle = applyEvent(worked, event('Stop'), T0);
     expect(effectiveState(idle, T0 + DONE_AFTER_MS)).toBe('DONE');
@@ -236,25 +238,25 @@ describe('subagents', () => {
   });
 
   it('ignores a subagent event that carries no agent type', () => {
-    // **Unpaired stops are ordinary, not an edge case.** Captured from a
-    // listener on the hook socket on 25 Aug, over 38 minutes of one session:
-    // ten `SubagentStop`s arrived and seven had no matching `SubagentStart`.
-    // Each stray carried a distinct `agent_id` and came from machinery nobody
-    // dispatched — one 3.9s after a `Stop`, one 3.0s after
-    // `SessionStart(source=compact)`. About one every five minutes.
+    // **Unpaired stops are ordinary, not an edge case.** From one frozen
+    // snapshot of the hook socket, 25 Aug 15:17-16:24 UTC: fifteen
+    // `SubagentStop`s, of which ten had no matching `SubagentStart`. Each
+    // stray carried a distinct `agent_id` and came from machinery nobody
+    // dispatched, nine of the ten within 4s of a `Stop` or a `SessionStart`.
     //
     // The floor below is not enough on its own. It stops the badge going
     // negative, which is the harmless direction; the damaging one is a stray
     // landing while a real subagent runs, taking a true count of 1 down to 0
-    // and blanking the badge with work still in flight. Any run outlasting the
-    // gap between strays is exposed — a `da-review` or an `animation-critic`,
-    // though not a quick `Explore`.
+    // and blanking the badge with work still in flight. What exposes a run is
+    // not elapsed time against a stray rate but `Stop` firing on the parent
+    // session underneath it — in the snapshot, all three dispatched runs over
+    // 400s took a stray mid-run and neither of the two under 20s did.
     //
     // `agent_type` is the discriminator and it costs nothing: `optionalString`
     // in `packages/hooks` maps an empty string to absent, so a stray reaches us
-    // as `agentType: undefined` while all three dispatched pairs in the capture
+    // as `agentType: undefined` while all five dispatched pairs in the snapshot
     // carried a non-empty one at both ends — `Agent` sends the agent's own
-    // type, `Workflow` sends `workflow-subagent`. Four of the seven strays were
+    // type, `Workflow` sends `workflow-subagent`. Seven of the ten strays were
     // observed empty; the other three predate a fix to the capture script's own
     // whitelist and were never observed either way. `SUBAGENT_DELTA` in
     // `session.ts` carries the full account, including what the gate still gets
@@ -296,21 +298,23 @@ describe('subagents', () => {
   });
 
   it('does not let a stray push the payoff window back', () => {
-    // Strays are not spread evenly — they follow the end of a turn. Across a
-    // 38-minute capture, six of seven landed 1.5-3.9s after a `Stop` and the
-    // seventh closed a compaction window; two idle stretches of 474s and 246s
-    // contained none at all. So the damage is not a lost payoff, which would
-    // need a stray to land in the fifteen seconds `DONE` is on screen and
-    // cannot happen at that timing. It is that **every** payoff is late, by
-    // however long after the `Stop` the stray arrives.
+    // Strays are not spread evenly — they follow the end of a turn. In the
+    // snapshot nine of ten landed within 4s of a `Stop` or a `SessionStart`
+    // and the tenth closed a compaction window, while two idle stretches of
+    // 474s and 246s held none at all. So the damage is not a lost payoff,
+    // which would need a stray to land in the fifteen seconds `DONE` is on
+    // screen and cannot happen at that timing. It is that a payoff is late by
+    // however long after the `Stop` the stray arrives — all eight `Stop`s in
+    // the snapshot were followed by one, which is a measurement of that
+    // workload and not a law.
     //
     // Small — a few seconds on a 45s timer — and the reason to fix it anyway
     // is that `DONE_AFTER_MS` is meant to measure quiet since the session
     // stopped working, and a stray is not the session working.
     //
     // The same shape is why ignoring these for freshness is safe: a session
-    // with nothing happening emits no strays, so nothing here can hold one
-    // awake or, now, fail to.
+    // with nothing happening emits no strays — see the two idle stretches
+    // above — so nothing here can hold one awake or, now, fail to.
     const worked = applyEvent(
       applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0),
       event('Stop'),
