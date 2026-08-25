@@ -52,12 +52,10 @@ type RegisteredEvent = {
  * that quietly never shows the new one. The cost of matching everything is a
  * few percent more spawns of a binary measured at ~42 ms an event.
  *
- * `PreCompact` is deliberately absent, and still is now that its `sweeping`
- * art has landed (25 Aug): the daemon has no `COMPACTING` state and nothing
- * consumes the event, so registering it would describe behaviour that does not
- * exist. The art and the wiring land in separate changes on purpose — see
- * `BUILD_PLAN.md` Stage 4 item 8 — so this comment stays true until the daemon
- * side moves, and it is the daemon side that should delete it.
+ * `PreCompact` is registered as of 25 Aug, the daemon side having moved: it is
+ * what opens the `COMPACTING` window that `sweeping` draws. It was deliberately
+ * absent until then, because registering an event nothing consumes describes
+ * behaviour that does not exist.
  *
  * Every event in `HANDLED_HOOK_EVENTS` must appear below, and nothing else may.
  * The list lives in `protocol` because this package and the daemon cannot see
@@ -107,6 +105,11 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
     event: 'SubagentStop',
     matcher: '*',
     why: 'and down. Untyped ones are machinery and the daemon ignores them',
+  },
+  {
+    event: 'PreCompact',
+    matcher: '*',
+    why: 'the context filled up and Clawd is tidying — the COMPACTING screen',
   },
   {
     event: 'SessionEnd',

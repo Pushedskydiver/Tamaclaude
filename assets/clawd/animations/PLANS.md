@@ -1334,13 +1334,11 @@ no date in the plan.
 
 **Nothing can reach this yet — though as of 25 Aug it can be drawn.** The art
 is baked and `loadSprite('sweeping')` works; what is missing is every path to
-it. `COMPACTING` is absent from `SESSION_STATES`, deliberately, and `state.ts`
-records tier 1 as empty — for a reason that has now changed while the conclusion
-has not: the blocker used to be that the art did not exist, and is now that
-nothing consumes it. `hook-settings.ts` likewise does not register the hook,
-because "nothing consumes the event, so registering it would describe behaviour
-that does not exist". Each absence cites the other, so the two have to move together or
-the art lands unreachable. `board-game` showed the way through: the art can
+it — as this section stood before the evening of 25 Aug. `COMPACTING` was
+absent from `SESSION_STATES` and `hook-settings.ts` did not register the hook,
+each absence citing the other, so the two had to move together or the art landed
+unreachable. They moved together: `state.ts` defines the state, `PreCompact` is
+registered, and `sweeping` is in `ANIMATIONS`. `board-game` showed the way through: the art can
 enter `SPRITE_NAMES` without entering `ANIMATIONS`, and the wiring follows.
 
 ### Costed 25 Aug, before drawing — and the cost is the rank, not the clock
@@ -1539,8 +1537,14 @@ measured the window, stated the implication and changed nothing.
 **Not wanted:** dust clouds, which are the small-pale-things failure again.
 A stage that visibly empties, since the loop repeats and it would refill.
 
-**Fallback:** cut it. It has the largest wiring cost and the least visible
-trigger — and it is now measured rather than asserted: 0.62 compactions a day,
+**Fallback: superseded 25 Aug — built instead of cut.** The dates below stood
+until the capture met the stop condition, and the wiring landed the same
+evening. Kept rather than deleted because the reasoning is what priced the
+option, and because the paragraph at the end of this section records what
+spending it cost.
+
+**Fallback (as written):** cut it. It has the largest wiring cost and the least
+visible trigger — and it is now measured rather than asserted: 0.62 compactions a day,
 0.52% duty, the rarest screen with a measured trigger. **Decide by Sun 6 Sep**,
 but not "with the Tier A gate", which has already fired green and which the
 section above records as reading like a rubber stamp. And **do not start the
@@ -1567,9 +1571,20 @@ entire return on the wiring.
 settings entry pointing at a logging script, one manual compaction, and read
 whether `PreCompact` arrives at the start and whether anything else fires inside
 the window and takes the hero. **If the capture does not happen, cut the screen**
-rather than buying the wiring on a plausible premise. The art is already sunk and
-inert — `sweeping` is in `SPRITE_NAMES` and out of `ANIMATIONS` — so cutting
-costs nothing and reverts nothing.
+rather than buying the wiring on a plausible premise.
+
+**Both discharged on 25 Aug, and the free cut is spent.** The capture happened —
+`PreCompact` reaches a hook at the start of the window, `SessionStart` closes it
+97s later, and nothing inside it can take the hero — so the stop condition was
+met in substance and the wiring landed the same evening, twelve days before the
+gate above. That is schedule-positive and not a decision to revisit. But the
+sentence that stood here said cutting "costs nothing and reverts nothing"
+because the art was inert, and that is no longer true: `sweeping` is in
+`ANIMATIONS`, `COMPACTING` is in `SESSION_STATES`, `PreCompact` is registered,
+and four exhaustive tables carry a row for it. Cutting now is the same
+cross-package change in the other direction, plus a persisted `z.enum`. Anyone
+arriving at the 6 Sep gate should know the option it was written to preserve is
+no longer priced at zero.
 
 ### As built, 25 Aug — where the art differs from the brief above
 

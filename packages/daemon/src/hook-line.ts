@@ -59,7 +59,7 @@ const optionalField = field.optional().catch(undefined);
  *
  * `kind` is a plain bounded string rather than a union of
  * `HANDLED_HOOK_EVENTS`: Claude Code sends around thirty events, the daemon
- * acts on ten, and an unhandled one is still proof that the session is
+ * acts on eleven, and an unhandled one is still proof that the session is
  * alive. Narrowing here would discard that — `PostToolUse` is the case that
  * matters, since it fires between every two calls of a chain and refreshing
  * liveness is the whole of its job.

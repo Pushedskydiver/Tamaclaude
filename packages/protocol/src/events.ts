@@ -31,7 +31,7 @@ export type HookEvent = {
    * Claude Code's `hook_event_name`.
    *
    * A plain string, not the `HANDLED_HOOK_EVENTS` union: Claude Code sends
-   * around thirty events and this system acts on eleven. Narrowing here would
+   * around thirty events and this system acts on twelve. Narrowing here would
    * make an unhandled event a type error at the boundary that receives it,
    * which is the wrong place to be strict — the hook's job is to forward
    * whatever arrives, and the daemon's is to ignore what it does not know.
@@ -108,5 +108,6 @@ export const HANDLED_HOOK_EVENTS = [
   'Notification',
   'SubagentStart',
   'SubagentStop',
+  'PreCompact',
   'SessionEnd',
 ] as const;

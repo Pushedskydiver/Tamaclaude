@@ -16,6 +16,7 @@ import {
   DONE_AFTER_MS,
   DONE_SHOWN_MS,
   EVICT_AFTER_MS,
+  needsAttention,
   WAITING_AFTER_MS,
 } from './state.js';
 
@@ -214,6 +215,28 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
   ['Stop', () => ({ state: 'IDLE', tool: undefined })],
   ['Notification', (_event, now) => ({ notifiedAt: now })],
   ['SessionEnd', (_event, now) => ({ state: 'ASLEEP', endedAt: now })],
+  /**
+   * The compaction window opens here and closes on `SessionStart`.
+   *
+   * No timer and no stored deadline: `SessionStart` with `source: 'compact'`
+   * fires at the far end and its entry above already returns the session to
+   * `IDLE`, so the exit was wired before the entry was. A capture on 25 Aug
+   * measured that window at 97s, with nothing inside it but a `SubagentStop`
+   * that cannot take the hero.
+   *
+   * `RESUMED` is not spread here, deliberately, and `tool` is the field that
+   * earns it: the turn is still the turn it was, and `TOOL_STATES` in
+   * `packages/cli` is what keeps the stale tool off the glass rather than
+   * clearing it here.
+   *
+   * The other three are inert rather than load-bearing, which a first version
+   * of this note got wrong by defending `notifiedAt` on its own merits.
+   * `errorType` is read only under `FAILED`; `endedAt` set means `isLive`
+   * already dropped the session; and `notifiedAt` has no reader during the
+   * window, because the guard in `applyEvent` means a session with a pending
+   * question never enters `COMPACTING` at all.
+   */
+  ['PreCompact', () => ({ state: 'COMPACTING' })],
 ]);
 
 /**
@@ -316,6 +339,35 @@ export function applyEvent(
   // from a host whose clock runs slow must never rewind a session's proof of
   // life and age it towards sleep.
   const seen = { ...session, lastEventAt: Math.max(session.lastEventAt, now) };
+  // **A compaction never covers a question.** `COMPACTING` was demoted out of
+  // the spec's tier 1 precisely so a two-minute screen could not hide a
+  // permission prompt — but a rank only decides between *sessions*, and this
+  // transition would have overwritten the state of the one it lands on. A
+  // review measured all three: `NEEDS_PERMISSION`, `FAILED` and a `WAITING`
+  // that `effectiveState` was about to promote each became `COMPACTING`, which
+  // is the exact defect the demotion was argued to prevent, arriving through a
+  // door the argument did not look at.
+  //
+  // Dropping the event rather than queueing it: the window ends on
+  // `SessionStart` regardless, so nothing needs to remember it happened, and a
+  // person looking at the panel is being told the more useful of the two facts.
+  //
+  // Against the *effective* state, not the stored one. `WAITING` is a
+  // promotion from `IDLE` rather than a state anything stores, so a guard on
+  // `seen.state` protects `NEEDS_PERMISSION` and `FAILED` and misses the third
+  // — which is what a first version of this line did.
+  //
+  // One hole survives and is narrower than it looks: a question asked less than
+  // `WAITING_AFTER_MS` ago has not promoted yet, so a compaction starting in
+  // that minute does take the stage, and `SessionStart` then clears
+  // `notifiedAt` with the rest of `RESUMED`. That is not this event's doing —
+  // any `SessionStart` forgets an unanswered question the same way.
+  if (
+    event.kind === 'PreCompact' &&
+    needsAttention(effectiveState(seen, now))
+  ) {
+    return seen;
+  }
   const delta = SUBAGENT_DELTA.get(event.kind);
   if (delta !== undefined) {
     // No `agentType` means this is not a dispatched subagent — see

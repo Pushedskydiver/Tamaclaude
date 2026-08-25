@@ -640,6 +640,28 @@ describe('what the panel says', () => {
     expect(scene.sessions[0]?.tone).toBe('attention');
   });
 
+  it('gives a compacting session an active chip and no tool line', () => {
+    // Both rows this needs were added to `TONE` and `TOOL_STATES` when
+    // `COMPACTING` landed, and neither was pinned: flipping the tone to
+    // `resting` or the tool flag to `true` left all 62 cli tests green.
+    //
+    // The tool flag is the one that matters. `PreCompact` fires mid-turn, so
+    // the session still carries the tool it was running — `messageFor` putting
+    // that on the band is the defect the function's own doc says it exists to
+    // prevent, a stale `Bash` pixel-identical to a session actually running
+    // Bash.
+    const scene = sceneFor({
+      registry: after(
+        { sessionId: 'busy', kind: 'PreToolUse', tool: 'Bash' },
+        { sessionId: 'busy', kind: 'PreCompact' },
+      ),
+      pack,
+      now: NOW,
+    });
+    expect(scene.sessions[0]?.tone).toBe('active');
+    expect(scene.message).not.toBe('Bash');
+  });
+
   it('puts a padded 24-hour clock on the status band', () => {
     const scene = sceneFor({ registry: createRegistry(NOW), pack, now: NOW });
     expect(scene.status.left).toMatch(/^\d{2}:\d{2}$/);

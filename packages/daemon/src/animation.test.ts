@@ -135,7 +135,7 @@ describe('animationFor', () => {
     // is deliberately not a screen anybody intends to draw: it is not in
     // `assets/clawd/animations/PLANS.md`, and it is not meant to be.
     //
-    // Re-planted rather than assumed, both ways: `'sweeping'` leaves all 17
+    // Re-planted rather than assumed, both ways: `'sweeping'` leaves the file
     // green, `'no-such-screen'` gives
     // `expected [ 'no-such-screen' ] to deeply equal []`.
     //
@@ -164,6 +164,27 @@ describe('animationFor', () => {
       animationFor('WORKING', { tool: 'Read' }),
     ].filter((name) => !baked.includes(name));
     expect(unbuilt).toEqual([]);
+  });
+});
+
+describe('the compaction screen', () => {
+  it('draws sweeping, and ranks below what was actually asked for', () => {
+    expect(animationFor('COMPACTING')).toBe('sweeping');
+    // `PLANS.md` §Sweeping settles the rank: below the attention states,
+    // because compaction runs about two minutes against the frozen spec's
+    // 2-second tier-1 oneshot, and covering a permission prompt for two
+    // minutes breaks the one promise the panel makes.
+    for (const louder of ['NEEDS_PERMISSION', 'FAILED', 'WAITING'] as const) {
+      expect(stateRank('COMPACTING')).toBeGreaterThan(stateRank(louder));
+    }
+    // And below the two states serving a request someone made: 18 of the 19
+    // measured compactions were automatic, so it is work nobody asked for.
+    expect(stateRank('COMPACTING')).toBeGreaterThan(stateRank('WORKING'));
+    expect(stateRank('COMPACTING')).toBeGreaterThan(stateRank('THINKING'));
+    // Above every resting state, because it is still work.
+    for (const quieter of ['DONE', 'IDLE', 'ASLEEP'] as const) {
+      expect(stateRank('COMPACTING')).toBeLessThan(stateRank(quieter));
+    }
   });
 });
 

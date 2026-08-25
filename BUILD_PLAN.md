@@ -439,12 +439,12 @@ The long pole. Runs in parallel with Stage 3 from week two.
 
 **Every top-level box is settled as of 25 Aug** — six `[x]` and the cut
 generator at `[~]`, nineteen days before the stage ends. **That is not the same
-as closed**, and a first version of this paragraph said closed: item 8 says of
-itself "No ✅ because the item is not done", `sweeping`'s wiring being
-cross-package and waiting on a `COMPACTING` state, and item 13 is unbuilt. A
-stage cannot close over a checkbox whose own children say they are open, and
-this one has no `**Exit:**` line to close against instead — so the box count is
-what is true, and those two sub-items need a home before the stage closes.
+as closed**, and a first version of this paragraph said closed. Item 8 was open
+then — `sweeping` baked with no `COMPACTING` state to draw it — and was wired
+the same evening, so **item 13 is the one that remains**, unbuilt. A stage
+cannot close over a checkbox whose own children say they are open, and this one
+has no `**Exit:**` line to close against instead, so that single sub-item is
+what stands between the box count and a closed stage.
 
 Recorded because the opposite was asserted the same day: the remote-transport
 cut was justified on "Stage 4 is not on schedule", which was false when written.
@@ -539,17 +539,39 @@ than partially. Eight good screens beat nine plus four rough ones.
      reach above the head, which the geometry forbids, and `confused` wanted a
      6deg body tilt against a 2.5deg one already recorded as reading like a
      corrupted sprite
-  8. sweeping (PreCompact) — **art landed 25 Aug, wiring deliberately not.**
-     No ✅ because the item is not done: `sweeping` is in `SPRITE_NAMES` and
-     absent from `ANIMATIONS`, with no `COMPACTING` in `SESSION_STATES` and no
-     `PreCompact` registered in `hook-settings.ts`, which is
-     the "art first, wiring last" order this list asks for. Recorded because the
-     6 Sep gate above is read off this list and the character of it has
-     changed — the art is sunk cost now, so cutting saves only the wiring, which
-     `assets/clawd/animations/PLANS.md` §Sweeping costs as cross-package and
-     atomic. That section also holds the rank decision the wiring depends on:
-     `COMPACTING` ranks **below the attention states**, not at the frozen spec's
-     tier 1, because a two-minute tier-1 screen would cover a permission prompt
+  8. sweeping ✅ (PreCompact) — **art 25 Aug, wiring the same day.** The
+     wiring was held back so the art could land on its own — five merges and
+     5h40m apart, not the one commit a first version of this line claimed.
+     `COMPACTING` is in `SESSION_STATES` at rank 5, `PreCompact` is registered
+     in `hook-settings.ts`, and `sweeping` is in `ANIMATIONS`.
+     It cost what `assets/clawd/animations/PLANS.md` §Sweeping said it would —
+     cross-package and atomic. Adding the state made `tsc` fail in **four**
+     exhaustive tables across two packages: `STATE_RANK`, `STATE_ANIMATIONS`,
+     `TONE` and `TOOL_STATES`, which is the number §Sweeping predicted and
+     named. A first version of this line said three and dropped
+     `STATE_ANIMATIONS` — the table holding `COMPACTING: 'sweeping'`, and so
+     the point of the change.
+     The window needed no timer: a capture measured `PreCompact` to
+     `SessionStart(source=compact)` at 97s with nothing inside it that can take
+     the hero, and `SessionStart` already cleared to `IDLE`, so the exit was
+     wired before the entry was. `source` never reaches the daemon —
+     `HookEvent` does not carry it — so the window closes on _any_
+     `SessionStart`. Broader than the compact case, and the safe direction.
+     **The screen never covers a question, and did not achieve that by
+     ranking.** The demotion out of tier 1 was argued on exactly this, but a
+     rank only decides between sessions and the transition overwrote the state
+     of the one it landed on: `NEEDS_PERMISSION`, `FAILED` and a promotable
+     `WAITING` all became `COMPACTING`, measured. `applyEvent` now drops the
+     event when the effective state is asking for a human.
+     **Two limits accepted rather than fixed.** A compaction whose
+     `SessionStart` never arrives sweeps until eviction at ten minutes, because
+     `effectiveState` freezes every non-`IDLE` state — §Sweeping proposed a
+     two-bound window sized off the current maximum, and that is deferred. And
+     a question asked within the last `WAITING_AFTER_MS` has not promoted yet,
+     so a compaction starting in that minute does take the stage.
+     The rank is the departure from the frozen spec, and `spec.md` §4 carries
+     it along with the one thing the amendment left open — where it sits
+     relative to `WORKING`, `THINKING` and `DONE`.
   9. dizzy ✅ (StopFailure) — **taken out of order, ahead of 6 and 8.** It is
      the last state that was on the fallback, so building it is Stage 3
      correctness (the `[x]` in Stage 3) rather than Stage 4 art, and the 6 Sep
