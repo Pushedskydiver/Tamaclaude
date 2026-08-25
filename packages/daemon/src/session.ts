@@ -302,19 +302,23 @@ export function applyEvent(
   const delta = SUBAGENT_DELTA.get(event.kind);
   if (delta !== undefined) {
     // No `agentType` means this is not a dispatched subagent — see
-    // `SUBAGENT_DELTA`. Returning `seen` rather than dropping the event keeps
-    // the clock refresh, which is not free and is worth naming: `quiet` in
-    // `effectiveState` is measured off `lastEventAt`, so a stray re-arms the
-    // payoff window. One landing inside the fifteen seconds `DONE` is on screen
-    // sends the panel back to `IDLE` and the payoff returns forty-five seconds
-    // later, and the capture's own 3.9s-after-`Stop` stray delays most payoffs
-    // by about that much. At one stray per five minutes against a fifteen
-    // second window that is a small minority of payoffs, and it is unchanged
-    // from before the gate — a stray refreshed the clock then too. Kept rather
-    // than fixed here because the alternative, ignoring these for freshness as
-    // well, decides that machinery traffic is not proof a session exists, and
-    // that question belongs with eviction rather than with the badge.
-    if (event.agentType === undefined) return seen;
+    // `SUBAGENT_DELTA`. Returned unchanged rather than as `seen`, so it does
+    // not refresh `lastEventAt` either: `quiet` in `effectiveState` is measured
+    // off that field, and a stray is not the session doing anything.
+    //
+    // Left as a refresh at first, on the reasoning that any event is proof of
+    // life. What that missed is *when* strays arrive. They are not spread
+    // evenly — across a 38-minute capture six of seven landed 1.5-3.9s after a
+    // `Stop`, the seventh closed a compaction window, and two idle stretches of
+    // 474s and 246s held none. So a stray never lands inside the fifteen
+    // seconds `DONE` is on screen and never costs a payoff; what it does is
+    // push **every** payoff back by its own delay after the `Stop`.
+    //
+    // That same clustering is why dropping the refresh is safe. A session with
+    // nothing happening emits no strays, so none of this can age a live session
+    // towards `ASLEEP` or eviction — the events being ignored only ever arrive
+    // moments after a real one that refreshed the clock properly.
+    if (event.agentType === undefined) return session;
     return { ...seen, subagents: Math.max(0, seen.subagents + delta) };
   }
   return { ...seen, ...TRANSITIONS.get(event.kind)?.(event, now) };

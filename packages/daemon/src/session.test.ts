@@ -267,8 +267,9 @@ describe('subagents', () => {
     expect(running.subagents).toBe(1);
     const stray = applyEvent(running, event('SubagentStop'), T0 + 1000);
     expect(stray.subagents).toBe(1);
-    // Still proof of life: the event is ignored for the count, not dropped.
-    expect(stray.lastEventAt).toBe(T0 + 1000);
+    // And ignored for freshness too — it does not claim the session did
+    // anything. See the payoff test below for why that second half matters.
+    expect(stray.lastEventAt).toBe(T0);
   });
 
   it('gates starts by the same rule, so pairs stay balanced', () => {
@@ -284,6 +285,35 @@ describe('subagents', () => {
     // version of this comment claimed the gate never drifts, which a review
     // showed to be false.
     expect(foldAt(['SubagentStart', 'SubagentStart'], T0).subagents).toBe(0);
+  });
+
+  it('does not let a stray push the payoff window back', () => {
+    // Strays are not spread evenly — they follow the end of a turn. Across a
+    // 38-minute capture, six of seven landed 1.5-3.9s after a `Stop` and the
+    // seventh closed a compaction window; two idle stretches of 474s and 246s
+    // contained none at all. So the damage is not a lost payoff, which would
+    // need a stray to land in the fifteen seconds `DONE` is on screen and
+    // cannot happen at that timing. It is that **every** payoff is late, by
+    // however long after the `Stop` the stray arrives.
+    //
+    // Small — a few seconds on a 45s timer — and the reason to fix it anyway
+    // is that `DONE_AFTER_MS` is meant to measure quiet since the session
+    // stopped working, and a stray is not the session working.
+    //
+    // The same shape is why ignoring these for freshness is safe: a session
+    // with nothing happening emits no strays, so nothing here can hold one
+    // awake or, now, fail to.
+    const stopped = applyEvent(start, event('Stop'), T0);
+    const worked = applyEvent(
+      applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0 - 1000),
+      event('Stop'),
+      T0,
+    );
+    expect(effectiveState(worked, T0 + DONE_AFTER_MS)).toBe('DONE');
+    const strayed = applyEvent(worked, event('SubagentStop'), T0 + 2500);
+    // Was 'IDLE' before this change: the stray moved the window 2.5s later.
+    expect(effectiveState(strayed, T0 + DONE_AFTER_MS)).toBe('DONE');
+    expect(stopped.lastEventAt).toBe(T0);
   });
 
   it('does not disturb the state its parent is in', () => {
