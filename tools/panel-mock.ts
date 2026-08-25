@@ -18,7 +18,7 @@
  *
  *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
  *                             [--layout hero|twoUp] [--pack packs/other]
- *                             [--extent panel|stage]
+ *                             [--extent stage|panel]
  *
  * **Landscape, and hero unless `--layout twoUp`.** The daemon hardcodes both
  * (`packages/cli/src/daemon.ts`), and portrait is refused by a
@@ -336,7 +336,7 @@ if (positionals.length === 0) {
   console.error(
     'usage: node tools/panel-mock.ts <frameDir> [frameDir2] ' +
       '[--message <text>] [--layout hero|twoUp] [--pack <dir>] ' +
-      '[--extent panel|stage]',
+      '[--extent stage|panel]',
   );
   process.exit(1);
 }

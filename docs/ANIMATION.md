@@ -257,9 +257,10 @@ alive — their idle is a night sky with stars, drifting fireflies, and a strip
 of grass he stands on.
 
 Ours will not be that scene. The idea is worth taking; the picture is theirs.
-What goes behind him was decided on 22 Aug and built — a rock pool through the
-day, in `packages/renderer/src/environment.ts`, `BUILD_PLAN.md` Stage 4. What
-stayed open was whether a pack may vary it, and that was cut on 25 Aug.
+What goes behind him is decided and built: a rock pool through the day, in
+`packages/renderer/src/environment.ts` — written 21 Aug, wired into `sceneFor`
+a day later, `BUILD_PLAN.md` Stage 4. What stayed open was whether a pack may
+vary it, and that was cut on 25 Aug.
 
 What _is_ settled is where it lives, because that turns out to matter:
 

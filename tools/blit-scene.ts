@@ -129,7 +129,8 @@ export function composePanels(
      * An option rather than a constant because `stage` is the side the 22 Aug
      * wiring rejected, and a rejected option nobody can render is a decision
      * that cannot be re-checked. `tools/panel-mock.ts --extent stage` is that
-     * picture; `BUILD_PLAN.md`'s deferred table is why it is not the default.
+     * picture. What makes `panel` the default is the 22 Aug wiring, not the
+     * deferred table — that table records the cut of the pack field.
      */
     readonly extent?: EnvironmentExtent;
     /**

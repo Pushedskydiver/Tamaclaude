@@ -93,9 +93,9 @@ const ORIENTATION = 'landscape';
  * Clawd with the pack's flat background above and below it. Both extents are
  * built (`ENVIRONMENT_EXTENTS` in the renderer); this picks one, the way
  * `ORIENTATION` above picks one. Picked here on 22 Aug, in the commit that
- * wired the scenery on, and not revisited since — not at the 25 Aug freeze,
- * whose record covers the screen list, the state machine and the pack format
- * and says nothing about extent.
+ * wired the scenery on, and not overturned since — and not at the 25 Aug
+ * freeze, whose record covers the screen list, the state machine and the pack
+ * format and says nothing about extent.
  *
  * A constant, and not a pack field. A switch was asked for so the owner or the
  * recipient could change it later, and a pack manifest entry is where that
