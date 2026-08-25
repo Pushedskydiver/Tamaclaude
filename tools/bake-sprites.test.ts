@@ -5,6 +5,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { SOURCE as ASLEEP } from '../packages/renderer/src/sprites/asleep.data.ts';
+import { SOURCE as BOARD_GAME } from '../packages/renderer/src/sprites/board-game.data.ts';
 import { SOURCE as BOULDERING } from '../packages/renderer/src/sprites/bouldering.data.ts';
 import { SOURCE as CONFUSED } from '../packages/renderer/src/sprites/confused.data.ts';
 import { SOURCE as DIZZY } from '../packages/renderer/src/sprites/dizzy.data.ts';
@@ -35,7 +36,7 @@ import { fingerprint } from './art-fingerprint.ts';
  * them into pale windows showing the sky through his face.
  *
  * A hash is enough here, and rasterising would not be: it would put Playwright
- * and twelve full renders into `pnpm test`.
+ * and thirteen full renders into `pnpm test`.
  *
  * **It used to be flaky too, and that is no longer the reason.** `svg2frames`
  * screenshotted without waiting for the seek to be painted, so two runs of
@@ -48,6 +49,7 @@ import { fingerprint } from './art-fingerprint.ts';
 
 const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['asleep', ASLEEP],
+  ['board-game', BOARD_GAME],
   ['bouldering', BOULDERING],
   ['confused', CONFUSED],
   ['dizzy', DIZZY],
@@ -304,7 +306,7 @@ describe('the baked animations', () => {
  * 31 rows for `asleep`'s Zs, which is the animation working as designed.
  *
  * **The bound fires on every correct pose, so the 0 is vacuous — and that is
- * not the problem.** Measured across all twelve bakes: the contiguous band
+ * not the problem.** Measured across all thirteen bakes: the contiguous band
  * from the feet is 42 to 200 rows, well over the bound, so the walk never
  * looks for a gap. The exception proves the mechanism rather than the rule —
  * `dizzy` drops to 16 on the six frames where an orbiting star is the
@@ -440,6 +442,56 @@ const EFFECTS: ReadonlyArray<
       3 - [0, 8, 16].filter((delay) => (frame + delay) % 24 < 2).length,
   ],
 ];
+
+/**
+ * Contiguous runs of drawn pixels along one row, within a column window.
+ *
+ * `componentSizes` cannot answer the question this exists for. `board-game`'s
+ * pieces stand *on* its board, so the board, the pieces and the crab are one
+ * 8-connected component of ~6,800 pixels — an effect-count assertion would
+ * find zero components of a piece's size and pass vacuously, which is worse
+ * than no test.
+ *
+ * What separates two pieces from one is whether their row has two runs in it
+ * or one. That is the property, so that is what is measured.
+ */
+export function rowRuns(
+  mask: Uint8Array,
+  grid: { width: number; row: number; until: number },
+): number {
+  let runs = 0;
+  let inside = false;
+  for (let x = 0; x < grid.until; x++) {
+    const drawn = mask[grid.row * grid.width + x] === 1;
+    if (drawn && !inside) runs++;
+    inside = drawn;
+  }
+  return runs;
+}
+
+describe("board game's pieces", () => {
+  // The defect this exists for shipped, in this animation, one commit after
+  // the comment above `EFFECTS` recorded `wizard` shipping the same thing.
+  // Both were caught by a critic rather than by a gate. The mover used to step
+  // *toward* the still piece and land sharing an edge with it: two rects of one
+  // fill sharing an edge are one silhouette, so half the loop of a screen whose
+  // premise is "several small things are doing it" had one thing on the board.
+  //
+  // Column 39 is the last column left of the torso, which reaches x 1.945 at
+  // mid-breath — so this window sees the board and never the crab.
+  it('stay two, on every frame', async () => {
+    const frames = await loadSprite('board-game');
+    expect(frames.length).toBeGreaterThan(0);
+    const runs = frames.map((sprite) =>
+      rowRuns(sprite.mask, {
+        width: sprite.frame.width,
+        row: 171,
+        until: 39,
+      }),
+    );
+    expect(runs).toEqual(frames.map(() => 2));
+  });
+});
 
 describe('componentSizes', () => {
   // The fusion detector every effect assertion below leans on, and which

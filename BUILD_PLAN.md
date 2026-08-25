@@ -410,10 +410,16 @@ than partially. Eight good screens beat nine plus four rough ones.
   10. ✅ wizard (WebSearch/WebFetch) — 5.5% of real tool calls. Built 24 Aug;
       the `TOOL_ANIMATIONS` wiring landed with the art rather than after it,
       against the "art first, wiring last" note below
-  11. board game (Agent/subagents) — 0.7%, the least-seen of the screens that
+  11. board game (`Agent`) — 0.7%, the least-seen of the screens that
       have a measured trigger. Six catalogue entries fire on hook events or
       timers and have no tool-call frequency at all, so this is not a claim
-      about the whole catalogue
+      about the whole catalogue. **Art landed 25 Aug; the `TOOL_ANIMATIONS`
+      entry has not**, which is this list's own "art first, wiring last" rule
+      followed rather than broken — so it is neither done nor deferred, and
+      saying so matters because the 6 Sep decision is read off this list. The
+      trigger was `Agent`/subagents until 25 Aug, when a live capture settled it
+      as `Agent` alone at a two second loop: keyed on `subagents > 0` it would
+      have been on for 53% of the panel's waking life
   12. **overheated (`StopFailure` with `error_type` `rate_limit` or `overloaded`)** — proposed
       on 22 Aug, not part of the original catalogue, and therefore a change to
       this plan rather than work under it. It is the cheapest screen left:

@@ -1188,6 +1188,16 @@ is 59KB baked against `wizard`'s 480KB — and leaves `gym`, `bouldering` and
 `typing` to say what the subagent is actually doing for the remaining ~900
 seconds. The screen is a punctuation mark: _handed off_, then back to work.
 
+**One caveat on that table**, since peak concurrency here was 7: when several
+subagents start together the screen is replaced by the _first_ of them to make a
+tool call, which is the minimum of a batch rather than one draw, and the
+published summary has no lower tail to answer that with. It does not change the
+decision — any distribution that closes a 2s loop early closes a longer one
+earlier, and a full 2s window shows all sixteen frames from any starting phase,
+which matters because `frameAt` is wall-clock modulo and never resets to frame 0
+when the animation changes. Recorded because the table reads as if the runs were
+independent and they are not.
+
 ### Why not `session.subagents > 0`
 
 That was this section's own proposal and it is rejected, for four reasons found
@@ -1261,13 +1271,26 @@ dot. A board he reaches toward: his legs already provide the contact. More than
 three pieces; at 8px a unit they merge. Any piece leaving the board. A twelve
 second loop — see the table above.
 
-**Known gap it widens:** a ground-level prop beside his legs blinds `hipGap`,
-making this the **third** animation it cannot catch, after `payoff`'s vehicle
-and `overheated`'s sploot legs. The bound already fires on all twelve bakes on a
-correct pose, so the gate currently catches nothing on any of them; the
-replacement is _sketched_ in `tools/bake-sprites.test.ts` — a discriminator is
-named and not validated — rather than designed. Board game does not make this
-worse; it should not be the third entry to pass it over in silence.
+**The gap this was predicted to widen, it does not.** This section expected a
+ground-level prop beside his legs to blind `hipGap` the way `payoff`'s vehicle
+does, making board game the third animation the gate cannot catch. Built and
+measured, it is caught: planting the defect the gate exists for — the whole
+peach body lifted two units off the legs, rendered and re-baked, not simulated
+— `hipGap` returns **8** where a correct pose returns 0. The prediction was
+made before the art existed and the art came out the other way, because the
+board sits _in_ the legs' own rows rather than bridging a lifted body to the
+ground.
+
+**The margin is one row, and that is worth carrying to the next ground prop.**
+Under the planted defect the contiguous band from the feet is exactly **24**,
+against `LEG_BAND = 24` and a strict `>`; at 25 the bound fires and the walk
+never runs. One more unit of prop height, or pieces one unit taller, and the
+original prediction becomes true.
+
+The wider point stands: on a correct pose the bound fires on all thirteen
+bakes, so the gate catches nothing anywhere until a defect exists, and the
+replacement is _sketched_ in `tools/bake-sprites.test.ts` — a discriminator
+named and not validated — rather than designed.
 
 **Fallback: cut the art, keep nothing.** With the trigger as a single map entry
 there is no wiring to strand, which is the trap the payoff screen hit — "a
