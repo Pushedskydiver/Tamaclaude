@@ -1333,9 +1333,59 @@ freeze.
 
 **Nothing can draw this yet.** `COMPACTING` is absent from `SESSION_STATES`,
 deliberately — `state.ts` records tier 1 as empty because `PreCompact`'s art
-does not exist — and `hook-settings.ts` does not register the hook. So this is
-art _plus_ a state, a rank, a `STATE_ANIMATIONS` entry and a hook registration.
-Cost that before drawing; it is the largest wiring bill of the three.
+does not exist — and `hook-settings.ts` does not register the hook, because
+"registering an event nothing consumes would be describing behaviour that does
+not exist". Each absence cites the other, so the two have to move together or
+the art lands unreachable. `board-game` showed the way through: the art can
+enter `SPRITE_NAMES` without entering `ANIMATIONS`, and the wiring follows.
+
+### Costed 25 Aug, before drawing
+
+**Exposure: 150 seconds, and that is the whole design input.** Measured from
+`compact_boundary` records across every transcript on this machine — 19
+compactions in 3 projects, each carrying `compactMetadata.durationMs`:
+
+|                 |                       |
+| --------------- | --------------------- |
+| shortest        | 99s                   |
+| **median**      | **150s**              |
+| longest         | 268s                  |
+| trigger         | **18 auto, 1 manual** |
+| context at fire | 933k–999k tokens      |
+
+This is the mirror image of `board-game`, and the two make the rule: **measure
+the window before choosing the loop.** That screen is replaced after 3.2
+seconds and had to become a two-second punctuation mark. This one holds for
+two and a half minutes — an eight second loop repeats about nineteen times, so
+it is the longest-exposure screen in the catalogue after `idle` and `asleep`,
+and it needs a beat that survives repetition rather than one event.
+
+It also fires **unbidden**: 18 of 19 were automatic, at 933k–999k tokens. The
+reading is not "he is tidying because you asked", it is "the context filled up
+and something is being put away". Nobody chose this screen, which is an
+argument for it being calm rather than busy.
+
+### Two things to verify before the wiring lands
+
+- **The matcher is not `*`.** Every event in `HOOK_EVENTS` registers with `'*'`.
+  Claude Code's hook docs give `PreCompact`'s matcher values as `manual` and
+  `auto` — the trigger type, not a tool pattern — so whether `'*'` matches at
+  all is unverified. If it does not, the hook registers, nothing arrives, and
+  the screen silently never fires. **One capture settles it**, the way the
+  `Agent` key was settled: listen on the daemon socket and force a compaction.
+- **`COMPACTING` needs an exit and there is no oneshot expiry to borrow.**
+  `PreCompact` fires _before_ compaction; nothing marks the end. `state.ts`
+  records that tier 1 expiry was deliberately not built because this state did
+  not exist. Either the next event clears it — which leaves the panel sweeping
+  forever if compaction is the last thing before a long idle — or it needs a
+  window like `DONE`'s. The measurement above sizes it: 268 seconds is the
+  longest observed, so a five minute bound is generous and still bounded.
+
+**One safety property, worth stating because it is not obvious.** `PreCompact`
+is one of the events where **exit code 2 blocks the operation** — a hook that
+fails the wrong way stops the user's compaction. `packages/hooks/src/index.ts`
+only ever `process.exit(0)`, on every path, so this system cannot do that. That
+is a property to preserve deliberately rather than a coincidence to rely on.
 
 `data-loop-seconds="8"`.
 
