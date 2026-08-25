@@ -108,28 +108,27 @@
         50%      { transform: scale(1.01, 0.99) translate(0, 0.25px); }
       }
 
-      /* Down, then following the piece left on the same beat.
+      /* Down and left, onto the board, and **static**.
 
-         On the wrapper rather than on `#eyes-color-group`, whose documented job
-         is the pack recolour hook — the corpus puts eye motion on a wrapper
-         (`idle`'s `#fx-eyes-look`, `confused`'s `#left-eye-cock`) and this file
-         already had the wrapper sitting empty. The rects keep `base.svg`'s
-         coordinates either way.
+         On its own wrapper — `idle`'s `#fx-eyes-look` is the convention — not
+         on `#eyes-color-group`, whose documented job is the pack recolour hook,
+         and not on `#eyes-blink`, where an `animation` added later would
+         silently replace it.
 
-         A static gaze is only legible against a rest pose the screen never
-         shows, so it barely read. Stepping it one unit on the piece's own frame
-         says he is following the thing that moved. §Collisions warns against
-         tracking a prop with a body part, but the hazard there is walking the
-         part into the prop: the board is three units below the eye line and
-         both eyes stay deep inside the torso at either position. */
-      #eyes-blink {
-        animation: look 2s infinite steps(1);
-      }
+         A draft stepped this one unit on the piece's beat, on the theory that a
+         static gaze is only legible against a rest pose the screen never shows.
+         Both halves of that were wrong. The eyes are 8x16 device pixels each
+         and moving them repaints 512 pixels against the piece's 128, so the
+         subject of the beat became his face at four to one — on a screen whose
+         whole premise is that he is *not* the one doing the work. And the rest
+         position had no x offset, so for eight of sixteen frames he was looking
+         straight ahead: half the loop of a watching animation, not watching.
 
-      @keyframes look {
-        0%   { transform: translate(0, 1px); }
-        50%  { transform: translate(-1px, 1px); }
-        100% { transform: translate(-1px, 1px); }
+         Static reads on a single frame without needing a comparison, because
+         the head is symmetric and the offset is not: the left eye sits 8 device
+         pixels from the torso edge against the right eye's 24. */
+      #fx-eyes-look {
+        transform: translate(-1px, 1px);
       }
 
       /* The piece that moves. One cell left at frame 8, back at the wrap:
@@ -167,9 +166,11 @@
       </g>
 
       <g id="eyes-blink">
-        <g id="eyes-color-group" fill="#000000">
-          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
-          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+        <g id="fx-eyes-look">
+          <g id="eyes-color-group" fill="#000000">
+            <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+            <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+          </g>
         </g>
       </g>
     </g>
