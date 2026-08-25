@@ -48,13 +48,16 @@
     87/96. Twelve seconds of loop bought two frames of
     content over four.
 
-    Two changes fix it, and the count is now **92 of 96**:
+    Two changes fix it, and the count is now **88 of 96**:
 
-      the breath is `3s alternate` — a six second cycle against a four second
-      stroke, so the combined period is the full twelve; four iterations in the
-      loop, which is even, so the wrap lands where the cycle started. It is
-      slower than the corpus rather than faster, which is the right direction
-      for a screen that fires unbidden.
+      the breath is `1.5s alternate` — a three second cycle against a four
+      second stroke, so the combined period is the full twelve; **eight**
+      iterations in the loop, which is even, so the wrap lands where the cycle
+      started. `3s` was tried first and rejected; the rule on `#breathe` below
+      has the measurements and is the authority for this bullet. Check any
+      arithmetic about `data-loop-seconds` against 1.5s and eight, not 3s and
+      four — an earlier draft of this bullet certified the even-iteration check
+      against the period the file does not use.
 
       the stroke is asymmetric — 1.6s out and 2.4s back, rather than a mirror
       about its own midpoint. A symmetric stroke is the push played backwards,
@@ -138,7 +141,7 @@
     full breath. The overrun is not hidden at all, which two drafts got wrong in
     opposite directions — the first claimed the torso covers it, the second put
     numbers on it that no definition reproduces. Counting dark pixels in the four
-    columns beside the torso's left edge, above the claw: **96 of 96 frames carry
+    columns beside the torso's left edge, above the claw *in that column*: **96 of 96 frames carry
     some, at most 8, spanning unit x 1.500 to 2.000**, across up to three columns
     rather than the one an earlier draft claimed. Composited on sand it reads
     as the handle continuing up behind the grip, which is what it is — but a
@@ -284,7 +287,13 @@
          work would have been breathing slower than the sleeping one. Measured on
          the torso's top row: at 1.5s this breathes at **3.33 device pixels a
          second against `asleep`'s 2.67**, with a **5 pixel excursion against its
-         8**. Faster and shallower than sleep, which is what exertion looks like.
+         8**. Faster than sleep, which is what exertion looks like.
+
+         The depth comparison needs a caveat: `asleep`'s 8 pixels is its *sigh*,
+         a second track at frames 34-50, and its resting breath is 4 pixels on a
+         four second cycle. Against that, this is a pixel **deeper**, not
+         shallower — a one-track breath set against a two-track one. The rate
+         comparison is like for like and is the one the decision rests on.
          Four frames of distinctness are worth less than getting that the right
          way round.
 

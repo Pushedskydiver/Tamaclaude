@@ -1507,7 +1507,7 @@ measured the window, stated the implication and changed nothing.
   carries the reading, so it is the `overheated` fan idiom rather than the
   `permission-sign` hold. **Amended 25 Aug: the claw rotates and does not
   extend**, because the broom supplies the length instead; see §As built. Breath
-  is `3s`, not the corpus `2s` — at `2s alternate` its cycle is the stroke
+  is `1.5s`, not the corpus `2s` — at `2s alternate` its cycle is the stroke
   exactly and the loop rendered 19 distinct frames of 96.
 - **Eyes.** Following the sweep. **Amended 25 Aug: static.** Built both ways and
   the tracking version reads worse; §As built has the measurements and the
@@ -1593,14 +1593,23 @@ out-and-back put peak head speed at 1.24 device pixels per frame, which does not
 read as travel at true size. Three four-second strokes give 1.25 mean, and 3 on
 the push against 2 on the recover.
 
-**5. The stroke is asymmetric and the breath is `3s`, because the loop was
+**5. The stroke is asymmetric and the breath is `1.5s`, because the loop was
 buying nothing.** This is the finding that would have shipped: at `2s alternate`
 the breath's full cycle is four seconds — the stroke exactly, and in phase — so
 frames 0-31 were byte-identical to 32-63 and the file rendered **19 distinct
-images of 96**, the lowest in the corpus against `asleep` 96/96 and `idle`
-123/128. Twelve seconds of loop bought two frames of content over four. A `3s`
-breath (six second cycle, four even iterations) plus a stroke that pushes in
-1.6s and recovers in 2.4s takes it to **92 of 96**.
+images of 96** — the lowest _ratio_ in the corpus, though not the lowest count,
+since `permission-sign` holds 16 of 64 as a deliberately still screen. Against
+the screens that also move continuously: `asleep` 96/96, `idle` 123/128. Twelve
+seconds of loop bought two frames of content over four.
+
+A `1.5s` breath (three second cycle, eight even iterations) plus a stroke that
+pushes in 1.6s and recovers in 2.4s takes it to **88 of 96**. `3s` was tried
+first and scores 92, but it made this the slowest-breathing screen in the corpus
+— slower than `asleep`, which a crab doing manual work should not be. Measured
+across all fourteen animations by torso-top travel, 1.5s puts sweeping seventh
+at 3.33 px/s; 3s would have put it thirteenth. Four frames of distinctness lose
+to that, and all eight duplicate frames are a whole stroke period apart, where no
+viewer can pair them.
 
 The general rule: **loop length only buys variety if two tracks have different
 periods.** Length against a single period is the same picture for longer. It is
@@ -1729,7 +1738,11 @@ phasing, which forces the delays to be multiples of the step.
    A mirror-symmetric main track costs the other half again — the return stroke
    is the push played backwards — so an asymmetric one (`sweeping` pushes in
    1.6s and recovers in 2.4s) is where the rest comes from. Both fixed took it to
-   92 of 96.
+   88 of 96.
+
+   Choosing the second period is not free: pick it against the corpus, not just
+   against the arithmetic. `sweeping` first took `3s`, which decouples the
+   periods and scores 92 — and made a working crab breathe slower than `asleep`.
 
    Answer it with a count, not an argument:
    `md5 -q out/<name>/frame_*.png | sort -u | wc -l`.
