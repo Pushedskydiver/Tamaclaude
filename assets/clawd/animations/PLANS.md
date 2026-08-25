@@ -1500,6 +1500,51 @@ measured the window, stated the implication and changed nothing.
 **Not wanted:** dust clouds, which are the small-pale-things failure again.
 A stage that visibly empties, since the loop repeats and it would refill.
 
+### As built, 25 Aug — three departures from the brief above
+
+The art landed with three things different from the sketch, each measured
+rather than argued.
+
+**The broom does not hang off the shoulder.** §Body mechanics says "one claw
+rotated and extended at the shoulder", and the first draft read that as the
+broom sharing the arm's pivot. A prop on a fixed radius from the shoulder
+travels an _arc_, so it lifts as it extends: the head was buried four device
+pixels in the sand for 57 of 96 frames and up to five above it for 35 more, an
+unbroken airborne run of 4.38 seconds. A compensating slide along the handle
+fixes the tip and leaves the corners, because a tilted bristle block dips.
+
+So the broom is authored **in floor coordinates and pivoted at its own head**:
+the head translates along x only, the handle leans about the head's centre, and
+the arm rotates to exactly `tilt - 90deg` so it lies along the handle. Contact
+became exact on all 96 frames — the head's lowest row is the ground line on
+every one — and the grip cannot open, because the two angles are one number.
+
+**The claw rotates but does not extend, and checklist §5 needs the nuance.**
+That item asks for rotation _and_ extension because "a bare rotation cannot
+clear the silhouette". Measured here, it clears it comfortably: the base arm
+already sits two units left of the torso, so rotating it puts the claw **11
+device pixels clear at the near end of the stroke and 17 at the far end** —
+counted on the baked frames, not from the angles, because the trigonometry
+alone gives 16 at the far end and misses the half pixel the breath adds.
+The reach the item is really asking for is supplied by the broom, which is what
+choosing a prop that travels buys. The item's instinct stands — measure the
+protrusion — but "extending" is a means, not the property.
+
+**The eyes do not follow.** §Eyes asks for a gaze that tracks the sweep, and
+the reason it cannot is `#fx-eyes-look` and the arm sharing the same corner:
+the left eye already sits at unit x 3 to 4, and at the near end of the stroke
+the arm's near corner reaches x 2.976. One more unit of leftward tracking puts
+the eye inside the arm. §Props need contact's other clause — do not walk a body
+part into a prop to make it track — decides it.
+
+**And the loop is three strokes, not one.** Twelve seconds spent on a single
+out-and-back put peak head speed at 1.24 device pixels per frame, which does not
+read as travel at true size. Three four-second strokes take it to 1.25 mean and
+2 peak, measured on the bake. The calm the two-minute window asks for is bought
+by the blink and the easing instead — which is _sampled_, because head position
+and both angles are related by an arctangent and easing them independently pulls
+them apart.
+
 **Fallback:** cut it. It has the largest wiring cost and the least visible
 trigger — and it is now measured rather than asserted: 0.62 compactions a day,
 0.52% duty, the rarest screen with a measured trigger. **Decide by Sun 6 Sep**,
