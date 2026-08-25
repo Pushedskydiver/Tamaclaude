@@ -21,10 +21,10 @@
  * dependency and no build step.
  *
  * Whole *panels* are still drawn elsewhere on purpose — `bake-splash.ts` owns
- * the firmware's splash, `colour-bars.ts` is a test pattern — and two review
- * artefacts still paint a flat backdrop behind transparent frames.
- * `tools/panel-mock.ts`'s header lists all four; `BUILD_PLAN.md` carries the
- * two that are open rather than deliberate.
+ * the firmware's splash, `colour-bars.ts` is a test pattern — and the harness
+ * paints a flat backdrop behind transparent frames, which is also deliberate:
+ * it draws no bands and exists to scrub motion. `contact-sheet.ts` was the
+ * fourth and stopped on 25 Aug.
  *
  * It also deletes arithmetic rather than adding it. Slot placement and the
  * landscape safe-area crop are `paintStage`'s job, and having them here as

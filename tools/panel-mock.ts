@@ -11,8 +11,10 @@
  * `tools/blit.ts` sends to the panel, and the page only blits the RGBA it is
  * handed. **No tool composes a `Scene` outside `render()`**, which is most of
  * `BUILD_PLAN.md`'s Stage 2 exit. Not all: `bake-splash.ts` and
- * `colour-bars.ts` draw whole panels deliberately, and `contact-sheet.ts` and
- * the harness still paint a flat backdrop behind transparent frames.
+ * `colour-bars.ts` draw whole panels deliberately, and the harness paints a
+ * flat backdrop — deliberately too, since it draws no bands and exists to
+ * scrub motion. `contact-sheet.ts` was the fourth until 25 Aug and now
+ * composes through `render()` like this one.
  *
  *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
  *                             [--layout hero|twoUp]
@@ -259,10 +261,10 @@ async function compose(
 /**
  * Flags, via `node:util` rather than by hand.
  *
- * A hand-rolled `indexOf`/`slice` version shipped first and broke on three
- * realistic inputs: `--message=text` fell through to the directory list, a
- * repeated flag left the stray value there too, and both then reached
- * `loadFrames` and died on an ENOENT naming a path nobody typed. `parseArgs`
+ * A hand-rolled `indexOf`/`slice` version shipped first and broke on two
+ * realistic inputs: `--message=text` fell through to the directory list, and a
+ * repeated flag left its stray value there too. Both then reached `loadFrames`
+ * and died on an ENOENT naming a path nobody typed. `parseArgs`
  * is a builtin, so this costs no dependency.
  */
 const { values, positionals } = parseArgs({

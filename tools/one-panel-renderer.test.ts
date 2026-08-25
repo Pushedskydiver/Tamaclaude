@@ -16,10 +16,11 @@ const TOOLS = resolve(import.meta.dirname);
  * forgotten, which is why the second test below checks the entries still name
  * files that exist — and why this one was removed rather than left harmless.
  *
- * An allowlist rather than a ban, because two of these genuinely have to draw
- * a panel and the third has to put *something* behind a transparent frame. The
- * point is that adding a fourth is a deliberate edit to this list rather than
- * a thing nobody notices.
+ * An allowlist rather than a ban: `harness.ts` has to put *something* behind a
+ * transparent frame, and the other two only name colours rather than drawing
+ * with them. The point is that adding an entry is a deliberate edit rather
+ * than a thing nobody notices — and removing one when its reason expires is
+ * the same discipline, which is why `contact-sheet.ts` is not here any more.
  */
 const ALLOWED = new Map([
   [

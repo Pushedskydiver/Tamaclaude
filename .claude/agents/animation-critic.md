@@ -30,21 +30,31 @@ that wrote them.
    node tools/svg2frames.ts assets/clawd/animations/<name>.svg /tmp/critic-<name>
    node tools/measure-compression.ts /tmp/critic-<name>
    ```
-4. **Look at the frames.** Build a contact sheet of ~10 frames spread across
-   the loop into a single PNG and `Read` it — `Read` renders images. Sampling
-   frames without viewing them is not a review.
-   Then **look at it on the ground it will stand on**:
+4. **Look at the frames.**
+
+   ```
+   node tools/contact-sheet.ts /tmp/critic-<name>
+   ```
+
+   and `Read` the sheet it names — `Read` renders images. Ten frames spread
+   across the loop, at true size and enlarged, each composed through `render()`
+   and cropped to the stage, so they sit on the ground they will stand on.
+   Viewing frames is the review; sampling them without looking is not.
+
+   Until 25 Aug this step said "build a contact sheet" and every critic wrote
+   its own, because the tool rendered _every_ frame — 128 for `idle`, some
+   21,500 pixels wide. Those hand-rolled sheets composited over a flat colour
+   the device never shows, so props were judged against the wrong ground.
+
+   Then **check it against the other skies**:
 
    ```
    node tools/panel-mock.ts /tmp/critic-<name>
    ```
 
-   and `Read` `out/panel-mock.png`. The contact sheet composites frames over a
-   flat backdrop; that is right for motion and loop seam, and wrong for whether
-   a prop reads — the device draws the environment edge to edge, so something
-   legible against near-black can vanish against sand or a dusk sky.
-   `panel-mock` composes through `render()` and shows all four skies. It shows
-   frame 0 only, so it answers "does this read", not "does this move".
+   and `Read` `out/panel-mock.png` — the whole panel, all four schemes. A pale
+   prop disappears against `day`'s sand and a dark one against `night`. It
+   shows frame 0 only, so it answers "does this read", not "does this move".
 
 5. Compare against the upstream reference for the same scene in
    the local upstream clawd-tank checkout if one exists (see `CREDITS.md`;
