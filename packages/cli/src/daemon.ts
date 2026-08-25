@@ -220,9 +220,13 @@ const TONE: Readonly<Record<SessionState, SessionChip['tone']>> = {
  * the opposite of what a strip is for.
  */
 function chipFor(session: Session, now: number): SessionChip {
-  // Everything is local. `origin` exists for the remote transport in
-  // `BUILD_PLAN.md` §Stage 3, which calls it "explicitly cuttable"; a session
-  // record carries no origin until it ships.
+  // Always local, and now permanently so: the remote transport `origin` was
+  // built for was cut on 25 Aug (`BUILD_PLAN.md` §Stage 3). Nothing on this
+  // device can produce a remote session, so `paintStrip`'s hollow-chip branch
+  // is unreachable in production — kept because it is built and tested and
+  // the panel can show the distinction the day something produces one, not
+  // because anything is coming. A `Session` still carries no origin of its
+  // own; this is the only place one is decided.
   return { tone: TONE[effectiveState(session, now)], origin: 'local' };
 }
 

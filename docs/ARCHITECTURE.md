@@ -191,12 +191,12 @@ and does not reason about sessions.
 
 ## Transports
 
-| Transport | Status            | Notes                                                                                                                                                                       |
-| --------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| USB-CDC   | Primary           | One cable = power + data. No pairing, no Wi-Fi provisioning. Truly plug-and-play.                                                                                           |
-| Canvas    | Development       | Same renderer, browser sink. No hardware required.                                                                                                                          |
-| TCP       | Planned, cuttable | Lets a remote host (the recipient's Raspberry Pi Claude Code agent) push session events. Same protocol, different socket — cheap if designed in now, expensive to retrofit. |
-| BLE       | Not planned       | Upstream uses it. USB is simpler and we are tethered anyway.                                                                                                                |
+| Transport | Status      | Notes                                                                                                                                                                                                                                                             |
+| --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| USB-CDC   | Primary     | One cable = power + data. No pairing, no Wi-Fi provisioning. Truly plug-and-play.                                                                                                                                                                                 |
+| Canvas    | Development | Same renderer, browser sink. No hardware required.                                                                                                                                                                                                                |
+| TCP       | Cut, 25 Aug | Would have let a remote host push session events. Cut against the 23 Sep date under the condition the plan line carried from the start. The design half is done and keeps: same protocol, different socket, so this is a transport to add rather than a retrofit. |
+| BLE       | Not planned | Upstream uses it. USB is simpler and we are tethered anyway.                                                                                                                                                                                                      |
 
 The device sleeps when the Mac sleeps. Accepted as correct behaviour, not a
 defect.

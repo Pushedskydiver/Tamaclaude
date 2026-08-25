@@ -31,6 +31,14 @@ type SessionTone = 'attention' | 'active' | 'resting';
  * Where a session is running. Spec §3 makes this a host name, but a 15px chip
  * has nowhere to put one — local-versus-remote is all that survives at this
  * size, and all the strip needs to say. Not exported, for the reason above.
+ *
+ * **`remote` has no producer, deliberately.** It was built for the TCP
+ * transport in `BUILD_PLAN.md` §Stage 3, cut on 25 Aug, and `chipFor` in
+ * `packages/cli` hardcodes `local`. `paintStrip`'s hollow-chip branch is kept
+ * rather than deleted because it is built, tested and one line, and because
+ * the distinction is the sort a strip exists to draw — not because a producer
+ * is planned. If one never arrives it is dead weight worth deleting, and that
+ * is a decision for after 23 Sep rather than before it.
  */
 type SessionOrigin = 'local' | 'remote';
 

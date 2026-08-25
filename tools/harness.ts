@@ -67,7 +67,7 @@
  *
  * It is driven by rendered frames, not by Claude Code. Injecting synthetic
  * events is a separate unchecked Stage 1 line; Stage 3 has landed for the
- * daemon and the panel, with remote transport still open.
+ * daemon and the panel; remote transport was cut on 25 Aug.
  */
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, resolve } from 'node:path';

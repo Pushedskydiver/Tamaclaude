@@ -307,9 +307,23 @@ the one an art review actually walks into.
       `overloaded` draw `overheated`, the other eight documented values keep
       `dizzy`. The field is kept because it arrives once and cannot be
       recovered
-- [ ] **Remote transport** — TCP + shared secret, so the recipient's Raspberry Pi agent appears on the
-      display. _Last item in the stage and explicitly cuttable_ — design the protocol for it
-      from day one (cheap), but ship it only if Stage 4 is on schedule.
+- [~] **Remote transport — CUT, 25 Aug.** TCP + shared secret, so a remote
+  Claude Code agent would appear on the display. The line always carried
+  its own condition — "explicitly cuttable, ship it only if Stage 4 is on
+  schedule" — and Stage 4 is not: its generator is unbuilt with the art
+  catalogue hand-drawn instead, and Stage 5 opens on 6 Sep with eleven
+  unchecked items. Cutting is the condition firing, not a new decision.
+  Taking it now rather than at the end of the stage is the point: an
+  explicitly cuttable item that is never actually cut just absorbs the
+  week it was supposed to protect.
+  **What the cut does not undo.** The protocol was designed for it from
+  day one, which was the cheap half and stays paid: the daemon speaks a
+  newline-delimited event stream over a socket, so a second socket is a
+  transport rather than a redesign. `SessionOrigin` and the hollow chip
+  `paintStrip` draws for a remote session are built and tested, and are
+  kept deliberately — the panel can already show the distinction the day
+  something produces one. Nothing on the device can produce one now, and
+  that is the honest state rather than an oversight.
 - [x] **The pack comes from a configured location.** `TAMACLAUDE_PACK`, else
       `~/.tamaclaude/pack/`, else refuse to start — `packages/cli/src/pack.ts`.
       The repo-relative `readFileSync` is gone, so the binary no longer depends
