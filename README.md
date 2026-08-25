@@ -57,8 +57,17 @@ start rather than falling back to the example, because a fallback would turn
 
 ```bash
 pnpm install
+pnpm exec playwright install --only-shell chromium
 pnpm build && pnpm test && pnpm lint && pnpm typecheck && pnpm format:check && pnpm knip
 ```
+
+The browser is not optional and `pnpm install` does not fetch it: pnpm 10 does
+not run a dependency's install scripts, so Playwright never downloads one.
+`tools/svg2frames.ts` rasterises every animation frame in headless Chromium and
+`tools/frame-palette.test.ts` drives it end to end, so **`pnpm test` fails
+without this line** — with an error naming `svg2frames.ts` and never mentioning
+Playwright. CI has always run it; the documented steps here did not, which is
+the sort of gap only a clean machine finds.
 
 `pnpm dev` builds the panel harness and tells you where to open it — an
 interactive page that animates at 8fps and switches orientation, layout and

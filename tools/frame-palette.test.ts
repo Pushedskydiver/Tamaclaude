@@ -46,13 +46,30 @@ beforeAll(async () => {
   const dir = mkdtempSync(join(tmpdir(), 'snap-'));
   const svg = join(dir, 'fixture.svg');
   writeFileSync(svg, FIXTURE);
-  execFileSync(
-    process.execPath,
-    [resolve(ROOT, 'tools/svg2frames.ts'), svg, dir],
-    {
-      stdio: 'ignore',
-    },
-  );
+  try {
+    execFileSync(
+      process.execPath,
+      [resolve(ROOT, 'tools/svg2frames.ts'), svg, dir],
+      { stdio: 'pipe' },
+    );
+  } catch (failure) {
+    // Say what is actually wrong. `svg2frames` needs headless Chromium, and
+    // `pnpm install` does not fetch one — pnpm 10 does not run a dependency's
+    // install scripts, so Playwright never downloads a browser. Without this
+    // the suite failed with `Command failed: node .../svg2frames.ts` and no
+    // mention of Playwright anywhere, which is a bad hour on a machine that
+    // has never built this repo. Found by running the clean-checkout dry run
+    // early, which `BUILD_PLAN.md` Stage 6 asks for in bold.
+    const detail = String((failure as { stderr?: unknown }).stderr ?? failure);
+    const missing = /executable doesn't exist|Please run.*playwright install/i;
+    throw new Error(
+      missing.test(detail)
+        ? 'headless Chromium is missing — run `pnpm exec playwright install ' +
+            '--only-shell chromium` (README §Development)'
+        : `svg2frames failed while building the fixture:\n${detail}`,
+      { cause: failure },
+    );
+  }
   const browser = await chromium.launch();
   const page = await browser.newPage();
   // `readFileSync`, not `base64` the command: its flags differ between macOS
