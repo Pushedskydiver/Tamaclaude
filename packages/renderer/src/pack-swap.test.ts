@@ -117,9 +117,11 @@ const CHIP = { tone: 'active', origin: 'local' } as const;
  * at all. `packages/cli` maps `DONE`, `IDLE` and `ASLEEP` to `resting`, which
  * are the states a desk panel sits in most of the time.
  *
- * These are measurements, not rules. `BUILD_PLAN.md` Stage 5 has an item for
- * making the environment a pack field; if it lands, these fail, and the numbers
- * here are what to compare the new ones against.
+ * These are measurements, not rules. They are also the current state rather
+ * than a baseline waiting to move: `BUILD_PLAN.md` had a Stage 5 item for
+ * making the environment a pack field, and it was cut on 25 Aug on the
+ * strength of the `stage` figure below. If the deferred table's re-entry
+ * condition is ever met, these are the numbers to compare against.
  */
 describe('what a pack swap changes on the shipping panel', () => {
   it('changes nothing at all when no session is on the strip', () => {
@@ -129,9 +131,9 @@ describe('what a pack swap changes on the shipping panel', () => {
   it('moves half the panel under stage extent, which is the control', () => {
     // Every `toBe(0)` above is satisfied by a renderer that draws nothing, so
     // one positive case has to pin the difference to the environment rather
-    // than to the harness. It is also the number the plan's extent-as-a-pack-
-    // field item turns on: choosing `stage` is what would show a pack its own
-    // background and ink again.
+    // than to the harness. It is also the number the cut extent-as-a-pack-field
+    // item turned on: choosing `stage` is what would show a pack its own
+    // background and ink again, and this is how much of the panel that is.
     const staged = (pack: PackManifest): Scene => ({
       ...shipping(pack, []),
       environment: { time: 'day', extent: 'stage', contact: true },

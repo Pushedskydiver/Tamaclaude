@@ -18,6 +18,7 @@
  *
  *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
  *                             [--layout hero|twoUp] [--pack packs/other]
+ *                             [--extent panel|stage]
  *
  * **Landscape, and hero unless `--layout twoUp`.** The daemon hardcodes both
  * (`packages/cli/src/daemon.ts`), and portrait is refused by a
@@ -42,7 +43,11 @@
  * not "does this move" — `tools/contact-sheet.ts` is still the artefact for
  * motion and the loop seam.
  */
-import type { SessionChip, StageLayout } from '@tamaclaude/renderer';
+import type {
+  EnvironmentExtent,
+  SessionChip,
+  StageLayout,
+} from '@tamaclaude/renderer';
 
 import { basename, resolve } from 'node:path';
 import process from 'node:process';
@@ -50,7 +55,7 @@ import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
 
-import { TIMES_OF_DAY } from '@tamaclaude/renderer';
+import { ENVIRONMENT_EXTENTS, TIMES_OF_DAY } from '@tamaclaude/renderer';
 
 import { composePanels, loadPack } from './blit-scene.ts';
 import { loadFrames } from './png-rgb565.ts';
@@ -125,8 +130,9 @@ function panelsFor(options: {
   readonly pack: Awaited<ReturnType<typeof loadPack>>;
   readonly message: string | undefined;
   readonly layout: StageLayout;
+  readonly extent: EnvironmentExtent;
 }): readonly Panel[] {
-  const { name, raster, pack, message, layout } = options;
+  const { name, raster, pack, message, layout, extent } = options;
   return SKIES.map((sky) => {
     const [composed] = composePanels([raster], {
       orientation: 'landscape',
@@ -136,6 +142,7 @@ function panelsFor(options: {
       sessions: CHIPS,
       message,
       layout,
+      extent,
     });
     if (composed === undefined) {
       throw new Error(`composePanels returned nothing for ${name}`);
@@ -143,7 +150,10 @@ function panelsFor(options: {
     return {
       // Shape off the frame itself rather than off `panelSize` again — the
       // pixels and their dimensions should not come from two places.
-      label: `${name} — ${sky}${layout === 'hero' ? '' : ` — ${layout}`}`,
+      label:
+        `${name} — ${sky}` +
+        `${layout === 'hero' ? '' : ` — ${layout}`}` +
+        `${extent === 'panel' ? '' : ` — ${extent}`}`,
       width: composed.width,
       height: composed.pixels.length / composed.width,
       rgba: toRgba(composed.pixels),
@@ -229,6 +239,7 @@ async function compose(
     readonly message: string | undefined;
     readonly layout: StageLayout;
     readonly pack: string;
+    readonly extent: EnvironmentExtent;
   },
 ) {
   const pack = await loadPack(resolve(options.pack));
@@ -250,6 +261,7 @@ async function compose(
           pack,
           message: options.message,
           layout: options.layout,
+          extent: options.extent,
         }),
       );
     }
@@ -284,8 +296,25 @@ const { values, positionals } = parseArgs({
     // 25 Aug, so no artefact could show a pack swap at all. `blit.ts` and
     // `contact-sheet.ts` still do, so nothing yet puts a pack on glass.
     pack: { type: 'string', default: 'packs/example' },
+    // How far the scenery reaches. `panel` ships; `stage` is the side the
+    // 22 Aug wiring rejected, and until 25 Aug nothing in `tools/` could
+    // render it — `composePanels` took the option and all three callers let it
+    // default. A rejected option nobody can draw is a decision that cannot be
+    // re-checked, and `BUILD_PLAN.md` cut the pack field on the strength of
+    // that rejection.
+    extent: { type: 'string', default: 'panel' },
   },
 });
+
+function isExtent(value: string): value is EnvironmentExtent {
+  return (ENVIRONMENT_EXTENTS as readonly string[]).includes(value);
+}
+if (!isExtent(values.extent)) {
+  console.error(
+    `--extent takes ${ENVIRONMENT_EXTENTS.join(' or ')}, not '${values.extent}'`,
+  );
+  process.exit(1);
+}
 
 if (values.layout !== 'hero' && values.layout !== 'twoUp') {
   console.error(`--layout takes 'hero' or 'twoUp', not '${values.layout}'`);
@@ -306,7 +335,8 @@ try {
 if (positionals.length === 0) {
   console.error(
     'usage: node tools/panel-mock.ts <frameDir> [frameDir2] ' +
-      '[--message <text>] [--layout hero|twoUp] [--pack <dir>]',
+      '[--message <text>] [--layout hero|twoUp] [--pack <dir>] ' +
+      '[--extent panel|stage]',
   );
   process.exit(1);
 }
@@ -314,5 +344,6 @@ await compose(positionals, resolve('out/panel-mock.png'), {
   message: values.message,
   layout: values.layout,
   pack: values.pack,
+  extent: values.extent,
 });
 console.log('panel mock -> out/panel-mock.png');

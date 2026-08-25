@@ -3,8 +3,10 @@
  *
  * A renderer layer drawn behind the sprite rather than scenery baked into each
  * animation SVG — `docs/ANIMATION.md` §Clawd lives somewhere sets out why, and
- * the short version is that one definition cannot drift, a pack can swap it,
- * and the animation contract stays "the base geometry plus transforms".
+ * the short version is that one definition cannot drift, ambient variation
+ * like the time of day is trivial, and the animation contract stays "the base
+ * geometry plus transforms". No pack changes anything here: the extent is a
+ * constant in `packages/cli` and the pack field for it was cut on 25 Aug.
  *
  * He is a crab. Putting him where a crab lives earns the mascot rather than
  * ignoring it, and it supplies the one thing every animation already assumes:

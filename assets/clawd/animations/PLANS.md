@@ -1003,8 +1003,10 @@ existing props look wrong. `bouldering` is the one to check — its wall should
 read as a sea cliff above the pool, which is coherent, rather than as a gym
 wall that has wandered onto a beach.
 
-**Pack-swappable.** The environment is a personalisation lever, so this is the
-default rather than the only one.
+**Not pack-swappable.** It was planned as a personalisation lever — one pack
+field for how far the scenery reaches, schemes later — and that was cut on
+25 Aug; see `BUILD_PLAN.md`'s deferred table. The rock pool is the only one,
+and `packages/cli` fixes its extent at `panel`.
 
 ---
 
