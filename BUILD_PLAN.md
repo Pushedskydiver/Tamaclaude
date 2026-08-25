@@ -421,6 +421,13 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
 
 The long pole. Runs in parallel with Stage 3 from week two.
 
+**Closed 25 Aug, nineteen days early**, with the generator cut and every other
+item done: fourteen animations authored through §The authoring loop, baked, and
+wired except `sweeping`, which waits on a `COMPACTING` state rather than on art.
+Recorded because the opposite was asserted on the same day — a cut elsewhere in
+this plan was justified on "Stage 4 is not on schedule", which was false when it
+was written and is the reason that entry now carries its real reasons instead.
+
 - [x] **The environment: a rock pool, through the day.** Built, and wired into
       `sceneFor` on 22 Aug — it was reachable from nothing before that, which
       is how four animations shipped with holes for eyes that only a
@@ -453,13 +460,21 @@ than partially. Eight good screens beat nine plus four rough ones.
 
 - [x] `assets/clawd/base.svg` — canonical geometry, stable element IDs (upstream's file, see `CREDITS.md`)
 - [x] `PLANS.md` — prose spec per animation (action / body mechanics / eyes / effects)
-- [ ] TS generator: base SVG + example + plan → LLM → animated SVG, under the
-      generation contract in `docs/ANIMATION.md` §The generation contract —
-      motion is CSS by ID, props and effects may add elements, and a pose
-      variant may be drawn where no transform reaches the pose. This line
-      previously said "may only add transforms and keyframes to existing IDs",
-      which is the ban that section retired; `CLAUDE.md` carried the same
-      wording and was corrected on 22 Aug, and this was the third copy
+- [~] ~~TS generator: base SVG + example + plan → LLM → animated SVG~~ —
+  **cut, 25 Aug.** It would have automated `docs/ANIMATION.md` §The
+  authoring loop, which is a documented agent procedure. That loop has
+  already produced the entire catalogue — fourteen animations, all of them
+  CSS against `base.svg` under §The generation contract — so the tool would
+  wrap a process that demonstrably works when invoked by hand.
+  **This is not the plan's condition firing; nothing conditioned it.** It is
+  a judgement that a tool automating a working loop is worth less than the
+  days it costs, with 29 left. Nothing depends on it: the only reference in
+  the tree was this line. The remaining art in Stage 5 does not want it
+  either — a pet sprite from photographs and a pixel scene are drawings, and
+  the logo is a `sharp` pipeline. An easter-egg idle, if one is ever added,
+  goes through the same authoring loop the other fourteen did.
+  What it would have bought is repeatability across a _series_ of
+  animations, which matters when there are many left. There are none.
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
