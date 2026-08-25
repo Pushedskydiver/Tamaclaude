@@ -147,12 +147,19 @@ The whole product, minus hardware.
      follows its own numbered steps. Nothing gates this either — no test fails
      if a tool starts painting a panel colour again, which is how
      `contact-sheet.ts` held one through three review passes.
-  2. **Hero versus two-up is open; the band heights that ship are not.**
-     `composePanels` hardcodes `layout: 'hero'`, so no tool composes a two-up
-     _panel_ through `render()` — the harness still scrubs two-up sprites at
-     true size against real slots, with empty bands. `daemon.ts`'s
-     `layout: 'hero'` is a bare literal with no rationale anywhere, unlike the
-     `landscape` beside it, which carries a dated record.
+  2. **Hero versus two-up is open, and is now answerable by looking.**
+     `composePanels` hardcoded `layout: 'hero'` until 25 Aug, so nothing could
+     compose a two-up _panel_ through `render()` and the comparison could not
+     be made at all. `panel-mock --layout twoUp` is that picture — real
+     environment, real bands, all four skies, true size and enlarged. Two-up
+     draws at scale 4, so it needs frames baked there
+     (`node tools/svg2frames.ts <svg> <outDir> 4`), which `composePanels` now
+     says in its error rather than failing obscurely.
+     The decision itself is still open. `daemon.ts`'s `layout: 'hero'` is a
+     bare literal with no rationale anywhere, unlike the `landscape` beside it,
+     which carries a dated record; the spec calls two-up "a genuine trade
+     rather than a settled rejection". Either that literal gets a reason or
+     two-up gets cut, and there is now something to decide from.
      The band heights are in better shape than an earlier version of this entry
      claimed. Landscape derives its message band as `height - (status + strip)`
      = 116px and consumes only `BAND_HEIGHTS.status` and `.strip`;
