@@ -439,12 +439,12 @@ The long pole. Runs in parallel with Stage 3 from week two.
 
 **Every top-level box is settled as of 25 Aug** — six `[x]` and the cut
 generator at `[~]`, nineteen days before the stage ends. **That is not the same
-as closed**, and a first version of this paragraph said closed. Item 8 was open
-then — `sweeping` baked with no `COMPACTING` state to draw it — and was wired
-the same evening, so **item 13 is the one that remains**, unbuilt. A stage
-cannot close over a checkbox whose own children say they are open, and this one
-has no `**Exit:**` line to close against instead, so that single sub-item is
-what stands between the box count and a closed stage.
+as closed**, and a first version of this paragraph said closed while two
+sub-items were open. Both are settled now: item 8's wiring landed the same
+evening its art did, and item 13 is cut under the Tier C licence `spec.md`
+already gave it. **So the stage is closed — 25 Aug, nineteen days early.** It
+has no `**Exit:**` line to close against, so what that means precisely is that
+every top-level box is settled and no numbered sub-item is open.
 
 Recorded because the opposite was asserted the same day: the remote-transport
 cut was justified on "Stage 4 is not on schedule", which was false when written.
@@ -499,11 +499,11 @@ than partially. Eight good screens beat nine plus four rough ones.
   existing animated SVGs, and the spec calls it Tier A art rather than set
   dressing. That and the easter-egg idle are animation work.
   What it would have bought is repeatability across a _series_, which matters
-  when many are left. Three are: the franchise-flavoured easter-egg idle
-  (Stage 5, unchecked), item 13's road bike, and the spec's meditation idle
-  variant. Three is not a series and each is one pass of the loop — but a first
-  version of this line said "there are none" and called the easter-egg idle
-  hypothetical when it is a scheduled box.
+  when many are left. **Two are**, item 13's road bike having been cut since:
+  the franchise-flavoured easter-egg idle (Stage 5, unchecked) and the spec's
+  meditation idle variant. Two is not a series and each is one pass of the loop
+  — but a first version of this line said "there are none" and called the
+  easter-egg idle hypothetical when it is a scheduled box.
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
@@ -622,14 +622,23 @@ than partially. Eight good screens beat nine plus four rough ones.
       rarer than. What can be said is that this is the only entry whose trigger
       was counted in sessions at all, and one in a thousand is rare by any
       reading. Salience rather than frequency is its case, as with item 7
-  13. road bike (long runs) — **Tier C, not B.** `spec.md` puts it with
-      `beacon` under "stretch — cut without regret". A plan written on 24 Aug
-      called it Tier B and was corrected: it is the most expensive item in the
-      catalogue (the first prop that carries him, and there is no seated pose
-      in the corpus), and it has no trigger — nothing measures duration. If it
-      is ever attempted, the cheap wiring is an elapsed field on `Refinement`
-      in `animation.ts`, branching inside the `WORKING` arm, rather than a new
-      state in `effectiveState`.
+  13. ~~road bike (long runs)~~ — **cut, 25 Aug.** `spec.md` §5 files it under
+      "Tier C — stretch (2): road bike, beacon. Cut without regret", and this
+      is that cut being taken rather than a new judgement.
+      It is the most expensive item in the catalogue: the first prop that would
+      carry Clawd, and no animation in the corpus has a seated pose — all
+      fourteen stand, climb or lie. And it has no trigger. `spec.md` specifies
+      one ("any tool, same session >90s") but nothing implements it:
+      `Refinement` in `animation.ts` is `{ tool?, errorType? }`, so no elapsed
+      time reaches the mapping. So the work is a pose the corpus does not have,
+      a prop nothing else needs, and a measurement that does not exist.
+      Nothing in the tree references it — no SVG, no `SPRITE_NAMES` entry, no
+      `ANIMATIONS` entry — so unlike `sweeping`'s wiring this cut reverts
+      nothing and costs nothing. If it is ever wanted, the cheap wiring is an
+      elapsed field on `Refinement`, branching inside the `WORKING` arm, rather
+      than a new state in `effectiveState`.
+      `beacon`, the other Tier C item, was never a plan item of its own and
+      needs no separate cut.
 
 **`Stop` does not mean "the turn finished".** Confirmed against live docs in
 Stage 3: it fires on every response. So the payoff screen above cannot be

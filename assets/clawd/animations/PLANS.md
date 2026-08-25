@@ -192,7 +192,8 @@ a scroll that seams at the loop boundary.
 **Why this one is next.** `gym` proved a prop can carry the motion in a
 straight line. This is the harder case — a _repeating_ prop pattern that must
 tile seamlessly, and the technique every scrolling background depends on
-(`road bike` in Tier C needs exactly this). The hold pattern has to be periodic
+(`road bike` would have needed it horizontally; it is cut, so `bouldering` is
+the only one that does). The hold pattern has to be periodic
 in the scroll distance or the loop visibly jumps once a second.
 
 **Diverged from this plan: the wall got a face.** The plan described joints and
