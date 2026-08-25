@@ -82,7 +82,9 @@ The whole product, minus hardware.
   the device sink. Also kept a native dependency out of the renderer, which
   the daemon imports.
 - [x] Dev harness: local web page, scrub through frames, switch layout and
-      orientation live, panel text in Departure Mono (`pnpm harness`)
+      orientation live (`pnpm harness`). It drew panel text in Departure Mono
+      until 25 Aug; it now draws no panel text at all, because drawing text the
+      renderer also draws is what made it a second panel renderer
 - [ ] Dev harness: hot reload, scrub through **states**, and fake event
       injection. Event injection needs the daemon, so it lands with Stage 3.
       State scrubbing does not — it needs only the state→animation mapping,
@@ -90,29 +92,76 @@ The whole product, minus hardware.
       on Stage 3. The earlier split dropped "states" while keeping "frames",
       which are not the same thing: frames are the eight rasters of one loop,
       states are the ten catalogue entries the freeze locks.
-- [x] Departure Mono vendored and rendering in the harness
+- [x] Departure Mono vendored — `CREDITS.md`, and `tools/make-font-atlas.ts`
+      turns it into the renderer's bitmap glyphs. It no longer renders _in the
+      harness_: that page stopped drawing panel text on 25 Aug
 - [x] Departure Mono bitmap rendering in the renderer, nearest-neighbour,
       `imageSmoothingEnabled = false`
 - [x] Scene primitives: sprite, text, chips. **Badge, clock and progress are
       not primitives** — a clock is text, a badge is text on a `fillRect`, a
       progress track is a `drawBorder` with a `fillRect` inside. Nothing earned
       its own function, and `knip` would have failed on one that did.
-- [ ] Harness draws through `render()` rather than approximating the bands —
-      what makes Stage 2's exit true by construction instead of by inspection.
-      **Costed 24 Aug, not built.** The blocker was never the renderer: it
-      imports no `node:` builtins, so it is pure and could run in a browser
-      unchanged. There are two ways in and both are real work rather than a
-      comment fix. (a) Add a bundler — none is in the repo, so it is a
-      dependency decision under `docs/CONVENTIONS.md` — and inline the
-      renderer into the page so the browser calls `render()` directly.
-      (b) Pre-render whole panels in Node through `render()` and inline those
-      instead of sprite frames, which needs no dependency and makes the
-      criterion trivially true, but multiplies the inlined images by
-      orientation and layout and loses live candidate-switching for anything
-      not baked. (b) is the smaller change and the larger file.
-      Until one lands, `tools/harness.ts` and `tools/blit-scene.ts` both say
-      in their headers that the browser and the panel agree only by
-      inspection, which is what this criterion exists to rule out.
+- [~] **No tool composes a _scene_ outside `render()`** — which is most of what
+  Stage 2's exit ("browser and panel show the same thing") asks for. Landed
+  25 Aug by deletion, not by either option this line used to cost. Left at
+  `[~]` because two things below are open.
+  Both costed options were wrong, and a grill found why. (a) "bundle the
+  renderer into the page" rested on a spike I could not reproduce and whose
+  figures did not agree with each other; what is verifiable is the
+  mechanism, not the number — `packages/renderer/src/framebuffer.ts` and
+  `band.ts` value-import `packPalette` from `packages/packs`, whose module
+  scope builds zod schemas, so a browser bundle of the renderer drags a
+  schema validator behind it. Measured with the repo's own bundler (vite /
+  rolldown, `node_modules/.bin/vite`), zod is roughly three-quarters to
+  four-fifths of that graph. (b) "pre-render whole panels" undercounted
+  badly: the cross-product of the harness's nine draw-affecting controls is
+  in the thousands to tens of thousands depending on which are held fixed,
+  and the prose that said "roughly ten thousand" was quoting one accounting
+  of several without saying which.
+  And neither could have worked. `sceneFor` lives in `packages/cli`, and
+  `eslint.config.ts` allows `tools` → `tools | renderer | packs | protocol`,
+  so a tool must hand-build its `Scene` either way — "true by construction"
+  was never reachable by making a second drawer more faithful.
+  `tools/panel-mock.ts` was the worst offender, because it is the artefact
+  that goes into pull requests and it hardcoded `#0d1117` and `#c9d1d9`
+  hand-synced to the example pack's palette. It now composes through
+  `composePanels`, and the page only unpacks RGB565 onto a canvas. It draws
+  all four skies, the strip's five-plus-overflow worst case, and takes
+  `--message` so a long MCP tool name can be put through the real wrapper.
+  `tools/harness.ts` keeps sprite scrubbing and draws band _outlines_ from
+  `panelBands()`, with no contents. No new dependency, and no bundler.
+  A line count was quoted here across three revisions and was wrong in two of
+  them, because the set of files it covered kept changing under it; what is
+  true and stable is that the panel-drawing code shrank and the comment around
+  it grew.
+  **Open, and why this is `[~]`:**
+
+  1. **Two review artefacts still paint a flat backdrop** — `contact-sheet.ts`
+     and the harness — where the device paints the environment edge to edge
+     (`ENVIRONMENT_EXTENT = 'panel'`), so both show a colour the panel never
+     displays. Both now say so instead of claiming to be the panel's ground,
+     and `docs/ANIMATION.md` §Judging now sends a reviewer to `panel-mock`.
+     What is still wrong is the _procedure_ rather than the prose:
+     `.claude/agents/animation-critic.md` step 4 and `docs/ANIMATION.md`'s
+     authoring loop both still say "build a contact sheet", and the agent
+     follows its own numbered steps. Nothing gates this either — no test fails
+     if a tool starts painting a panel colour again, which is how
+     `contact-sheet.ts` held one through three review passes.
+  2. **Hero versus two-up is open; the band heights that ship are not.**
+     `composePanels` hardcodes `layout: 'hero'`, so no tool composes a two-up
+     _panel_ through `render()` — the harness still scrubs two-up sprites at
+     true size against real slots, with empty bands. `daemon.ts`'s
+     `layout: 'hero'` is a bare literal with no rationale anywhere, unlike the
+     `landscape` beside it, which carries a dated record.
+     The band heights are in better shape than an earlier version of this entry
+     claimed. Landscape derives its message band as `height - (status + strip)`
+     = 116px and consumes only `BAND_HEIGHTS.status` and `.strip`;
+     `BAND_HEIGHTS.message` = 64 reaches `portraitBands()` alone and so ships
+     nowhere. `panel-mock` shows both shipping bands, at the strip's
+     five-plus-overflow worst case, and `--message` puts a long MCP name
+     through the real wrapper. So the freeze's landscape inputs are judgeable
+     today; what is unjudged is a portrait constant that does not ship.
+
 - [x] Manifest schema (zod) in `packages/packs`; pack resolution in
       `packages/cli/src/pack.ts` — `TAMACLAUDE_PACK`, then
       `~/.tamaclaude/pack/`, then a hard error. **`packages/packs` is still
@@ -165,13 +214,15 @@ before the stage it was scheduled in even opens. The exit itself is still not
 met, for the reason immediately below; the splash closed the firmware
 question, not the parity one.
 
-**Not met yet, and the gap is narrower than it looks.** The panel is composed
-by `render()`; the harness is not. `tools/harness.ts` imports only the layout
-helpers and approximates the bands itself, so the two agree by inspection —
-which is the thing this criterion exists to rule out. A review caught a PR
-claiming otherwise. Closing it means bundling the renderer into the harness
-page so both ends call one function, and that is the last open Stage 1 item
-that is not waiting on the design freeze.
+**Most of the way, and the remainder is named rather than hidden.** Every tool
+that composes a _scene_ now does it through `render()` — see the Stage 1 entry
+above, which landed 25 Aug by deleting the competing draws rather than by
+bundling the renderer into a page, the fix this paragraph used to prescribe.
+What is left is that two review artefacts still paint a flat backdrop behind
+transparent frames where the device paints scenery, and that the
+`animation-critic` agent's own numbered steps still send it to one of them. That is a smaller and more specific
+gap than "the harness approximates the bands", but it is not nothing, and it is
+the one an art review actually walks into.
 
 ## Stage 3 — Session pipeline (Mon 24 – Mon 31 Aug)
 

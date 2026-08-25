@@ -33,6 +33,19 @@ that wrote them.
 4. **Look at the frames.** Build a contact sheet of ~10 frames spread across
    the loop into a single PNG and `Read` it — `Read` renders images. Sampling
    frames without viewing them is not a review.
+   Then **look at it on the ground it will stand on**:
+
+   ```
+   node tools/panel-mock.ts /tmp/critic-<name>
+   ```
+
+   and `Read` `out/panel-mock.png`. The contact sheet composites frames over a
+   flat backdrop; that is right for motion and loop seam, and wrong for whether
+   a prop reads — the device draws the environment edge to edge, so something
+   legible against near-black can vanish against sand or a dusk sky.
+   `panel-mock` composes through `render()` and shows all four skies. It shows
+   frame 0 only, so it answers "does this read", not "does this move".
+
 5. Compare against the upstream reference for the same scene in
    the local upstream clawd-tank checkout if one exists (see `CREDITS.md`;
    it is outside this repo and its path differs per machine). That corpus is the

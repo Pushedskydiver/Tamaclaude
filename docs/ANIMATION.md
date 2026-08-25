@@ -653,8 +653,17 @@ them assets.
 ## Judging an animation
 
 **Not in a browser at 8x zoom.** A pixel animation looks completely different
-at 172x320 on a 1.47" panel than it does scaled up on a monitor. Judge in the
-dev harness at true size, and on the panel itself once hardware allows.
+at 172x320 on a 1.47" panel than it does scaled up on a monitor. Judge at true
+size, and on the panel itself once hardware allows.
+
+**And judge it on the ground it will actually stand on.** `pnpm harness` and
+`tools/contact-sheet.ts` composite frames over a flat backdrop; the device
+draws the environment edge to edge, so a prop that reads against near-black may
+vanish against sand or a dusk sky. `node tools/panel-mock.ts out/<name>` is the
+artefact composed through `render()` — every sky, real bands, true size and
+enlarged — and it is the one to look at before saying an animation reads. It
+composes frame 0 only, so it answers "does this read", not "does this move";
+the contact sheet is still the artefact for motion and the loop seam.
 
 **And not by the author.** Every animation in this repo was written, checked by
 the context that wrote it, declared good, and shipped with defects that context

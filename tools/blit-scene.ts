@@ -8,17 +8,23 @@
  * This routes the same rasters through `render()` instead, so the panel is
  * composed by the renderer rather than by this file.
  *
- * **It is not yet what the harness draws with, and Stage 2's exit is not met.**
- * `BUILD_PLAN.md` makes that exit "browser and panel show the same thing", and
- * a review caught this file claiming to satisfy it. `tools/harness.ts` imports
- * only the layout helpers and has its own browser-side draw — its own header
- * says so: "Text layout within a band is this page's approximation." So the
- * two agree by inspection, which is exactly what the criterion is written to
- * rule out, and the gap widened here: the panel now draws 2x bitmap status
- * text that no browser view renders at all.
+ * **Every tool that composes a _scene_ goes through here**, which is most of
+ * Stage 2's exit and not all of it — see the qualification below. `BUILD_PLAN.md` makes that exit "browser and panel
+ * show the same thing", and a review once caught this file claiming to satisfy
+ * it while `tools/harness.ts` and `tools/panel-mock.ts` each composed their own
+ * panel in browser CSS.
  *
- * Closing it means bundling the renderer into the harness page so both ends
- * call this same function. That is the remaining Stage 1 work, not this.
+ * It closed by deletion, not by bundling the renderer into a page. `panel-mock`
+ * composes through this function and blits the pixels; `harness` stopped
+ * drawing band contents at all. So no second path composes a *scene* — a
+ * stronger guarantee than two paths agreeing, and it needs no bundler, no new
+ * dependency and no build step.
+ *
+ * Whole *panels* are still drawn elsewhere on purpose — `bake-splash.ts` owns
+ * the firmware's splash, `colour-bars.ts` is a test pattern — and two review
+ * artefacts still paint a flat backdrop behind transparent frames.
+ * `tools/panel-mock.ts`'s header lists all four; `BUILD_PLAN.md` carries the
+ * two that are open rather than deliberate.
  *
  * It also deletes arithmetic rather than adding it. Slot placement and the
  * landscape safe-area crop are `paintStage`'s job, and having them here as
@@ -30,6 +36,7 @@ import type {
   EnvironmentExtent,
   Orientation,
   Scene,
+  SessionChip,
   StageSprite,
   TimeOfDay,
 } from '@tamaclaude/renderer';
@@ -109,6 +116,28 @@ export function composePanels(
      */
     readonly time?: TimeOfDay;
     readonly extent?: EnvironmentExtent;
+    /**
+     * Chips for the strip band, when a caller wants to see it occupied.
+     *
+     * Defaults to none, which is what `tools/blit.ts` wants: it is showing an
+     * animation on the device, not modelling a desk. `tools/panel-mock.ts`
+     * passes some, because an empty strip is a 32px void in the landscape
+     * right-hand column and a review artefact that can never show the band
+     * populated cannot be used to judge it — which the CSS mock it replaced
+     * could, and was the one thing that version did better.
+     */
+    readonly sessions?: readonly SessionChip[];
+    /**
+     * Message-band text, when the animation's own name is not the case worth
+     * seeing. Defaults to the name, which is what the device-facing caller
+     * wants.
+     *
+     * It exists because the band's height is an open question and the longest
+     * string any artefact could otherwise show is `"permission-sign"`. A long
+     * MCP tool name is the case the band has to survive, and the page that used
+     * to display one wrapped it with CSS rather than with `wrapText`.
+     */
+    readonly message?: string;
   },
 ): readonly Frame[] {
   // The crop `paintStage` applies is derived from the *layout's* scale, and
@@ -141,8 +170,8 @@ export function composePanels(
       layout: 'hero',
       pack: options.pack,
       sprites: [raster],
-      sessions: [],
-      ...placeholderBands(options.name),
+      sessions: options.sessions ?? [],
+      ...placeholderBands(options.message ?? options.name),
       environment: {
         time: options.time ?? 'day',
         extent: options.extent ?? 'panel',

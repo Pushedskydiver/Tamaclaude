@@ -1,163 +1,259 @@
 #!/usr/bin/env node
 /**
- * Compose full-panel mockups so layout decisions are made by looking, not
- * arguing.
+ * Compose the panel the way the device does, and screenshot it for review.
  *
- * `.claude/research/screens/spec.md` §11 leaves several questions open that
- * are measurements rather than opinions — hero versus two-up, whether the
- * message band earns its height, and now portrait versus landscape mounting —
- * and the design freeze is one day after the harness afternoon booked to
- * answer them. This renders every candidate at true panel size from real
- * animation frames.
+ * This is the artefact that goes into a pull request, and it used to draw its
+ * own panel in browser CSS with `#0d1117` and `#c9d1d9` hardcoded, hand-synced
+ * to `packs/example`'s palette — so a pack swap changed the device and not the
+ * mock, and reviewers looked at the mock.
  *
- *   node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing
- *   node tools/panel-mock.ts out/typing out/gym
+ * It composes through `render()` in Node, via the same `composePanels` that
+ * `tools/blit.ts` sends to the panel, and the page only blits the RGBA it is
+ * handed. **No tool composes a `Scene` outside `render()`**, which is most of
+ * `BUILD_PLAN.md`'s Stage 2 exit. Not all: `bake-splash.ts` and
+ * `colour-bars.ts` draw whole panels deliberately, and `contact-sheet.ts` and
+ * the harness still paint a flat backdrop behind transparent frames.
  *
- * Geometry, scales and the safe-area crop all come from
- * `@tamaclaude/renderer` rather than from constants copied here, so the mock a
- * decision is made from cannot drift from the code that implements it. An
- * earlier version kept the scale and crop locally and got the landscape two-up
- * candidate wrong — which then went into the spec as a design verdict.
+ *   node tools/panel-mock.ts out/typing [out/gym ...] [--message <text>]
+ *
+ * **Landscape hero only.** The daemon hardcodes both (`packages/cli/src/daemon.ts`),
+ * and portrait is refused by a `_Static_assert` in the firmware until portrait
+ * splash art exists. Landscape two-up is not refused — nothing selects it, and
+ * `BUILD_PLAN.md` carries that as open rather than settled.
+ *
+ * What it varies instead is what the shipping panel actually varies: all four
+ * skies, since the daemon passes `timeOfDay(now)`; the strip at its
+ * five-chips-plus-badge limit; and `--message`, so a long MCP tool name can be
+ * put through the real `wrapText`. That last answers the question for
+ * landscape, whose message band is derived as `height - (status + strip)` =
+ * 116px. `BAND_HEIGHTS.message` = 64 reaches `portraitBands()` alone, so the
+ * constant `BUILD_PLAN.md` calls unjudged is not the band this renders.
+ *
+ * It composes frame 0 only. That answers "does this read against its ground",
+ * not "does this move" — `tools/contact-sheet.ts` is still the artefact for
+ * motion and the loop seam.
  */
-import type { Orientation, StageLayout } from '@tamaclaude/renderer';
+import type { SessionChip } from '@tamaclaude/renderer';
 
-import { readdir, readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import process from 'node:process';
 
 import { chromium } from 'playwright';
 
-import {
-  panelBands,
-  panelSize,
-  safeAreaCropUnits,
-  spriteSlots,
-  stageScale,
-} from '@tamaclaude/renderer';
+import { TIMES_OF_DAY } from '@tamaclaude/renderer';
 
-/** Sample text for the message band. A tool label, never a real quip — this
- *  file is tracked and the quips are not. See CLAUDE.md §Non-obvious constraints. */
-const SAMPLE_MESSAGE = 'Grep';
-const PANEL_BACKGROUND = '#0d1117';
-const INK = '#c9d1d9';
-const DIM = '#6e7681';
-type PanelOptions = {
-  readonly layout: StageLayout;
-  readonly orientation: Orientation;
-  readonly frames: readonly string[];
-  readonly miniClawd: string;
+import { composePanels, loadPack } from './blit-scene.ts';
+import { loadFrames } from './png-rgb565.ts';
+import { toRgba } from './rgb565-rgba.ts';
+
+/**
+ * Every sky the daemon can pass, read from the renderer rather than listed.
+ *
+ * `timeOfDay()` returns all four and dawn plus dusk are six hours of every
+ * twenty-four. Dusk matters most: it is the second-darkest scheme, so it is
+ * the second-worst case for a pale prop against its ground.
+ */
+const SKIES = TIMES_OF_DAY;
+
+/**
+ * Chips for the strip, at the limit `paintStrip` imposes.
+ *
+ * `MAX_CHIPS` is five, so a sixth session becomes a `+1` badge rather than a
+ * chip — which is the case worth seeing, and the case no artefact in the repo
+ * could show before. **Only the first five are drawn**, so the sixth entry's
+ * tone and origin never appear; the five that do cover every tone, with
+ * `remote` among them, which is what the band has to make distinguishable.
+ *
+ * Hardcoded at six, so the ordinary one-to-five case has no artefact. That is
+ * the same gap this closed, rotated: `composePanels` already takes `sessions`,
+ * so a `--sessions <n>` flag is three lines when someone wants it.
+ */
+const CHIPS: readonly SessionChip[] = [
+  { tone: 'active', origin: 'local' },
+  { tone: 'attention', origin: 'local' },
+  { tone: 'resting', origin: 'remote' },
+  { tone: 'active', origin: 'remote' },
+  { tone: 'resting', origin: 'local' },
+  { tone: 'attention', origin: 'remote' },
+];
+
+/** How much the enlarged copy is blown up, for inspecting individual pixels. */
+const ZOOM = 3;
+
+type Panel = {
+  readonly label: string;
+  readonly width: number;
+  readonly height: number;
+  /**
+   * The composed panel, already unpacked to RGBA.
+   *
+   * A typed array rather than a spread `number[]`, because Playwright
+   * serialises typed arrays natively as base64 and walks a plain array
+   * element-by-element through its full recursion — measured at 23ms against
+   * 345ms for the same output. Unpacked in Node rather than in the page so
+   * `toRgba` can be imported and tested; see `rgb565-rgba.test.ts`.
+   */
+  readonly rgba: Uint8ClampedArray;
 };
 
-async function firstFrame(frameDir: string): Promise<string> {
-  const names = (await readdir(frameDir))
-    .filter((name) => name.endsWith('.png'))
-    .sort();
-  if (names.length === 0) throw new Error(`no PNGs in ${frameDir}`);
-  const bytes = await readFile(resolve(frameDir, names[0]));
-  return `data:image/png;base64,${bytes.toString('base64')}`;
+/**
+ * Turn one animation's first frame into a composed panel per sky.
+ *
+ * The first frame rather than the whole loop, because this is the fixed
+ * comparison image — `tools/contact-sheet.ts` is the artefact for judging
+ * motion, and `pnpm harness` is the one for scrubbing it.
+ */
+function panelsFor(options: {
+  readonly name: string;
+  readonly raster: Parameters<typeof composePanels>[0][number];
+  readonly pack: Awaited<ReturnType<typeof loadPack>>;
+  readonly message: string | undefined;
+}): readonly Panel[] {
+  const { name, raster, pack, message } = options;
+  return SKIES.map((sky) => {
+    const [composed] = composePanels([raster], {
+      orientation: 'landscape',
+      pack,
+      name,
+      time: sky,
+      sessions: CHIPS,
+      message,
+    });
+    if (composed === undefined) {
+      throw new Error(`composePanels returned nothing for ${name}`);
+    }
+    return {
+      // Shape off the frame itself rather than off `panelSize` again — the
+      // pixels and their dimensions should not come from two places.
+      label: `${name} — ${sky}`,
+      width: composed.width,
+      height: composed.pixels.length / composed.width,
+      rgba: toRgba(composed.pixels),
+    };
+  });
 }
 
-function bandCss(orientation: Orientation): string {
-  return Object.entries(panelBands(orientation))
-    .map(
-      ([name, rect]) =>
-        `.${orientation} .band-${name}{left:${rect.x}px;top:${rect.y}px;` +
-        `width:${rect.width}px;height:${rect.height}px;}`,
-    )
-    .join('');
+const SHEET_STYLE = `
+  body{margin:0;padding:24px;background:#010409;color:#6e7681;
+       font:12px ui-monospace,SFMono-Regular,monospace;display:inline-block}
+  .row{display:flex;gap:32px;align-items:flex-start;margin-bottom:22px}
+  canvas{display:block;image-rendering:pixelated}
+  .label{margin-bottom:8px}
+`;
+
+/**
+ * Paint the composed panels, in the browser.
+ *
+ * Serialised into the page, so it may not reference anything outside its own
+ * arguments. Everything it knows about a panel is a width, a height and a run
+ * of pixels — no bands, no palette, no layout. All of that happened in
+ * `render()` before the browser saw anything, which is the point.
+ */
+function paintSheet({
+  panels,
+  zoom,
+}: {
+  readonly panels: readonly Panel[];
+  readonly zoom: number;
+}) {
+  const sheet = document.getElementById('sheet');
+  if (sheet === null) throw new Error('no #sheet');
+  for (const panel of panels) {
+    // Allocated then filled, rather than constructed from `panel.rgba`
+    // directly: the `ImageData` overload wants a buffer it owns, and what
+    // arrives here has crossed a serialisation boundary.
+    const image = new ImageData(panel.width, panel.height);
+    image.data.set(panel.rgba);
+    const row = document.createElement('div');
+    row.className = 'row';
+    for (const scale of [1, zoom]) {
+      const wrap = document.createElement('div');
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.textContent =
+        scale === 1 ? `${panel.label} — true size` : `${scale}x`;
+      const canvas = document.createElement('canvas');
+      canvas.width = panel.width;
+      canvas.height = panel.height;
+      canvas.style.width = `${panel.width * scale}px`;
+      canvas.style.height = `${panel.height * scale}px`;
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('no 2d context');
+      context.putImageData(image, 0, 0);
+      wrap.append(label, canvas);
+      row.append(wrap);
+    }
+    sheet.append(row);
+  }
 }
 
-function stageHtml(options: PanelOptions): string {
-  // Frames are authored 21x25. Landscape shows only the 21x20 safe area, so
-  // the sprite is clipped to its slot and pulled up by the prop headroom that
-  // portrait keeps. See docs/ANIMATION.md §Safe area.
-  //
-  // The crop must use the scale this layout actually draws at, not the
-  // authoring scale. A two-up sprite is drawn at scale 4, so a crop computed
-  // at scale 8 removes ten authored units instead of five and leaves a void
-  // beneath. Both constants come from the renderer for the same reason the
-  // bands do.
-  const crop =
-    options.orientation === 'landscape'
-      ? safeAreaCropUnits() * stageScale(options.layout)
-      : 0;
-  return spriteSlots(options.layout, options.orientation)
-    .map((slot, index) => {
-      const uri = options.frames[index] ?? options.frames[0];
-      return `<div class="slot" style="left:${slot.x}px;top:${slot.y}px;width:${slot.width}px;height:${slot.height}px"><img class="sprite" src="${uri}" alt="" style="width:${slot.width}px;margin-top:-${crop}px"></div>`;
-    })
-    .join('');
-}
-
-function panelHtml(options: PanelOptions): string {
-  const size = panelSize(options.orientation);
-  const strip = Array.from(
-    { length: 3 },
-    (_, i) =>
-      `<img class="mini" src="${options.miniClawd}" alt="" style="left:${8 + i * 21}px">`,
-  ).join('');
-  return `<div class="panel ${options.orientation}" style="width:${size.width}px;height:${size.height}px">
-      <div class="band-status"><span>14:32</span><span>&times;2</span></div>
-      ${stageHtml(options)}
-      <div class="band-strip">${strip}<span class="overflow">+2</span></div>
-      <div class="band-message"><span>${SAMPLE_MESSAGE}</span></div>
-    </div>`;
-}
-
-function styles(): string {
-  return `<style>
-      body{margin:0;padding:24px;background:#010409;color:${DIM};
-           font:12px ui-monospace,SFMono-Regular,monospace;display:inline-block}
-      h2{color:${INK};font-size:13px;font-weight:400;margin:22px 0 10px}
-      .row{display:flex;gap:32px;align-items:flex-start}
-      .panel{position:relative;background:${PANEL_BACKGROUND};
-             overflow:hidden;image-rendering:pixelated}
-      [class^="band-"]{position:absolute}
-      ${bandCss('portrait')}
-      ${bandCss('landscape')}
-      .band-status{display:flex;align-items:center;justify-content:space-between;
-                   padding:0 6px;box-sizing:border-box;color:${INK};font-size:13px}
-      .band-strip{border-top:1px solid #21262d;border-bottom:1px solid #21262d}
-      .band-message{display:flex;align-items:center;padding:0 8px;
-                    box-sizing:border-box;color:${INK};font-size:13px}
-      .slot{position:absolute;overflow:hidden}
-      .sprite{display:block;image-rendering:pixelated}
-      .mini{position:absolute;top:8px;width:15px;height:16px;image-rendering:pixelated}
-      .overflow{position:absolute;right:6px;top:9px}
-    </style>`;
-}
-
-async function compose(frameDirs: readonly string[], outPath: string) {
-  const frames = await Promise.all(frameDirs.map((dir) => firstFrame(dir)));
-  const svg = await readFile('assets/clawd/base.svg');
-  const miniClawd = `data:image/svg+xml;base64,${svg.toString('base64')}`;
-  const panel = (layout: StageLayout, orientation: Orientation) =>
-    panelHtml({ layout, orientation, frames, miniClawd });
-
+/** Blit the composed panels onto canvases and screenshot the page. */
+async function shoot(panels: readonly Panel[], outPath: string) {
   const browser = await chromium.launch();
   const page = await browser.newPage({
-    viewport: { width: 1200, height: 1100 },
+    viewport: { width: 1200, height: 900 },
   });
-  await page.setContent(`${styles()}
-    <h2>portrait 172&times;320 &mdash; true size</h2>
-    <div class="row">
-      <div><div>hero</div>${panel('hero', 'portrait')}</div>
-      <div><div>two-up</div>${panel('twoUp', 'portrait')}</div>
-    </div>
-    <h2>landscape 320&times;172 &mdash; stage cropped to the 21&times;20 safe area</h2>
-    <div><div>hero</div>${panel('hero', 'landscape')}</div>
-    <div style="margin-top:14px"><div>two-up</div>${panel('twoUp', 'landscape')}</div>`);
-  await page.locator('body').screenshot({ path: outPath });
-  await browser.close();
+  try {
+    await page.setContent(
+      `<style>${SHEET_STYLE}</style><div id="sheet"></div>`,
+    );
+    await page.evaluate(paintSheet, { panels, zoom: ZOOM });
+    await page.locator('body').screenshot({ path: outPath });
+  } finally {
+    await browser.close();
+  }
 }
 
-const dirs = process.argv.slice(2);
-if (dirs.length === 0) {
-  console.error('usage: node tools/panel-mock.ts <frameDir> [frameDir2]');
+async function compose(
+  frameDirs: readonly string[],
+  outPath: string,
+  message: string | undefined,
+) {
+  const pack = await loadPack(resolve('packs/example'));
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const panels: Panel[] = [];
+  try {
+    for (const dir of frameDirs) {
+      const rasters = await loadFrames(page, dir);
+      const first = rasters[0];
+      if (first === undefined) throw new Error(`no frames in ${dir}`);
+      // The directory name is the animation name. `composePanels` uses it
+      // twice: for `castsShadow` — `bouldering` is on a wall and casts none —
+      // and as the message band's text unless `--message` overrides it.
+      panels.push(
+        ...panelsFor({
+          name: basename(resolve(dir)),
+          raster: first,
+          pack,
+          message,
+        }),
+      );
+    }
+  } finally {
+    await browser.close();
+  }
+  await shoot(panels, outPath);
+}
+
+const argv = process.argv.slice(2);
+const flag = argv.indexOf('--message');
+// `--message <text>` puts something other than the animation's name in the
+// band. The case worth passing is a long MCP tool name — the only *review
+// artefact* that puts one through the real `wrapText` at true size. The
+// shipping daemon does it on the panel every time such a tool runs.
+const message = flag === -1 ? undefined : argv[flag + 1];
+if (flag !== -1 && message === undefined) {
+  console.error('--message needs a value');
   process.exit(1);
 }
-await compose(
-  dirs.map((dir) => resolve(dir)),
-  resolve('out/panel-mock.png'),
-);
+const dirs =
+  flag === -1 ? argv : [...argv.slice(0, flag), ...argv.slice(flag + 2)];
+if (dirs.length === 0) {
+  console.error(
+    'usage: node tools/panel-mock.ts <frameDir> [frameDir2] [--message <text>]',
+  );
+  process.exit(1);
+}
+await compose(dirs, resolve('out/panel-mock.png'), message);
 console.log('panel mock -> out/panel-mock.png');
