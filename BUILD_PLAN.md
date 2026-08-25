@@ -205,8 +205,8 @@ that is not waiting on the design freeze.
       zero mask mismatches — and seen animating on the real panel.
       The raw art was 24,192,000 bytes of RGB565 plus the same again halved for
       the mask, and encoded it shipped as 1,128,216. **Those are the six-animation
-      figures and they are the stale copy** — ten animations and 664 frames now
-      measure 44,620,800 raw and 1,918,964 encoded. `tools/bake-sprites.ts` and
+      figures and they are the stale copy** — thirteen animations and 840 frames now
+      measure 56,448,000 raw and 2,510,452 encoded. `tools/bake-sprites.ts` and
       `packages/renderer/src/sprites/index.ts` carry the live numbers with a
       caveat that only a re-bake refreshes them; this line had neither. Size was never going to be what
       limited how many animations this device gets, though it was quoted as
@@ -387,8 +387,8 @@ than partially. Eight good screens beat nine plus four rough ones.
      install shows, so "from the recipient's pack" was never achievable as
      written — recognition comes from shape and context, and the tracked art
      carries no mark identifying a specific vehicle.
-     The fallback this line used to name is moot: the trigger shipped six hours
-     before the art — same day, `9fd31c3` at 11:22 and the art at 17:18 — and
+     The fallback this line used to name is moot: the trigger shipped seven hours
+     before the art — same day, `9fd31c3` at 11:22 and `6540a86` at 18:33 — and
      `DONE` borrowed `idle` in between, so the risk it was written against
      never arrived. An earlier version said a fortnight, which `main`'s history
      does not contain: it starts on 18 Aug. Item 12 already made this exact
@@ -410,17 +410,21 @@ than partially. Eight good screens beat nine plus four rough ones.
   10. ✅ wizard (WebSearch/WebFetch) — 5.5% of real tool calls. Built 24 Aug;
       the `TOOL_ANIMATIONS` wiring landed with the art rather than after it,
       against the "art first, wiring last" note below
-  11. board game (`Agent`) — 0.7%, the least-seen of the screens that
-      have a measured trigger. Six catalogue entries fire on hook events or
-      timers and have no tool-call frequency at all, so this is not a claim
-      about the whole catalogue. **Art landed 25 Aug; the `TOOL_ANIMATIONS`
-      entry has not**, which is this list's own "art first, wiring last" rule
-      followed rather than broken — so it is neither done nor deferred, and
-      saying so matters because the 6 Sep decision is read off this list. The
-      trigger was `Agent`/subagents until 25 Aug, when a live capture settled it
-      as `Agent` alone at a two second loop: keyed on `subagents > 0` it would
-      have been on for 53% of the panel's waking life
-  12. **overheated (`StopFailure` with `error_type` `rate_limit` or `overloaded`)** — proposed
+  11. ✅ board game (`Agent`) — 0.7%, the least-seen of the screens that
+      have a measured tool-call frequency. Nine of the catalogued screens fire on
+      hook events or timers and have no tool-call frequency at all, so this is
+      not a claim about the whole catalogue — and not about triggers either:
+      `overheated`'s is measured too, at ~0.1% of sessions, which item 12 says
+      leaves "no 'rarest catalogued' to be rarer than". An earlier version of
+      this line said six, which no enumeration of the catalogue produces. Art landed 25 Aug at 11:07 and the
+      `TOOL_ANIMATIONS` entry at 11:59 — fifty-two minutes, the tightest of the
+      three art-then-wiring gaps against `overheated`'s three hours and the
+      payoff's seven. That is this list's own "art first, wiring last" rule
+      followed rather than broken. The trigger was
+      `Agent`/subagents until 25 Aug, when a live capture settled it as `Agent`
+      alone at a two second loop: keyed on `subagents > 0` it would have been on
+      for 53% of the panel's waking life
+  12. ✅ **overheated (`StopFailure` with `error_type` `rate_limit` or `overloaded`)** — proposed
       on 22 Aug, not part of the original catalogue, and therefore a change to
       this plan rather than work under it. It is the cheapest screen left:
       the error has been stored since Stage 3, so the trigger needed no new

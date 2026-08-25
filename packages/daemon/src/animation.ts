@@ -13,7 +13,7 @@ import type { SessionState } from './state.js';
  * The animations this daemon can ask for. `assets/clawd/animations/PLANS.md`
  * is the authority for what exists — not the fifteen the screen spec
  * catalogues — and this list is what is both built *and wired*, which is not
- * the same thing — `overheated` was built and baked one PR before it was wired,
+ * the same thing — `overheated` was built and baked two PRs before it was wired,
  * which is the order `BUILD_PLAN.md` item 12 asks for: art lands first, so
  * cutting it at the Stage 4 gate never means reverting shipped daemon code. `SPRITE_NAMES` is the built
  * list, this is a subset of it, and `animation.test.ts` enforces that
@@ -32,6 +32,7 @@ export const ANIMATIONS = [
   'overheated',
   'payoff',
   'wizard',
+  'board-game',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -80,6 +81,30 @@ const TOOL_ANIMATIONS: ReadonlyMap<string, AnimationName> = new Map<
   // calls and fell through to `thinking` until now.
   ['WebSearch', 'wizard'],
   ['WebFetch', 'wizard'],
+  // Deliberately a short-lived screen. A subagent's own tool calls arrive on
+  // the *parent's* session, so `Bash` or `Read` from inside one repaints over
+  // this at a measured median of 3.2 seconds. The art is two seconds for that
+  // reason, so the loop closes first; keyed instead on `session.subagents > 0`
+  // the screen would have held for 53% of the panel's waking life and roughly
+  // halved `gym`. `assets/clawd/animations/PLANS.md` §Board game has the
+  // measurements.
+  //
+  // The ground for that is the hook capture below, **not** the transcript
+  // layout. Subagent transcripts live under `<parentSessionId>/subagents/`, so
+  // reading the parent's id out of them re-observes the directory name; the
+  // plan disowns that as evidence in as many words.
+  //
+  // `'Agent'` is what the hook wire actually carries, captured 25 Aug from a
+  // listener on the daemon socket rather than inferred from a transcript:
+  // `{"kind":"PreToolUse","tool":"Agent"}`. Worth having done, because this
+  // key is a raw string and the test asserting the mapping reads the same
+  // literal — so a wrong name here would have shipped green and the screen
+  // would simply never have fired.
+  //
+  // The same capture confirmed the premise: 15 tool calls made inside three
+  // different subagents all arrived on the *parent's* `sessionId`, and each
+  // carried `agentId` and `agentType`. That is why this screen is two seconds.
+  ['Agent', 'board-game'],
 ]);
 
 /**
@@ -106,7 +131,7 @@ const STATE_ANIMATIONS: Readonly<
   NEEDS_PERMISSION: 'permission-sign',
   FAILED: 'dizzy',
   WAITING: 'confused',
-  // `BUILD_PLAN.md` item 6, and the reason the trigger shipped six hours
+  // `BUILD_PLAN.md` item 6, and the reason the trigger shipped seven hours
   // before the art: `DONE` borrowed `idle` until now, so the state and the rank
   // were real while the glass showed the picture it would have shown anyway.
   // Nothing had to be reverted when the art arrived, which was the point.

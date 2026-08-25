@@ -37,6 +37,17 @@ describe('animationFor', () => {
     expect(animationFor('WORKING', { tool: 'Read' })).toBe('bouldering');
   });
 
+  it('maps Agent to board game, for as long as it lasts', () => {
+    // The screen is two seconds because it does not get longer: a subagent's
+    // own tool calls arrive on the *parent's* session — sidechains do not get
+    // their own id — and measured over 167 runs the first one lands at a
+    // median of 3.2s. So this mapping paints `board-game`, and then `Bash` or
+    // `Read` from inside the subagent repaints over it almost immediately.
+    // That is the design, not a defect: the screen says *handed off* and the
+    // tool screens go back to saying what is being done.
+    expect(animationFor('WORKING', { tool: 'Agent' })).toBe('board-game');
+  });
+
   it('maps both web tools to wizard', () => {
     // Spelled out rather than trusted, because a `Map` key is a raw string:
     // `'Websearch'`, a trailing space or an `mcp__` prefix all typecheck, and
