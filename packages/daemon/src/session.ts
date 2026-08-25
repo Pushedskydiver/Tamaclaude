@@ -207,18 +207,25 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
  * event when it carries no `agentType`. That gate is what makes the count
  * survivable, so it is not an optimisation to tidy away later.
  *
- * **Unpaired stops are ordinary.** A second capture on 25 Aug, 13 minutes of
- * one session, logged six `SubagentStop`s against a single `SubagentStart`.
- * The five strays each had a distinct `agent_id` and an empty `agent_type`,
- * and none came from a dispatch — one arrived 3.9s after a `Stop`, one 3.0s
- * after `SessionStart(source=compact)`. Roughly one every two to three
- * minutes.
+ * **Unpaired stops are ordinary.** A second capture on 25 Aug, 30 minutes of
+ * one session: eight `SubagentStop`s, of which six had no matching
+ * `SubagentStart`. Each stray had a distinct `agent_id` and none came from a
+ * dispatch — one arrived 3.9s after a `Stop`, one 3.0s after
+ * `SessionStart(source=compact)`. That is one roughly every five minutes.
+ *
+ * Three of the six were observed to carry an *empty* `agent_type`. The other
+ * three predate a fix to the capture script's own field whitelist, which was
+ * dropping the key, so for those the wire value was not observed at all —
+ * recorded here rather than rounded up to six, because the whole rule below
+ * rests on it. What the full sample does support is the absence of a
+ * counterexample in either direction: no stray carried a non-empty
+ * `agent_type`, and no paired stop lacked one.
  *
  * The floor below only stops the badge going negative, which is the harmless
  * direction. The damaging one is a stray landing while a real subagent runs:
- * a true count of 1 goes to 0 and the badge blanks with work still in flight,
- * for every run longer than the gap between strays — which is every
- * `da-review` and `animation-critic`.
+ * a true count of 1 goes to 0 and the badge blanks with work still in flight.
+ * Any run outlasting the gap between strays is exposed, which at five minutes
+ * covers a `da-review` or an `animation-critic` but not a quick `Explore`.
  *
  * **Why `agentType` and not `agentId`.** Both are optional on the wire, but
  * `optionalString` in `packages/hooks` maps an empty string to absent, so a

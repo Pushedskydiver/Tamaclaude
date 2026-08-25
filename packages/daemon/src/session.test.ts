@@ -237,18 +237,18 @@ describe('subagents', () => {
 
   it('ignores a subagent event that carries no agent type', () => {
     // **Unpaired stops are ordinary, not an edge case.** Captured from a
-    // listener on the hook socket on 25 Aug, over 13 minutes of one session:
-    // six `SubagentStop`s arrived and only one had a matching `SubagentStart`.
-    // The five strays each carried a distinct `agent_id` and an *empty*
-    // `agent_type`, and came from machinery nobody dispatched — one 3.9s after
-    // a `Stop`, one 3.0s after `SessionStart(source=compact)`.
+    // listener on the hook socket on 25 Aug, over 30 minutes of one session:
+    // eight `SubagentStop`s arrived and six had no matching `SubagentStart`.
+    // Each stray carried a distinct `agent_id` and came from machinery nobody
+    // dispatched — one 3.9s after a `Stop`, one 3.0s after
+    // `SessionStart(source=compact)`. About one every five minutes.
     //
     // The floor below is not enough on its own. It stops the badge going
     // negative, which is the harmless direction; the damaging one is a stray
     // landing while a real subagent runs, taking a true count of 1 down to 0
-    // and blanking the badge with work still in flight. At roughly one stray
-    // every two to three minutes, anything longer than that is likely to be
-    // hit — which is every `da-review` and `animation-critic` run.
+    // and blanking the badge with work still in flight. Any run outlasting the
+    // gap between strays is exposed — a `da-review` or an `animation-critic`,
+    // though not a quick `Explore`.
     //
     // `agent_type` is the discriminator and it costs nothing: `optionalString`
     // in `packages/hooks` already maps an empty string to absent, so a stray
