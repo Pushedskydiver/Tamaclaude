@@ -338,22 +338,30 @@ function paintContactShadow(
   at: { readonly layout: StageLayout; readonly orientation: Orientation },
   colour: number,
 ): void {
-  const slot = spriteSlots(at.layout, at.orientation)[0];
-  if (slot === undefined) return;
+  // **Every slot, not slot zero.** This read `spriteSlots(...)[0]` until
+  // 25 Aug, which is invisible in `hero` — one slot — and wrong in `twoUp`,
+  // where the right-hand character stood on nothing. `tools/panel-mock.ts`
+  // gained a `--layout twoUp` option that day and the first artefact it
+  // produced showed it. That matters beyond the pixels: `spec.md` records an
+  // earlier hero-versus-two-up verdict tainted by a different `panel-mock`
+  // bug, so a floating character would have been the second time a two-up
+  // decision was made from a broken picture.
   const scale = stageScale(at.layout);
   const row = groundRow(at.layout, at.orientation);
-  // base.svg: `ground-shadow` is x=3 width=9 on a canvas whose left edge is
-  // unit -3, so it starts six units into the raster.
-  fillRect(
-    target,
-    {
-      x: slot.x + Math.round(6 * scale),
-      y: row,
-      width: Math.round(9 * scale),
-      height: Math.max(1, Math.round(scale / 4)),
-    },
-    colour,
-  );
+  for (const slot of spriteSlots(at.layout, at.orientation)) {
+    // base.svg: `ground-shadow` is x=3 width=9 on a canvas whose left edge is
+    // unit -3, so it starts six units into the raster.
+    fillRect(
+      target,
+      {
+        x: slot.x + Math.round(6 * scale),
+        y: row,
+        width: Math.round(9 * scale),
+        height: Math.max(1, Math.round(scale / 4)),
+      },
+      colour,
+    );
+  }
 }
 
 /**

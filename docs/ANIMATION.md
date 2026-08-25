@@ -656,14 +656,17 @@ them assets.
 at 172x320 on a 1.47" panel than it does scaled up on a monitor. Judge at true
 size, and on the panel itself once hardware allows.
 
-**And judge it on the ground it will actually stand on.** `pnpm harness` and
-`tools/contact-sheet.ts` composite frames over a flat backdrop; the device
-draws the environment edge to edge, so a prop that reads against near-black may
-vanish against sand or a dusk sky. `node tools/panel-mock.ts out/<name>` is the
-artefact composed through `render()` — every sky, real bands, true size and
-enlarged — and it is the one to look at before saying an animation reads. It
-composes frame 0 only, so it answers "does this read", not "does this move";
-the contact sheet is still the artefact for motion and the loop seam.
+**And judge it on the ground it will actually stand on.** `pnpm harness`
+composites frames over a flat backdrop, because it draws no bands and is for
+scrubbing motion; the device draws the environment edge to edge, so a prop that
+reads against near-black may vanish against sand.
+
+`node tools/contact-sheet.ts out/<name>` samples ten frames across the loop,
+each composed through `render()` and cropped to the stage — the artefact for
+motion, on the real ground. `node tools/panel-mock.ts out/<name>` is the whole
+panel in all four skies, frame 0 only — the artefact for whether a prop reads.
+Between them they answer "does this move" and "does this read"; the harness
+answers neither and says so.
 
 **And not by the author.** Every animation in this repo was written, checked by
 the context that wrote it, declared good, and shipped with defects that context

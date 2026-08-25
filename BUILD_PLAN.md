@@ -104,7 +104,7 @@ The whole product, minus hardware.
 - [~] **No tool composes a _scene_ outside `render()`** — which is most of what
   Stage 2's exit ("browser and panel show the same thing") asks for. Landed
   25 Aug by deletion, not by either option this line used to cost. Left at
-  `[~]` because two things below are open.
+  `[~]` because the second of the two things below is still open.
   Both costed options were wrong, and a grill found why. (a) "bundle the
   renderer into the page" rested on a spike I could not reproduce and whose
   figures did not agree with each other; what is verifiable is the
@@ -136,23 +136,39 @@ The whole product, minus hardware.
   it grew.
   **Open, and why this is `[~]`:**
 
-  1. **Two review artefacts still paint a flat backdrop** — `contact-sheet.ts`
-     and the harness — where the device paints the environment edge to edge
-     (`ENVIRONMENT_EXTENT = 'panel'`), so both show a colour the panel never
-     displays. Both now say so instead of claiming to be the panel's ground,
-     and `docs/ANIMATION.md` §Judging now sends a reviewer to `panel-mock`.
-     What is still wrong is the _procedure_ rather than the prose:
-     `.claude/agents/animation-critic.md` step 4 and `docs/ANIMATION.md`'s
-     authoring loop both still say "build a contact sheet", and the agent
-     follows its own numbered steps. Nothing gates this either — no test fails
-     if a tool starts painting a panel colour again, which is how
-     `contact-sheet.ts` held one through three review passes.
-  2. **Hero versus two-up is open; the band heights that ship are not.**
-     `composePanels` hardcodes `layout: 'hero'`, so no tool composes a two-up
-     _panel_ through `render()` — the harness still scrubs two-up sprites at
-     true size against real slots, with empty bands. `daemon.ts`'s
-     `layout: 'hero'` is a bare literal with no rationale anywhere, unlike the
-     `landscape` beside it, which carries a dated record.
+  1. **Closed 25 Aug.** `contact-sheet.ts` composed its frames over a flat
+     `#0d1117` — a `packs/example` palette entry copied by hand — where the
+     device paints the environment edge to edge (`ENVIRONMENT_EXTENT = 'panel'`).
+     It is the artefact the mandatory `animation-critic` reads, so every
+     animation review since the environment landed judged art against a
+     background the panel cannot display, which is the failure this plan
+     already records four animations shipping through.
+     It now composes each frame through `render()` and crops to the stage slot,
+     so a reviewer sees the sprite on its real ground and still sees the frames
+     side by side. `--sky` picks the scheme; `day` is the hard case for a
+     _pale_ prop, its sand measuring 19.1 against dusk's 6.5. The harness keeps a backdrop and says so — it draws no bands
+     and is for motion, and `docs/ANIMATION.md` plus the critic's own step 4
+     send a reviewer to `panel-mock` for context.
+     `tools/one-panel-renderer.test.ts` is the gate that was missing, and
+     `contact-sheet.ts` has come off its allowlist rather than staying on it
+     harmlessly.
+  2. **Hero versus two-up is open, and is now answerable by looking.**
+     `composePanels` hardcoded `layout: 'hero'` until 25 Aug, so nothing could
+     compose a two-up _panel_ through `render()`. The comparison was not
+     impossible — `tools/harness.ts` has always scrubbed two-up sprites at true
+     size against real slots, with two _different_ animations, which is the one
+     thing the new picture cannot do. And `panel-mock` drew two-up until PR #52
+     removed it earlier the same day, so this restores a capability rather than
+     adding one. `panel-mock --layout twoUp` is that picture — real
+     environment, real bands, all four skies, true size and enlarged. Two-up
+     draws at scale 4, so it needs frames baked there
+     (`node tools/svg2frames.ts <svg> <outDir> 4`), which `composePanels` now
+     says in its error rather than failing obscurely.
+     The decision itself is still open. `daemon.ts`'s `layout: 'hero'` is a
+     bare literal with no rationale anywhere, unlike the `landscape` beside it,
+     which carries a dated record; the spec calls two-up "a genuine trade
+     rather than a settled rejection". Either that literal gets a reason or
+     two-up gets cut, and there is now something to decide from.
      The band heights are in better shape than an earlier version of this entry
      claimed. Landscape derives its message band as `height - (status + strip)`
      = 116px and consumes only `BAND_HEIGHTS.status` and `.strip`;
@@ -218,11 +234,11 @@ question, not the parity one.
 that composes a _scene_ now does it through `render()` — see the Stage 1 entry
 above, which landed 25 Aug by deleting the competing draws rather than by
 bundling the renderer into a page, the fix this paragraph used to prescribe.
-What is left is that two review artefacts still paint a flat backdrop behind
-transparent frames where the device paints scenery, and that the
-`animation-critic` agent's own numbered steps still send it to one of them. That is a smaller and more specific
-gap than "the harness approximates the bands", but it is not nothing, and it is
-the one an art review actually walks into.
+What is left is the harness, which paints a flat backdrop behind transparent
+frames where the device paints scenery — deliberately, since it draws no bands
+and exists to scrub motion, and both `docs/ANIMATION.md` and the critic's own
+step 4 now send a reviewer elsewhere for context. A much smaller gap than "the
+harness approximates the bands", and a chosen one.
 
 ## Stage 3 — Session pipeline (Mon 24 – Mon 31 Aug)
 
@@ -319,9 +335,9 @@ the one an art review actually walks into.
   first commit that ever contained this file — "_Last item in the stage and
   explicitly cuttable_ — design the protocol for it from day one (cheap),
   but ship it only if Stage 4 is on schedule" — and a first version of this
-  entry claimed that condition had fired. It has not. Stage 4 has one
-  unchecked box and it is a _tool_; every Tier A animation exists, twelve
-  days before the 6 Sep gate. That version also said the catalogue was
+  entry claimed that condition had fired. It has not. Stage 4 had one
+  unchecked box at the time and it was a _tool_, cut on 25 Aug, so the count is
+  now zero; every Tier A animation exists, twelve days before the 6 Sep gate. That version also said the catalogue was
   "hand-drawn", which contradicts `docs/ANIMATION.md` — the animations are
   LLM-authored CSS against a fixed geometry, and hand-drawing is the risk
   register's untaken fallback. Both claims were wrong and both made the cut
@@ -421,6 +437,21 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
 
 The long pole. Runs in parallel with Stage 3 from week two.
 
+**Every top-level box is settled as of 25 Aug** — six `[x]` and the cut
+generator at `[~]`, nineteen days before the stage ends. **That is not the same
+as closed**, and a first version of this paragraph said closed: item 8 says of
+itself "No ✅ because the item is not done", `sweeping`'s wiring being
+cross-package and waiting on a `COMPACTING` state, and item 13 is unbuilt. A
+stage cannot close over a checkbox whose own children say they are open, and
+this one has no `**Exit:**` line to close against instead — so the box count is
+what is true, and those two sub-items need a home before the stage closes.
+
+Recorded because the opposite was asserted the same day: the remote-transport
+cut was justified on "Stage 4 is not on schedule", which was false when written.
+The animations are LLM-authored CSS against a fixed geometry, but "authored
+through §The authoring loop" would be its own retrofit — four predate the loop
+by two days, and `CLAUDE.md` records six shipping with no critic at all.
+
 - [x] **The environment: a rock pool, through the day.** Built, and wired into
       `sceneFor` on 22 Aug — it was reachable from nothing before that, which
       is how four animations shipped with holes for eyes that only a
@@ -453,13 +484,26 @@ than partially. Eight good screens beat nine plus four rough ones.
 
 - [x] `assets/clawd/base.svg` — canonical geometry, stable element IDs (upstream's file, see `CREDITS.md`)
 - [x] `PLANS.md` — prose spec per animation (action / body mechanics / eyes / effects)
-- [ ] TS generator: base SVG + example + plan → LLM → animated SVG, under the
-      generation contract in `docs/ANIMATION.md` §The generation contract —
-      motion is CSS by ID, props and effects may add elements, and a pose
-      variant may be drawn where no transform reaches the pose. This line
-      previously said "may only add transforms and keyframes to existing IDs",
-      which is the ban that section retired; `CLAUDE.md` carried the same
-      wording and was corrected on 22 Aug, and this was the third copy
+- [~] ~~TS generator: base SVG + example + plan → LLM → animated SVG~~ —
+  **cut, 25 Aug.** It would have automated `docs/ANIMATION.md` §The
+  authoring loop, which is a documented agent procedure. That loop has
+  already produced the entire catalogue — fourteen animations, all of them
+  CSS against `base.svg` under §The generation contract — so the tool would
+  wrap a process that demonstrably works when invoked by hand.
+  **This is not the plan's condition firing; nothing conditioned it.** It is
+  a judgement that a tool automating a working loop is worth less than the
+  days it costs, with 29 left. Nothing depends on it: the only reference in
+  the tree was this line. Most of Stage 5's remaining art does not want it — a
+  pixel scene is a drawing and the logo is a `sharp` pipeline — but the pet
+  sprite is a background prop _on idle and asleep_, so it lands inside two
+  existing animated SVGs, and the spec calls it Tier A art rather than set
+  dressing. That and the easter-egg idle are animation work.
+  What it would have bought is repeatability across a _series_, which matters
+  when many are left. Three are: the franchise-flavoured easter-egg idle
+  (Stage 5, unchecked), item 13's road bike, and the spec's meditation idle
+  variant. Three is not a series and each is one pass of the loop — but a first
+  version of this line said "there are none" and called the easter-egg idle
+  hypothetical when it is a scheduled box.
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
