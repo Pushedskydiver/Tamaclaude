@@ -293,11 +293,20 @@ describe('what the panel says', () => {
     // path with two shields, so emptying `mapped` is what reaches the defect.
     //
     // `FAILED` is the only live state that reaches the *panel* with a stale
-    // tool — which the assertion below pins, since `resolve` copies it across
-    // unfiltered. It does not reach the message band: `TOOL_STATES.FAILED` is
-    // `false`, and that whitelist is the only thing stopping it. This comment
-    // said "reaches the tool line" until 25 Aug, which read as the opposite of
-    // what the next four lines assert.
+    // tool. The assertions below pin that it does, not that it is the only one
+    // — the uniqueness is an argument from `TRANSITIONS`, where every other
+    // route into a toolless state clears `tool` on the way, and nothing here
+    // holds it.
+    //
+    // It does not reach the message band. In this test that is down to the
+    // whitelist alone, because `bare` empties `mapped` — which is the point of
+    // emptying it. With the shipping pack, `refinedFailureLine` and the
+    // `mapped` lookup both answer first, as the paragraph above says.
+    //
+    // This comment said "reaches the tool line" until 25 Aug, flatly, which
+    // read as the opposite of what the assertions at the end of this test pin.
+    // Counting lines here would be a third stale claim in the same block, so
+    // this one points at the code by name instead.
     //
     // `SessionEnd` also leaves `tool` set, at `ASLEEP` — the panel never sees
     // it because `isLive` drops a session with `endedAt`, which is a different

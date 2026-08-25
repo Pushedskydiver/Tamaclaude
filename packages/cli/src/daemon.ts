@@ -306,16 +306,24 @@ function refinedFailureLine(
 /**
  * The states where the tool is the interesting fact, rather than a leftover.
  *
- * **Two handlers leave `tool` set, not one.** `StopFailure` leaves it at
- * `FAILED`, and `SessionEnd` leaves it at `ASLEEP` — `session.ts` stores
- * `ASLEEP` with the tool the session died holding.
+ * **Two handlers strand a tool, not one.** Plenty of events leave `tool`
+ * alone — every unmapped one does — but two leave it set while moving the
+ * session out of the state it belonged to: `StopFailure` at `FAILED`, and
+ * `SessionEnd` at `ASLEEP`, which `session.ts` stores with the tool the
+ * session died holding.
  *
  * Neither reaches the glass, and the reasons are different, which is the whole
- * argument for this table. `FAILED` is stopped here and nowhere else: `resolve`
- * copies `hero.tool` onto the panel unfiltered, so `panel.tool` really is
- * `Bash` for a session that died running it, and the only thing between that
- * and the message band is the `false` below. `ASLEEP` never gets that far,
- * because `isLive` drops a session with `endedAt` before the panel is built.
+ * argument for this table. `resolve` copies `hero.tool` onto the panel
+ * unfiltered, so `panel.tool` really is `Bash` for a session that died running
+ * it. What stops it there depends on the pack: `refinedFailureLine` and the
+ * `mapped` lookup both run ahead of the line below, and the example pack
+ * defines `FAILED` and `FAILED:rate_limit`, so for that pack the tool never
+ * gets this far. **The `false` below is the only guard that does not depend on
+ * the pack** — which is why the test for it has to empty `mapped` to reach the
+ * defect at all. `ASLEEP` *carrying a tool* never gets here either, because
+ * `isLive` drops a session with `endedAt` before the panel is built; plain
+ * `ASLEEP` by promotion reaches the panel constantly and has no tool to
+ * strand.
  *
  * Said in the present tense here until 25 Aug, as though `StopFailure` still
  * reached the glass — a description of the world immediately above the table
@@ -328,7 +336,9 @@ function refinedFailureLine(
  * it is stronger than the one first written here: a `FAILED`-only blacklist is
  * not merely risky for some future state, it already has a live state on the
  * wrong side of it. If eviction ever held an ended session on the strip for a
- * beat, `ASLEEP` would surface carrying `Bash`.
+ * beat, `ASLEEP` would surface carrying `Bash`. That is a claim about the
+ * blacklist, not about the table as it stands: with `ASLEEP: false` below, such
+ * a session would set `panel.tool` and still put nothing on the message band.
  *
  * A total `Record` rather than a `Set`, for the reason `TONE` above gives: a
  * `Set` compiles clean when a state is added to `SESSION_STATES` and silently

@@ -10,11 +10,15 @@
  * `error` onto the fields below. This block said the translation was unwritten
  * and the shape aspirational for as long as it has been neither.
  *
- * It then said `error_type` for as long again, which is worse: `errorType`
- * below records that reading `error_type` was a real defect that emptied every
- * `StopFailure` silently, and this header went on naming the wrong key three
- * lines from the field that documents it. A file that corrects itself in one
- * place and not the other is the shape a reader trusts least.
+ * It then said `error_type` after that stopped being true, which is worse:
+ * `errorType` below records that reading `error_type` was a real defect which
+ * emptied every `StopFailure` silently, and this header went on naming the
+ * wrong key while `errorType`'s own doc block, further down this file, spelt
+ * out that the wire name is `error`. Not a stale
+ * description of stale code — the header was accurate while `packages/hooks`
+ * still read `error_type`, and went wrong the moment that was fixed on 24 Aug.
+ * A file that corrects itself in one place and not the other is the shape a
+ * reader trusts least.
  *
  * Verified against code.claude.com/docs/en/hooks.md rather than assumed —
  * `BUILD_PLAN.md` Stage 3 gated the state machine on exactly that, because a
