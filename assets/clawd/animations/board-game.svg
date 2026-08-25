@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="2">
+  <!--
+    Clawd: board game (Agent)
+
+    He is not doing the work; several small things are doing it for him. Plan:
+    assets/clawd/animations/PLANS.md §Board game.
+
+    Generated against assets/clawd/base.svg. Every base element appears below at
+    its original coordinates and colours except `ground-shadow`, which
+    §Clawd lives somewhere forbids carrying. All motion, including the eyes'
+    look down and left, is CSS applied by ID.
+
+    ── Two seconds, and why not four ─────────────────────────────────────
+
+    This screen is a punctuation mark, not a scene. Keyed on `PreToolUse` for
+    `Agent`, it is replaced the moment the subagent makes its own first tool
+    call — and those arrive on the *parent's* session, because sidechains do not
+    get their own id. Measured over 167 subagent runs: median 3.2s to that first
+    call, p90 4.3s, max 9.6s. Against that window:
+
+      2s loop (16 frames)  seen whole on 167 of 167
+      3s                                 110 of 167
+      4s                                  29 of 167
+     12s                                   0 of 167
+
+    So two seconds, and the screen says *handed off* before `gym` or
+    `bouldering` take the stage back to report what the subagent is doing.
+
+    ── The breath is half amplitude, and that is not a shortcut ──────────
+
+    The corpus breath is `2s alternate`, which is a **four** second full cycle —
+    in for two, out for two. On a two second loop that ends the wrap at the far
+    end of the cycle and seams hard, twice a second, which §Timing is explicit
+    about. So the breath here is one full cycle in 2s with its own keyframes and
+    no `alternate`.
+
+    That is twice the corpus rate, so the amplitude is halved to match its
+    *velocity* rather than its numbers: the corpus moves 0.02 of scale across
+    2s, and 0.01 across 1s is the same 0.01 a second. A faster breath at full
+    amplitude reads as panting; this reads as the same crab.
+
+    ── The board ─────────────────────────────────────────────────────────
+
+    Left flank at ground level, which is the only flank free there:
+    `paintEnvironment` puts the pool at units x 11.25 to 17.50, y 12.50 to
+    15.63, so anything at ground level on the right is in the water. The rock is
+    on this side but at y 6.63 to 8.75 — mid-distance, well above a ground-level
+    prop.
+
+    **It overlaps the outer left leg, and that is the contact.** §Props need
+    contact wants a prop that touches, and this screen deliberately has no claw
+    raise — it is the one working screen where he does not act — so the legs
+    have to do it. Half a unit of overlap, which touches without hiding a foot.
+
+    Five and a half units wide and two tall. The first draft was four and a
+    half by one, on the reasoning that a flat slab needs less than the payoff's
+    vehicle — that vehicle needed wheels, a cabin and a window to read. True,
+    and it still rendered as a smudge on the sand: a board seen from a desk is
+    a surface with a thickness, and one row has no thickness.
+
+    Board and pieces sit outside `#breathe`. Anything with two colours inside a
+    scaling group fringes to the body colour — checklist §7, and the `wizard`
+    hat's 81 of 96 frames.
+
+    ── Two tones, because one is invisible at some hour ──────────────────
+
+    Measured with `tools/contrast.ts` against sand, which is what this prop
+    actually sits on: `#000000` is 4.21 / 8.19 / 3.28 / **1.61** at dawn, day,
+    dusk and night, and `#C9D1D9` is 3.32 / **1.71** / 4.27 / 8.68. The dark
+    slab carries by day and the pale pieces carry at night, which is why it is
+    both and not either.
+
+    No new colour: only `#000000`, `#C9D1D9` and `#DE886D`, all already in the
+    corpus.
+
+    ── One move, and no blink ────────────────────────────────────────────
+
+    The piece steps one cell at frame 8 and back at the wrap. At sixteen frames
+    that is the whole beat and it has to be a single legible event, so it is a
+    whole art pixel under `steps(1)` — nothing continuous, nothing sub-unit.
+
+    No blink, which reverses the plan's earlier note. That note argued from
+    `confused`'s 26 distinct frames of 96 that a screen this calm needs one; at
+    sixteen frames a blink is three or four of them and lands as a twitch. The
+    motion budget belongs to the pieces.
+  -->
+  <defs>
+    <style>
+      /* One frame of the two second loop is 6.25%. */
+
+      /* `idle`'s breath at half amplitude on a full 2s cycle — see the note
+         above on why it is not `2s alternate`. Legs are a sibling of this
+         group so they stay planted. */
+      #breathe {
+        transform-origin: 7.5px 13px;
+        animation: breathe 2s infinite ease-in-out;
+      }
+
+      @keyframes breathe {
+        0%, 100% { transform: scale(1, 1) translate(0, 0); }
+        50%      { transform: scale(1.01, 0.99) translate(0, 0.25px); }
+      }
+
+      /* Down and left, onto the board — as a transform on the base id, so the
+         rects keep `base.svg`'s coordinates. Whole units, so it cannot land off
+         the grid. */
+      #eyes-color-group {
+        transform: translate(-1px, 1px);
+      }
+
+      /* The piece that moves. One cell right at frame 8, back at the wrap:
+         `steps(1)` so it is never between cells, and a whole unit so it is
+         never between pixels. */
+      #fx-piece-moving {
+        animation: nudge 2s infinite steps(1);
+      }
+
+      @keyframes nudge {
+        0%  { transform: translate(0, 0); }
+        50% { transform: translate(1px, 0); }
+      }
+    </style>
+  </defs>
+
+  <g id="master-group">
+    <g id="legs-group" fill="#DE886D">
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="breathe">
+      <g id="body-color-group" fill="#DE886D">
+        <rect id="torso" x="2" y="6" width="11" height="7"/>
+        <g id="left-arm-joint">
+          <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+        </g>
+        <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+      </g>
+
+      <g id="eyes-blink">
+        <g id="eyes-color-group" fill="#000000">
+          <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+          <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+        </g>
+      </g>
+    </g>
+
+    <!-- The board, drawn after the legs so it reads as nearer the viewer, and
+         overlapping the outer left leg by half a unit — which is the contact
+         this screen has instead of a claw.
+
+         Three parts, because one flat slab rendered as a smudge on the sand:
+         a pale playing surface, a dark front edge under it that gives the slab
+         depth, and dark pieces standing on the surface rather than lying in
+         it. That also fixes the contrast both ways — the pale top is 1.71:1
+         against day sand and would vanish alone, and the dark edge and pieces
+         are 1.61:1 against night sand and would vanish alone. Together one of
+         them always carries. -->
+    <g id="fx-board">
+      <rect id="fx-board-top" x="-2" y="13" width="5.5" height="1" fill="#C9D1D9"/>
+      <rect id="fx-board-edge" x="-2" y="14" width="5.5" height="1" fill="#000000"/>
+      <g id="fx-pieces" fill="#000000">
+        <rect id="fx-piece-still" x="0.5" y="12" width="1" height="1"/>
+        <g id="fx-piece-moving">
+          <rect x="-1.5" y="12" width="1" height="1"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -5,6 +5,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import { SOURCE as ASLEEP } from '../packages/renderer/src/sprites/asleep.data.ts';
+import { SOURCE as BOARD_GAME } from '../packages/renderer/src/sprites/board-game.data.js';
 import { SOURCE as BOULDERING } from '../packages/renderer/src/sprites/bouldering.data.ts';
 import { SOURCE as CONFUSED } from '../packages/renderer/src/sprites/confused.data.ts';
 import { SOURCE as DIZZY } from '../packages/renderer/src/sprites/dizzy.data.ts';
@@ -48,6 +49,7 @@ import { fingerprint } from './art-fingerprint.ts';
 
 const BAKED: ReadonlyArray<readonly [string, string]> = [
   ['asleep', ASLEEP],
+  ['board-game', BOARD_GAME],
   ['bouldering', BOULDERING],
   ['confused', CONFUSED],
   ['dizzy', DIZZY],
