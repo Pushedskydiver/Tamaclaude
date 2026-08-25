@@ -285,6 +285,14 @@ describe('subagents', () => {
     // version of this comment claimed the gate never drifts, which a review
     // showed to be false.
     expect(foldAt(['SubagentStart', 'SubagentStart'], T0).subagents).toBe(0);
+    // Freshness as well as the count, and pinned separately because folding at
+    // one instant cannot see it: gating the count for untyped starts while
+    // still letting them refresh the clock passes every other test here.
+    // Nothing in the capture was an untyped *start* — the sample for this half
+    // is empty — so it is symmetry that justifies it, not evidence.
+    expect(
+      applyEvent(start, event('SubagentStart'), T0 + 1000).lastEventAt,
+    ).toBe(T0);
   });
 
   it('does not let a stray push the payoff window back', () => {
@@ -303,17 +311,37 @@ describe('subagents', () => {
     // The same shape is why ignoring these for freshness is safe: a session
     // with nothing happening emits no strays, so nothing here can hold one
     // awake or, now, fail to.
-    const stopped = applyEvent(start, event('Stop'), T0);
     const worked = applyEvent(
-      applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0 - 1000),
+      applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0),
       event('Stop'),
-      T0,
+      T0 + 1000,
     );
-    expect(effectiveState(worked, T0 + DONE_AFTER_MS)).toBe('DONE');
-    const strayed = applyEvent(worked, event('SubagentStop'), T0 + 2500);
+    const due = worked.lastEventAt + DONE_AFTER_MS;
+    expect(effectiveState(worked, due)).toBe('DONE');
+    const strayed = applyEvent(
+      worked,
+      event('SubagentStop'),
+      worked.lastEventAt + 2500,
+    );
     // Was 'IDLE' before this change: the stray moved the window 2.5s later.
-    expect(effectiveState(strayed, T0 + DONE_AFTER_MS)).toBe('DONE');
-    expect(stopped.lastEventAt).toBe(T0);
+    expect(effectiveState(strayed, due)).toBe('DONE');
+    expect(strayed.lastEventAt).toBe(worked.lastEventAt);
+  });
+
+  it('lets a session age past a stray, which is what the above costs', () => {
+    // The other half of the trade, and the local standard is that a chosen cost
+    // gets asserted rather than left to prose. Before the gate this session
+    // would still have been `IDLE` at the five-minute mark, because the stray
+    // reset the clock four minutes in; now the stray is not evidence the
+    // session did anything, so it sleeps on schedule.
+    //
+    // Safe for the reason `SUBAGENT_DELTA` gives: a subagent that is genuinely
+    // running rides its own `PreToolUse`/`PostToolUse` on the parent's session
+    // id, so a session with real work in flight is refreshed by that work and
+    // never depends on a stray to stay awake.
+    const idle = applyEvent(start, event('Stop'), T0);
+    const strayed = applyEvent(idle, event('SubagentStop'), T0 + 4 * 60_000);
+    expect(effectiveState(strayed, T0 + ASLEEP_AFTER_MS)).toBe('ASLEEP');
   });
 
   it('does not disturb the state its parent is in', () => {

@@ -69,6 +69,14 @@ describe('observe', () => {
     // on the strip for a session nobody is using, and it stays for the ten
     // minutes of `EVICT_AFTER_MS`. Asserted here so the behaviour is chosen
     // rather than merely current.
+    //
+    // It sits at an angle to `applyEvent`, which no longer lets a stray refresh
+    // `lastEventAt` on a session that already exists. Not a contradiction: a
+    // stray is proof a session *id* exists, which is why `observe` mints one,
+    // and not proof that session is doing anything, which is why the clock does
+    // not move afterwards. Worth stating because the two files read as if they
+    // disagree, and because `registry.ts` also folds a stray into the
+    // registry-level `lastEventAt` that `resolve.ts` reads for the empty desk.
     const registry = observe(
       createRegistry(T0),
       event('stray', 'SubagentStop'),

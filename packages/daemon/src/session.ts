@@ -74,7 +74,12 @@ export type Session = {
   readonly workedAt?: number;
   /** First sight of this session. Spec §4's tie-break within "needs you". */
   readonly startedAt: number;
-  /** Last proof of life, of any kind. Drives sleep and eviction. */
+  /**
+   * Last proof of life. Drives sleep and eviction.
+   *
+   * Of any kind but one: a subagent event carrying no `agentType` leaves this
+   * alone — see the gate in `applyEvent`. It used to be every kind.
+   */
   readonly lastEventAt: number;
   /** When Claude Code last asked for input, if it is still unanswered. */
   readonly notifiedAt?: number;
@@ -282,7 +287,8 @@ const SUBAGENT_DELTA: ReadonlyMap<string, number> = new Map([
  * `packages/hooks`, which cannot import each other.
  *
  * `PostToolUse` is absent on purpose: a tool finishing changes nothing but the
- * freshness that every event refreshes.
+ * freshness that every event refreshes — every event bar the untyped subagent
+ * ones the gate in `applyEvent` drops, which `PostToolUse` is not.
  */
 export const HANDLED_KINDS: ReadonlySet<string> = new Set([
   ...TRANSITIONS.keys(),
@@ -306,18 +312,27 @@ export function applyEvent(
     // not refresh `lastEventAt` either: `quiet` in `effectiveState` is measured
     // off that field, and a stray is not the session doing anything.
     //
-    // Left as a refresh at first, on the reasoning that any event is proof of
-    // life. What that missed is *when* strays arrive. They are not spread
-    // evenly — across a 38-minute capture six of seven landed 1.5-3.9s after a
-    // `Stop`, the seventh closed a compaction window, and two idle stretches of
-    // 474s and 246s held none. So a stray never lands inside the fifteen
-    // seconds `DONE` is on screen and never costs a payoff; what it does is
-    // push **every** payoff back by its own delay after the `Stop`.
+    // **Why this is safe**, and the argument does not need the capture:
+    // `packages/protocol/src/events.ts` records that subagents are not a
+    // separate event stream but ride the ordinary events under the parent's
+    // session id. So a session with a live subagent is being refreshed by that
+    // subagent's own `PreToolUse`/`PostToolUse`, and a session whose only
+    // traffic is untyped subagent events genuinely has nothing happening and
+    // ought to age. Anyone can check that; nobody can re-check the numbers
+    // below.
     //
-    // That same clustering is why dropping the refresh is safe. A session with
-    // nothing happening emits no strays, so none of this can age a live session
-    // towards `ASLEEP` or eviction — the events being ignored only ever arrive
-    // moments after a real one that refreshed the clock properly.
+    // **What the capture adds** is the size of the win, and it is smaller than
+    // it first looks. Strays are not spread evenly: over 45 minutes, all six
+    // `Stop`s were followed by one within 4s, while none of the eight strays
+    // landed anywhere near the 45-60s the payoff is on screen. So a stray does
+    // not cost a payoff — it delays one, by its own lag behind the `Stop`.
+    //
+    // Six of six is the measurement, not a law; `Stop` fires once per response
+    // (`TRANSITIONS` above) and a different workload gives a different rate —
+    // the capture cited in `session.test.ts` saw nine in three hours against
+    // six in forty-five minutes here. Read it as "in this capture, every
+    // payoff-eligible boundary was followed by a stray", which is what was
+    // seen, rather than as every payoff always being late.
     if (event.agentType === undefined) return session;
     return { ...seen, subagents: Math.max(0, seen.subagents + delta) };
   }
@@ -349,12 +364,17 @@ export function effectiveState(session: Session, now: number): SessionState {
   // a payoff. Crossing the upper bound is the expiry, so there is no stored
   // timer and nothing to tidy up.
   //
-  // **It can re-arm, and that is the behaviour rather than a leak.** Any event
-  // refreshes `lastEventAt`, so a session that goes quiet again after a
-  // `PostToolUse` or a `SubagentStop` gets another window off the same
-  // `workedAt`. An earlier version of this comment claimed a repeat "cannot
-  // re-trigger, because there is no trigger" — the arithmetic is on the one
-  // field every event resets. Only `UserPromptSubmit` and `SessionStart` spend
+  // **It can re-arm, and that is the behaviour rather than a leak.** Almost any
+  // event refreshes `lastEventAt`, so a session that goes quiet again after a
+  // `PostToolUse` gets another window off the same `workedAt`. An earlier
+  // version of this comment claimed a repeat "cannot re-trigger, because there
+  // is no trigger" — the arithmetic is on the one field nearly every event
+  // resets.
+  //
+  // This paragraph used to name `SubagentStop` alongside `PostToolUse`, and
+  // that is now exactly backwards: an untyped one is the single event the gate
+  // in `applyEvent` withholds the refresh from, and re-arming this window off
+  // machinery traffic was the reason for it. Only `UserPromptSubmit` and `SessionStart` spend
   // it, which is right: asking for something new is what acknowledges the last
   // thing, and either way the payoff needs a fresh quiet period to appear.
   if (session.workedAt !== undefined) {

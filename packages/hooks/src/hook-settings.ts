@@ -106,7 +106,7 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
   {
     event: 'SubagentStop',
     matcher: '*',
-    why: 'and down. Untyped ones are machinery: proof of life, not a count',
+    why: 'and down. Untyped ones are machinery and the daemon ignores them',
   },
   {
     event: 'SessionEnd',
