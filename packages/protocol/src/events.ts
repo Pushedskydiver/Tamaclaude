@@ -108,5 +108,6 @@ export const HANDLED_HOOK_EVENTS = [
   'Notification',
   'SubagentStart',
   'SubagentStop',
+  'PreCompact',
   'SessionEnd',
 ] as const;

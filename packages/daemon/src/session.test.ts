@@ -374,6 +374,52 @@ describe('subagents', () => {
   });
 });
 
+describe('the compaction window', () => {
+  it('opens on PreCompact and closes on the SessionStart that ends it', () => {
+    // Measured on a hook-socket capture, 25 Aug: `PreCompact` at the near end,
+    // `SessionStart` with `source: 'compact'` 97s later at the far end, and
+    // nothing between them but a `SubagentStop`, which moves no state. The exit
+    // needed no new code — `SessionStart` already returns a session to `IDLE`.
+    const working = applyEvent(
+      start,
+      event('PreToolUse', { tool: 'Bash' }),
+      T0,
+    );
+    const compacting = applyEvent(working, event('PreCompact'), T0 + 1000);
+    expect(compacting.state).toBe('COMPACTING');
+    expect(effectiveState(compacting, T0 + 97_000)).toBe('COMPACTING');
+    const after = applyEvent(compacting, event('SessionStart'), T0 + 98_000);
+    expect(after.state).toBe('IDLE');
+  });
+
+  it('keeps the tool and any unanswered question', () => {
+    // `PreCompact` fires mid-turn, so the turn is still the turn it was.
+    // Clearing `tool` would be a lie about what the session was doing, and
+    // clearing `notifiedAt` would forget a question nobody has answered
+    // because the context happened to fill up. `TOOL_STATES` in `packages/cli`
+    // is what keeps the stale tool off the glass.
+    const asked = applyEvent(
+      applyEvent(start, event('PreToolUse', { tool: 'Bash' }), T0),
+      event('Notification'),
+      T0 + 500,
+    );
+    const compacting = applyEvent(asked, event('PreCompact'), T0 + 1000);
+    expect(compacting.tool).toBe('Bash');
+    expect(compacting.notifiedAt).toBe(T0 + 500);
+  });
+
+  it('does not age out of the window while it is open', () => {
+    // `effectiveState` promotes only from `IDLE`, so a compaction longer than
+    // the sleep threshold still shows as compacting rather than asleep. The
+    // longest measured was 268s; `ASLEEP_AFTER_MS` is five minutes, so this is
+    // reachable on a slow one.
+    const compacting = applyEvent(start, event('PreCompact'), T0);
+    expect(effectiveState(compacting, T0 + ASLEEP_AFTER_MS + 1000)).toBe(
+      'COMPACTING',
+    );
+  });
+});
+
 describe('effectiveState', () => {
   const idle = applyEvent(start, event('Stop'), T0);
 

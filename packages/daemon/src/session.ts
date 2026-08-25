@@ -214,6 +214,21 @@ const TRANSITIONS: ReadonlyMap<string, Transition> = new Map<
   ['Stop', () => ({ state: 'IDLE', tool: undefined })],
   ['Notification', (_event, now) => ({ notifiedAt: now })],
   ['SessionEnd', (_event, now) => ({ state: 'ASLEEP', endedAt: now })],
+  /**
+   * The compaction window opens here and closes on `SessionStart`.
+   *
+   * No timer and no stored deadline: `SessionStart` with `source: 'compact'`
+   * fires at the far end and its entry above already returns the session to
+   * `IDLE`, so the exit was wired before the entry was. A capture on 25 Aug
+   * measured that window at 97s, with nothing inside it but a `SubagentStop`
+   * that cannot take the hero.
+   *
+   * `RESUMED` is not spread here, deliberately. `tool` stays set because the
+   * turn is still the turn it was — `TOOL_STATES` is what keeps a stale tool
+   * off the glass — and clearing `notifiedAt` would forget a question a person
+   * has not answered just because the context filled up.
+   */
+  ['PreCompact', () => ({ state: 'COMPACTING' })],
 ]);
 
 /**

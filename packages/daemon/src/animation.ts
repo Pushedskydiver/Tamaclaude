@@ -33,6 +33,7 @@ export const ANIMATIONS = [
   'payoff',
   'wizard',
   'board-game',
+  'sweeping',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];
@@ -137,6 +138,7 @@ const STATE_ANIMATIONS: Readonly<
   // Nothing had to be reverted when the art arrived, which was the point.
   DONE: 'payoff',
   THINKING: 'thinking',
+  COMPACTING: 'sweeping',
   IDLE: 'idle',
   ASLEEP: 'asleep',
 };

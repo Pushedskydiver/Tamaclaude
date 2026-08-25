@@ -539,17 +539,21 @@ than partially. Eight good screens beat nine plus four rough ones.
      reach above the head, which the geometry forbids, and `confused` wanted a
      6deg body tilt against a 2.5deg one already recorded as reading like a
      corrupted sprite
-  8. sweeping (PreCompact) — **art landed 25 Aug, wiring deliberately not.**
-     No ✅ because the item is not done: `sweeping` is in `SPRITE_NAMES` and
-     absent from `ANIMATIONS`, with no `COMPACTING` in `SESSION_STATES` and no
-     `PreCompact` registered in `hook-settings.ts`, which is
-     the "art first, wiring last" order this list asks for. Recorded because the
-     6 Sep gate above is read off this list and the character of it has
-     changed — the art is sunk cost now, so cutting saves only the wiring, which
-     `assets/clawd/animations/PLANS.md` §Sweeping costs as cross-package and
-     atomic. That section also holds the rank decision the wiring depends on:
-     `COMPACTING` ranks **below the attention states**, not at the frozen spec's
-     tier 1, because a two-minute tier-1 screen would cover a permission prompt
+  8. sweeping ✅ (PreCompact) — **art 25 Aug, wiring the same day.** The
+     wiring was deliberately held back a commit so the art could land on its
+     own; `COMPACTING` is now in `SESSION_STATES` at rank 5, `PreCompact` is
+     registered in `hook-settings.ts`, and `sweeping` is in `ANIMATIONS`.
+     It cost what `assets/clawd/animations/PLANS.md` §Sweeping said it would —
+     cross-package and atomic. Adding the state made `tsc` fail in three
+     exhaustive `Record<SessionState, …>` tables across two packages, which is
+     the whole of the "atomic" part and is the reason it could not be done
+     piecemeal.
+     The window needed no timer: a capture measured `PreCompact` to
+     `SessionStart(source=compact)` at 97s with nothing inside it that can take
+     the hero, and `SessionStart` already cleared to `IDLE`, so the exit was
+     wired before the entry was. The rank is the departure from the frozen
+     spec, and `spec.md` §4 carries it along with the one thing the amendment
+     left open — where it sits relative to `WORKING`, `THINKING` and `DONE`.
   9. dizzy ✅ (StopFailure) — **taken out of order, ahead of 6 and 8.** It is
      the last state that was on the fallback, so building it is Stage 3
      correctness (the `[x]` in Stage 3) rather than Stage 4 art, and the 6 Sep

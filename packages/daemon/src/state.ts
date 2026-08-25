@@ -31,6 +31,7 @@ export const SESSION_STATES = [
   'DONE',
   'WORKING',
   'THINKING',
+  'COMPACTING',
   'IDLE',
   'ASLEEP',
 ] as const;
@@ -85,7 +86,8 @@ export const ATTENTION_RANK = 2;
  * exist. When the wiring does land, `assets/clawd/animations/PLANS.md`
  * §Sweeping ranks `COMPACTING` **below** the attention states rather than at
  * the frozen spec's tier 1 — compaction runs for minutes, and tier 1 there
- * would cover a permission prompt for all of them.
+ * would cover a permission prompt for all of them. Wired 25 Aug at rank 5,
+ * between `THINKING` and `DONE`; the spec's §4 and §9 carry the departure.
  */
 const STATE_RANK: Readonly<Record<SessionState, number>> = {
   NEEDS_PERMISSION: ATTENTION_RANK,
@@ -93,9 +95,15 @@ const STATE_RANK: Readonly<Record<SessionState, number>> = {
   WAITING: ATTENTION_RANK,
   WORKING: 3,
   THINKING: 4,
-  DONE: 5,
-  IDLE: 6,
-  ASLEEP: 7,
+  // Below the two states that serve a request the person actually made, above
+  // every resting one. Compaction is work, so it beats `DONE` and `IDLE` — but
+  // 18 of the 19 measured compactions were automatic, so it is work nobody
+  // asked for, and a session mid-`WORKING` on something that *was* asked for is
+  // the better answer to "what should I look at".
+  COMPACTING: 5,
+  DONE: 6,
+  IDLE: 7,
+  ASLEEP: 8,
 };
 
 /** How loudly a state asks for a human. Lower wins the stage. */
