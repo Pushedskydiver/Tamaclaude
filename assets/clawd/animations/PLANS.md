@@ -1328,16 +1328,163 @@ The context is filling up and Clawd is tidying it.
 `BUILD_PLAN.md` Stage 4 item 8, and **Tier B per `spec.md` — the third owed
 screen, which the first draft of this section replaced with `road bike`.**
 `road bike` is Tier C: "cut without regret". Promoting it was reopening a
-settled decision on the most expensive of the three, seventeen days before
-freeze.
+settled decision on the most expensive of the three, twenty days before the
+13 Sep feature freeze — the original said seventeen, which reproduces against
+no date in the plan.
 
 **Nothing can draw this yet.** `COMPACTING` is absent from `SESSION_STATES`,
 deliberately — `state.ts` records tier 1 as empty because `PreCompact`'s art
-does not exist — and `hook-settings.ts` does not register the hook. So this is
-art _plus_ a state, a rank, a `STATE_ANIMATIONS` entry and a hook registration.
-Cost that before drawing; it is the largest wiring bill of the three.
+does not exist — and `hook-settings.ts` does not register the hook, because
+"registering an event nothing consumes would be describing behaviour that does
+not exist". Each absence cites the other, so the two have to move together or
+the art lands unreachable. `board-game` showed the way through: the art can
+enter `SPRITE_NAMES` without entering `ANIMATIONS`, and the wiring follows.
 
-`data-loop-seconds="8"`.
+### Costed 25 Aug, before drawing — and the cost is the rank, not the clock
+
+**The decision this screen forces is where it sits in `STATE_RANK`, and the
+first draft of this section never said the word.** `spec.md` §4 puts
+`COMPACTING` in tier 1 — "seize the stage until `oneshotUntil`, regardless of
+anything else" — sized at a **2 second** oneshot. Measured, compaction runs for
+**two minutes**.
+
+`state.ts` already litigated this for the other tier-1 occupant and the verdict
+is the one that governs here: `DONE` was moved out of tier 1 because "a
+fifteen-second window is a different cost. **Covering a session blocked on a
+human breaks the one promise the panel makes** — it exists to say when to
+look." Two reviews independently reproduced a live defect from ranking it too
+high. A two-minute tier-1 `COMPACTING` is seven to eighteen times that rejected
+window, and the thing it would cover is a permission prompt.
+
+So: **`COMPACTING` ranks below the attention states**, exactly as `DONE` does
+and for exactly the same reason. That is a departure from the frozen spec and
+has to be written into `spec.md` §4 and §9 rather than only here — design
+freeze is today, `COMPACTING` is already in the frozen state machine, so
+implementing it is not a reopening but changing its oneshot from 2s to a
+minutes-long window is.
+
+This also closes a hole in the first draft's own arithmetic: the exposure figure
+below is only realised if `COMPACTING` wins `resolvePanel`'s comparator, which
+is the decision that draft presupposed without making.
+
+### How long, measured — and stratified, because pooling it hid the trend
+
+19 compactions across 3 projects on this machine, from `compact_boundary`
+records carrying `compactMetadata.durationMs`:
+
+| Claude Code | n     | median     | max        |
+| ----------- | ----- | ---------- | ---------- |
+| 2.1.219     | 3     | 194.0s     | 268.1s     |
+| 2.1.229     | 8     | 173.2s     | 204.5s     |
+| 2.1.222     | 2     | 129.3s     | 145.8s     |
+| 2.1.234     | 1     | 125.9s     | 125.9s     |
+| **2.1.237** | **5** | **108.6s** | **123.4s** |
+
+**The pooled median of 150s describes no version.** Compaction is getting
+faster release over release, and the newest — which is what will be running on
+23 September — is 109s median with a 123s maximum. The 268s the first draft used
+to size a timeout is the single oldest observation, four releases back and 2.2×
+the current maximum. Sizing anything off a clock that upstream is visibly
+changing is the wrong move.
+
+**Two exposure numbers, and they say opposite things.** Per occurrence this
+holds for minutes. In aggregate it is 0.62 compactions a day and 49.5 minutes
+total across a 30.9-day corpus — a **0.52% duty cycle**, taking "awake" as the
+union of activity with blocks broken at 10 minutes idle, which is the same
+definition §Board game uses. That very likely makes sweeping the _rarest_
+screen on the panel, not the longest-lived; the first draft claimed the latter
+and it is false, because `effectiveState` leaves any non-`IDLE` state standing
+until the next event or the 10-minute eviction, so `permission-sign`, `dizzy`
+and `gym` all reach longer single occupancies.
+
+Both numbers matter and they answer different questions. The per-occurrence
+figure sizes the loop. The aggregate says how much it is worth spending.
+
+**The evidence is transcript-layer and the conclusion is hook-layer**, which is
+the methodology §Board game explicitly retired. `durationMs` matches the gap
+between the record before the boundary and the boundary itself to within ~100ms
+where one sits immediately before, and no transcript record falls inside the
+window in any of the 19 — but no transcript can show that `PreCompact` fires at
+the _start_ of that window, that no hook event fires inside it, or that the
+daemon's hero is this session throughout. Plausible, unverified, and the capture
+that would settle it is `PreCompact` to `SessionStart(compact)`, not this.
+
+Sample caveats, weaker than §Board game's and stated for the same reason: 19
+events against that section's 167, all from one machine, all `claude-desktop`,
+all at a 933k–999k context. A smaller context window compacts more often on
+less material, so both rate and duration are configuration-dependent rather
+than properties of compaction.
+
+### The exit already exists
+
+The first draft said `COMPACTING` "needs an exit and there is no oneshot expiry
+to borrow", and proposed a five-minute bound. Both halves were wrong.
+
+`SessionStart` fires after compaction with `source: "compact"`. It is already
+registered in `hook-settings.ts`, already in `HANDLED_HOOK_EVENTS`, and already
+has a transition setting `IDLE` — whose comment two lines up names this exact
+case and calls it "not worth a special case". Across all 19 boundaries the
+session id is unchanged either side, so the clearing event lands on the same
+record. `PostCompact` exists too. Nothing needs building.
+
+And the "nothing to borrow" quoted half a sentence: `state.ts` continues "This
+state needs none: the window has two bounds, so crossing the upper one _is_ the
+expiry". That field-free idiom is the belt-and-braces for a daemon restarting
+mid-compaction — sized off the current version's maximum with headroom, not off
+a 268s outlier, and with a stated relationship to `ASLEEP_AFTER_MS`, which the
+proposed five minutes silently equalled.
+
+**The matcher risk was invented.** The first draft said every registration uses
+`'*'` and that `PreCompact`'s `manual`/`auto` values might mean `'*'` never
+matches. Three registrations already do not use `'*'` — `UserPromptSubmit`,
+`Stop` and `Notification` — and `hook-settings.ts`'s own docblock says an
+omitted matcher and `"*"` both mean everything. The hook docs agree generally,
+with no per-event carve-out; `manual`/`auto` are matcher _values_, not a
+requirement. It gated on nothing.
+
+### What the wiring actually costs
+
+More than the first draft said, and it does not split. Adding `COMPACTING` to
+`SESSION_STATES` is compile-enforced across **four** total `Record`s, two of
+them in another package — `STATE_RANK`, `STATE_ANIMATIONS`, `TONE` and
+`TOOL_STATES` — plus `HANDLED_HOOK_EVENTS`, a `TRANSITIONS` entry, the
+`ANIMATIONS` entry, the bake, and the quip-key surface, because state names are
+quip keys. Every type error appears the moment the state is added.
+
+So "art first, wiring last" buys less here than it did for `board-game`: that
+rule decouples the art, and the art was never the expensive half. The precedent
+that helps is `DONE`, which **borrowed `idle` while the state and rank were
+real** — "Nothing had to be reverted when the art arrived, which was the point."
+That is the route that makes the expensive half cuttable on its own.
+
+### One safety property, in two halves
+
+Stating one half is how a property like this gets broken. `PreCompact` can be
+blocked by a hook — by **exit code 2**, _and_ by stdout carrying
+`{"decision":"block"}`. `packages/hooks/src/index.ts` closes both: `bail()` is
+`process.exit(0)` and terminates every in-program path — socket error, end, the
+150ms deadline, `uncaughtException`, `unhandledRejection`, the undefined-event
+path and `main().catch` — and the file already treats writing nothing to stdout
+as a correctness requirement.
+
+The gap is the path that never reaches the program: a Node that will not start,
+or module resolution breaking after the repo moves. `hook-settings.ts` covers
+that with `|| true` on the command and says so.
+
+The stake is higher than "a skipped compaction": per the hook docs, blocking a
+compaction triggered to recover from a context-limit error surfaces the
+underlying error and fails the request. This is the one screen whose wiring can
+damage the thing it decorates.
+
+`data-loop-seconds="12"`, **not the 8 this section carried before the
+measurement**. `docs/ANIMATION.md` says longer loops are close to free on the
+wire and that length is the cheap way to buy variety, and the corpus splits
+that way: the long-exposure screens are `idle` at 16s and `asleep`, `confused`,
+`dizzy` and `wizard` at 12s, while 8s is where `thinking`, `payoff` and
+`permission-sign` sit. This holds for two minutes. Leaving 8s while writing
+"it needs a beat that survives repetition" was applying §Board game's lesson
+backwards: there the measurement changed the loop, here the first draft
+measured the window, stated the implication and changed nothing.
 
 - **Action.** Clawd sweeping something off the stage with an extended claw.
   What he sweeps should read as _removed_, not destroyed.
@@ -1354,7 +1501,12 @@ Cost that before drawing; it is the largest wiring bill of the three.
 A stage that visibly empties, since the loop repeats and it would refill.
 
 **Fallback:** cut it. It has the largest wiring cost and the least visible
-trigger — `PreCompact` fires rarely. **Decide by Sun 6 Sep.**
+trigger — and it is now measured rather than asserted: 0.62 compactions a day,
+0.52% duty, the rarest screen with a measured trigger. **Decide by Sun 6 Sep**,
+but not "with the Tier A gate", which has already fired green and which the
+section above records as reading like a rubber stamp. And **do not start the
+wiring after 13 Sep**: it is atomic and cross-package, so it cannot be
+half-landed.
 
 ---
 
