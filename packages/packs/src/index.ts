@@ -1,11 +1,17 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table, an optional birthday, props and an
- * optional logo. The character
- * is deliberately not part of it — Clawd is shared across packs and recoloured,
- * so there is one base geometry and one animation set. Swapping the pack
- * changes every screen without a rebuild or a reflash.
+ * A pack is a palette, a quip table and an optional birthday. Props and a logo
+ * are planned (`BUILD_PLAN.md` Stage 5) and are not fields yet. The character
+ * is deliberately not part of it: there is one base geometry and one animation
+ * set, and the sprites are baked to fixed RGB565 by `tools/bake-sprites.ts`, so
+ * nothing recolours Clawd per pack — a claim this block made until 25 Aug.
+ *
+ * **"Changes every screen" is aspirational, and measured it is not true today.**
+ * `packages/renderer/src/pack-swap.test.ts` records what a swap actually moves
+ * on the shipping panel: nothing at all with an empty session strip, and one
+ * 240px chip per working session. The palette's larger role is the logo and pet
+ * sprite that quantise to it, which Stage 5 has yet to build.
  *
  * The schema below is `name`, `palette`, `quips` and an optional `birthday`.
  * Props and logo land with the renderer. This line enumerates the schema

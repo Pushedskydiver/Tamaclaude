@@ -621,18 +621,32 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
       sprite. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
       points; `tamaclaude pack` confirms which, and prints the countdown.
-      **The palette is nearly inert in the shipping configuration, measured
-      26 Aug.** `packages/cli` composes with `extent: 'panel'`, and
-      `withEnvironment` then paints the environment across the whole
-      framebuffer and replaces the painter's ink with `environmentInk(time)`.
-      So `palette[0]` and `palette[1]` reach no shipping pixel at all. Swapping
-      a pack for one that agrees on nothing — magenta background, yellow ink —
-      changes **zero** pixels with an empty session strip, and 240 per chip
-      once one is on it: the tone entries, and nothing else.
-      Quips and `birthday` are text and do reach the glass.
-      `packages/renderer/src/pack-swap.test.ts` holds the measurement, and
+      **What the palette reaches today, measured 25 Aug.** `packages/cli`
+      composes with `extent: 'panel'`, so `withEnvironment` paints the
+      environment across the whole framebuffer and replaces the painter's ink
+      with `environmentInk(time)`. Swapping a pack for one that agrees on
+      nothing — magenta background, yellow ink — changes: - **zero** pixels with an empty strip, which is the modal case: `isLive`
+      keeps a session ten minutes, and overnight or any longer gap renders
+      the empty desk; - **zero** for a `resting` chip, because `TONE_ROLE` maps it to `ink`,
+      which has already been substituted — and `DONE`, `IDLE` and `ASLEEP`
+      are all resting; - 240 for an `active` or `attention` chip, capped at five by `MAX_CHIPS`.
+      So `palette[0]` never reaches a shipping pixel, and `palette[1]` only via
+      `sceneColours`' fallback on a pack carrying fewer than four entries.
+      **That is a consequence of a decision already taken, not a defect.**
+      `environment.ts` argues the ink substitution: a pack's ink is chosen
+      against its own background, and white on a midday sky is nearly
+      invisible, so whatever the text sits on should decide its colour. `panel`
+      extent was picked at the 25 Aug freeze with the trade priced in both
+      directions.
+      **The palette is still load-bearing** — the logo item below quantises to
+      it and the pet sprite is drawn in it — so what needs correcting is this
+      line's implied promise that a recipient will _see_ their palette in the
+      chrome. They will see it in quips, the birthday quip, their logo, their
+      pet, and a 240px chip while a session is working.
+      `packages/renderer/src/pack-swap.test.ts` holds the measurement;
       `panel-mock --pack <dir>` renders any pack, which no tool could do
-      before. The consequence is the item below.
+      before — though `blit.ts` still cannot, so nothing yet puts a pack on
+      glass.
 - [ ] **Set the Mac's clock to 23 Sep during the dry run and watch the panel.**
       The only end-to-end test the birthday can ever have: the recipient's pack
       is gitignored, so CI will never load it, and `isBirthday` reads the host's
@@ -697,18 +711,23 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       header left stale after an edit can pass — both of which an earlier
       version of it did.
 
-- [ ] **Environment as a pack field — the item that makes a palette mean
-      anything.** Extent (`stage` or `panel`) and eventually the schemes.
-      `docs/ANIMATION.md` gives "a pack can change it" as one of the four
-      reasons scenery is a renderer layer, and today a pack can change nothing
-      about it: `ENVIRONMENT_EXTENT` is a constant in
-      `packages/cli/src/daemon.ts`. Deferred there deliberately rather than
-      taken in the same pass as wiring the scenery on at all.
-      Promoted 26 Aug on a measurement rather than a preference: with
-      `extent: 'panel'` the environment covers the pack's background and
-      substitutes its ink, so until this lands the recipient's palette shows up
-      only on session chips. Either this ships, or the pack item above should
-      stop listing a palette among what the recipient gets.
+- [ ] **Environment extent as a pack field** — one optional field, defaulting
+      to `panel`. `ENVIRONMENT_EXTENT` is a constant in
+      `packages/cli/src/daemon.ts`; `docs/ANIMATION.md` gives "a pack can
+      change it" as one of four reasons scenery is a renderer layer. Deferred
+      there deliberately rather than taken in the same pass as wiring the
+      scenery on at all. About an hour: a field in `packages/packs`, a `??` in
+      the daemon, a test.
+      **It is not the item that makes a palette mean anything**, which an
+      earlier version of this line claimed. A pack choosing `stage` would show
+      its background and ink — 28,160 px against 0 — but that is reversing the
+      25 Aug freeze rather than completing it, and a pack-supplied _scheme_
+      would restore nothing at all, since the environment would still cover the
+      background and still substitute the ink.
+      **Schemes are deferred**, and are in the table at the end rather than
+      here: they would invalidate the contrast baseline in `tools/contrast.ts`
+      that every animation review has been judged against, 12 days before the
+      6 Sep art gate.
 - [ ] `packs/alex/` — proves the pack swap works
 
 ## Stage 6 — Hardening + gift prep (Mon 14 – Sat 19 Sep)

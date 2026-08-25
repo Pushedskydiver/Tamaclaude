@@ -280,9 +280,9 @@ const { values, positionals } = parseArgs({
     // `hero` or `twoUp`. See the header: two-up is an open question that no
     // tool could show a picture of until now.
     layout: { type: 'string', default: 'hero' },
-    // Which pack to compose with. Every tool here hardcoded `packs/example`
-    // until 26 Aug, so no artefact could show a pack swap — the thing the
-    // pack mechanism exists for.
+    // Which pack to compose with. Every tool hardcoded `packs/example` until
+    // 25 Aug, so no artefact could show a pack swap at all. `blit.ts` and
+    // `contact-sheet.ts` still do, so nothing yet puts a pack on glass.
     pack: { type: 'string', default: 'packs/example' },
   },
 });
@@ -291,10 +291,22 @@ if (values.layout !== 'hero' && values.layout !== 'twoUp') {
   console.error(`--layout takes 'hero' or 'twoUp', not '${values.layout}'`);
   process.exit(1);
 }
+// `loadPack` throws a raw ENOENT or a ZodError dump, which is what
+// `packages/cli/src/pack.ts` exists to prevent for the shipping path. This is
+// a review tool, so the guard is a readable prefix rather than that file's
+// full treatment.
+try {
+  await loadPack(resolve(values.pack));
+} catch (error) {
+  console.error(
+    `--pack ${values.pack}: ${error instanceof Error ? error.message : String(error)}`,
+  );
+  process.exit(1);
+}
 if (positionals.length === 0) {
   console.error(
     'usage: node tools/panel-mock.ts <frameDir> [frameDir2] ' +
-      '[--message <text>] [--layout hero|twoUp]',
+      '[--message <text>] [--layout hero|twoUp] [--pack <dir>]',
   );
   process.exit(1);
 }

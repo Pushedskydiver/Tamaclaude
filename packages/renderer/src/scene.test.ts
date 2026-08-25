@@ -307,6 +307,10 @@ describe('the session strip', () => {
 });
 
 describe('pack colours', () => {
+  // True of a scene with no environment, which every fixture here builds.
+  // `packages/cli` always composes one, and `pack-swap.test.ts` records that it
+  // covers this fill — so the pack background reaches no shipping pixel. Both
+  // are true; they describe different scenes.
   it('paints the whole panel in the pack background before anything else', () => {
     const target = render(EMPTY);
     expect(pixelAt(target, 0, 0)).toBe(BACKGROUND);
@@ -315,6 +319,9 @@ describe('pack colours', () => {
     );
   });
 
+  // Same caveat as above: with an environment at `panel` extent,
+  // `withEnvironment` substitutes `environmentInk(time)` for the pack's ink, so
+  // on the shipping panel this is the sky's ink rather than the pack's.
   it('draws ink in the pack ink colour, not a literal', () => {
     const colours = sceneColours(PACK);
     expect(colours.ink).not.toBe(colours.background);
