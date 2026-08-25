@@ -402,9 +402,10 @@ than partially. Eight good screens beat nine plus four rough ones.
      corrupted sprite
   8. sweeping (PreCompact) — **art landed 25 Aug, wiring deliberately not.**
      No ✅ because the item is not done: `sweeping` is in `SPRITE_NAMES` and
-     absent from `ANIMATIONS`, `SESSION_STATES` and `hook-settings.ts`, which is
+     absent from `ANIMATIONS`, with no `COMPACTING` in `SESSION_STATES` and no
+     `PreCompact` registered in `hook-settings.ts`, which is
      the "art first, wiring last" order this list asks for. Recorded because the
-     6 Sep decision below is read off this list and the character of it has
+     6 Sep gate above is read off this list and the character of it has
      changed — the art is sunk cost now, so cutting saves only the wiring, which
      `assets/clawd/animations/PLANS.md` §Sweeping costs as cross-package and
      atomic. That section also holds the rank decision the wiring depends on:
@@ -426,7 +427,7 @@ than partially. Eight good screens beat nine plus four rough ones.
       `overheated`'s is measured too, at ~0.1% of sessions, which item 12 says
       leaves "no 'rarest catalogued' to be rarer than". An earlier version of
       this line said six, which no enumeration of the catalogue produces. Art landed 25 Aug at 11:07 and the
-      `TOOL_ANIMATIONS` entry at 11:59 — fifty-two minutes, the tightest of the
+      `TOOL_ANIMATIONS` entry at 12:23 — one hour sixteen, the tightest of the
       three art-then-wiring gaps against `overheated`'s three hours and the
       payoff's seven. That is this list's own "art first, wiring last" rule
       followed rather than broken. The trigger was

@@ -1602,9 +1602,10 @@ images of 96**, the lowest in the corpus against `asleep` 96/96 and `idle`
 breath (six second cycle, four even iterations) plus a stroke that pushes in
 1.6s and recovers in 2.4s takes it to **92 of 96**.
 
-The general rule, which no checklist item states: **loop length only buys
-variety if two tracks have different periods.** Length against a single period
-is the same picture for longer. Worth a checklist item on the next pass.
+The general rule: **loop length only buys variety if two tracks have different
+periods.** Length against a single period is the same picture for longer. It is
+checklist item 9 as of this commit, answerable with a frame count rather than an
+argument.
 
 **6. There is a blink.** `#eyes-blink` carried an id and no rule at all, so
 nothing blinked across a screen that holds for minutes. It is the only beat the
@@ -1616,7 +1617,7 @@ unit down; at 9 the lid collapsed into the brow with a measured 7 pixel drift.
 
 ## What every plan has to answer
 
-Eight constraints, each one a place an animation has already gone wrong on this
+Nine constraints, each one a place an animation has already gone wrong on this
 project. Checking a plan against them costs minutes; discovering them from a
 critic's render costs a rebuild.
 

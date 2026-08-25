@@ -50,7 +50,7 @@ type RegisteredEvent = {
  * someone else's machine, in a file we only touch at install time. It would
  * then drift the first time a state is added, and the symptom would be a panel
  * that quietly never shows the new one. The cost of matching everything is a
- * few percent more spawns of a binary that takes 30 ms.
+ * few percent more spawns of a binary measured at ~42 ms an event.
  *
  * `PreCompact` is deliberately absent, and still is now that its `sweeping`
  * art has landed (25 Aug): the daemon has no `COMPACTING` state and nothing
@@ -110,8 +110,10 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
 /**
  * Claude Code's own cap on the hook, in seconds.
  *
- * `tamaclaude-notify` gives itself 150 ms and is measured at 30 ms round trip,
- * so this is not the working timeout — it is the outer guard for the case its
+ * `tamaclaude-notify` gives itself 150 ms and costs ~42 ms an event end to end
+ * — 38 ms of which is Node starting, with the socket write itself in the
+ * hundreds of microseconds (`index.test.ts`, measured 22 Aug). So this is not
+ * the working timeout — it is the outer guard for the case its
  * own deadline cannot cover, a process wedged before it runs any of its code.
  * Five seconds rather than one so a loaded machine cannot make a healthy
  * install look broken, and rather than the 600 s default so a broken one cannot

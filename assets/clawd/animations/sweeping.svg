@@ -13,8 +13,11 @@
 
     ── Twelve seconds, because the window is minutes ─────────────────────
 
-    Measured from `compact_boundary` records: compaction runs 109s median on the
-    release that will be running in September, 123s at its maximum there. So the
+    Measured from `compact_boundary` records: compaction ran 109s median on the
+    newest release present, 123s at its maximum there — a census of five, and
+    already six by the time it was re-checked, at 111.8s. PLANS.md §Sweeping is
+    the authority and flags its table as the census as taken; the point survives
+    a moving number, which is why the loop is sized on the order of magnitude. So the
     loop is seen about **nine** times over. An earlier draft said thirteen, which
     is 109/8 — left over from when this file was eight seconds — and also what
     the pooled 150s median gives, a figure PLANS.md §Sweeping retires in as many
@@ -38,8 +41,11 @@
     corpus `2s alternate`, whose full cycle is four seconds — exactly the stroke,
     exactly in phase. Rendered: frames 0-31 were byte-identical to 32-63, and
     64-95 differed only at the two blink frames. **19 distinct images of 96**,
-    the lowest in the corpus, against `asleep` 96/96, `idle` 123/128, `dizzy`
-    89/96 and `wizard` 87/96. Twelve seconds of loop bought two frames of
+    the lowest *ratio* in the corpus at 19.8%. Not the lowest count —
+    `permission-sign` holds 16 of 64 and `confused` 26 of 96, both deliberately
+    still screens. The comparison that matters is against the screens that also
+    move continuously: `asleep` 96/96, `idle` 123/128, `dizzy` 89/96, `wizard`
+    87/96. Twelve seconds of loop bought two frames of
     content over four.
 
     Two changes fix it, and the count is now **92 of 96**:
@@ -55,6 +61,13 @@
       so its second half is the first half re-rendered even once the breath is
       decoupled. Measured on the bake: the head leads at **3 device pixels a
       frame on the push and 2 on the recover**, mean 1.25.
+
+      Be clear what that buys and what it does not. The position samples are the
+      *same nine values* in both directions, so the recover is the push's path at
+      two thirds speed rather than a different action: it reads as directional,
+      not yet as effortful. The lever for the rest is the handle angle on the
+      return — lifting the broom off its line — which is a redraw rather than a
+      timing change.
 
     ── Three strokes in the twelve, not one ──────────────────────────────
 
@@ -122,10 +135,14 @@
     grip read as a grip. The handle is a unit longer than it needs to be and its
     **tip** is inside the torso on every frame — x 2.21 to 2.52 at the left top
     corner and 2.97 at the right, against a torso whose left edge is 1.890 at
-    full breath. The overrun is not *entirely* hidden, which an earlier draft
-    claimed: a single column of it shows past the torso edge at unit x 1.88 to
-    2.00, at most **5 pixels** and on 60 of 96 frames. It reads as handle above
-    grip, which is what it is.
+    full breath. The overrun is not hidden at all, which two drafts got wrong in
+    opposite directions — the first claimed the torso covers it, the second put
+    numbers on it that no definition reproduces. Counting dark pixels in the four
+    columns beside the torso's left edge, above the claw: **96 of 96 frames carry
+    some, at most 8, spanning unit x 1.500 to 2.000**, across up to three columns
+    rather than the one an earlier draft claimed. Composited on sand it reads
+    as the handle continuing up behind the grip, which is what it is — but a
+    sentence that has been wrong twice is worth stating exactly.
 
     The sweep stays left of the legs at x 3 and well clear of the pool at
     x 11.25, and the rock sits at y 6.63 to 8.75 — mid-distance, above all of
@@ -181,10 +198,11 @@
     its edge blends black into black however it turns. Only the head is pale.
 
     The mechanism is worth naming exactly, because two drafts described it
-    wrongly. When the head's translate is off the pixel grid it renders **19
-    device pixels wide instead of 20**, and the missing edge column snaps to
-    `#DE886D`. It is the head's own edge column going body-coloured, not a rim
-    added outside it.
+    wrongly. When the head's translate is off the pixel grid it covers **21 columns instead of 20**, of
+    which 19 render pale and the partly-covered one at each end snaps to
+    `#DE886D`. It is the head's own end columns going body-coloured, not a rim
+    added outside it — which is why the count below is 8 pixels per affected
+    edge and 16 when both go.
 
     Measured against a variant with the broom deleted: **57 of 96 frames carry
     peach the broom creates, at most 16 pixels** — 30 frames where **both**
@@ -205,9 +223,14 @@
 
       whole-pixel `steps(1)` on the head, which `docs/ANIMATION.md` gives as the
       general remedy, takes the fringe to zero. It needs a keyframe per frame,
-      because at 1.25 px a frame nine keyframes would step the head 2.5 pixels
-      every four frames and read as stepping. That couples the file to the 8 fps
-      bake rate, which no other continuously-moving element in the corpus is.
+      because at 1.25 px a frame, nine keyframes over a four-second stroke
+      are one every four frames — and the old nine-sample track moved the head
+      2.93 to 7.07 pixels between samples, mean 5, which reads as stepping. That couples the file to the 8 fps
+      bake rate — which `wizard`'s `#fx-bob` already accepts, and
+      `docs/ANIMATION.md` names as the worked example of this very remedy. So
+      the objection is cost, not novelty: `#fx-bob` is eight positions on a
+      breath nobody tracks, and this would be thirty-two on the one element the
+      screen is about.
 
     The rim reads as a slightly ragged end on the prop, not as the line
     `bouldering` was reverted for — that was a one-pixel violet line across 80 of
@@ -246,19 +269,29 @@
          spaced — 5% apart on the push and 7.5% on the recover — because the
          stroke is asymmetric. See the comment on `sweep`. */
 
-      /* **Three seconds, not the corpus two, and that is the whole beat
+      /* **1.5 seconds, not the corpus two, and that is the whole beat
          structure.** `2s alternate` is a four second cycle, which is the stroke
          exactly and in phase with it, and the file rendered 19 distinct frames
-         of 96 — see §Two periods above. Three seconds is a six second cycle
-         against a four second stroke, so the combined period is the full twelve;
-         four iterations in the loop, which is even, so the wrap lands where the
-         cycle started. Amplitude is unchanged, so the breath is slower than the
-         corpus rather than faster — the right direction for a screen nobody
-         asked for. Legs and broom are siblings of this group so they stay
-         planted. */
+         of 96 — see §Two periods above. 1.5s is a three second cycle against a
+         four second stroke, so the combined period is the full twelve; eight
+         iterations in the loop, which is even, so the wrap lands where the cycle
+         started.
+
+         **3s was tried first, and it is the wrong direction.** It decouples the
+         periods just as well and scores marginally better on distinct frames —
+         92 against 88 — but it makes this the slowest breath in the corpus by
+         half again, and `asleep` is a four second cycle. A crab doing manual
+         work would have been breathing slower than the sleeping one. Measured on
+         the torso's top row: at 1.5s this breathes at **3.33 device pixels a
+         second against `asleep`'s 2.67**, with a **5 pixel excursion against its
+         8**. Faster and shallower than sleep, which is what exertion looks like.
+         Four frames of distinctness are worth less than getting that the right
+         way round.
+
+         Legs and broom are siblings of this group so they stay planted. */
       #breathe {
         transform-origin: 7.5px 13px;
-        animation: breathe 3s infinite alternate ease-in-out;
+        animation: breathe 1.5s infinite alternate ease-in-out;
       }
 
       @keyframes breathe {
