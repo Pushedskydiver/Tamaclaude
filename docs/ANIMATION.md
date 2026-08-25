@@ -257,8 +257,10 @@ alive — their idle is a night sky with stars, drifting fireflies, and a strip
 of grass he stands on.
 
 Ours will not be that scene. The idea is worth taking; the picture is theirs.
-What to put behind him is a design decision that has not been made yet, and it
-belongs with the pack work rather than here — see `BUILD_PLAN.md` Stage 4.
+What goes behind him is decided and built: a rock pool through the day, in
+`packages/renderer/src/environment.ts` — written 21 Aug, wired into `sceneFor`
+a day later, `BUILD_PLAN.md` Stage 4. What stayed open was whether a pack may
+vary it, and that was cut on 25 Aug.
 
 What _is_ settled is where it lives, because that turns out to matter:
 
@@ -266,8 +268,11 @@ What _is_ settled is where it lives, because that turns out to matter:
 into each animation SVG. Four reasons, and the last is the one that decides it:
 
 - One definition, reused by every animation, so they cannot drift apart.
-- A pack can change it — which makes the environment a personalisation lever
-  rather than a fixed cost.
+- No pack changes it, and none will before 23 Sep: the field was cut on 25 Aug
+  and `ENVIRONMENT_EXTENT` is a constant. The reason stays on the list because
+  it is a property of the layer rather than of the field — the renderer is
+  where a pack lever would have to live if one is ever wanted, which is not
+  true of scenery baked into each SVG.
 - Time of day, or any other ambient variation, becomes trivial.
 - It keeps the animation contract intact. An SVG carrying a sky would no longer
   be "the base geometry plus transforms", and the whole reason character

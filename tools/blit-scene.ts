@@ -123,6 +123,15 @@ export function composePanels(
      * the current hour could not show you the pair.
      */
     readonly time?: TimeOfDay;
+    /**
+     * How far the scenery reaches. Defaults to `panel`, which is what ships.
+     *
+     * An option rather than a constant because `stage` is the side the 22 Aug
+     * wiring rejected, and a rejected option nobody can render is a decision
+     * that cannot be re-checked. `tools/panel-mock.ts --extent stage` is that
+     * picture. What makes `panel` the default is the 22 Aug wiring, not the
+     * deferred table — that table records the cut of the pack field.
+     */
     readonly extent?: EnvironmentExtent;
     /**
      * Chips for the strip band, when a caller wants to see it occupied.

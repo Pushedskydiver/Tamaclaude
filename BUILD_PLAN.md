@@ -455,8 +455,9 @@ by two days, and `CLAUDE.md` records six shipping with no critic at all.
 - [x] **The environment: a rock pool, through the day.** Built, and wired into
       `sceneFor` on 22 Aug — it was reachable from nothing before that, which
       is how four animations shipped with holes for eyes that only a
-      non-black stage could reveal. The extent is a constant (`panel`); a pack
-      field for it is Stage 5 below. Plan in
+      non-black stage could reveal. The extent is a constant (`panel`), chosen
+      in that same 22 Aug commit; the pack field that would have exposed the
+      other was cut on 25 Aug — see the deferred table. Plan in
       `assets/clawd/animations/PLANS.md`. A renderer layer behind every
       animation (`docs/ANIMATION.md` §Clawd lives somewhere) — one place, with
       the sky carrying dawn/day/dusk/night as a palette swap. He is currently
@@ -667,8 +668,8 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       `environment.ts` argues the ink substitution: a pack's ink is chosen
       against its own background, and white on a midday sky is nearly
       invisible, so whatever the text sits on should decide its colour. `panel`
-      extent was picked at the 25 Aug freeze with the trade priced in both
-      directions.
+      extent was picked on 22 Aug, in the commit that wired the scenery on,
+      with the trade priced in both directions.
       **The palette is still load-bearing** — the logo item below quantises to
       it and the pet sprite is drawn in it — so what needs correcting is this
       line's implied promise that a recipient will _see_ their palette in the
@@ -742,23 +743,41 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       header left stale after an edit can pass — both of which an earlier
       version of it did.
 
-- [ ] **Environment extent as a pack field** — one optional field, defaulting
-      to `panel`. `ENVIRONMENT_EXTENT` is a constant in
-      `packages/cli/src/daemon.ts`; `docs/ANIMATION.md` gives "a pack can
-      change it" as one of four reasons scenery is a renderer layer. Deferred
-      there deliberately rather than taken in the same pass as wiring the
-      scenery on at all. About an hour: a field in `packages/packs`, a `??` in
-      the daemon, a test.
-      **It is not the item that makes a palette mean anything**, which an
-      earlier version of this line claimed. A pack choosing `stage` would show
-      its background and ink — 28,160 px against 0 — but that is reversing the
-      25 Aug freeze rather than completing it, and a pack-supplied _scheme_
-      would restore nothing at all, since the environment would still cover the
-      background and still substitute the ink.
-      **Schemes are deferred**, and are in the table at the end rather than
-      here: they would invalidate the contrast baseline in `tools/contrast.ts`
-      that every animation review has been judged against, 12 days before the
-      6 Sep art gate.
+- [~] ~~**Environment extent as a pack field**~~ — **cut, 25 Aug.** One
+  optional field defaulting to `panel`, about an hour's work.
+  **What it would buy is the recipient re-opening a decision taken on
+  22 Aug.** `panel` was picked in the commit that wired the scenery on, not
+  at the 25 Aug freeze — the freeze record covers the screen list, the
+  state machine and the pack format, and says nothing about extent. Both
+  extents are built and `scene.ts` prices the trade both ways: `stage`
+  keeps the pack's ink legible but "makes the panel look like a picture
+  bolted to a terminal".
+  **The rejected side is renderable**, which is what makes this a cut rather
+  than a deferral — the judgement can be re-checked by looking instead of by
+  reading this. `tools/panel-mock.ts --extent stage` draws it: the scenery stops where the landscape stage ends and the
+  rest of the panel is flat pack background, against `panel`'s sky running
+  edge to edge with the resting chip taking environment ink. A pack field's
+  only effect is selecting that rejected side — 28,160 px against 0 with an
+  empty strip, measured in `pack-swap.test.ts`.
+  **This declines a request rather than tidying an oversight**, and
+  `daemon.ts` records the request: a switch was asked for so the owner or
+  the recipient could change it later. The reason to decline is precedent
+  as much as the date: the screen spec's timings table already refused this
+  shape of field — schema, validation and tests for knobs nobody will ever
+  turn — and this is an hour of code and a schema entry for a lever with
+  one useful setting. If it is wanted after 23 Sep the deferred table
+  carries it.
+  Schemes were the other half and stay deferred separately. A pack-supplied
+  scheme would not restore the pack's own `palette[0]` and `palette[1]` to
+  the panel — the environment still covers the background and still
+  substitutes the ink — but it would hand the pack the scheme's colours
+  instead, which is more of the panel than extent buys rather than less.
+  It would also invalidate the sixteen colours in `tools/contrast.ts`'s
+  `AGAINST` table, transcribed there from `environment.ts`, and every
+  animation carrying a contrast figure would need it re-run. No count is given
+  because the obvious grep undercounts: `overheated.svg` writes its figures as
+  `7.76 dawn` rather than `7.76:1`, so a search for the ratio form misses it,
+  and `PLANS.md` carries figures for animations whose SVGs do not.
 - [ ] `packs/alex/` — proves the pack swap works
 
 ## Stage 6 — Hardening + gift prep (Mon 14 – Sat 19 Sep)
@@ -778,14 +797,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 ## Deliberately not scheduled
 
-| Deferred                                          | Re-entry condition                                                                              |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| macOS menu bar app                                | Needs a native shim or Electron, which reintroduces Gatekeeper and code signing. Post-birthday. |
-| BLE transport                                     | USB-CDC is simpler and truly plug-and-play. Only if untethered operation is ever wanted.        |
-| Wi-Fi provisioning                                | Kills plug-and-play. Only if the device needs to live away from the Mac.                        |
-| microSD asset storage                             | Host renders, so the device stores nothing but the splash.                                      |
-| `docs/INDEX.md`, `docs/decisions/`, `PROGRESS.md` | Adopt if the project outlives 23 Sep.                                                           |
-| Notarised `.app` (£79/yr)                         | Only if a menu bar app is ever built.                                                           |
+| Deferred                                           | Re-entry condition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS menu bar app                                 | Needs a native shim or Electron, which reintroduces Gatekeeper and code signing. Post-birthday.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Environment as a pack field (extent, then schemes) | Cut 25 Aug. The screen spec already refused this shape of field for the timings table — "new schema, validation and tests for knobs nobody will ever turn" — and froze the manifest as `name`, `palette`, `quips` plus props and logo, which extent would breach. Render both sides with `panel-mock --extent stage` before re-opening: `stage` is the side the 22 Aug wiring rejected, so the field's non-default position is a worse picture rather than a taste. Schemes would invalidate the `AGAINST` table in `tools/contrast.ts`. Only after 23 Sep, and schemes only with a re-run of every animation carrying a contrast figure. |
+| BLE transport                                      | USB-CDC is simpler and truly plug-and-play. Only if untethered operation is ever wanted.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Wi-Fi provisioning                                 | Kills plug-and-play. Only if the device needs to live away from the Mac.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| microSD asset storage                              | Host renders, so the device stores nothing but the splash.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `docs/INDEX.md`, `docs/decisions/`, `PROGRESS.md`  | Adopt if the project outlives 23 Sep.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Notarised `.app` (£79/yr)                          | Only if a menu bar app is ever built.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ## Risks
 

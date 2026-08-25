@@ -79,13 +79,19 @@ export type Scene = {
   /**
    * The rock pool behind Clawd, or nothing.
    *
-   * `extent` is deliberately not decided here. Confining the scenery to the
-   * stage keeps the pack's ink legible but makes the panel look like a picture
-   * bolted to a terminal; letting the sky run behind the text is one coherent
-   * object but needs the scheme's ink rather than the pack's, because white on
-   * a midday sky is invisible. Both are built; the 25 Aug design freeze picks
-   * one. Omitting this entirely is what tests mostly want — a scene on the
-   * pack background is far easier to assert about than one on scenery.
+   * `extent` is the caller's choice, not this type's. Confining the scenery to
+   * the stage keeps the pack's ink legible but makes the panel look like a
+   * picture bolted to a terminal; letting the sky run behind the text is one
+   * coherent object but needs the scheme's ink rather than the pack's, because
+   * white on a midday sky is invisible.
+   *
+   * Both are built. `packages/cli` sets `panel` as a constant, chosen on
+   * 22 Aug when the scenery was wired; the pack field that would have exposed
+   * the other was cut on 25 Aug. `tools/panel-mock.ts --extent stage` renders
+   * the rejected side, so the choice can be re-checked by looking.
+   *
+   * Omitting this entirely is what tests mostly want — a scene on the pack
+   * background is far easier to assert about than one on scenery.
    */
   readonly environment?: {
     readonly time: TimeOfDay;

@@ -92,14 +92,23 @@ const ORIENTATION = 'landscape';
  * `panel`, so the scenery fills the glass rather than sitting in a band behind
  * Clawd with the pack's flat background above and below it. Both extents are
  * built (`ENVIRONMENT_EXTENTS` in the renderer); this picks one, the way
- * `ORIENTATION` above picks one.
+ * `ORIENTATION` above picks one. Picked here on 22 Aug, in the commit that
+ * wired the scenery on, and not overturned since — and not at the 25 Aug
+ * freeze, whose record covers the screen list, the state machine and the pack
+ * format and says nothing about extent.
  *
- * A constant rather than a pack field for now. A switch was asked for so the
- * owner or the recipient could change it later, and a pack manifest entry is
- * where that belongs — the pack is the personalisation layer. That is deferred, not
- * forgotten: it is a schema change to `@tamaclaude/packs` plus a migration for
- * a manifest that already exists, and it was explicitly not taken in the same
- * pass as wiring the scenery on at all.
+ * A constant, and not a pack field. A switch was asked for so the owner or the
+ * recipient could change it later, and a pack manifest entry is where that
+ * would belong — the pack is the personalisation layer.
+ *
+ * Cut on 25 Aug rather than deferred, and the precedent is the screen spec's
+ * timings table, which refused this shape of field outright: schema,
+ * validation and tests for knobs nobody will ever turn. Extent is one knob,
+ * and its non-default position is the one this line rejected — so the field
+ * buys a lever with one useful setting, for an hour of code and a schema
+ * entry, 29 days out. `BUILD_PLAN.md`'s deferred table carries the re-entry
+ * condition, and `tools/panel-mock.ts --extent stage` draws the rejected side
+ * so the judgement can be re-checked by looking rather than by reading this.
  */
 const ENVIRONMENT_EXTENT = 'panel';
 
