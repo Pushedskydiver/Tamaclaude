@@ -1145,58 +1145,145 @@ proud of the torso, which is upstream's construction and not an accident.
 
 ---
 
-## Board game — `Agent` and subagents
+## Board game — `Agent`
 
 Clawd is not doing the work; several small things are doing it for him.
 
 `BUILD_PLAN.md` Stage 4 item 11, Tier B per `spec.md`.
 
-**The trigger is the risk, and it is not `Agent`.** Subagents are not a separate
-event stream — `events.ts` says they ride the ordinary events, and
-`state.ts` says sidechains get their own transcript file but not their own
-session id, which is what the daemon keys on. So a subagent's own `Bash` and
-`Read` calls land on the _parent's_ session and repaint the stage as `gym` or
-`bouldering` within seconds of `Agent` firing. Keyed on the tool, this screen
-lasts one or two seconds, not the length of a subagent.
+**Trigger settled 25 Aug: `PreToolUse` on `Agent`, at a two second loop.** It
+stays a row in `spec.md`'s first-match-wins tool table, so nothing about the
+resolver changes and the whole wiring is one `TOOL_ANIMATIONS` entry, exactly as
+`wizard` shipped.
 
-`session.subagents` already exists, is already incremented on `SubagentStart`,
-and already feeds the badge. Keying on `subagents > 0` is the fix and it is a
-`packages/daemon` change with a mandatory `da-review` — **settle it before any
-SVG is drawn**, and confirm with one live hook capture, because it decides
-whether this is a 12-second screen or a 2-second one.
+### Why the loop length is the trigger decision
 
-`data-loop-seconds="12"`.
+The risk this section was written around is real: subagents are not a separate
+event stream, and sidechains do not get their own session id, so a subagent's
+own tool calls arrive on the _parent's_ session and repaint the stage.
+
+**The evidence is a hook capture, not a transcript count.** The daemon reads
+hook payloads, not transcripts, and those are different mechanisms — a listener
+on the daemon socket during a live subagent produced
+`{"sessionId":"<parent>","kind":"PreToolUse","tool":"Bash","agentId":"<agent>","agentType":"spec-grill"}`.
+That is the claim at the layer that matters. `state.ts` corroborates it with a
+real sample — 36 distinct session ids against 1,187 transcript files. Counting
+subagent transcript files does **not**: they live under
+`<parentSessionId>/subagents/`, so the session ids are the directory names and
+167 files re-observe the same two facts 167 times.
+
+Measured across those runs, time from a subagent starting to its first tool
+call is median **3.2s**, p90 4.3s, max **9.6s**. Against that window:
+
+| loop | frames | seen whole     |
+| ---- | ------ | -------------- |
+| 2s   | 16     | **167 of 167** |
+| 3s   | 24     | 110 of 167     |
+| 12s  | 96     | **0 of 167**   |
+
+So the original plan's twelve seconds was never going to be seen at all, and the
+fix is the loop, not the trigger. At two seconds the screen closes before the
+first repaint on every run measured, costs 16 frames rather than 96 — `typing`
+is 59KB baked against `wizard`'s 480KB — and leaves `gym`, `bouldering` and
+`typing` to say what the subagent is actually doing for the remaining ~900
+seconds. The screen is a punctuation mark: _handed off_, then back to work.
+
+### Why not `session.subagents > 0`
+
+That was this section's own proposal and it is rejected, for four reasons found
+by grilling it rather than by building it.
+
+- **It has no correct place in `animationFor`.** Checked before the state
+  switch it beats `NEEDS_PERMISSION`, `WAITING` and `FAILED` — the three
+  attention states the resolver exists to distinguish — and it beats `DONE`,
+  whose window is 45s, so a quiet model turn inside a subagent would replace the
+  payoff screen with the least important screen in the catalogue.
+- **The counter can stick.** `persistence.ts` restores `subagents` verbatim,
+  nothing resets it on `SessionStart` and `RESUMED` does not clear it, so a
+  daemon restart or a crash mid-subagent leaves a count with no `SubagentStop`
+  ever arriving — showing the screen for up to the 10 minute eviction window
+  while nothing runs. If a session-lifetime gate is ever wanted, `agentId` is
+  already on the wire and already parsed before being discarded, and a per-event
+  `agentId !== undefined` test has no counter and no stuck state.
+- **It is not a long screen, it is the default screen.** Merging every subagent
+  interval on this machine: at least one live for **26.0h** against **49.3h**
+  awake, peak concurrency **7**. That is **53% duty**, and it would roughly
+  halve `gym` — which `BUILD_PLAN.md` calls the most-watched working screen by
+  a factor of three — in favour of a Tier B screen. The parameter that figure
+  turns on, since it has no meaning without one: "awake" is the union of parent
+  and subagent activity with a block broken at 10 minutes idle. A grill
+  measuring the same thing with a different idle threshold got 25.9h of 52.3h,
+  which is the same answer to the precision that matters.
+- **It exits a settled table.** `spec.md` lists this as a `PreToolUse` row under
+  "first match wins". A session-lifetime gate does not reorder that table, it
+  leaves it, and that is a reopening rather than a settling.
+
+**And the exposure numbers are the author's, not the recipient's.** 167 subagent
+runs across two sessions with 7 concurrent at peak is this repo's own review
+discipline, not ordinary use. Someone who never spawns a subagent sees this
+screen 0% of the time; someone with this workflow would have seen it half the
+time under the rejected trigger. Nothing measures the recipient's usage, and
+that assumption gets tested on 23 September in front of them. Two seconds and
+one map entry is the cheap hedge: guessing wrong costs a screen nobody notices
+rather than a screen that eats the panel.
+
+**Known and accepted:** an `Agent`-keyed trigger fires on 93 of the 168 subagent
+runs measured here. The other 75 were spawned by `Workflow` and by a session
+tool, and whether `SubagentStart` fires for those is unverified in either
+direction — so the rejected trigger is not known to cover them either.
+
+`data-loop-seconds="2"`, 16 frames.
 
 - **Action.** A board on the ground to his left with pieces that move without
   him touching them. He watches.
 - **Body mechanics.** Breath only, legs outside it. **No claw raise** — this is
-  the one working screen where he deliberately does not act.
-- **Eyes.** Down and left, on the board. **Keep the blink.** Measured across the
-  bakes, `confused` reaches 26 distinct frames of 96 _with_ two blinks and a
-  caret; dropping the blink here would make this the calmest screen in the
-  corpus, and unlike the payoff it cannot borrow a short exposure window to
-  excuse it — a subagent run is unbounded and the viewer sees the loop repeat.
+  the one working screen where he deliberately does not act. One breath cycle is
+  exactly 2s, so the loop is one breath.
+- **Eyes.** Down and left, on the board. **No blink**, and this reverses the
+  earlier note. That note argued from `confused`'s 26 distinct frames of 96 that
+  a screen this calm needs one; at 16 frames a blink is 3 or 4 of them and lands
+  as a twitch, and `permission-sign` is calmer still at 16 distinct of 64. The
+  motion budget belongs to the pieces.
 - **Props.** The board, left flank, ground level, overlapping his legs.
-  **Measure the width rather than inheriting 5 units** — that figure came from
-  a _vehicle_, which needs wheels, a cabin and a window to read; a flat slab
-  with pieces may read at 3 or 4. It matters because the payoff's vehicle is
-  already a 5-unit ground-level slab on the same flank, and prop mass is what a
-  glance reads. Two or three pieces, at least two tones, measured against sand.
-- **Effects.** None. The pieces moving is the effect.
+  **Measure the width rather than inheriting 5 units** — that figure came from a
+  _vehicle_, which needs wheels, a cabin and a window to read; a flat slab with
+  pieces may read at 3 or 4. Two or three pieces, at least two tones, measured
+  against sand.
+- **Effects.** None. The pieces moving is the effect — **one piece, one move,
+  once per loop.** At 16 frames that is the whole beat and it has to be legible
+  as a single event: a piece in one place at frame 0 and one cell further at
+  frame 8, on whole device pixels with `steps(1)`. Anything continuous inside a
+  scaling group is the `wizard` hat failure, which cost two rebuilds and 81 of
+  96 fringed frames.
 
 **Not wanted:** dice — they read as gambling, and a single unit rasterises to a
 dot. A board he reaches toward: his legs already provide the contact. More than
-three pieces; at 8px a unit they merge. Any piece leaving the board.
+three pieces; at 8px a unit they merge. Any piece leaving the board. A twelve
+second loop — see the table above.
 
-**Known gap it widens:** a ground-level prop beside his legs blinds `hipGap`
-the way the payoff's vehicle does, making this the second animation to do it.
-The replacement gate is designed in `tools/bake-sprites.test.ts` and unbuilt.
+**Known gap it widens:** a ground-level prop beside his legs blinds `hipGap`,
+making this the **third** animation it cannot catch, after `payoff`'s vehicle
+and `overheated`'s sploot legs. The bound already fires on all twelve bakes on a
+correct pose, so the gate currently catches nothing on any of them; the
+replacement is _sketched_ in `tools/bake-sprites.test.ts` — a discriminator is
+named and not validated — rather than designed. Board game does not make this
+worse; it should not be the third entry to pass it over in silence.
 
-**Fallback:** cut it. At 0.7% of tool calls it is the least-seen screen with a
-measured trigger, and if the `subagents > 0` wiring does not land it has no
-trigger worth the art. **Decide by Sun 6 Sep**, with the Tier A gate.
+**Fallback: cut the art, keep nothing.** With the trigger as a single map entry
+there is no wiring to strand, which is the trap the payoff screen hit — "a
+parked frame with no trigger has nowhere to be shown". So this is cuttable at
+any point up to the freeze at no cost.
 
----
+| date           | what has to be true                                             |
+| -------------- | --------------------------------------------------------------- |
+| **Wed 3 Sep**  | board and pieces drawn, rendered at true size on all four sands |
+| **Sat 6 Sep**  | `animation-critic` has passed it, or it is cut                  |
+| **Sat 13 Sep** | `TOOL_ANIMATIONS` entry merged, or the art is cut with it       |
+
+The 6 Sep Tier A gate this used to hang off has already fired green — all nine
+Tier A screens are baked as of 25 Aug, twelve days early — so "decide by 6 Sep
+with the Tier A gate" would now read as a rubber stamp rather than a decision.
+A fallback decided on 22 September is not a fallback.
 
 ## Sweeping — `PreCompact`
 
