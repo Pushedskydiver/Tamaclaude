@@ -447,7 +447,7 @@ than partially. Eight good screens beat nine plus four rough ones.
       rather than leaving a state blank. **Art first, wiring last** — the
       wiring lands in `packages/daemon`, which Stage 3 marks done, so building
       it first means either reverting shipped code at the gate or leaving a
-      dead branch behind. Art landed at 08:58 and wiring at 11:32, both on 24 Aug — the order held,
+      dead branch behind. Art landed at 08:58 and wiring at 12:01, both on 24 Aug — the order held,
       which is the part that matters, but they were hours apart rather than
       days. Through `spec-grill` once; the first plan was found
       unbuildable and rewritten around a sploot pose, which is upstream's scene

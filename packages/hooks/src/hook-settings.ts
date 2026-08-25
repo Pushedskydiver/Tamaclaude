@@ -111,9 +111,9 @@ const HOOK_EVENTS: readonly RegisteredEvent[] = [
  * Claude Code's own cap on the hook, in seconds.
  *
  * `tamaclaude-notify` gives itself 150 ms and costs ~42 ms an event end to end
- * — 38 ms of which is Node starting, with the socket write itself in the
- * hundreds of microseconds (`index.test.ts`, measured 22 Aug). So this is not
- * the working timeout — it is the outer guard for the case its
+ * — 38 ms of which is Node starting (`index.test.ts`, measured 22 Aug). The
+ * socket write itself is estimated at hundreds of microseconds in `index.ts`,
+ * unmeasured. So this is not the working timeout — it is the outer guard for the case its
  * own deadline cannot cover, a process wedged before it runs any of its code.
  * Five seconds rather than one so a loaded machine cannot make a healthy
  * install look broken, and rather than the 600 s default so a broken one cannot

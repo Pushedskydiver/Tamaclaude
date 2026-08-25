@@ -1332,11 +1332,14 @@ settled decision on the most expensive of the three, twenty days before the
 13 Sep feature freeze — the original said seventeen, which reproduces against
 no date in the plan.
 
-**Nothing can draw this yet.** `COMPACTING` is absent from `SESSION_STATES`,
-deliberately — `state.ts` records tier 1 as empty because `PreCompact`'s art
-does not exist — and `hook-settings.ts` does not register the hook, because
-"registering an event nothing consumes would be describing behaviour that does
-not exist". Each absence cites the other, so the two have to move together or
+**Nothing can reach this yet — though as of 25 Aug it can be drawn.** The art
+is baked and `loadSprite('sweeping')` works; what is missing is every path to
+it. `COMPACTING` is absent from `SESSION_STATES`, deliberately, and `state.ts`
+records tier 1 as empty — for a reason that has now changed while the conclusion
+has not: the blocker used to be that the art did not exist, and is now that
+nothing consumes it. `hook-settings.ts` likewise does not register the hook,
+because "nothing consumes the event, so registering it would describe behaviour
+that does not exist". Each absence cites the other, so the two have to move together or
 the art lands unreachable. `board-game` showed the way through: the art can
 enter `SPRITE_NAMES` without entering `ANIMATIONS`, and the wiring follows.
 
@@ -1437,9 +1440,14 @@ case and calls it "not worth a special case". Across all 19 boundaries the
 session id is unchanged either side, so the clearing event lands on the same
 record. `PostCompact` exists too. Nothing needs building.
 
-And the "nothing to borrow" quoted half a sentence: `state.ts` continues "This
-state needs none: the window has two bounds, so crossing the upper one _is_ the
-expiry". That field-free idiom is the belt-and-braces for a daemon restarting
+And the "nothing to borrow" quoted half a sentence: `state.ts` says of `DONE`
+that it "needs no oneshot expiry of its own: its window has two bounds, so
+crossing the upper one _is_ the expiry". (Quoted here as it reads now. The
+sentence used to open "This state needs none", and on 25 Aug an edit put eight
+lines about `COMPACTING` between it and its antecedent, so it briefly read as a
+claim about `COMPACTING` — which has no window in the daemon at all. This
+paragraph is the one place in the repo that borrows the idiom _for_
+`COMPACTING`, so it is the passage that would have inherited the misreading.) That field-free idiom is the belt-and-braces for a daemon restarting
 mid-compaction — sized off the current version's maximum with headroom, not off
 a 268s outlier, and with a stated relationship to `ASLEEP_AFTER_MS`, which the
 proposed five minutes silently equalled.

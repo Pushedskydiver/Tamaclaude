@@ -117,23 +117,27 @@ describe('animationFor', () => {
     // The previous version filtered `animationFor`'s output by `ANIMATIONS`,
     // which is the tuple `AnimationName` is derived from, so it compared a
     // value against the set that defines its own type and could not fail.
-    // Planting `'road-bike'` in `ANIMATIONS` and mapping `Glob` to it — an
+    // Planting `'no-such-screen'` in `ANIMATIONS` and mapping `Glob` to it — an
     // animation with no SVG and no bake, reachable from a real tool name — is
     // what this line exists to catch, and it does: the filter goes red the
     // moment an unbaked name enters `ANIMATIONS`. Before this assertion
     // existed that same mutant left all 413 tests green and only `tsc` caught
     // it, in `packages/cli`.
     //
-    // **Naming the mutant is maintenance, and it has now been renamed twice —
-    // both times because the name shipped.** `'wizard'`/`WebSearch` went real
-    // on 24 Aug; `'sweeping'`/`Glob` went real on 25 Aug, when the art entered
-    // `SPRITE_NAMES` and quietly made the documented mutant buildable. A
-    // documented mutant has to stay unbuildable, so `road-bike` holds only
-    // until it is built — `assets/clawd/animations/PLANS.md` has it as Tier C,
-    // "cut without regret", which is what makes it a safe name to borrow.
+    // **`no-such-screen` is reserved, and that is the point.** Naming the
+    // mutant after a planned screen made it maintenance: it was renamed twice,
+    // both times because the name shipped. `'wizard'`/`WebSearch` went real on
+    // 24 Aug; `'sweeping'`/`Glob` went real on 25 Aug, when the art entered
+    // `SPRITE_NAMES` and quietly made the documented mutant buildable — the
+    // reproduction stops reproducing and the test stays green, so nothing
+    // announces it. Both times a human review caught it, which is not a
+    // mechanism. A third planned name would only reset the timer, so this one
+    // is deliberately not a screen anybody intends to draw: it is not in
+    // `assets/clawd/animations/PLANS.md`, and it is not meant to be.
     //
     // Re-planted rather than assumed, both ways: `'sweeping'` leaves all 17
-    // green, `'road-bike'` gives `expected [ 'road-bike' ] to deeply equal []`.
+    // green, `'no-such-screen'` gives
+    // `expected [ 'no-such-screen' ] to deeply equal []`.
     //
     // **Plant it with root `npx vitest run`.** Two ways of running it report
     // success while proving nothing. `pnpm --filter @tamaclaude/daemon test`
