@@ -41,8 +41,11 @@
  * `--over` is the colour the mark sits on — for the lid that is `#A91326`,
  * fixed in the artwork. It was `#30363B` until the lid was recoloured on
  * 26 Aug; with `--format pack` it makes no difference to the bytes, because
- * crisp edges mean a transparent-background mark has nothing to snap against
- * the ground, but it is what the palette warning measures against.
+ * crisp edges mean a transparent-background mark has no soft edges to snap
+ * against the ground — *unless a mark colour's own nearest candidate is the
+ * ground*, since `--over` joins the candidate list for opaque pixels too. On
+ * the mark that ships it changes nothing; on one drawn in a near-miss of the
+ * lid it changes everything, which is what the warning is for.
  *
  * **`--width` scales the viewBox, not the artwork.** A logo drawn inside a
  * generous viewBox — `0 0 140 140` for a mark that occupies `20 9 100 121` —
@@ -127,7 +130,7 @@ import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
  * roughly a third of either — small enough to sit as a prop rather than as
  * the subject, and large enough that a wordmark is still legible at 1:1.
  * A starting point for looking. `--format pack` has a real slot to fit —
- * 84x20 — so it warns rather than printing an object the schema will refuse.
+ * 84x20 — so it warns when the result will not fit, and prints it regardless.
  */
 const DEFAULT_WIDTH = 48;
 
@@ -356,9 +359,12 @@ try {
   // nothing warned, because the merge check looks for two declared fills
   // colliding and there was only ever one.
   //
-  // With `crispEdges` every pixel is the fill or nothing: two colours on the
-  // lid instead of four, and a payload about 30% smaller because a two-colour
-  // image run-length-encodes far better.
+  // With `crispEdges` every pixel is the fill or nothing. On the mark that
+  // actually ships that is one drawn colour instead of two, and a payload 6.6%
+  // smaller at `--width 14` and 19.3% at 16, because a two-colour image
+  // run-length-encodes better. The three-colour figure above was measured on a
+  // white logo that is not in this repo — it is why the option exists, not a
+  // number anyone here can reproduce.
   //
   // `png` and `rects` keep the antialiasing. They are viewed and pasted at
   // larger sizes, where the dither reads as a smoother edge rather than noise.
@@ -388,7 +394,9 @@ try {
     // This emits what the
     // sprites already are — RGB565 through `encodeRect`, base64 of a mode byte
     // and its payload — plus the bit-mask that says which pixels are drawn.
-    // **Say so rather than printing something that cannot be pasted.** The
+    // **Say so, and print it anyway.** Refusing would be worse: the object is
+    // still useful for looking at, and a tool that prints nothing on a size
+    // mistake sends you hunting the wrong thing. The
     // default width is 48, which on a square mark gives a 48-tall object the
     // schema refuses outright — and the recipe in this header omits `--width`
     // often enough that a review hit it. The lid is 84x20.

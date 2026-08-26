@@ -11,8 +11,11 @@
  * **"Changes every screen" is aspirational, and measured it is not true today.**
  * `packages/renderer/src/pack-swap.test.ts` records what a swap actually moves
  * on the shipping panel: nothing at all with an empty session strip, and one
- * 240px chip per working session. The palette's larger role is what quantises
- * to it: the logo does, since 26 Aug, and the pet sprite will.
+ * 240px chip per working session — which no longer enumerates it, because a
+ * pack carrying a `logo` moves a further 177 pixels on the `typing` screen
+ * with the strip empty, and `pack-swap.test.ts` does not measure that. The
+ * palette's larger role is what quantises to it: the logo does, since 26 Aug,
+ * and the pet sprite will.
  *
  * The schema below is `name`, `palette`, `quips`, an optional `birthday` and an
  * optional `logo`. Props land with the renderer. This line enumerates the

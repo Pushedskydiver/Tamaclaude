@@ -8,10 +8,13 @@ birthday, and an optional logo. Props are planned and are not fields yet. Point 
 directory, or put one at `~/.tamaclaude/pack/`, and the panel picks it up with
 no rebuild and no reflash. What a swap actually moves is measured in
 `packages/renderer/src/pack-swap.test.ts`, and it is less than "every screen":
-the session chips and the logo today, with the pet sprite still to build.
+the session chips today, with the pet sprite still to build.
 
 A pack is the **directory**, not the manifest — `manifest.json` is a file
-inside it, and the logo and pet sprite will be its siblings. With no pack
+inside it, and a logo's source SVG is a sibling. The logo the panel reads is
+*not* a sibling: it is baked into the manifest as a `logo` field, because
+nothing in the shipping graph can decode an image. The pet sprite, when it
+lands, will have the same shape. With no pack
 configured the daemon refuses to start; there is no bundled default to fall
 back to. Run `tamaclaude pack` to see which one is loaded.
 

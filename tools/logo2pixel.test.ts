@@ -321,8 +321,10 @@ describe('--format pack', () => {
     // red and blue in the RGB565 pack, and both left all 612 tests green.
     //
     // That is not a hypothetical. `packages/renderer/src/sprites/index.ts`
-    // records the same pair of mutations surviving the whole renderer suite
-    // once already. A codec with no round trip is silent corruption waiting.
+    // records a review flipping the bit order and byte-swapping every pixel,
+    // and the whole renderer suite staying green — a near-identical pair, a
+    // 16-bit endianness swap rather than a red/blue one, with the same
+    // outcome. A codec with no round trip is silent corruption waiting.
     //
     // So this runs the real tool and hands its output to the real painter,
     // rather than re-encoding with a private helper the way the renderer's own
@@ -330,12 +332,13 @@ describe('--format pack', () => {
     // wrong together.
     const dir = mkdtempSync(join(tmpdir(), 'logo-pack-'));
     const svg = join(dir, 'mark.svg');
-    // **Asymmetric in both axes, deliberately.** The two-bar `fixture` above
-    // spans nearly the full width, so reversing the bit order within each mask
-    // byte mirrors every 8-pixel group onto itself and the picture is
-    // unchanged — that mutant passed a version of this test built on it. A
-    // block in one corner and a block in the opposite corner cannot survive
-    // either a horizontal mirror or a transpose.
+    // **Asymmetric in both axes, deliberately.** A version of this test built
+    // on the two-bar `fixture` above let the bit-order mutant through — not
+    // because bars are self-mirroring, which a review checked and they are not
+    // (each row packs to `0x3F 0xFC`, which reverses to `0xFC 0x3F` and opens
+    // a four-column gap), but because the two pixels it happened to sample are
+    // drawn under both orderings. A block in one corner and a block in the
+    // opposite corner cannot be sampled into agreement that way.
     //
     // The colours are two of the example pack's own, so the snap is exact and
     // this is about framing rather than about quantising.

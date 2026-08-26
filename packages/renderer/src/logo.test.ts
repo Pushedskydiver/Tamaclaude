@@ -79,8 +79,16 @@ describe('the lid slot', () => {
     // What actually distinguishes the lid is that it is flat: one colour over
     // almost all of it, plus the small pulsing square. Clawd's body in the same
     // rectangle carries his shell, his eyes and the gaps between his legs. So
-    // this counts distinct colours, which separates the two by a wide margin,
-    // and does it on every frame rather than the first.
+    // this counts distinct colours, and pins how flat the slot is, on every
+    // frame rather than the first.
+    //
+    // **Two assertions, because neither covers the range alone.** Measured at
+    // the real slot and at four shifts: y 160 gives 2 colours, y 150 gives 4-5,
+    // y 140 gives 3 — so the colour count catches the twenty-rows-up case by
+    // one colour, not by a wide margin. At y 130 it gives 2, exactly like the
+    // lid, and only the flatness share separates them (0.867 against the 0.9
+    // gate). An earlier comment here said a rectangle over the crab has "five
+    // or more", which is true of one shift and not the others.
     const frames = await loadSprite('typing');
     expect(frames.length).toBeGreaterThan(0);
     const area = LID_SLOT.width * LID_SLOT.height;
@@ -163,6 +171,10 @@ describe('painting a pack logo', () => {
     // mask, duplicating the next test exactly. A review caught it.
     const words = Math.ceil(Math.ceil((logo.width * logo.height) / 8) / 2);
     const invisible = { ...logo, mask: blob(new Uint16Array(words)) };
+    // Prove the payload is readable before asserting nothing was drawn —
+    // otherwise this passes on the null path again, which is the exact fault
+    // being repaired and which a bad `words` would silently reintroduce.
+    expect(paintLogo(buffer(320, 172), HERO, invisible)).not.toBeNull();
     paintLogo(fb, HERO, invisible);
     expect(at(fb, 78, 129)).toBe(0x1234);
   });
@@ -175,9 +187,11 @@ describe('painting a pack logo', () => {
     // `hero`, and found by evaluating the other three combinations rather than
     // the one that ships.
     // **Portrait two-up, and the orientation matters to what this proves.** In
-    // landscape the mark would land at y 175 on a 172-tall panel, so the
-    // framebuffer bounds stop it and the clip is never exercised — a mutant
-    // that removed the clip passed a test written that way. Portrait is 320
+    // landscape the mark lands at y 189 on a 172-tall panel — two-up's crop is
+    // 20, not hero's 34, which an earlier version of this comment used to get
+    // 175 — so the framebuffer bounds stop it and the clip is never exercised.
+    // A mutant that removed the clip passed a test written that way. Portrait
+    // is 320
     // tall and the mark lands at y 237, comfortably on the panel and 63 pixels
     // below the slot it belongs to. Only the clip stops that one.
     const fb = buffer(172, 320);
@@ -312,9 +326,17 @@ describe('the placeholder underneath', () => {
 describe('a logo through render', () => {
   // **The composition, which `paintLogo` tests cannot reach.** Everything
   // above builds a framebuffer by hand and calls the painter directly, so the
-  // arithmetic that connects a `Scene` to the lid — the slot, the safe-area
-  // crop, which slot gets the mark — is exercised nowhere. A review deleted
-  // the `index === 0` guard in `scene.ts` and the whole suite stayed green.
+  // arithmetic that connects a `Scene` to the lid — the slot and the safe-area
+  // crop — is exercised nowhere.
+  //
+  // **What is still not covered is `scene.ts`'s `index === 0`**, and it cannot
+  // be from here: hero has one slot, and two-up clips the lid away on both, so
+  // deleting the guard changes no pixel in any layout that exists. A review
+  // deleted it and all 618 tests stayed green — twice, once before these tests
+  // and once after. `scene.ts` says as much on the line itself. This file used
+  // to claim otherwise in its title, which is the worse of the two failures:
+  // an untested guard is a gap, an untested guard advertised as tested is a
+  // gap nobody looks for.
   const PACK: PackManifest = {
     name: 'test',
     palette: [
@@ -333,7 +355,7 @@ describe('a logo through render', () => {
   };
   const MARK = 0xf81f;
 
-  it('puts the mark on the lid, and only on the first slot', async () => {
+  it('puts the mark on the lid, at the origin the stage gave the sprite', async () => {
     const typing = (await loadSprite('typing')).slice(0, 1);
     const logo = solidLogo(12, 14, MARK);
     const lit = render({ ...base, sprites: typing, logo });

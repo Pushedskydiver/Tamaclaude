@@ -778,8 +778,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       `packages/renderer/src/sprites/index.ts` already turns back into pixels.
       That makes this a schema entry, a loader, a blit at a known slot, and a
       third output format on `tools/logo2pixel.ts` — which today emits a PNG to
-      look at and SVG rects to paste, **neither of which the renderer can
-      consume**. Smaller than it first looked, and the tool is the part that
+      look at and SVG rects to paste, **neither of which the renderer could
+      consume** — `--format pack` is the third, added 26 Aug, and is the one it
+      can. Smaller than it first looked, and the tool is the part that
       needs the change.
       **Decided on the artefact, 26 Aug.** `panel-mock --pack <dir>` draws a
       pack-supplied mark on the lid across all four skies, so the exit below is
