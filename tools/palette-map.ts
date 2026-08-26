@@ -15,7 +15,12 @@ import type { Rgb } from './frame-palette.ts';
  */
 export function declaredFills(svg: string): Rgb[] {
   const found = new Map<string, Rgb>();
-  for (const [, value] of svg.matchAll(/fill\s*[:=]\s*"?(#[0-9a-fA-F]{6})/g)) {
+  // Either quote style, because SVG permits both and exporters differ — a logo
+  // quoted the other way escaped this entirely, and a warning that silently
+  // skips a common encoding is worse than no warning.
+  for (const [, value] of svg.matchAll(
+    /fill\s*[:=]\s*['"]?(#[0-9a-fA-F]{6})/g,
+  )) {
     const colour: Rgb = [
       Number.parseInt(value.slice(1, 3), 16),
       Number.parseInt(value.slice(3, 5), 16),

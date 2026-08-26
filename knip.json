@@ -6,5 +6,6 @@
       "entry": ["tools/*.ts"]
     }
   },
-  "ignoreBinaries": ["plutil"]
+  "ignoreBinaries": ["plutil"],
+  "ignore": [".claude/worktrees/**"]
 }

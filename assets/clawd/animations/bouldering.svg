@@ -630,10 +630,14 @@
         </g>
 
         <!-- Nested inside the body colour group rather than beside it, because
-             the eyes must ride the bob with the torso, and the two colour
-             groups are edited by overriding these fills wherever they sit.
-             That is an authoring edit and a re-bake, not something a pack
-             does — see `docs/ANIMATION.md`. -->
+             the eyes must ride the bob with the torso. Editing the two group
+             fills is an authoring change and a re-bake, not anything a pack
+             does — see `docs/ANIMATION.md`.
+
+             Note this file is the easy case: its legs sit inside the body
+             group, so one fill covers them. Ten other animations put
+             `#legs-group` outside the group with its own peach fill, so
+             editing the two groups there leaves the legs behind. -->
         <g id="eyes-color-group" fill="#000000">
           <g id="eyes-look">
             <rect id="left-eye" x="4" y="8" width="1" height="2"/>

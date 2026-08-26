@@ -17,8 +17,9 @@ back to. Run `tamaclaude pack` to see which one is loaded.
 
 The character is **not** in the pack. Clawd is shared and his colours are
 baked into the sprites, so nothing here changes them: recolouring him means
-editing the colour groups in every animation under `assets/clawd/` and
-re-baking. Making him swappable would mean a second animation set, and the
+editing every declared fill under `assets/clawd/` — they are not all inside
+the colour groups — and re-baking, which for `splash.svg` means reflashing the
+firmware rather than rebuilding a sprite. Making him swappable would mean a second animation set, and the
 calendar has no room for one. See `docs/ARCHITECTURE.md` §Packs.
 
 ## `manifest.json`

@@ -6,8 +6,8 @@
  *                            [--width 48] [--over '#RRGGBB']
  *
  * `BUILD_PLAN.md` Stage 5 calls this "SVG → nearest-neighbour → palette
- * quantise (`sharp`)", and the screen spec's asset table calls it the logo
- * pixelation script. **It needs no `sharp`.** Both halves already existed for
+ * quantise (`sharp`)", and the screen spec names a "logo pixelation script"
+ * as the cost of putting one on the boot splash. **It needs no `sharp`.** Both halves already existed for
  * the animation pipeline: Playwright rasterises the SVG the way
  * `tools/svg2frames.ts` does, and `snapToPalette` in `tools/frame-palette.ts`
  * is already nearest-neighbour in RGB against a palette it is handed. That
@@ -31,14 +31,14 @@
  *   node tools/logo2pixel.ts pack/logo.svg --width 12 \
  *     --over '#RRGGBB' --format rects
  *
- * `--over` is the colour the mark sits on and **must be one of the pack's own
- * palette entries** — see the note on it below. Wrap the output in
+ * `--over` is the colour the mark sits on — for the lid that is `#30363B`,
+ * fixed in the artwork. Wrap the output in
  * `<g fill="#RRGGBB" transform="translate(x,y)">` inside the logo group: the
  * rects carry no fill of their own, so without one they default to black.
  *
  * Centring is arithmetic, not a constant. For a mark `w` x `h` device pixels
  * at 8 px per unit, `x = 2.25 + (10.5 - w/8)/2` and `y = 11 + (2.5 - h/8)/2` —
- * a 12x14 mark gives `translate(6.75,11.375)` and leaves 3 px of lid above and
+ * a 16x16 mark gives `translate(6.5,11.25)` and leaves 2 px of lid above and
  * below. **Height is the constraint**: at 20 px there is not much of it, so
  * pick the width that lands the height you want rather than the other way
  * round.
@@ -52,21 +52,26 @@
  * construction, which is fine for a one-colour mark on a contrasting ground
  * and wrong for anything else.
  *
- * **Nothing renders the output yet, and no plan item covers making it.**
- * `packages/packs` has no logo field, and the renderer draws no logo. This
- * produces the asset only. The pixel art is worth judging by eye against a
- * real palette before anything draws it, which is what makes the tool useful
- * now — but a logo reaches the panel only via a pack `logo` field the schema
- * does not have, or via a private re-bake of the animation frames.
+ * **Nothing renders the output yet.** `packages/packs` has no logo field and
+ * the renderer draws no logo; `BUILD_PLAN.md` Stage 5 carries "A pack `logo`
+ * field, and something that draws it" as the item for that. This produces the
+ * asset only, which is still worth having early: the pixel art is what needs
+ * judging by eye against a real palette, and it can be judged before anything
+ * draws it. The other live route is a private re-bake of the animation
+ * frames — see `typing.svg`'s note on the logo group for what that costs.
  *
- * **A logo is quantised against a ground, and the ground is a choice.** Partly
- * transparent pixels are composited over `--over` before the nearest colour is
- * picked, and `snapToPalette` clears alpha only where a pixel both resolved to
- * that ground and arrived non-opaque. The default is the pack's background,
- * `palette[0]`, because that is the only ground a pack defines. A logo bound
- * for the laptop lid in `typing` sits on the lid instead, so it wants
- * `--over` set to the lid colour and a re-bake — the same art quantised
- * against a different ground is a different picture at the edges.
+ * There is a third, and it is closed: the boot splash, which is where the
+ * screen spec originally put the logo. `tools/bake-splash.ts` writes a
+ * firmware header, so it is flashed rather than configured, and the splash
+ * shipped on 21 Aug without one. `BUILD_PLAN.md` records why the lid won.
+ *
+ * **A logo is quantised against a ground.** Partly transparent pixels are
+ * composited over `--over` before the nearest colour is picked, and
+ * `snapToPalette` clears alpha only where a pixel both resolved to that ground
+ * and arrived non-opaque — so the ground joins the snap candidates, or nothing
+ * would ever be transparent. The default is `palette[0]`. The same art
+ * quantised against a different ground is a different picture at the edges, so
+ * re-bake per surface rather than reusing one output.
  */
 import type { Rgb } from './frame-palette.ts';
 
@@ -139,28 +144,51 @@ if (svgArg === undefined) {
 }
 
 const width = Number(values.width);
+if (!Number.isInteger(width) || width <= 0) {
+  console.error(
+    `--width must be a positive whole number, not '${values.width}'`,
+  );
+  process.exit(1);
+}
 const svg = await readFile(resolve(svgArg), 'utf8');
 const pack = await loadPack(resolve(values.pack));
 const palette = pack.palette.map((entry) => [...entry] as unknown as Rgb);
 const background = palette[0];
 if (background === undefined) throw new Error('pack palette is empty');
-const over = values.over === undefined ? background : parseHex(values.over);
-// **`--over` has to be a palette entry, and this is not a style rule.**
-// `snapToPalette` clears alpha only where a pixel's *snapped* colour equals
-// the ground, and the snapped colour always comes from the palette — so a
-// ground outside it is never matched, every pixel comes back opaque, and the
-// output is a solid rectangle the size of the mark's bounding box. That is
-// silent in `png` and catastrophic in `rects`, where it is what gets pasted.
-// A real branded pack carries the surface colour anyway: the lid is red
-// because the pack's palette is.
-if (!palette.some((entry) => entry.every((v, c) => v === over[c]))) {
-  console.error(
-    `--over ${values.over} is not in ${pack.name}'s palette, so nothing ` +
-      `would be transparent and the output would be a solid block. ` +
-      `Use one of: ${palette.map((c) => hexOf(c)).join(' ')}`,
-  );
+// Both of these threw a raw stack trace until 26 Aug, while `--scale` — a
+// flag that appears in no recipe — had a readable message.
+let over: Rgb;
+try {
+  over = values.over === undefined ? background : parseHex(values.over);
+} catch {
+  console.error(`--over must be a #RRGGBB colour, not '${values.over}'`);
   process.exit(1);
 }
+/**
+ * The palette the snap actually chooses from: the pack's, plus the ground.
+ *
+ * **The ground has to be a candidate or nothing is transparent.**
+ * `snapToPalette` clears alpha only where a pixel's *snapped* colour equals
+ * the ground and the capture was non-opaque — and the snapped colour comes
+ * from this array. A ground outside it is therefore never matched, every pixel
+ * comes back opaque, and the output is a solid rectangle the size of the
+ * mark's bounding box: silent in `png`, and in `rects` it is what gets pasted.
+ *
+ * Adding it here rather than demanding a pack carry it. The surface a mark
+ * sits on is often not a pack colour at all — the laptop lid in `typing` is a
+ * fixed `#30363B` in the artwork, and no pack palette reaches a baked sprite,
+ * so it is that colour on every install. Requiring `--over` to be a palette
+ * entry would refuse the tool's own documented workflow.
+ *
+ * Opaque interior pixels survive even when they land on the ground, because
+ * the alpha rule needs *both* conditions; only the antialiased edge, which
+ * arrives part-transparent, resolves to the ground and drops out.
+ */
+const candidates: Rgb[] = palette.some((entry) =>
+  entry.every((v, c) => v === over[c]),
+)
+  ? palette
+  : [...palette, over];
 
 const scale = Number(values.scale);
 if (!Number.isFinite(scale) || scale <= 0) {
@@ -173,7 +201,7 @@ if (!Number.isFinite(scale) || scale <= 0) {
 // one merge, and the mark that lost simply is not in the output — no error, no
 // empty file, just a picture missing a shape. A fixture with a purple field
 // and a yellow disc came back as a flat orange rectangle.
-for (const clash of collisions(declaredFills(svg), palette)) {
+for (const clash of collisions(declaredFills(svg), candidates)) {
   const names = clash.sources.map((colour) => hexOf(colour));
   const listed = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
   console.warn(
@@ -207,7 +235,7 @@ try {
   const raw = await page.screenshot({ omitBackground: true });
   const snapped = await page.evaluate(snapToPalette, {
     uri: `data:image/png;base64,${raw.toString('base64')}`,
-    palette,
+    palette: candidates,
     bg: over,
   });
   const total = size.width * size.height;
@@ -238,8 +266,10 @@ try {
     console.log(runsToRects(runs, { unitsPerPixel, x: 0, y: 0 }).join('\n'));
   } else {
     const base64 = snapped.uri.replace(/^data:image\/png;base64,/, '');
-    // `out/` is gitignored, so it is absent from every fresh checkout and this
-    // is the first tool that might touch it — `svg2frames.ts` does the same.
+    // `out/` is gitignored, so it is absent from a fresh checkout. Several
+    // tools write there; the ones that might create it — `svg2frames.ts`,
+    // `harness.ts` — mkdir like this. This one had not, and failed with a raw
+    // ENOENT after the browser had launched and done the work.
     await mkdir(dirname(resolve(out)), { recursive: true });
     await writeFile(resolve(out), Buffer.from(base64, 'base64'));
     console.log(

@@ -692,10 +692,7 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   repo already had both halves of. Playwright rasterises the SVG the way
   `tools/svg2frames.ts` does, and `snapToPalette` was already
   nearest-neighbour against a palette it is handed; it was written to snap
-  frames to an SVG's own colours, and the palette is a parameter. That is
-  the second time a named raster dependency turned out unnecessary — see
-  the cancelled `@napi-rs/canvas` sink above — and both were retired by the
-  same Playwright decision.
+  frames to an SVG's own colours, and the palette is a parameter.
   **It warns when a palette merges two of a logo's colours**, which is the
   failure that is otherwise silent: a small palette cannot represent an
   arbitrary logo, and the mark that loses is simply absent from the output.
@@ -707,11 +704,24 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   frames. The item below carries the first; the second needs no plan
   because it is a build step run once.
   The logo itself is pack content and is not in this repo.
-- [ ] **A pack `logo` field, and something that draws it.** The half above that
-      is not built. `spec.md` already freezes the manifest as `name`, `palette`,
-      `quips` plus props and logo, so the field is in scope; the artwork stays
-      out of git either way, which is why this is the route rather than pasting
-      a mark into a tracked animation.
+- [ ] **A pack `logo` field, and something that draws it.** The half above
+      that is not built, and the larger half.
+      **Where it goes: the laptop lid, not the splash.** The screen spec's
+      asset table put the logo on the boot splash. That is now settled the
+      other way and nobody wrote it down: the splash shipped on 21 Aug with no
+      logo in it, it is firmware and so is flashed rather than configured, and
+      `PLANS.md` §Typing gives the reason the lid wins — it is on screen every
+      time Claude writes code, where the splash is seen once before setup and
+      never again. The manifest freeze at the same spec allows the field.
+      **Size it before starting.** The bytes travel `cli -> renderer`, so it is
+      a schema entry, a loader, a renderer path and tests across three
+      packages, plus compositing a runtime image onto a baked sprite — which
+      nothing in this repo has done. `PLANS.md` grades pack-supplied art as the
+      most expensive of the three options it costed. Stage 5 ends at feature
+      freeze on 13 Sep, so **if this has not started by 8 Sep, take the private
+      re-bake instead** and accept that the tree stays dirty; `typing.svg`'s
+      logo group says what that costs. If neither happens, no logo ships, and
+      that is a acceptable loss against the date.
 - [ ] Quips mapped to states, never randomised
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).

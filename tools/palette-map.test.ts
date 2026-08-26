@@ -4,7 +4,17 @@ import { describe, expect, it } from 'vitest';
 
 import { collisions, declaredFills, nearestIn } from './palette-map.ts';
 
-/** `packs/example`'s palette: background, ink, attention, active. */
+/**
+ * A four-entry palette shaped like a real one, not read from any pack.
+ *
+ * Deliberately not `packs/example`'s. These functions are pure and the
+ * assertions below are about relationships between the numbers, so binding
+ * them to a shipped manifest would make this test fail when that manifest
+ * changed for unrelated reasons. Writing the same values here and *calling*
+ * them `packs/example`'s would be worse again: a second source of truth that
+ * `tools/one-panel-renderer.test.ts` cannot catch, because that gate greps
+ * hex strings and these are decimals.
+ */
 const PACK: Rgb[] = [
   [13, 17, 23],
   [201, 209, 217],
@@ -126,6 +136,14 @@ describe('declaredFills', () => {
   it('injects no ground of its own', () => {
     // The distinguishing property against `paletteOf`, which always adds one.
     expect(declaredFills('<rect fill="#FFD166"/>')).toEqual([[255, 209, 102]]);
+  });
+
+  it('reads single-quoted fills, which several editors emit', () => {
+    // The hole that mattered: a logo entirely hex-filled through `fill`
+    // attributes escaped the collision warning completely if its exporter
+    // used single quotes. The warning exists to be believed, so the cases it
+    // silently skips have to be the ones nobody writes.
+    expect(declaredFills(`<rect fill='#FFD166'/>`)).toEqual([[255, 209, 102]]);
   });
 
   it('ignores fill="none" and named colours rather than guessing', () => {

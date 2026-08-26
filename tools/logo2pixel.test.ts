@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,12 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
  * equals the ground it was composited over, and the snapped colour is always a
  * palette entry — so a `--over` outside the palette matched nothing, every
  * pixel came back opaque, and the mark became its own bounding box.
+ *
+ * The fix is not a refusal: the ground joins the snap candidates, so the edge
+ * still resolves to it and drops out while the mark survives. That is why the
+ * case below drives an out-of-palette ground and asserts the *output* rather
+ * than an exit code — an exit-code assertion would stop testing the defect the
+ * moment the guard changed shape.
  *
  * Nothing about that is visible from any one module. `tools/bake-splash.ts`
  * gates its equivalent against a committed artefact for the same reason; this
@@ -92,11 +98,32 @@ function rectWidths(stdout: string): number[] {
   return [...stdout.matchAll(/width="([\d.]+)"/g)].map((m) => Number(m[1]));
 }
 
+/**
+ * How many separated horizontal bands the rects fall into.
+ *
+ * The fixture is two bars with a gap, so a correct render is two bands. A
+ * count of rects cannot see that: a solid block, one bar missing, and both
+ * bars present all produce plausible counts. This is the structure.
+ */
+function bandCount(stdout: string): number {
+  const ys = [
+    ...new Set([...stdout.matchAll(/y="([\d.]+)"/g)].map((m) => Number(m[1]))),
+  ].sort((a, b) => a - b);
+  if (ys.length === 0) return 0;
+  const step = 1 / 8;
+  return ys.reduce(
+    (bands, y, i) =>
+      i > 0 && y - (ys[i - 1] ?? 0) > step * 1.5 ? bands + 1 : bands,
+    1,
+  );
+}
+
 describe('logo2pixel, end to end', () => {
   it('does not emit the mark as its own bounding box', () => {
-    // The assertion that would have caught it. Two bars with a gap between
-    // them must produce rows that are *not* full width — a solid block is
-    // every run spanning the mark, which is what a broken alpha rule gives.
+    // The happy path: a legal ground, which is what the tool was always
+    // tested with and is exactly why the original defect survived. It is here
+    // as the control — the case that catches the defect is the next one, which
+    // supplies a ground the palette does not contain.
     const { output: stdout, status } = run([
       fixturePath(fixture(paletteAt(2), paletteAt(3))),
       '--pack',
@@ -113,14 +140,20 @@ describe('logo2pixel, end to end', () => {
     expect(widths.length).toBeGreaterThan(0);
     // 16px at 0.125 units per pixel is 2 units, so a full-width run is 2.
     expect(Math.max(...widths)).toBeLessThan(2);
-    // And the empty band between the bars must leave rows with no run at all.
-    expect(widths.length).toBeLessThan(20);
+    // Two bars with a gap must render as two separated bands. A rect count
+    // cannot tell that from a solid block or from one bar going missing —
+    // an earlier version asserted `length < 20` against a 16-row raster,
+    // which no outcome could exceed.
+    expect(bandCount(stdout)).toBe(2);
   });
 
-  it('refuses a ground the palette does not contain', () => {
-    // Any colour outside the palette produces a solid block rather than an
-    // error, so this has to be refused rather than warned about.
-    const { status, output: stdout } = run([
+  it('keeps the mark when the ground is not a palette colour', () => {
+    // The surface a mark sits on is usually not a pack colour: the laptop lid
+    // in `typing` is a fixed `#30363B` in the artwork and no pack palette
+    // reaches a baked sprite, so it is that on every install. The ground has
+    // to join the snap candidates for anything to be transparent — without
+    // that, every pixel comes back opaque and this is a solid block.
+    const { output: stdout, status } = run([
       fixturePath(fixture(paletteAt(2), paletteAt(3))),
       '--pack',
       PACK,
@@ -131,8 +164,36 @@ describe('logo2pixel, end to end', () => {
       '--format',
       'rects',
     ]);
-    expect(status).toBe(1);
-    expect(stdout).toMatch(/not in .* palette/);
+    expect(status).toBe(0);
+    const widths = rectWidths(stdout);
+    expect(widths.length).toBeGreaterThan(0);
+    expect(Math.max(...widths)).toBeLessThan(2);
+    expect(bandCount(stdout)).toBe(2);
+  });
+});
+
+describe('logo2pixel writes its PNG', () => {
+  it('writes into a directory that does not exist yet', () => {
+    // The default format, and it had no test: `out/` is gitignored so it is
+    // absent from every fresh checkout, and the tool wrote into it without
+    // creating it. The failure was a raw ENOENT after Chromium had launched
+    // and done all the work.
+    const target = join(
+      mkdtempSync(join(tmpdir(), 'logo2pixel-out-')),
+      'nested',
+      'mark.png',
+    );
+    const { status, output } = run([
+      fixturePath(fixture(paletteAt(2), paletteAt(3))),
+      target,
+      '--pack',
+      PACK,
+      '--width',
+      '16',
+    ]);
+    expect(output).not.toMatch(/ENOENT/);
+    expect(status).toBe(0);
+    expect(existsSync(target)).toBe(true);
   });
 });
 
@@ -140,7 +201,7 @@ describe('logo2pixel refuses input that would ship silently wrong', () => {
   it('refuses a scale that would put NaN in the output', () => {
     // `coordinate()` stringifies NaN happily and Chromium ignores an invalid
     // attribute silently, so this reaches the panel as a blank lid.
-    const { status } = run([
+    const { status, output } = run([
       fixturePath(fixture(paletteAt(2), paletteAt(3))),
       '--pack',
       PACK,
@@ -152,6 +213,10 @@ describe('logo2pixel refuses input that would ship silently wrong', () => {
       'abc',
     ]);
     expect(status).toBe(1);
+    // The message, not just the code: `run` reports a missing import or a
+    // signal as status 1 too, so an exit-code-only assertion passes when the
+    // tool cannot start at all.
+    expect(output).toMatch(/--scale must be a positive number/);
   });
 
   it('warns when the palette cannot tell two of the mark colours apart', () => {
