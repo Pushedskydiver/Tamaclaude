@@ -37,13 +37,14 @@ describe('counting a numstat', () => {
   });
 });
 
-describe('the trigger table', () => {
-  const fires = (what: string, files: readonly string[]): boolean => {
-    const row = triggers([]).find((each) => each.what.includes(what));
-    if (row === undefined) throw new Error(`no trigger row matching ${what}`);
-    return row.fires(files, 0);
-  };
+/** Does the row whose `what` contains `phrase` fire on these paths? */
+const fires = (what: string, files: readonly string[]): boolean => {
+  const row = triggers([]).find((each) => each.what.includes(what));
+  if (row === undefined) throw new Error(`no trigger row matching ${what}`);
+  return row.fires(files, 0);
+};
 
+describe('the trigger table', () => {
   it('does not send a plan to the animation critic', () => {
     // `PLANS.md` lives under `assets/clawd/animations/`, so a prefix match
     // sends a docs-only diff to a reviewer whose whole job is to re-render
@@ -77,6 +78,44 @@ describe('the trigger table', () => {
     expect(
       fires('static art', ['assets/fonts/DepartureMono-LICENSE.txt']),
     ).toBe(false);
+  });
+});
+
+describe('routing a picture to the critic that looks at it', () => {
+  it('sends re-baked animation frames to the animation critic', () => {
+    // A re-bake changes every pixel and touches no `.svg`, so before this the
+    // whole catalogue could be regenerated and fire nothing but `da-review`.
+    // The frames are animation, so they go to the critic that scrubs motion —
+    // and explicitly not to the static one, or both rows fire on one file.
+    expect(
+      fires('animations', ['packages/renderer/src/sprites/idle.data.ts']),
+    ).toBe(true);
+    expect(
+      fires('static art', ['packages/renderer/src/sprites/idle.data.ts']),
+    ).toBe(false);
+  });
+
+  it('sends baked static art and the files it is baked from to the art critic', () => {
+    // The row said "static art, or a painter that places it in a slot" and
+    // caught neither the art itself once baked nor the file that decides what
+    // it looks like. `tools/splash-source.ts` is by its own header "what the
+    // splash is baked *from*" and fired nothing at all; the baked QR fired
+    // only `da-review`, while `qr.ts` — the painter that did not change —
+    // fired this row. That inversion is the row's intent run backwards.
+    expect(fires('static art', ['packages/renderer/src/qr.data.ts'])).toBe(
+      true,
+    );
+    expect(
+      fires('static art', [
+        'packages/device/firmware/blitter/main/splash-data.h',
+      ]),
+    ).toBe(true);
+    expect(fires('static art', ['tools/splash-source.ts'])).toBe(true);
+    expect(fires('static art', ['tools/bake-splash.ts'])).toBe(true);
+    // The one tracked pack. `packs/example/` is un-ignored by `.gitignore`,
+    // and the schema lets a manifest carry a logo blob.
+    expect(fires('static art', ['packs/example/manifest.json'])).toBe(true);
+    expect(fires('static art', ['tools/review-triggers.ts'])).toBe(false);
   });
 
   it('sends a painter that places art into a slot to the art critic', () => {

@@ -170,12 +170,20 @@ degrade reasoning accuracy as context grows.
   yawn whose mouth hung outside the body. Animations are code — they are
   stylesheets — and they now get a critic like any other code.
 
-  That fix covered animations and left static art on `self-review only`, which
-  is where a logo escaped its slot into the session strip under a layout
-  nothing had rendered, and where three drafts of the pet sprite read as a
-  slug, a featureless blob and a shadow in turn. Each was caught by someone
-  rendering it and looking; none by a gate. So static art has a critic too, and
-  the exemption is gone rather than narrowed.
+  That fix covered animations and left static art on `self-review only`. It
+  has a critic now too, and the exemption is gone rather than narrowed.
+
+  **The warrant is one defect, not three, and the other two were cited here
+  for a day before a review took them away.** The real one: an anti-aliased
+  mark landed on three palette colours at once, recorded in
+  `tools/logo2pixel.ts`, seen by no gate and caught by looking at the render.
+  The two that did not survive checking were a logo escaping its slot — which
+  happened in `packages/renderer/src/logo.ts`, a file that already fires
+  `da-review, mandatory`, and which a review caught, so it never went through
+  this gap at all — and three rejected drafts of the pet sprite, which happened
+  in an unversioned scratch directory and left nothing anybody can check. One
+  checkable defect is a thin warrant. It is the honest one, and stacking two
+  unexamined claims on top of it is how this file has gone wrong before.
 
   **`pixel-art-critic` is not `animation-critic` with the motion checks
   removed.** Its one irreplaceable move is the cold read: render the artefact,
@@ -183,10 +191,29 @@ degrade reasoning accuracy as context grows.
   cannot run that check on their own work, because they see the intended
   subject whatever is on the screen.
 
-  **The grep cannot see pack art.** `packs/` is gitignored, so redrawing the
-  logo or the pet changes no tracked file and fires no trigger. The row catches
-  the painters and the tracked art; the pack half is a judgement call that
-  survives, and it is the half most likely to be skipped.
+  **The grep cannot see the recipient's pack, and the reason is not the one
+  first written here.** It is not that `packs/` is gitignored: `.gitignore`
+  un-ignores `packs/example/` and everything under it, so the one committed
+  pack is tracked. The real reason is simpler — their pack is a private
+  repository cloned to `~/.tamaclaude/pack/` (`BUILD_PLAN.md`), so it is not in
+  this repo at all.
+
+  **Reaching for "`packs/` is gitignored" to explain why something is safe has
+  gone wrong here once before**, over the research specs rather than over art:
+  `.gitignore` itself carries the correction, that the risk register "claimed
+  `packs/` being gitignored kept that material off the internet; it never did,
+  because the specs were never in `packs/`." Different subject, same reflex,
+  and the second time it was written into a blast-radius doc. Redrawing the logo or
+  the pet fires nothing, and no rule here can change that. That half is a
+  judgement call, and it is the half most likely to be skipped.
+
+  **What the row does catch was also wrong on the first pass**, and a review
+  found it by asking what each artefact named in `pixel-art-critic`'s own
+  description actually fires. It caught painters and tracked images, and missed
+  the art itself once baked, the files it is baked from, and the one tracked
+  pack. The baked QR fired nothing but `da-review` while `qr.ts` — the painter
+  that had not changed — fired this row, which is the rule run backwards.
+  `tools/review-triggers.ts` carries the corrected list and the reasoning.
 
   **`pnpm review-triggers` answers this for the current branch.** The table was
   meant to make the rule a grep rather than a judgement, and it still got

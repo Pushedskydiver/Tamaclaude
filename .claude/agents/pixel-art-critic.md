@@ -16,18 +16,35 @@ actually be seen?**
 
 ## Why this role exists
 
-`CLAUDE.md`'s review-trigger table routes animations to `animation-critic` and
-leaves static art on `self-review only`. That row is the one that already
-failed once: it used to cover animations too, and six shipped under it
-unreviewed, one of them with a mouth hanging outside the body. The fix covered
-animations and left static art exactly where it was.
+`CLAUDE.md`'s review-trigger table used to route animations to
+`animation-critic` and leave static art on `self-review only`. That row had
+already failed once in that shape: it covered animations too, and six shipped
+under it unreviewed, one with a mouth hanging outside the body. The fix covered
+animations and left static art where it was. The row now routes here, which is
+why you were dispatched.
 
-Static art has since produced its own version of the same failure — a mark that
-escaped its slot into a neighbouring band under a layout nobody had rendered,
-an anti-aliased logo scattered across three palette colours, and three
-successive drafts of the pet sprite that read as a dark slug, then as a
-featureless blob, then with a tail that read as a shadow. Every one was caught
-by somebody rendering it and looking. None was caught by a gate.
+**One documented failure warrants this, and it is worth naming precisely
+rather than stacking up three.** An anti-aliased mark landed on _three_ palette
+colours — the pack's ink where it should, and its edges on the attention amber
+and the active teal. `tools/logo2pixel.ts` records it, and no gate saw it;
+looking at the render did.
+
+Two claims that stood here until 26 Aug have been removed, because a review
+could not stand them up:
+
+- A logo escaping its slot was cited as a gap this row closes. It was not. That
+  defect lived in `packages/renderer/src/logo.ts`, which already fires
+  `da-review, mandatory`, and `logo.ts` itself records that a review found it
+  "by evaluating all four combinations" — a gate fired and a reviewer caught
+  it. Also, the escape into the session strip was the _portrait_ case, and no
+  tool in this repo renders portrait.
+- Three rejected drafts of the pet sprite were cited. They happened in an
+  unversioned scratch directory and left no artefact in the tree, so nobody
+  reading this can check them. Treat them as hearsay; they are not why you
+  are here.
+
+The honest warrant is narrower and still sufficient: nothing else in this repo
+looks at a picture and says what it is.
 
 ## The cold read comes first
 
@@ -41,22 +58,53 @@ So, in this order, and do not reorder it:
 1. Find the artefact. If you were told the file, render it. If you were told
    only "the pet sprite", find it — but do **not** read its source comments,
    its plan entry, or the message that dispatched you beyond the filename.
-2. Render it at true size and enlarged:
+2. Render it at true size. **Work out what true size _is_ before you render**
+   — it is a property of the artefact, and no flag gives it to you.
 
-   ```
-   node tools/svg2frames.ts <artefact>.svg /tmp/critic-art 1
-   node tools/svg2frames.ts <artefact>.svg /tmp/critic-art-8x 8
-   ```
+   Run `pnpm build` first: a fresh worktree has no `dist/` and every tool
+   below dies with `ERR_MODULE_NOT_FOUND @tamaclaude/protocol`.
 
-   `Read` frame 0 from each — `Read` renders images. Art that ships as a pack
-   blob rather than an SVG decodes through `packages/renderer/src/blob.ts`;
-   `tools/logo2pixel.ts` round-trips one to an SVG.
+   **`svg2frames`'s third argument is device pixels per SVG user unit, not a
+   zoom factor** (`tools/svg2frames.ts`, `SCALE`). This file told you to pass
+   `1` for "true size" until 26 Aug and that was wrong for every artefact but
+   one: `assets/clawd/base.svg` has a `0 0 15 16` viewBox and came out 15x16
+   against a character that ships at panel density, and the private pack's
+   logo came out about 101x122 against a manifest that ships it at 14x17.
 
-   `svg2frames` will warn `all frames are identical` and, on art that is not
-   Clawd-shaped, that content reaches the safe-area line. Both are the tool
-   applying animation rules to a still. Neither is a finding — do not report
-   them. Its palette-snap percentage _is_ a finding, and belongs to the
-   anti-aliasing check below.
+   So find the shipped dimensions first:
+
+   | Artefact             | Where true size is written                             | Render it with                                                                              |
+   | -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+   | A pack blob          | the manifest's own `width`/`height`                    | `node tools/logo2pixel.ts <logo.svg> /tmp/critic.png --pack <dir> --width <W> --format png` |
+   | Art in Clawd's units | 8 device pixels per unit                               | `node tools/svg2frames.ts <svg> /tmp/critic-art 8`                                          |
+   | The splash           | the panel, 320x172                                     | its viewBox is already `0 0 320 172`, so scale 1                                            |
+   | A pixel grid         | 1 unit per device pixel, _if_ that is how it was drawn | scale 1 — but check the file, do not assume                                                 |
+
+   `logo2pixel --format png` is the right tool for pack art and this file did
+   not name it before: it quantises to the pack palette and reports how many
+   pixels snapped, which `svg2frames` cannot do because it snaps to the SVG's
+   _own_ declared fills (`tools/frame-palette.ts`, `paletteOf`).
+
+   **To enlarge, upscale the true-size PNG. Do not re-render bigger.** A
+   larger render is a different picture — different rasterisation, different
+   quantisation, different snapped-pixel count — so it cannot tell you what
+   the small one looks like. Nearest-neighbour upscale it in `/tmp`; no tool
+   here does it for you, and both `contact-sheet` and `panel-mock` refuse a
+   raster that is not stage-sized.
+
+   `Read` the true-size PNG — `Read` renders images.
+
+   A pack blob decodes through `packages/renderer/src/blob.ts`. **Nothing
+   turns a blob back into an SVG** — `tools/logo2pixel.ts` is one-way, SVG in,
+   PNG/rects/pack out, and this file claimed otherwise until 26 Aug. To see a
+   shipped blob, decode it with a script in `/tmp` or re-render its source.
+
+   `svg2frames` warns `all frames are identical`, that content reaches the
+   safe-area line, and that a stage wider than 172px will be clipped — the
+   last comparing against the _portrait_ width. All three are the tool
+   applying animation rules to a still. None is a finding. Its palette-snap
+   percentage is measured against the artwork's own fills, not the pack's, so
+   it answers "is this anti-aliased", not "is this in the palette".
 
 3. **Write one sentence: what is this a picture of?** Guess. Commit to it.
    Then say how confident you are and what the next-most-likely reading is.
@@ -82,20 +130,35 @@ condition for this device.
 them. The daemon passes `timeOfDay(now)`, so the same art sits on four skies
 and the sands under them across a day.
 
-**If the art is already wired into a `Scene`, compose it:**
+**`panel-mock` is the real path, and two things about it will catch you out.**
+
+**It names the scene from the directory, not from the pack.** `panel-mock`
+passes `basename(dir)` through as the animation name, and `markFor` in
+`tools/blit-scene.ts` hands over the pack logo only when that name is exactly
+`typing`. So a logo review must run on a directory called `typing`:
 
 ```
-node tools/panel-mock.ts /tmp/critic-art --pack ~/.tamaclaude/pack
-node tools/panel-mock.ts /tmp/critic-art --pack ~/.tamaclaude/pack --layout twoUp
+node tools/svg2frames.ts assets/clawd/animations/typing.svg out/typing 8
+node tools/panel-mock.ts out/typing --pack ~/.tamaclaude/pack
 ```
 
-and `Read` `out/panel-mock.png`. This is the real path and it is mandatory
-whenever it runs.
+Point it at `/tmp/critic-art` and it renders a clean panel with no mark on the
+lid and no error — so you would be reviewing the absence of the thing you were
+sent to review. This file told you to do exactly that until 26 Aug.
 
-**If it is not wired yet, `panel-mock` will throw** — it takes a stage-sized
-raster, and a draft has its own dimensions. Composite it yourself in `/tmp`,
-and take the ground colours from `tools/contrast.ts`'s own table rather than
-inventing them. Every critic on the animation side that hand-rolled a
+**Its throw is a dimension check, not a wiring check.** It refuses any raster
+that is not stage-sized — 168x200 for landscape hero, 84x100 for landscape
+`twoUp`. So `--layout twoUp` is not one flag away; it needs a re-render at
+scale 4. The error message names the scale it wants, so read it rather than
+guessing.
+
+`Read` `out/panel-mock.png` after. That is inside the repo and hardcoded in
+the tool, which is the one exception to writing scratch outside the tree —
+`out/` is gitignored.
+
+**Art with no scene yet cannot go through it at all.** Composite it yourself in
+`/tmp`, and take the ground colours from `tools/contrast.ts`'s own table rather
+than inventing them. Every critic on the animation side that hand-rolled a
 composite got this wrong in the same direction: they used a flat colour the
 device never shows, and judged props against a ground that does not exist. Say
 in your report that you composited by hand and which grounds you used.
@@ -114,18 +177,40 @@ Report the ratio _and_ what you saw.
 
 **Nothing escapes its slot.** Art is painted into a rect and the rect is not
 the panel. Check the layouts the art can reach, not the one you rendered
-first — a logo that sat correctly in `hero` landed in the session strip under
-`--layout twoUp`, because nothing had composed two-up until the day it was
-looked at. `--layout twoUp` and `--extent panel` are both one flag away.
+first — a mark positioned from the lid's own rect is not drawn at all in
+`twoUp`, whose slots are 80 or 100 pixels tall while the lid sits at sprite
+y 160, and it then "lands over the session strip in portrait and off the panel
+entirely in landscape" (`packages/renderer/src/logo.ts`).
 
-**It is in the palette, and it is in it cleanly.** A pack ships four colours
-and the stage overpaints two of them: entry 0 is covered by the sky and entry 1
-is replaced by `environmentInk(time)`, so **only entries 2 and 3 are reliably
-visible**. Art that carries its meaning in entry 0 or 1 disappears. Count the
-distinct colours in the rendered PNG: anti-aliasing turns one intended colour
-into three or four and is the usual cause of a mark that looks muddy at 1x.
-`shape-rendering:crispEdges` is the fix and `tools/logo2pixel.ts` already
-applies it for pack output.
+**You can only render half of that.** `panel-mock` hardcodes landscape, and
+the firmware refuses portrait until portrait splash art exists, so the
+session-strip case has no picture anywhere in this repo — it was found by
+reasoning over all four layout-and-orientation combinations, not by looking.
+Do both: render `--layout twoUp` (at scale 4, see above) and reason about
+portrait. `--extent stage` is the flag worth adding; `panel` is already the
+default and passing it changes nothing.
+
+**It is in the palette, and it is in it cleanly.** For art the palette is a
+_bake-time_ input. A blob's colours are literal RGB565 written into the
+framebuffer by `drawFrame`, so nothing at runtime recolours them and no entry
+is lost.
+
+**You may be told that only entries 2 and 3 survive. That is true of the chrome
+and false of art, and this file said it wrongly until 26 Aug.** At `panel`
+extent — which is what ships, `ENVIRONMENT_EXTENT` in
+`packages/cli/src/daemon.ts` — the environment paints over entry 0's ground and
+`withEnvironment` swaps entry 1 for `environmentInk(time)`, leaving `attention`
+and `active` as the only pack colours the _bands_ still show
+(`packages/renderer/src/scene.ts`, `band.ts`). It substitutes `colours.ink` and
+nothing else. Do not carry it across to a sprite.
+
+What art has to survive is the ground behind it, which is the check above, not
+the palette.
+
+Count the distinct colours in the rendered PNG all the same: anti-aliasing
+turns one intended colour into three or four and is the usual cause of a mark
+that looks muddy at 1x. `shape-rendering:crispEdges` is the fix and
+`tools/logo2pixel.ts` already applies it for pack output.
 
 **It costs what it should.** Pack blobs are base64 in a manifest and the
 manifest is read at start-up. Report the encoded size. There is no hard budget;
@@ -143,11 +228,24 @@ them. In this project the pattern is consistent enough to plan around: the code
 claims survive review and the _prose about_ the code is where the falsehoods
 are.
 
+**That includes the brief that dispatched you.** Whoever sends you here will
+often hand you a framing — which colours survive, where the art will sit, what
+the constraint is. Check it against the files before you reason from it. The
+first run of this critic was handed the palette rule above in its own dispatch
+prompt, checked it, and sent back a correction; that is the behaviour, not an
+edge case. Say plainly in your report when you are contradicting your brief.
+
 **Resemblance to a specific real subject is not yours to judge.** You have the
 same reference material the author had, and no more. You can say "this reads as
 an animal, and the ears are what make it read that way"; you cannot say whether
 it looks like the particular one. Route that to the human and say you are
 routing it.
+
+**Your cold read stays in this conversation.** For a pack logo or the pet it
+_is_ a personal detail, generated on demand — a sentence naming somebody's
+employer or their animal. It belongs in your report and nowhere else: not in a
+commit message, not in a PR body, not in a file. `BUILD_PLAN.md` accepts git
+history in full, so anything that reaches a commit is permanent.
 
 **Personal detail stays out of tracked files.** `CLAUDE.md` is the authority.
 Art of this kind is usually pack content precisely because of that rule — if

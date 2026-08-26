@@ -29,20 +29,59 @@ const ROOT = resolve(import.meta.dirname, '..');
 const BIG_DIFF_LINES = 200;
 
 /**
- * Renderer modules that place static art into a rect.
+ * Every tracked file that decides what a still picture looks like.
  *
- * A list rather than a pattern, because there is no naming convention to match
- * and inventing one to make this greppable would be the tail wagging the dog.
- * It is short and it is checked by a test, which is the trade this file makes
- * everywhere else too.
+ * Three kinds, and the first version of this list held only the first — which
+ * a review caught by asking what each of the four artefacts named in
+ * `pixel-art-critic`'s own description actually fires:
  *
- * `sprites/` is deliberately absent: those are baked animation frames and
- * `animation-critic` owns them.
+ * - **Painters**, which place art into a rect. The escape-its-slot defect
+ *   lives here and no art file changes when it happens.
+ * - **Baked output**, which _is_ the art once generated. Re-baking the QR
+ *   changed every pixel and fired only `da-review`, while `qr.ts` — the
+ *   painter that had not changed — fired this row. That inversion is the row
+ *   run backwards.
+ * - **Bake-time sources**, which decide what the baked output will be.
+ *   `tools/splash-source.ts` is, by its own header, "what the splash is baked
+ *   *from*", and it fired nothing at all.
+ *
+ * A list rather than a pattern, because there is no naming convention across
+ * those three and inventing one to make this greppable would be the tail
+ * wagging the dog. A test pins every entry — though by construction a test
+ * cannot catch the _next_ omission, which is how this list went wrong the
+ * first time.
+ *
+ * Animation bakes are absent deliberately and are handled by `isAnimation`
+ * instead; an earlier comment here claimed `animation-critic` already owned
+ * them, and it did not — `sprites/idle.data.ts` fired `da-review` alone.
  */
-const ART_PAINTERS = new Set([
+const STATIC_ART_FILES = new Set([
+  // Painters.
   'packages/renderer/src/logo.ts',
   'packages/renderer/src/qr.ts',
+  // Baked output.
+  'packages/renderer/src/qr.data.ts',
+  'packages/device/firmware/blitter/main/splash-data.h',
+  // Bake-time sources.
+  'tools/splash-source.ts',
+  'tools/bake-splash.ts',
+  'tools/bake-qr.ts',
+  'tools/logo2pixel.ts',
 ]);
+
+/** Baked animation frames, which `isAnimation` routes rather than this row. */
+const SPRITE_BAKE = /^packages\/renderer\/src\/sprites\/.*\.data\.ts$/;
+
+/**
+ * The one tracked pack.
+ *
+ * `.gitignore` un-ignores `packs/example/` explicitly, so "packs/ is
+ * gitignored" is false of it — a claim this repo had already caught and
+ * written down in `.gitignore` itself before it was made again here. The
+ * schema lets a manifest carry a logo blob, so a diff touching it can change
+ * a picture.
+ */
+const TRACKED_PACK = 'packs/example/';
 
 /** Lockfiles are excluded from that count — they are generated bulk. */
 const LOCKFILES = new Set(['pnpm-lock.yaml', 'package-lock.json']);
@@ -86,9 +125,16 @@ function blastRadius(): readonly string[] {
  * plan-only diff was sending work to a reviewer whose job is to re-render
  * frames — of animations that diff had not touched. The spec-or-plan row is
  * what covers a plan.
+ *
+ * The baked frames count too. A re-bake changes every pixel and touches no
+ * `.svg`, so the entire catalogue could be regenerated and fire `da-review`
+ * alone — which is the reviewer that reads code, not frames.
  */
 function isAnimation(file: string): boolean {
-  return file.startsWith('assets/clawd/animations/') && file.endsWith('.svg');
+  return (
+    (file.startsWith('assets/clawd/animations/') && file.endsWith('.svg')) ||
+    SPRITE_BAKE.test(file)
+  );
 }
 
 /**
@@ -110,10 +156,19 @@ function isAnimation(file: string): boolean {
  * a judgement, and that it is the half most likely to be skipped.
  */
 function isStaticArt(file: string): boolean {
+  // **Belt-and-braces, and measured to be so.** Deleting this line fails no
+  // test today: nothing `isAnimation` matches can reach a clause below, since
+  // the image rule is anchored to `assets/` and already excludes the
+  // animations directory. It is kept because the two rows must be disjoint by
+  // construction rather than by coincidence — the day someone adds a sprites
+  // path to `STATIC_ART_FILES`, this is the line that was meant to stop both
+  // rows firing on one file. `packages/renderer/src/scene.ts` keeps its
+  // `index === 0` guard on exactly this reasoning.
+  if (isAnimation(file)) return false;
   const image =
     /^assets\/.*\.(?:svg|png)$/.test(file) &&
     !file.startsWith('assets/clawd/animations/');
-  return image || ART_PAINTERS.has(file);
+  return image || STATIC_ART_FILES.has(file) || file.startsWith(TRACKED_PACK);
 }
 
 function touches(files: readonly string[], prefix: string): boolean {
