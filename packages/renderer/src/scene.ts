@@ -126,10 +126,18 @@ export type Scene = {
    * *instead of*, not an overlay: a session chip or a line of quip showing
    * through a QR is not decoration, it is a symbol that does not decode.
    *
-   * The strip and the message are what it costs, and that is the trade. The
-   * stage still shows Clawd and the status band still shows the clock, so
-   * nothing that says *when to look* is given up — and the day's quip is on
-   * the page the QR leads to, at more length than a band could carry.
+   * **The strip and the message are what it costs, including the pack's own
+   * birthday quip, and that was measured rather than waved at.** The area is
+   * 148px tall and a 25-module symbol at the 4px floor takes 132 of it; a line
+   * of text needs 19 (`TEXT_INSET` twice plus `GLYPH_HEIGHT`). Sixteen is not
+   * nineteen, so there is no arrangement that shows both. A review found the
+   * quip silently painted-over here and it is now a recorded trade instead.
+   *
+   * What survives: the stage still shows Clawd and the status band still shows
+   * the clock, so nothing saying *when to look* is given up. And the quip is
+   * not lost for the day — `birthdayLine` covers every non-attention state, so
+   * it is on the band whenever a session is working or thinking, which is
+   * every state the QR does not take.
    */
   readonly qr?: QrCode;
 };
@@ -293,14 +301,15 @@ export function render(scene: Scene): Framebuffer {
   const painter = withEnvironment(base, scene);
   paintStatus(painter, scene);
   paintStage(painter, scene);
-  // The QR takes both lower bands or neither of them. `paintQr` returns `null`
-  // when it cannot give every module a whole pixel, and then the ordinary
-  // bands draw: losing the QR is survivable, losing the panel's only text
-  // because something silently drew nothing is not.
-  if (
-    scene.qr === undefined ||
-    paintQr(target, qrArea(painter.bands), scene.qr) === null
-  ) {
+  // The QR takes the session strip, and as much of the message band as it
+  // needs. `paintQr` returns `null` when the modules would be too small to
+  // read, and then the ordinary bands draw: losing the QR is survivable,
+  // losing the panel's only text because something silently drew nothing is
+  // not.
+  const showedQr =
+    scene.qr !== undefined &&
+    paintQr(target, qrArea(painter.bands), scene.qr) !== null;
+  if (!showedQr) {
     paintStrip(painter, scene.sessions);
     paintMessage(painter, scene);
   }

@@ -79,33 +79,107 @@ describe('painting a QR onto the panel', () => {
   it('takes the pitch from the shorter side, not the wider one', () => {
     // The real band is 152x148, and both floor to a 5px pitch at 21 modules —
     // so it cannot tell a `min(width, height)` from a bare `width`, and a
-    // mutant that used the width survived the suite. A band shorter than it is
-    // wide separates them: 152 would give 5 and overflow the height, 100 gives
-    // 3 and fits.
+    // mutant that used either one alone survived the suite. Bands constrained
+    // on one axis at a time separate all three. 120px gives a 4px pitch where
+    // 148 or 152 would give 5, so a block sized from the wrong axis overflows.
     const fb = buffer(320, 172);
-    const short = { x: 168, y: 24, width: 152, height: 100 };
-    const painted = paintQr(fb, short, { size: 21, modules: corner(21) });
+    const short = { x: 168, y: 24, width: 152, height: 120 };
+    const wide = paintQr(fb, short, { size: 21, modules: corner(21) });
+    expect(wide?.height).toBe(116);
+    expect(wide?.height).toBeLessThanOrEqual(short.height);
 
-    expect(painted?.height).toBe(87);
-    expect(painted?.height).toBeLessThanOrEqual(short.height);
-    expect(painted?.width).toBe(87);
-
-    // And the other way round, because both real areas so far are wider than
-    // they are tall — so a bare `height` reads identically to `min` and
-    // survived too. Only a narrow, tall band separates all three.
-    const narrow = { x: 0, y: 0, width: 100, height: 148 };
+    const narrow = { x: 0, y: 0, width: 120, height: 148 };
     const tall = paintQr(fb, narrow, { size: 21, modules: corner(21) });
-    expect(tall?.width).toBe(87);
+    expect(tall?.width).toBe(116);
     expect(tall?.width).toBeLessThanOrEqual(narrow.width);
+  });
+
+  it('paints each module where the matrix says, not its transpose', () => {
+    // **The one mutation the three-layer story missed.** Swapping the
+    // arguments at `paintQr`'s one call to `darkIn` — `(matrix, row, col)`
+    // instead of `(matrix, col, row)` — paints the transpose, and left all 599
+    // tests green. Every layer looked past it:
+    //
+    // - `tools/bake-qr.test.ts` compares module by module, but through
+    //   `moduleAt`, which is not on the paint path.
+    // - the geometry tests here use `corner`, one module at (0,0), which is
+    //   its own transpose.
+    // - `scene.test.ts` used `0xaa` at an odd size, where dark-iff-even-bit
+    //   makes the matrix transpose-invariant too.
+    // - `jsqr` decodes a mirrored symbol, and a transpose is a mirror.
+    //
+    // So this reads the framebuffer back into a matrix and compares it to the
+    // source. It is the only assertion in the repo that covers the code that
+    // actually draws.
+    const fb = buffer(320, 172);
+    // **Dark iff the column is a multiple of three** — vertical stripes, which
+    // become horizontal ones under transposition. Chosen after two fixtures
+    // that looked asymmetric and were not: `corner` is a single module on the
+    // diagonal, and `(col + 2*row) % 3 === 0` is invariant because
+    // `col + 2*row ≡ 0 (mod 3)` forces `col ≡ row`, which makes `row + 2*col`
+    // zero as well. The assertion below is what stops a third one.
+    const size = 21;
+    const dark = (col: number, _row: number): boolean => col % 3 === 0;
+
+    // The fixture must actually distinguish a matrix from its transpose, or
+    // this whole test is decoration. Two of the three tried so far did not.
+    const asymmetric = (): boolean => {
+      for (let row = 0; row < size; row += 1) {
+        for (let col = 0; col < size; col += 1) {
+          if (dark(col, row) !== dark(row, col)) return true;
+        }
+      }
+      return false;
+    };
+    expect(asymmetric(), 'fixture is its own transpose').toBe(true);
+    const bits = Buffer.alloc(Math.ceil((size * size) / 8));
+    for (let row = 0; row < size; row += 1) {
+      for (let col = 0; col < size; col += 1) {
+        if (!dark(col, row)) continue;
+        const bit = row * size + col;
+        bits[bit >> 3] = (bits[bit >> 3] ?? 0) | (0x80 >> (bit & 7));
+      }
+    }
+    const block = paintQr(fb, area, { size, modules: bits.toString('base64') });
+    expect(block).not.toBeNull();
+    if (block === null) return;
+
+    const pitch = block.width / (size + 8);
+    const originX = block.x + 4 * pitch;
+    const originY = block.y + 4 * pitch;
+    const wrong: string[] = [];
+    for (let row = 0; row < size; row += 1) {
+      for (let col = 0; col < size; col += 1) {
+        // Sample the middle of the module, so an off-by-one in the pitch is
+        // not what this reports.
+        const px = at(
+          fb,
+          originX + col * pitch + Math.floor(pitch / 2),
+          originY + row * pitch + Math.floor(pitch / 2),
+        );
+        if ((px === 0x0000) !== dark(col, row)) {
+          wrong.push(`${String(col)},${String(row)}`);
+        }
+      }
+    }
+    expect(wrong).toEqual([]);
   });
 
   it('refuses to draw a symbol it cannot give whole pixels to', () => {
     const fb = buffer(320, 172);
     // 177 modules is QR version 40. Plus the quiet zone that is 185 across a
-    // 148px band, so the pitch floors to zero: there is no drawing that could
-    // be scanned, and a zero-pitch loop would silently paint nothing anyway.
+    // 148px band, so the pitch floors to zero.
     expect(paintQr(fb, area, { size: 177, modules: solid(177) })).toBeNull();
     expect(at(fb, 200, 90)).toBe(0x1234);
+
+    // **And it refuses a pitch that is whole but unreadable.** Portrait gives
+    // this area 172x96, where a 25-module symbol gets 2px modules — a square
+    // no camera resolves, drawn over the strip and the message band. `null` is
+    // what sends the caller back to the bands.
+    const portraitArea = { x: 0, y: 224, width: 172, height: 96 };
+    expect(
+      paintQr(fb, portraitArea, { size: 25, modules: solid(25) }),
+    ).toBeNull();
   });
 });
 

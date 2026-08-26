@@ -17,7 +17,7 @@ describe('the baked birthday QR', () => {
     // bit-reversed matrix — all of which render beautifully and scan not at
     // all.
     const expected = QRCode.create(BIRTHDAY_URL, {
-      errorCorrectionLevel: 'Q',
+      errorCorrectionLevel: 'L',
     }).modules;
 
     expect(BIRTHDAY_QR.size).toBe(expected.size);

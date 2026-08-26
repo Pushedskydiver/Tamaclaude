@@ -7,9 +7,9 @@
  * QR and scans as nothing at all, and the failure would surface on one
  * specific morning with no way to fix it.
  *
- * So this composes the real scene through the real `render`, converts the
- * framebuffer exactly as the RGB565-to-RGBA path does, and hands it to a
- * decoder that has never seen this repo. `jsqr` is a root devDependency; the
+ * So this composes the real scene through the real `render`, widens the
+ * framebuffer to RGBA, and hands it to a decoder that has never seen this
+ * repo. `jsqr` is a root devDependency; the
  * shipping graph is untouched.
  *
  * **It proves less than it looks like it proves, and one of those gaps was
@@ -24,10 +24,10 @@
  *
  * What it does *not* prove at all is that a phone can read it off the glass.
  * That is a question about a 4px module at 247 PPI and a camera, and only the
- * panel can answer it — `tools/bake-qr.ts` writes a 1:1 preview for that.
+ * panel can answer it. `tools/bake-qr.ts` prints the physical size — 0.41mm
+ * per module — and writes a preview, which is not life size: no monitor is
+ * 247 PPI.
  */
-import type { QRCode } from 'jsqr';
-
 import jsqr from 'jsqr';
 import { describe, expect, it } from 'vitest';
 
@@ -40,28 +40,20 @@ import { sceneFor } from './daemon.js';
 const URL_IN_THE_SYMBOL = 'https://alexclapperton.co.uk/j';
 
 /**
- * `jsqr`, corrected for its own type declaration.
+ * The decoder, reached through `.default`.
  *
- * The published UMD bundle ends `module.exports = factory()` where the factory
- * returns the function, so `require('jsqr')` *is* the decoder. Its `.d.ts`
- * declares an ES `export default`, which under `NodeNext` types the import as
- * a namespace carrying a `.default` — a shape that does not exist at runtime.
- * The bundle is right and the declaration is wrong, so this asserts the
- * runtime shape rather than working around it at every call.
+ * `jsqr`'s UMD bundle sets `module.exports = factory()`, and the factory
+ * returns the function — so `module.exports.default === module.exports` and
+ * both are callable. TypeScript types the import as the namespace, which has
+ * no call signature, so the bare `jsqr(...)` does not compile; `.default` does,
+ * and is the same function.
+ *
+ * An earlier draft asserted this away with `as unknown as` and a restated
+ * four-parameter signature, which needed an `eslint-disable` for `max-params`
+ * and claimed `.default` "does not exist at runtime". It does — a review
+ * checked, and `.default` typechecks and runs.
  */
-// `max-params` is three and this signature is jsqr's, not mine — it takes the
-// buffer, its two dimensions and an options bag. Restating it is the only way
-// to get a callable type out of a declaration whose shape is wrong (above),
-// and collapsing four positional parameters that a third-party function
-// already has would mean wrapping it in something that lies about its own
-// arity.
-// eslint-disable-next-line max-params
-const decode = jsqr as unknown as (
-  data: Uint8ClampedArray,
-  width: number,
-  height: number,
-  options?: { readonly inversionAttempts?: 'dontInvert' },
-) => QRCode | null;
+const decode = jsqr.default;
 
 /**
  * Read the symbol as it is painted, with no inversion pass.
@@ -85,7 +77,16 @@ const PACK = parsePackManifest({
   birthday: { date: '09-23', quip: 'happy birthday' },
 });
 
-/** The framebuffer as RGBA, the way `rgb565-rgba.ts` widens it for a screen. */
+/**
+ * The framebuffer as RGBA.
+ *
+ * **Not the same algorithm as `tools/rgb565-rgba.ts`**, which replicates bits
+ * (`(r << 3) | (r >> 2)`) and says why: plain scaling darkens every colour by
+ * up to 3%. The two disagree on 14 of 96 channel values. That is irrelevant
+ * to a symbol whose only colours are 0x0000 and 0xffff, which both map to 0
+ * and 255 either way — but an earlier draft claimed this converted "exactly
+ * as" the display path, and it does not.
+ */
 function rgba(pixels: Uint16Array): Uint8ClampedArray {
   const out = new Uint8ClampedArray(pixels.length * 4);
   for (let i = 0; i < pixels.length; i += 1) {
@@ -127,11 +128,13 @@ describe('the QR the panel actually paints', () => {
     expect(found?.data).toBe(URL_IN_THE_SYMBOL);
   });
 
-  it('is absent on every other screen', async () => {
+  it('is absent when the animation is not the birthday', async () => {
     // The same instant and the same pack — only the animation differs. So this
-    // says the QR follows `animationForPanel`'s decision and not the date on
-    // its own, which is the whole of the coexistence design: one predicate,
-    // two consequences.
+    // says `sceneFor` keys the QR off the animation rather than off the date.
+    // It does **not** exercise `animationForPanel`, which is what decides that
+    // animation; an earlier draft claimed it did. The per-state coverage of
+    // that decision is `daemon.test.ts`'s `BIRTHDAY_COVERS` table, which has a
+    // row per state. And "any other screen" here is one screen: `idle`.
     const panel = await panelAt('idle');
     expect(
       decode(panel.data, panel.width, panel.height, AS_PAINTED),
@@ -142,9 +145,9 @@ describe('the QR the panel actually paints', () => {
     // Guards the pair: a matrix whose `size` disagrees with its bit count
     // decodes as nothing, and the two are written by the same tool from the
     // same symbol, so nothing else would notice them drifting apart.
-    expect(BIRTHDAY_QR.size).toBe(29);
+    expect(BIRTHDAY_QR.size).toBe(25);
     expect(Buffer.from(BIRTHDAY_QR.modules, 'base64').length).toBe(
-      Math.ceil((29 * 29) / 8),
+      Math.ceil((25 * 25) / 8),
     );
   });
 });

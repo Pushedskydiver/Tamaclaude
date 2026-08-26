@@ -382,12 +382,18 @@ describe('the birthday QR', () => {
   // 0xaa is alternating bits, so the matrix has both dark and light modules.
   // An all-zero fill draws a white square with no dark modules at all, which
   // made the "black and white only" assertion vacuous on the first run.
-  // **25 modules, which is the version the real URL encodes to** — not 21.
-  // At 21 the block is 145px in a 148px band and covers everything the two
-  // bands could ever draw, so "the QR replaces them" and "the QR is painted
-  // over them" are indistinguishable and the overlay mutant is equivalent. At
-  // 25 the pitch drops to 4px, the block to 132px, and the margin is wide
-  // enough for a chip to show. Test the geometry that ships.
+  // **25 modules, which is what the real URL encodes to at the EC level that
+  // ships.** Not 21, and — after a review — not 29 either: this said 25 while
+  // `qr.data.ts` held a 29-module symbol, so it claimed to test the shipping
+  // geometry and did not.
+  //
+  // The size matters to what this file can prove. At 21 the block is 145px in
+  // a 148px band and at 29 it is 148px exactly, and in both cases it covers
+  // everything the two bands could ever draw — so "the QR replaces them" and
+  // "the QR is painted over them" become indistinguishable and the overlay
+  // mutant is equivalent. At 25 the block is 132px and the 16px below it is
+  // where the birthday quip goes, which is both a margin to assert against and
+  // the reason the EC level is L.
   const qr = { size: 25, modules: Buffer.alloc(79, 0xaa).toString('base64') };
 
   // **A pack whose background is neither black nor white.** `PACK` above has
@@ -474,7 +480,9 @@ describe('the birthday QR', () => {
     // panel's only text because something silently drew nothing is not.
     const huge = {
       size: 177,
-      modules: Buffer.alloc(3922, 0xaa).toString('base64'),
+      modules: Buffer.alloc(Math.ceil((177 * 177) / 8), 0xaa).toString(
+        'base64',
+      ),
     };
     const busy = { ...landscape, message: 'happy birthday' };
     expect(render({ ...busy, qr: huge }).pixels).toEqual(render(busy).pixels);

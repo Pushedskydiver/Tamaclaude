@@ -404,7 +404,10 @@ export type SceneInput = {
   /**
    * Which animation the sprites are frames of.
    *
-   * Only the ground shadow needs it: the environment is painted before any
+   * **Two things read it now**, and it stays optional, so a caller that omits
+   * it loses the QR on the birthday with no type error to show for it.
+   *
+   * The ground shadow was the first: the environment is painted before any
    * sprite exists, so the layer that draws the shadow cannot tell whether the
    * character about to go in front of it is standing on the ground or half way
    * up a wall. The name is the only thing that knows.

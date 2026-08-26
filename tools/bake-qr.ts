@@ -32,10 +32,11 @@ import { parseArgs } from 'node:util';
 
 import QRCode from 'qrcode';
 
-import { panelBands } from '../packages/renderer/src/layout.ts';
-
-/** Must match `QUIET_MODULES` in `packages/renderer/src/qr.ts`. */
-const QUIET_MODULES = 4;
+import {
+  MIN_SCANNABLE_PITCH,
+  panelBands,
+  QUIET_MODULES,
+} from '../packages/renderer/src/layout.ts';
 
 const DATA_PATH = 'packages/renderer/src/qr.data.ts';
 const PREVIEW_PATH = 'out/qr-preview.png';
@@ -87,7 +88,7 @@ console.log(
 console.log(
   `pitch    ${String(pitch)} px/module -> block ${String(across * pitch)}px, symbol ${String(size * pitch)}px`,
 );
-if (pitch < 4) {
+if (pitch < MIN_SCANNABLE_PITCH) {
   console.log(
     `WARNING  a ${String(pitch)}px module is below anything proven to scan here; shorten the URL or drop the EC level`,
   );
@@ -112,8 +113,14 @@ await QRCode.toFile(resolve(PREVIEW_PATH), url, {
   margin: QUIET_MODULES,
   color: { dark: '#000000ff', light: '#ffffffff' },
 });
+// 247 PPI: sqrt(172^2 + 320^2) / 1.47in, from the panel in `docs/HARDWARE.md`.
+const PANEL_PPI = 247;
+const mm = (px: number): string => ((px / PANEL_PPI) * 25.4).toFixed(2);
 console.log(
-  `preview  ${PREVIEW_PATH} at ${String(pitch)}px/module — scan this, do not guess`,
+  `on glass ${mm(pitch)} mm per module, ${mm(across * pitch)} mm across`,
+);
+console.log(
+  `preview  ${PREVIEW_PATH} at ${String(pitch)} image px/module — NOT life size`,
 );
 
 if (!values.write) {
@@ -124,7 +131,8 @@ if (!values.write) {
 writeFileSync(
   resolve(DATA_PATH),
   `/**
- * The birthday QR, baked by \`node tools/bake-qr.ts <url> --write\`.
+ * The birthday QR, baked by
+ * \`node tools/bake-qr.ts ${url} --ec ${level} --write\`.
  *
  * **Generated — do not edit by hand.** Re-bake it instead. The URL is the
  * source of truth and this is a build artefact of it, the way
