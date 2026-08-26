@@ -715,30 +715,48 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
-- [~] **Company logo → pixel** — the tool is built; nothing draws its output.
-  `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
-  the mark sits on, and emits a PNG to look at or SVG rects to paste.
-  **No `sharp`, and none was needed** — the plan named a dependency the
-  repo already had both halves of. Playwright rasterises the SVG the way
-  `tools/svg2frames.ts` does, and `snapToPalette` was already
-  nearest-neighbour against a palette it is handed; it was written to snap
-  frames to an SVG's own colours, and the palette is a parameter.
-  **It warns when a palette merges two of a logo's colours**, which is the
-  failure that is otherwise silent: a small palette cannot represent an
-  arbitrary logo, and the mark that loses is simply absent from the output.
-  The warning reads six-digit hex only, wherever the word `fill` precedes it,
-  so it also picks up CSS declarations. What passes it silently is `#fff`
-  shorthand, stroke-only artwork, `rgb()` notation and — the one that matters
-  for a company mark — **gradients**, which name no colour at all, so a
-  gradient logo gets no warning while the quantiser flattens the whole ramp.
-  **What is left is the whole of the delivery.** A logo reaches the panel
-  only through a pack `logo` field the schema does not have and a renderer
-  path that does not exist, or through a private re-bake of the animation
-  frames. The item below carries the first; the second needs no plan
-  because it is a build step run once.
-  The logo itself is pack content and is not in this repo.
-- [ ] **A pack `logo` field, and something that draws it.** The half above
-      that is not built, and the larger half.
+- [x] **Company logo → pixel** — the tool is built and the lid draws its output.
+      `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
+      the mark sits on, and emits a PNG to look at, SVG rects to paste, or — since
+      26 Aug — `--format pack`, which is the only one the renderer can consume.
+      **No `sharp`, and none was needed** — the plan named a dependency the
+      repo already had both halves of. Playwright rasterises the SVG the way
+      `tools/svg2frames.ts` does, and `snapToPalette` was already
+      nearest-neighbour against a palette it is handed; it was written to snap
+      frames to an SVG's own colours, and the palette is a parameter.
+      **It warns when a palette merges two of a logo's colours**, which is the
+      failure that is otherwise silent: a small palette cannot represent an
+      arbitrary logo, and the mark that loses is simply absent from the output.
+      The warning reads six-digit hex only, wherever the word `fill` precedes it,
+      so it also picks up CSS declarations. What passes it silently is `#fff`
+      shorthand, stroke-only artwork, `rgb()` notation and — the one that matters
+      for a company mark — **gradients**, which name no colour at all, so a
+      gradient logo gets no warning while the quantiser flattens the whole ramp.
+      **The delivery landed on 26 Aug.** `--format pack` emits RGB565 through
+      `encodeRect` plus a bit-mask, the schema takes a `logo` field, and
+      `packages/renderer/src/logo.ts` draws it. The private re-bake of animation
+      frames is not needed and never was the plan.
+      **One thing the merge warning cannot see, found by rendering a real mark.**
+      The check looks for two declared fills colliding in a small palette. A logo
+      with _one_ colour passes it and still comes out wrong: the browser
+      antialiases the edges, and `snapToPalette` resolves each mid-tone to whichever
+      entry is nearest, so a white mark arrived speckled with the pack's attention
+      amber and active teal — three colours from one. `--format pack` renders with
+      `shape-rendering:crispEdges` for that reason, which also cuts the payload by
+      about 30% because two colours run-length-encode far better than four.
+      The logo itself is pack content and is not in this repo.
+- [x] **A pack `logo` field, and something that draws it.** Built 26 Aug.
+      The mark is fixed to the lid, which is safe because the lid does not move:
+      measured across all sixteen frames of `typing`, it is identical pixel for
+      pixel, the only thing changing inside it is the pulsing square, and
+      nothing occludes it. A test re-checks that against the baked sprite.
+      **The pulsing square stays and is cleared underneath the mark.** It
+      showed through the mark's transparent parts — through the counter of the
+      letter — and removing it would kill the lit-screen effect for every pack
+      without a logo, which the SVG calls load-bearing. The lid colour it is
+      cleared to is _sampled from the framebuffer_ rather than written down: the
+      sprite is drawn by then, and a constant would be a second copy of a value
+      that lives in the artwork.
       **Where it goes: the laptop lid, not the splash — and this overrules the
       freeze rather than filling a gap.** The screen spec's easter-egg table
       routes the logo to the boot splash, and that spec is the _later_
@@ -763,7 +781,13 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       look at and SVG rects to paste, **neither of which the renderer can
       consume**. Smaller than it first looked, and the tool is the part that
       needs the change.
-      **Decide it on an artefact, not on a start date.** If
+      **Decided on the artefact, 26 Aug.** `panel-mock --pack <dir>` draws a
+      pack-supplied mark on the lid across all four skies, so the exit below is
+      met rather than argued. It was not met by the commit that built the
+      feature — that one verified with a private render nobody else could
+      repeat, which is the shape this paragraph rejects — and wiring the logo
+      into `blit-scene.ts` was three lines.
+      The original wording, kept because the reasoning is what mattered: if
       `panel-mock` cannot draw a pack-supplied mark by **10 Sep**, stop: a
       trigger that fires when someone opens a file is a rubber stamp, which is
       the objection `PLANS.md` already makes to a gate of that shape. Note the

@@ -244,12 +244,19 @@ function paintStage(painter: Painter, scene: Scene): void {
       within: slot,
       mask: sprite.mask,
     });
-    // The mark goes on after the sprite, at the same origin, so it lands on
-    // the lid however the stage is laid out. Only on the first slot: two-up
-    // shows two different sessions and a logo on both would say they are the
-    // same machine.
+    // The mark goes on after the sprite, at the same origin and clipped to the
+    // same slot, so it can only land where the sprite did.
+    //
+    // **`index === 0` is belt-and-braces, not the thing doing the work.** The
+    // intent is that two-up shows two different sessions and a mark on both
+    // would say they are the same machine — but no layout renders a lid on a
+    // second slot, because two-up's slots are 80 or 100 pixels tall and the
+    // lid sits at sprite y 160. The clip gets there first. Deleting this line
+    // changes no pixel today, which a review demonstrated; it is kept because
+    // the day a layout does show two lids, this is the line that was meant to
+    // stop it.
     if (scene.logo !== undefined && index === 0) {
-      paintLogo(painter.target, origin, scene.logo);
+      paintLogo(painter.target, { origin, within: slot }, scene.logo);
     }
   }
 }

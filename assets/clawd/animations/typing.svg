@@ -386,7 +386,7 @@
     <g id="fx-laptop-shade" fill="#6F4436">
       <rect x="2.25" y="10.75" width="10.5" height="0.25"/>
     </g>
-    <g id="fx-laptop-screen" fill="#30363B">
+    <g id="fx-laptop-screen" fill="#A91326">
       <rect x="2.25" y="11" width="10.5" height="2.5"/>
     </g>
     <g id="fx-laptop-body" fill="#8B949E">
@@ -406,11 +406,13 @@
        animations and does not warn, every gate stays green, and the lid goes
        static. To keep the pulse, emit the mark twice — once inside each of
        these two elements, which are `<rect>`s today and would have to become
-       `<g>`s carrying the lit and dim fills — because `tools/logo2pixel.ts --format rects` produces one
+       `<g>`s carrying the lit and dim fills — because `tools/logo2pixel.ts` in its `rects` format produces one
        silhouette with no fill of its own, not a two-tone picture.
 
        **No pack does any of this today.** Sprites are baked to fixed RGB565
-       and no pack palette reaches one; `packages/packs` has no logo field.
+       and no pack palette reaches one. `packages/packs` grew a `logo` field on
+       26 Aug and the renderer draws it here, which is the route that avoids
+       everything below; what follows is the other one.
        Getting a mark here means editing this file and re-baking, and for
        personal artwork that has to stay a *private* bake, because the repo is
        public. Note what that leaves dirty: this file and

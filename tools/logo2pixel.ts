@@ -38,8 +38,18 @@
  * draws it on the lid at run time — so the mark stays in the private pack
  * instead of being baked into tracked animation frames.
  *
- * `--over` is the colour the mark sits on — for the lid that is `#30363B`,
- * fixed in the artwork.
+ * `--over` is the colour the mark sits on — for the lid that is `#A91326`,
+ * fixed in the artwork. It was `#30363B` until the lid was recoloured on
+ * 26 Aug; with `--format pack` it makes no difference to the bytes, because
+ * crisp edges mean a transparent-background mark has nothing to snap against
+ * the ground, but it is what the palette warning measures against.
+ *
+ * **`--width` scales the viewBox, not the artwork.** A logo drawn inside a
+ * generous viewBox — `0 0 140 140` for a mark that occupies `20 9 100 121` —
+ * comes out proportionally smaller, and at these sizes that is the difference
+ * between a readable mark and four pixels. Crop the viewBox to the artwork
+ * before baking. This tool does not do it for you: guessing where a mark's
+ * margins are meant to be is a design decision, and a wrong guess is silent.
  *
  * **Do not wrap the rects in a new group inside `#fx-laptop-logo`.** That
  * leaves `#logo-lit` and `#logo-dim` in place, so the mark is static and the
@@ -71,10 +81,9 @@
  * construction, which is fine for a one-colour mark on a contrasting ground
  * and wrong for anything else.
  *
- * **Nothing renders the output yet.** `packages/packs` has no logo field and
- * the renderer draws no logo; `BUILD_PLAN.md` Stage 5 carries "A pack `logo`
- * field, and something that draws it" as the item for that. This produces the
- * asset only, which is still worth having early: the pixel art is what needs
+ * **`--format pack` is rendered; the other two are not.** `packages/packs`
+ * takes a `logo` field and `packages/renderer/src/logo.ts` draws it, so the
+ * pack route is complete. `png` and `rects` produce the asset only, which is still worth having early: the pixel art is what needs
  * judging by eye against a real palette, and it can be judged before anything
  * draws it. The other live route is a private re-bake of the animation
  * frames — see `typing.svg`'s note on the logo group for what that costs.
@@ -117,8 +126,8 @@ import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
  * The landscape stage is 168px wide and the message band 152px, so 48 is
  * roughly a third of either — small enough to sit as a prop rather than as
  * the subject, and large enough that a wordmark is still legible at 1:1.
- * Nothing consumes it yet, so this is a starting point for looking, not a
- * measurement of a slot that exists.
+ * A starting point for looking. `--format pack` has a real slot to fit —
+ * 84x20 — so it warns rather than printing an object the schema will refuse.
  */
 const DEFAULT_WIDTH = 48;
 
@@ -288,8 +297,15 @@ async function readPixels(page: Page, uri: string): Promise<number[]> {
  * Base64 of a `[mode byte][payload]` blob — the framing the renderer reads.
  *
  * The same shape `tools/bake-sprites.ts` writes, because the renderer decodes
- * both through one function. A second hand-rolled copy of a codec's framing is
- * how two of them drift apart with nothing to notice.
+ * both through one function.
+ *
+ * **The decode side is shared; this side is not.** `packages/renderer/src/blob.ts`
+ * consolidated the reading, and there are now three copies of the writing —
+ * here, in `bake-sprites.ts`, and in the renderer's own test helper. That is
+ * the drift this sentence used to warn against while being an instance of it.
+ * What keeps it honest is the round-trip in `logo2pixel.test.ts`: it runs this
+ * tool and hands the bytes to the real painter, so an encoder that disagrees
+ * with the decoder goes red.
  */
 function blob(words: Uint16Array): string {
   const { mode, payload } = encodeRect(words);
@@ -330,10 +346,28 @@ try {
   // The SVG is stretched to the viewport rather than the viewport sized to the
   // SVG's own width/height attributes, which a logo may not carry at all — the
   // viewBox is the only dimension guaranteed to be there.
+  // **`--format pack` renders without antialiasing, and that is not a
+  // preference.** A mark for the lid is twelve to sixteen pixels across, and
+  // the browser's antialiased edges become mid-tones that `snapToPalette` then
+  // resolves to whichever palette entry happens to be nearest. Measured on a
+  // one-colour white logo: the mark landed on *three* colours — the pack's ink
+  // where it should, but its edges on the attention amber and the active teal,
+  // so a monochrome mark arrived speckled with the two chip colours and
+  // nothing warned, because the merge check looks for two declared fills
+  // colliding and there was only ever one.
+  //
+  // With `crispEdges` every pixel is the fill or nothing: two colours on the
+  // lid instead of four, and a payload about 30% smaller because a two-colour
+  // image run-length-encodes far better.
+  //
+  // `png` and `rects` keep the antialiasing. They are viewed and pasted at
+  // larger sizes, where the dither reads as a smoother edge rather than noise.
+  const crisp = values.format === 'pack' ? 'shape-rendering:crispEdges' : '';
   await page.setContent(
     `<!doctype html><meta charset="utf-8"><style>
        html,body{margin:0;padding:0}
        svg{display:block;width:100%;height:100%}
+       svg *{${crisp}}
      </style>${svg}`,
   );
   // `omitBackground`, unlike the splash: a logo is a prop drawn over whatever
@@ -347,11 +381,23 @@ try {
   });
   const total = size.width * size.height;
   if (values.format === 'pack') {
-    // **The only format the renderer can consume.** `png` is to look at and
-    // `rects` is to paste into an SVG; neither reaches the panel, because
-    // nothing in the shipping graph decodes an image. This emits what the
+    // **The only format the renderer can consume.** `png` is to look at, and
+    // `rects` reaches the panel only through a re-bake of the animation art —
+    // the route this format exists to make unnecessary. Neither can be handed
+    // to the renderer, because nothing in the shipping graph decodes an image.
+    // This emits what the
     // sprites already are — RGB565 through `encodeRect`, base64 of a mode byte
     // and its payload — plus the bit-mask that says which pixels are drawn.
+    // **Say so rather than printing something that cannot be pasted.** The
+    // default width is 48, which on a square mark gives a 48-tall object the
+    // schema refuses outright — and the recipe in this header omits `--width`
+    // often enough that a review hit it. The lid is 84x20.
+    if (size.width > 84 || size.height > 20) {
+      console.error(
+        `warning: ${String(size.width)}x${String(size.height)} does not fit the ` +
+          `lid (84x20) and the pack schema will refuse it — try a smaller --width`,
+      );
+    }
     const rgba = new Uint8ClampedArray(await readPixels(page, snapped.uri));
     const { words, padded, drawn } = pack565(rgba, total);
     console.log(

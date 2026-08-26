@@ -7,6 +7,9 @@
  * before the daemon exists and is flashed rather than configured. A splash
  * logo could not be a pack field at all. The lid can be.
  *
+ * **The mark is clipped to the sprite's own slot**, so a layout that does not
+ * render the lid cannot put a company logo somewhere else on the panel.
+ *
  * **Fixed position, and that is safe because the lid does not move.** Measured
  * from the baked frames rather than assumed: across all sixteen frames of
  * `typing` the lid is identical pixel for pixel, the only thing that changes
@@ -89,9 +92,25 @@ export function logoSlot(logo: Pick<PackLogo, 'width' | 'height'>): Rect {
  */
 export function paintLogo(
   target: Framebuffer,
-  spriteOrigin: { readonly x: number; readonly y: number },
+  where: {
+    /** Where the sprite's own (0,0) landed on the panel. */
+    readonly origin: { readonly x: number; readonly y: number };
+    /**
+     * The slot the sprite was clipped to, which clips the mark too.
+     *
+     * **Without it the mark escapes.** `drawFrame` clips the sprite to its
+     * slot, and in `twoUp` that slot is 80 or 100 pixels tall while the lid
+     * lives at sprite y 160-179 — so the lid is not drawn at all, and a mark
+     * positioned from `LID_SLOT` lands over the session strip in portrait and
+     * off the panel entirely in landscape. Latent, because the daemon only
+     * ever asks for `hero`; a review found it by evaluating all four
+     * combinations rather than the one that ships.
+     */
+    readonly within: Rect;
+  },
   logo: PackLogo,
 ): Rect | null {
+  const spriteOrigin = where.origin;
   const pixels = logo.width * logo.height;
   const slot = logoSlot(logo);
   const decoded = read(logo, pixels);
@@ -110,25 +129,32 @@ export function paintLogo(
         spriteOrigin.x +
         LID_SAMPLE.x
     ];
-  if (lid !== undefined) {
-    fillRect(
-      target,
-      {
-        x: spriteOrigin.x + PLACEHOLDER.x,
-        y: spriteOrigin.y + PLACEHOLDER.y,
-        width: PLACEHOLDER.width,
-        height: PLACEHOLDER.height,
-      },
-      lid,
-    );
-  }
+  const clear = intersect(
+    {
+      x: spriteOrigin.x + PLACEHOLDER.x,
+      y: spriteOrigin.y + PLACEHOLDER.y,
+      width: PLACEHOLDER.width,
+      height: PLACEHOLDER.height,
+    },
+    where.within,
+  );
+  if (lid !== undefined && clear !== null) fillRect(target, clear, lid);
   drawFrame(target, frame(decoded.words, logo.width), {
     x: at.x,
     y: at.y,
-    within: at,
+    within: where.within,
     mask: decoded.mask,
   });
   return at;
+}
+
+/** The overlap of two rectangles, or nothing if they do not touch. */
+function intersect(a: Rect, b: Rect): Rect | null {
+  const x = Math.max(a.x, b.x);
+  const y = Math.max(a.y, b.y);
+  const width = Math.min(a.x + a.width, b.x + b.width) - x;
+  const height = Math.min(a.y + a.height, b.y + b.height) - y;
+  return width > 0 && height > 0 ? { x, y, width, height } : null;
 }
 
 function read(
@@ -136,9 +162,12 @@ function read(
   pixels: number,
 ): { readonly words: Uint16Array; readonly mask: Uint8Array } | null {
   try {
+    // No length check: `decodeRect` allocates `pixelCount` words and throws on
+    // any mismatch, on both the raw and RLE paths, so a guard here is
+    // unreachable. A review deleted one and the suite stayed green. The
+    // `catch` is doing all of the work.
     const words = decodeBlob(logo.pixels, pixels);
     const mask = unpackMask(decodeBlob(logo.mask, maskWords(pixels)), pixels);
-    if (words.length !== pixels) return null;
     return { words, mask };
   } catch {
     return null;

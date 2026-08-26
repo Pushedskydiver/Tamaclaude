@@ -1,8 +1,9 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table and an optional birthday. Props and a logo
- * are planned (`BUILD_PLAN.md` Stage 5) and are not fields yet. The character
+ * A pack is a palette, a quip table, an optional birthday and an optional
+ * logo. Props are planned (`BUILD_PLAN.md` Stage 5) and are not fields yet.
+ * The character
  * is deliberately not part of it: there is one base geometry and one animation
  * set, and the sprites are baked to fixed RGB565 by `tools/bake-sprites.ts`, so
  * nothing recolours Clawd per pack — a claim this block made until 25 Aug.
@@ -10,14 +11,18 @@
  * **"Changes every screen" is aspirational, and measured it is not true today.**
  * `packages/renderer/src/pack-swap.test.ts` records what a swap actually moves
  * on the shipping panel: nothing at all with an empty session strip, and one
- * 240px chip per working session. The palette's larger role is the logo and pet
- * sprite that quantise to it, which Stage 5 has yet to build.
+ * 240px chip per working session. The palette's larger role is what quantises
+ * to it: the logo does, since 26 Aug, and the pet sprite will.
  *
- * The schema below is `name`, `palette`, `quips` and an optional `birthday`.
- * Props and logo land with the renderer. This line enumerates the schema
- * exhaustively on purpose, so adding a field without touching it is a visible
- * omission — `birthday` was added under the previous wording, which named only
- * the first three and had been correct when written.
+ * The schema below is `name`, `palette`, `quips`, an optional `birthday` and an
+ * optional `logo`. Props land with the renderer. This line enumerates the
+ * schema exhaustively on purpose, so adding a field without touching it is a
+ * visible omission — and it has now caught two: `birthday` went in under the
+ * wording that named only the first three, and `logo` went in under the
+ * wording that named four and said a logo was not a field yet. Both were
+ * correct when written and neither was updated by the commit that falsified
+ * it, which is the failure this paragraph exists to make visible rather than
+ * to prevent.
  */
 
 import { rgb565 } from '@tamaclaude/protocol';
@@ -140,8 +145,14 @@ const packManifestSchema = z.object({
        */
       width: z.number().int().min(1).max(84),
       height: z.number().int().min(1).max(20),
-      pixels: z.string().regex(BASE64, 'logo.pixels must be base64'),
-      mask: z.string().regex(BASE64, 'logo.mask must be base64'),
+      /**
+       * `.min(1)` because the empty string is valid base64 and decodes to
+       * nothing, which `logo.ts` then treats as no logo at all — a pack that
+       * looks configured and shows no mark, with no error anywhere. That is
+       * the class of fault this boundary exists to name.
+       */
+      pixels: z.string().min(1).regex(BASE64, 'logo.pixels must be base64'),
+      mask: z.string().min(1).regex(BASE64, 'logo.mask must be base64'),
     })
     .optional(),
 });

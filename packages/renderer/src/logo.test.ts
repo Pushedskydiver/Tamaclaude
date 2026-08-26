@@ -1,10 +1,14 @@
 import type { Framebuffer } from './framebuffer.js';
+import type { PackManifest } from '@tamaclaude/packs';
+import type { Rect } from '@tamaclaude/protocol';
 
 import { describe, expect, it } from 'vitest';
 
+import { parsePackManifest } from '@tamaclaude/packs';
 import { encodeRect } from '@tamaclaude/protocol';
 
 import { LID_SLOT, logoSlot, paintLogo, PLACEHOLDER } from './logo.js';
+import { render } from './scene.js';
 import { loadSprite } from './sprites/index.js';
 
 /** Base64 of a `[mode][payload]` blob, the way a pack carries one. */
@@ -32,6 +36,12 @@ function solidLogo(width: number, height: number, colour: number) {
   };
 }
 
+/** The shipping landscape-hero placement: origin and the slot it clips to. */
+const HERO = {
+  origin: { x: 0, y: -34 },
+  within: { x: 0, y: 6, width: 168, height: 160 },
+};
+
 const buffer = (w: number, h: number): Framebuffer => ({
   pixels: new Uint16Array(w * h).fill(0x1234),
   width: w,
@@ -40,33 +50,87 @@ const buffer = (w: number, h: number): Framebuffer => ({
 const at = (fb: Framebuffer, x: number, y: number): number =>
   fb.pixels[y * fb.width + x] ?? -1;
 
-describe('the lid slot', () => {
-  it('is where the laptop lid actually is in the baked sprite', async () => {
-    // **The one assertion that stops this drifting.** `LID_SLOT` is a fixed
-    // rectangle in sprite coordinates, and the lid it names is drawn inside
-    // `typing.svg`. Re-authoring the animation would move the lid and leave
-    // the mark floating over Clawd with nothing to notice — so this reads the
-    // baked frames and checks the slot is entirely laptop.
-    const frames = await loadSprite('typing');
-    const first = frames[0];
-    expect(first).toBeDefined();
-    if (first === undefined) return;
-    const width = first.frame.width;
-    let undrawn = 0;
-    for (let y = LID_SLOT.y; y < LID_SLOT.y + LID_SLOT.height; y += 1) {
-      for (let x = LID_SLOT.x; x < LID_SLOT.x + LID_SLOT.width; x += 1) {
-        if ((first.mask[y * width + x] ?? 0) === 0) undrawn += 1;
-      }
+/** What is in the lid slot on one frame: how many colours, and any gaps. */
+function censusOfSlot(sprite: Awaited<ReturnType<typeof loadSprite>>[number]): {
+  readonly undrawn: number;
+  readonly seen: Map<number, number>;
+} {
+  const width = sprite.frame.width;
+  const seen = new Map<number, number>();
+  let undrawn = 0;
+  for (let y = LID_SLOT.y; y < LID_SLOT.y + LID_SLOT.height; y += 1) {
+    for (let x = LID_SLOT.x; x < LID_SLOT.x + LID_SLOT.width; x += 1) {
+      const at = y * width + x;
+      if ((sprite.mask[at] ?? 0) === 0) undrawn += 1;
+      const colour = sprite.frame.pixels[at] ?? -1;
+      seen.set(colour, (seen.get(colour) ?? 0) + 1);
     }
-    expect(undrawn, 'every pixel of the lid slot is drawn in typing').toBe(0);
+  }
+  return { undrawn, seen };
+}
+
+describe('the lid slot', () => {
+  it('is a flat panel of laptop on every frame, not part of Clawd', async () => {
+    // **The assertion that stops this drifting**, and it took two goes. The
+    // first version checked only that every pixel of the slot was *drawn* —
+    // `mask === 1` — which a review falsified by shifting the rectangle twenty
+    // rows up onto Clawd's body, where every pixel is also drawn. It passed.
+    //
+    // What actually distinguishes the lid is that it is flat: one colour over
+    // almost all of it, plus the small pulsing square. Clawd's body in the same
+    // rectangle carries his shell, his eyes and the gaps between his legs. So
+    // this counts distinct colours, which separates the two by a wide margin,
+    // and does it on every frame rather than the first.
+    const frames = await loadSprite('typing');
+    expect(frames.length).toBeGreaterThan(0);
+    const area = LID_SLOT.width * LID_SLOT.height;
+    for (const [index, sprite] of frames.entries()) {
+      const { undrawn, seen } = censusOfSlot(sprite);
+      expect(undrawn, `frame ${String(index)}: every slot pixel is drawn`).toBe(
+        0,
+      );
+      // The lid and one shade of the pulse. A rectangle over the crab has
+      // five or more.
+      expect(
+        seen.size,
+        `frame ${String(index)}: distinct colours`,
+      ).toBeLessThanOrEqual(2);
+      expect(
+        Math.max(...seen.values()) / area,
+        `frame ${String(index)}: the slot is mostly one flat colour`,
+      ).toBeGreaterThan(0.9);
+    }
   });
 
-  it('matches the bounds the pack schema enforces', () => {
-    // `packages/packs/src/index.ts` repeats these two numbers, because that
-    // package sits below this one and cannot import them. This is the test
-    // that catches them disagreeing.
-    expect(LID_SLOT.width).toBe(84);
-    expect(LID_SLOT.height).toBe(20);
+  it('is exactly what the pack schema will accept', () => {
+    // `packages/packs` repeats these two numbers because it sits below this
+    // package and cannot import them. An earlier version of this test pinned
+    // `LID_SLOT` against its own literals and claimed to catch the two
+    // disagreeing — it could not, because it never touched the schema. This
+    // package *can* import `packs`, so it asserts the relation directly: a
+    // mark the size of the slot parses, and one pixel more on either axis does
+    // not.
+    const base = {
+      name: 'p',
+      palette: [
+        [0, 0, 0],
+        [255, 255, 255],
+      ],
+      quips: { mapped: {}, idle: [] },
+    };
+    const logo = (width: number, height: number) => ({
+      ...base,
+      logo: { width, height, pixels: 'AAA=', mask: 'AAA=' },
+    });
+    expect(() =>
+      parsePackManifest(logo(LID_SLOT.width, LID_SLOT.height)),
+    ).not.toThrow();
+    expect(() =>
+      parsePackManifest(logo(LID_SLOT.width + 1, LID_SLOT.height)),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest(logo(LID_SLOT.width, LID_SLOT.height + 1)),
+    ).toThrow();
   });
 });
 
@@ -74,7 +138,7 @@ describe('painting a pack logo', () => {
   it('centres the mark on the lid and draws only its own pixels', () => {
     const fb = buffer(320, 172);
     const logo = solidLogo(12, 14, 0xf81f);
-    const painted = paintLogo(fb, { x: 0, y: -34 }, logo);
+    const painted = paintLogo(fb, HERO, logo);
 
     // Centred in an 84x20 slot: (84-12)/2 = 36 across, (20-14)/2 = 3 down.
     expect(logoSlot(logo)).toEqual({ x: 78, y: 163, width: 12, height: 14 });
@@ -92,10 +156,41 @@ describe('painting a pack logo', () => {
   it('leaves masked-out pixels showing whatever was underneath', () => {
     const fb = buffer(320, 172);
     const logo = solidLogo(12, 14, 0xf81f);
-    // Blank the mask: nothing is drawn, so the lid keeps its own pixels.
-    const invisible = { ...logo, mask: blob(new Uint16Array(4)) };
-    paintLogo(fb, { x: 0, y: -34 }, invisible);
+    // **The word count matters, and the first version got it wrong.** `read()`
+    // asks `decodeBlob` for `maskWords(168)` = 11 words; a 4-word blob makes
+    // `decodeRect` throw, `read` return null, and `paintLogo` draw nothing —
+    // so the assertion below passed while testing the null path instead of the
+    // mask, duplicating the next test exactly. A review caught it.
+    const words = Math.ceil(Math.ceil((logo.width * logo.height) / 8) / 2);
+    const invisible = { ...logo, mask: blob(new Uint16Array(words)) };
+    paintLogo(fb, HERO, invisible);
     expect(at(fb, 78, 129)).toBe(0x1234);
+  });
+
+  it('draws nothing when the slot does not contain the lid', () => {
+    // `twoUp` gives each sprite an 80px slot, and the lid lives at sprite
+    // y 160-179 — so the lid is never rendered and a mark positioned from
+    // `LID_SLOT` would land over the session strip, or off the panel. The
+    // clip is what stops it. Latent today because the daemon only asks for
+    // `hero`, and found by evaluating the other three combinations rather than
+    // the one that ships.
+    // **Portrait two-up, and the orientation matters to what this proves.** In
+    // landscape the mark would land at y 175 on a 172-tall panel, so the
+    // framebuffer bounds stop it and the clip is never exercised — a mutant
+    // that removed the clip passed a test written that way. Portrait is 320
+    // tall and the mark lands at y 237, comfortably on the panel and 63 pixels
+    // below the slot it belongs to. Only the clip stops that one.
+    const fb = buffer(172, 320);
+    const twoUp = {
+      origin: { x: 2, y: 74 },
+      within: { x: 2, y: 74, width: 84, height: 100 },
+    };
+    const painted = paintLogo(fb, twoUp, solidLogo(12, 14, 0xf81f));
+
+    // It still reports where the mark belongs — the caller may want to know —
+    // but not one pixel of it reached the panel.
+    expect(painted).toEqual({ x: 80, y: 237, width: 12, height: 14 });
+    expect([...fb.pixels].filter((v) => v === 0xf81f)).toEqual([]);
   });
 
   it('treats an unreadable payload as no logo rather than throwing', () => {
@@ -105,10 +200,55 @@ describe('painting a pack logo', () => {
     // panel down on the recipient's machine is not.
     const fb = buffer(320, 172);
     const broken = { width: 12, height: 14, pixels: 'AAAA', mask: 'AAAA' };
-    expect(paintLogo(fb, { x: 0, y: -34 }, broken)).toBeNull();
+    expect(paintLogo(fb, HERO, broken)).toBeNull();
     expect(at(fb, 78, 129)).toBe(0x1234);
   });
 });
+
+/** A framebuffer with the lid painted, and the pulse on top, as the sprite would. */
+function lidUnder(origin: {
+  readonly x: number;
+  readonly y: number;
+}): Framebuffer {
+  const fb: Framebuffer = {
+    pixels: new Uint16Array(320 * 172).fill(0x1234),
+    width: 320,
+    height: 172,
+  };
+  const fill = (rect: Rect, colour: number): void => {
+    for (let y = rect.y; y < rect.y + rect.height; y += 1) {
+      for (let x = rect.x; x < rect.x + rect.width; x += 1) {
+        fb.pixels[(origin.y + y) * fb.width + origin.x + x] = colour;
+      }
+    }
+  };
+  fill(LID_SLOT, 0x31a7);
+  fill(PLACEHOLDER, 0x5d3f);
+  return fb;
+}
+
+/** The pulsing square after a mark went on: pulse left, and wrong ground. */
+function censusOfPlaceholder(
+  fb: Framebuffer,
+  origin: { readonly x: number; readonly y: number },
+  mark: Rect,
+): { readonly blue: number; readonly wrongGround: number } {
+  let blue = 0;
+  let wrongGround = 0;
+  for (let y = PLACEHOLDER.y; y < PLACEHOLDER.y + PLACEHOLDER.height; y += 1) {
+    for (let x = PLACEHOLDER.x; x < PLACEHOLDER.x + PLACEHOLDER.width; x += 1) {
+      const seen = fb.pixels[(origin.y + y) * fb.width + origin.x + x];
+      if (seen === 0x5d3f) blue += 1;
+      const inMark =
+        x >= mark.x &&
+        x < mark.x + mark.width &&
+        y >= mark.y &&
+        y < mark.y + mark.height;
+      if (!inMark && seen !== 0x31a7) wrongGround += 1;
+    }
+  }
+  return { blue, wrongGround };
+}
 
 describe('the placeholder underneath', () => {
   it('is where the pulsing square actually is in the baked sprite', async () => {
@@ -143,24 +283,106 @@ describe('the placeholder underneath', () => {
   it('is covered even by a mark smaller than it is', () => {
     // A 4x4 mark centres inside the 8x8 square and would leave a ring of blue
     // around itself if the clear were skipped when the mark is small.
-    const fb = buffer(320, 172);
-    // Paint the lid colour under it, then the pulse on top of that, the way
-    // the sprite would.
     const origin = { x: 0, y: -34 };
-    for (let y = LID_SLOT.y; y < LID_SLOT.y + LID_SLOT.height; y += 1)
-      for (let x = LID_SLOT.x; x < LID_SLOT.x + LID_SLOT.width; x += 1)
-        fb.pixels[(origin.y + y) * fb.width + origin.x + x] = 0x31a7;
-    for (let y = PLACEHOLDER.y; y < PLACEHOLDER.y + PLACEHOLDER.height; y += 1)
-      for (let x = PLACEHOLDER.x; x < PLACEHOLDER.x + PLACEHOLDER.width; x += 1)
-        fb.pixels[(origin.y + y) * fb.width + origin.x + x] = 0x5d3f;
+    const fb = lidUnder(origin);
 
-    paintLogo(fb, origin, solidLogo(4, 4, 0xf81f));
+    paintLogo(
+      fb,
+      { origin, within: { x: 0, y: 6, width: 168, height: 160 } },
+      solidLogo(4, 4, 0xf81f),
+    );
 
-    let blue = 0;
-    for (let y = PLACEHOLDER.y; y < PLACEHOLDER.y + PLACEHOLDER.height; y += 1)
-      for (let x = PLACEHOLDER.x; x < PLACEHOLDER.x + PLACEHOLDER.width; x += 1)
-        if (fb.pixels[(origin.y + y) * fb.width + origin.x + x] === 0x5d3f)
-          blue += 1;
+    // Outside the mark the clear must have left the *lid* colour. `mark` is
+    // derived from `logoSlot`, not written down: a 4x4 centres at x 82, and
+    // hardcoding 80 made this fail by exactly the 8-pixel overlap.
+    const mark = logoSlot({ width: 4, height: 4 });
+    const { blue, wrongGround } = censusOfPlaceholder(fb, origin, mark);
+
     expect(blue, 'no pulse showing around a small mark').toBe(0);
+    // **Asserting the replacement, not just the removal.** The first version
+    // counted only how many pulse-coloured pixels survived, so any colour at
+    // all passed — including the buffer's own filler. A review moved
+    // `LID_SAMPLE` thirty pixels off the lid, where the sprite is transparent,
+    // and nothing noticed: on a real panel that fills the square with whatever
+    // the sky painted there.
+    expect(wrongGround, 'the cleared square is the lid colour').toBe(0);
+  });
+});
+
+describe('a logo through render', () => {
+  // **The composition, which `paintLogo` tests cannot reach.** Everything
+  // above builds a framebuffer by hand and calls the painter directly, so the
+  // arithmetic that connects a `Scene` to the lid — the slot, the safe-area
+  // crop, which slot gets the mark — is exercised nowhere. A review deleted
+  // the `index === 0` guard in `scene.ts` and the whole suite stayed green.
+  const PACK: PackManifest = {
+    name: 'test',
+    palette: [
+      [0, 0, 0],
+      [255, 255, 255],
+    ],
+    quips: { mapped: {}, idle: [] },
+  };
+  const base = {
+    orientation: 'landscape' as const,
+    layout: 'hero' as const,
+    pack: PACK,
+    status: { left: '', right: '' },
+    sessions: [],
+    message: '',
+  };
+  const MARK = 0xf81f;
+
+  it('puts the mark on the lid, and only on the first slot', async () => {
+    const typing = (await loadSprite('typing')).slice(0, 1);
+    const logo = solidLogo(12, 14, MARK);
+    const lit = render({ ...base, sprites: typing, logo });
+    const dark = render({ ...base, sprites: typing });
+
+    const changed: number[] = [];
+    for (let i = 0; i < lit.pixels.length; i += 1) {
+      if (lit.pixels[i] !== dark.pixels[i]) changed.push(i);
+    }
+    expect(changed.length).toBeGreaterThan(0);
+
+    // Every changed pixel is inside the lid, mapped to panel coordinates the
+    // way `paintStage` maps the sprite: slot origin, less the safe-area crop.
+    const lid = { x: LID_SLOT.x + 0, y: LID_SLOT.y - 34 };
+    const strays = changed.filter((i) => {
+      const x = i % lit.width;
+      const y = Math.floor(i / lit.width);
+      return (
+        x < lid.x ||
+        x >= lid.x + LID_SLOT.width ||
+        y < lid.y ||
+        y >= lid.y + LID_SLOT.height
+      );
+    });
+    expect(strays, 'nothing changed outside the lid').toEqual([]);
+
+    // The mark itself reached the panel, at the centred slot.
+    const slot = logoSlot(logo);
+    expect(lit.pixels[(slot.y - 34) * lit.width + slot.x]).toBe(MARK);
+  });
+
+  it('does not mark the second machine in two-up', async () => {
+    // Two sessions, two laptops. A logo on both would say they are the same
+    // machine, which is the reason `scene.ts` gates on the first slot.
+    const typing = await loadSprite('typing');
+    const two = [typing[0], typing[1]].filter((s) => s !== undefined);
+    const portrait = {
+      ...base,
+      orientation: 'portrait' as const,
+      layout: 'twoUp' as const,
+    };
+    const lit = render({
+      ...portrait,
+      sprites: two,
+      logo: solidLogo(12, 14, MARK),
+    });
+    // In two-up the lid is clipped away entirely, so the mark cannot land at
+    // all — on either slot. What this pins is that it does not land somewhere
+    // else instead.
+    expect([...lit.pixels].filter((v) => v === MARK)).toEqual([]);
   });
 });

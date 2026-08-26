@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { paintLogo } from '../packages/renderer/src/logo.ts';
+
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
@@ -143,7 +145,7 @@ describe('logo2pixel, end to end', () => {
       '--pack',
       PACK,
       '--width',
-      '16',
+      '14',
       '--over',
       BACKGROUND,
       '--format',
@@ -281,5 +283,111 @@ describe('logo2pixel warns about colours it cannot keep apart', () => {
     ]);
     expect(status).toBe(0);
     expect(stdout).toMatch(/cannot tell them apart/);
+  });
+});
+
+/** Paint a pack logo object where the shipping landscape-hero stage puts it. */
+function paintOnHero(logo: unknown): {
+  readonly target: { pixels: Uint16Array; width: number; height: number };
+  readonly painted: ReturnType<typeof paintLogo>;
+} {
+  const target = {
+    pixels: new Uint16Array(320 * 172).fill(0x1234),
+    width: 320,
+    height: 172,
+  };
+  const painted = paintLogo(
+    target,
+    {
+      origin: { x: 0, y: -34 },
+      within: { x: 0, y: 6, width: 168, height: 160 },
+    },
+    logo as { width: number; height: number; pixels: string; mask: string },
+  );
+  return { target, painted };
+}
+
+describe('--format pack', () => {
+  it('round-trips through the renderer that reads it', () => {
+    // **The gate this format did not have.** `pack565` and `blob` here are a
+    // second hand-rolled copy of the framing `bake-sprites.ts` writes, and
+    // their only decoder is `packages/renderer/src/blob.ts`. Nothing connected
+    // the two: a review flipped the mask bit order to LSB-first, and swapped
+    // red and blue in the RGB565 pack, and both left all 612 tests green.
+    //
+    // That is not a hypothetical. `packages/renderer/src/sprites/index.ts`
+    // records the same pair of mutations surviving the whole renderer suite
+    // once already. A codec with no round trip is silent corruption waiting.
+    //
+    // So this runs the real tool and hands its output to the real painter,
+    // rather than re-encoding with a private helper the way the renderer's own
+    // tests do — which is how both sides can agree with each other and be
+    // wrong together.
+    const dir = mkdtempSync(join(tmpdir(), 'logo-pack-'));
+    const svg = join(dir, 'mark.svg');
+    // **Asymmetric in both axes, deliberately.** The two-bar `fixture` above
+    // spans nearly the full width, so reversing the bit order within each mask
+    // byte mirrors every 8-pixel group onto itself and the picture is
+    // unchanged — that mutant passed a version of this test built on it. A
+    // block in one corner and a block in the opposite corner cannot survive
+    // either a horizontal mirror or a transpose.
+    //
+    // The colours are two of the example pack's own, so the snap is exact and
+    // this is about framing rather than about quantising.
+    writeFileSync(
+      svg,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <rect x="2" y="2" width="14" height="14" fill="#F77849"/>
+  <rect x="24" y="24" width="14" height="14" fill="#3FB950"/>
+</svg>`,
+    );
+
+    const { output, status } = run([
+      svg,
+      '--width',
+      '14',
+      '--over',
+      '#30363B',
+      '--format',
+      'pack',
+    ]);
+    expect(status, output).toBe(0);
+
+    const logo: unknown = JSON.parse(
+      output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1),
+    );
+    // **14, not 16, and the size is load-bearing.** 14x14 is 196 pixels, which
+    // packs to 25 mask bytes — odd, so the encoder's pad-to-even step is doing
+    // something. At 16x16 it is 32 bytes and the padding is a no-op, which let
+    // a mutant that dropped it pass.
+    expect(logo).toMatchObject({ width: 14, height: 14 });
+
+    // Decode exactly as the panel does, then read the two blocks back out.
+    const { target, painted } = paintOnHero(logo);
+    expect(painted).not.toBeNull();
+    if (painted === null) return;
+
+    const at = (x: number, y: number): number =>
+      target.pixels[y * target.width + x] ?? -1;
+    // `#F77849` and `#3FB950` in RGB565. Written as literals rather than
+    // computed, so a mutation of the pack's own conversion cannot agree with
+    // the expectation.
+    const top = 0xf3c9;
+    const bottom = 0x3dca;
+    // The blocks sit at 5%..40% and 60%..95% of a 40-unit box, so at 14px they
+    // cover roughly columns and rows 1..5 and 8..13. Sampled near the middle
+    // of each, and — the part that catches a mirror — in the two corners that
+    // should be *empty*.
+    const ground = 0x1234;
+    expect(at(painted.x + 3, painted.y + 3), 'top-left block').toBe(top);
+    expect(at(painted.x + 10, painted.y + 10), 'bottom-right block').toBe(
+      bottom,
+    );
+    expect(at(painted.x + 10, painted.y + 3), 'top-right is empty').toBe(
+      ground,
+    );
+    expect(at(painted.x + 3, painted.y + 10), 'bottom-left is empty').toBe(
+      ground,
+    );
   });
 });
