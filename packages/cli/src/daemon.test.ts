@@ -10,7 +10,12 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createRegistry, observe, resolvePanel } from '@tamaclaude/daemon';
+import {
+  ANIMATIONS,
+  createRegistry,
+  observe,
+  resolvePanel,
+} from '@tamaclaude/daemon';
 import { parsePackManifest } from '@tamaclaude/packs';
 import { frame } from '@tamaclaude/protocol';
 import { loadSprite, panelSize, render } from '@tamaclaude/renderer';
@@ -762,6 +767,31 @@ describe('what the panel says', () => {
         size.width,
       );
     }
+  });
+
+  it('offers the pack logo to the lid and to nothing else', () => {
+    // The lid exists in one animation. A mutant that handed the logo to every
+    // scene left all 611 tests green and would have drawn a company mark over
+    // the rock pool — `paintLogo` positions from `LID_SLOT` regardless of what
+    // is underneath, because it cannot see the sprite it is drawing onto.
+    const withLogo = parsePackManifest({
+      ...pack,
+      logo: { width: 12, height: 14, pixels: 'AAA=', mask: 'AAA=' },
+    });
+    const registry = after({ sessionId: 's', kind: 'Stop' });
+    const logoFor = (animation: AnimationName): unknown =>
+      sceneFor({ registry, pack: withLogo, now: NOW, animation }).logo;
+
+    expect(logoFor('typing')).toBeDefined();
+    for (const animation of ANIMATIONS.filter((name) => name !== 'typing')) {
+      expect(logoFor(animation), animation).toBeUndefined();
+    }
+
+    // And a pack without one offers nothing, which is every pack but the
+    // recipient's — the placeholder square in the artwork shows through.
+    expect(
+      sceneFor({ registry, pack, now: NOW, animation: 'typing' }).logo,
+    ).toBeUndefined();
   });
 
   it('picks overheated for a rate limit on the path the panel actually uses', () => {
