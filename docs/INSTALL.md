@@ -68,12 +68,21 @@ baked into the code.
 ## 3. Put your pack in place
 
 A _pack_ is a folder holding your colours, the things Clawd says, and the date
-he knows about. **Yours was made for you and came with the
-panel** — you should not have to build one.
+he knows about. **Yours was made for you** — you should not have to build one.
+It lives in its own small repository, private because a pack holds things this
+project deliberately keeps off the public internet. You were given its address
+along with this one.
 
-Copy it in so that `manifest.json` sits directly inside `~/.tamaclaude/pack/`.
-Mind the trailing slash on the folder you are copying from — without it you get
-a folder inside a folder, and the program will say it cannot find the pack:
+Clone it straight into place:
+
+```bash
+git clone <the pack address you were given> ~/.tamaclaude/pack
+```
+
+If you were handed a folder rather than an address, copy its contents in
+instead so that `manifest.json` sits directly inside `~/.tamaclaude/pack/` —
+and mind the trailing slash, because without it you get a folder inside a
+folder and the program will say it cannot find the pack:
 
 ```bash
 mkdir -p ~/.tamaclaude/pack
@@ -96,11 +105,10 @@ completely correct and quietly do the wrong thing on the one day it matters.
 There is an example pack in the project with placeholder colours and no date,
 which exists so the software has something to test against.
 
-> **Keep a copy of your pack somewhere safe.** It is deliberately not part of
-> the project — it holds things that should not be on the public internet — so
-> a fresh download will not bring it back. If this Mac is wiped or the folder
-> deleted, your copy is the only way to restore it. Everything else here can be
-> rebuilt from scratch; this cannot.
+> **If you cloned it, it is already backed up** — the pack repository is the
+> copy, and a wiped Mac just means cloning it again. If you were handed a
+> folder instead, keep it somewhere safe: the pack is the one thing here that
+> cannot be rebuilt from a fresh download.
 
 ## 4. Plug the panel in
 
@@ -232,9 +240,15 @@ far.
 
 ## Changing your pack
 
-Replace the **contents** of `~/.tamaclaude/pack/`, then make the program start
-again — it reads the pack once when it starts, so unplugging the panel is not
-enough. Logging out and back in does it, or:
+If you cloned it, pull:
+
+```bash
+cd ~/.tamaclaude/pack && git pull
+```
+
+Otherwise replace the **contents** of `~/.tamaclaude/pack/`. Either way the
+program reads the pack once when it starts, so make it start again —
+unplugging the panel is not enough. Logging out and back in does it, or:
 
 ```bash
 pnpm tamaclaude uninstall-agent

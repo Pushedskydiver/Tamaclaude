@@ -666,13 +666,19 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       out of band during the in-person install and exists in exactly one place
       afterwards. A wiped Mac, a deleted folder or a re-clone loses it, and the
       daemon then refuses to start with `no pack configured`.
-      **This blocks the install, not just recovery.** The recipient works
-      through `docs/INSTALL.md` himself and cannot get past step 3 without the
-      pack in hand, so it has to travel with the panel — decide the channel and
-      write it into the guide's step 3, which currently says only "came with
-      the panel". A copy on the same medium doubles as the backup, and the
-      guide already tells him to keep one; that is an instruction, not a
-      mechanism.
+      **The channel is decided: its own private repository**, created 26 Aug,
+      with the recipient as a collaborator. `docs/INSTALL.md` step 3 clones it
+      straight into `~/.tamaclaude/pack` — `resolvePack` only reads
+      `manifest.json` from the directory and never enumerates it, so the `.git`
+      inside is invisible to the loader.
+      That was the alternative to closing the project, which would have solved
+      the same problem by making the public history a one-way door. It also
+      answers three things at once: delivery, backup (the repository _is_ the
+      copy), and updates, since a quip added later is a `git pull` rather than
+      a hand-off. **The address stays out of this repo** — the guide says "the
+      address you were given", the same way it treats the main one.
+      The remaining risk is his GitHub auth on a new machine, so hand over a
+      copy on whatever ships with the panel as well; the guide takes either.
       **What the palette reaches today, measured 25 Aug.** `packages/cli`
       composes with `extent: 'panel'`, so `withEnvironment` paints the
       environment across the whole framebuffer and replaces the painter's ink
