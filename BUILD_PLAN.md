@@ -517,7 +517,12 @@ than partially. Eight good screens beat nine plus four rough ones.
 - [x] Animations, in priority order — ship each as it lands:
   1. idle ✅ / asleep ✅
   2. thinking ✅
-  3. typing ✅ (Edit/Write)
+  3. typing ✅ (Edit/Write) — **lid recoloured `#30363B` → `#A91326` on
+     26 Aug**, at the recipient's request, and re-baked. The only Tier-A art
+     change after the freeze. Two consequences worth the line: `#30363B` left
+     the palette, so one softened claw edge that used to snap cold now snaps
+     to the warm `#6F4436`; and `--over` for baking a pack logo changed with
+     it, which `tools/logo2pixel.ts` documents.
   4. bouldering ✅ (Read)
   5. gym ✅ (Bash)
   6. **The payoff screen** ✅ — a vehicle parked at his left, overlapping, and
@@ -719,7 +724,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
       the mark sits on, and emits a PNG to look at, SVG rects to paste, or — since
       26 Aug — `--format pack`, which is the only one the renderer can consume.
-      **No `sharp`, and none was needed** — the plan named a dependency the
+      **No `sharp`, and none was needed** — though the branch that finished this
+      did add `@xmldom/xmldom`, build-time only, to gate the animation SVGs as XML.
+      The plan named a dependency the
       repo already had both halves of. Playwright rasterises the SVG the way
       `tools/svg2frames.ts` does, and `snapToPalette` was already
       nearest-neighbour against a palette it is handed; it was written to snap
@@ -742,8 +749,11 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       antialiases the edges, and `snapToPalette` resolves each mid-tone to whichever
       entry is nearest, so a white mark arrived speckled with the pack's attention
       amber and active teal — three colours from one. `--format pack` renders with
-      `shape-rendering:crispEdges` for that reason, which also cuts the payload by
-      about 30% because two colours run-length-encode far better than four.
+      `shape-rendering:crispEdges` for that reason, which on the mark that ships
+      also cuts the payload by 6.6% at `--width 14` and 19.3% at 16, because a
+      two-colour image run-length-encodes better. This said "about 30%" until
+      27 Aug — the fourth survivor of a phrase corrected everywhere else in the
+      same commit, and inside the file that commit was editing.
       The logo itself is pack content and is not in this repo.
 - [x] **A pack `logo` field, and something that draws it.** Built 26 Aug.
       The mark is fixed to the lid, which is safe because the lid does not move:
@@ -782,9 +792,17 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       consume** — `--format pack` is the third, added 26 Aug, and is the one it
       can. Smaller than it first looked, and the tool is the part that
       needs the change.
-      **Decided on the artefact, 26 Aug.** `panel-mock --pack <dir>` draws a
-      pack-supplied mark on the lid across all four skies, so the exit below is
-      met rather than argued. It was not met by the commit that built the
+      **Seen on the panel, 26 Aug**, which is the standard the birthday item
+      four boxes up was held to and the one that matters: the recipient's own
+      pack, the launchd daemon, the device on the desk, and a human looking at
+      it. The mark reads at 14x17 on the red lid. That is why this is `[x]`.
+      A review was right that the _tooling_ claim was the weaker one, and that
+      the plan said so itself at §Stage 2: `blit.ts` hardcoded `packs/example`,
+      which has no logo, so nothing in this repo could put a triggering pack on
+      the device. Both halves are fixed — `panel-mock --pack <dir>` and
+      `blit.ts <frames> [port] [orientation] [sky] [pack]` — and the wiring in
+      `blit-scene.ts` is now gated by `compose-extent.test.ts`, because a
+      mutant that keyed the mark on `thinking` left all six gates green. It was not met by the commit that built the
       feature — that one verified with a private render nobody else could
       repeat, which is the shape this paragraph rejects — and wiring the logo
       into `blit-scene.ts` was three lines.
@@ -792,9 +810,12 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       `panel-mock` cannot draw a pack-supplied mark by **10 Sep**, stop: a
       trigger that fires when someone opens a file is a rubber stamp, which is
       the objection `PLANS.md` already makes to a gate of that shape. Note the
-      input is also unscheduled — both routes need the recipient's `logo.svg`,
-      and the pack that holds it is itself an open item above.
-      **The fallback does not deliver, and that is why it is not one.** A
+      input landed on 26 Aug: the recipient's `logo.svg` is in the pack repo,
+      cropped to its artwork and baked to a 14x17 mark. It is a single flat
+      colour, so the gradient hazard above did not arise — though it would have
+      passed the merge warning in silence if it had.
+      **Resolved 26 Aug; kept as the reasoning, not as a live option.** The
+      fallback does not deliver, and that is why it was not one. A
       private re-bake writes the mark into `packages/renderer/src/sprites/`,
       which is tracked; the recipient installs from a clone of a public repo
       — the recipient clones onto his own machine — so an uncommitted change
@@ -803,8 +824,13 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       — the placeholder stays and the panel is still a gift. Two paragraphs
       above promise the recipient will see "their logo"; if this is cut, that
       promise goes with it, and the deferred table takes a row.
-- [ ] Quips mapped to states, never randomised
-- [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
+- [x] Quips mapped to states, never randomised — `messageFor` looks up
+      `quips.mapped[state]` and only falls to the `idle` rotation when a
+      resting state has no mapped line. Built well before this was ticked; the
+      box was simply missed.
+- [~] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the
+  pack. **The quip half is built** — `messageFor` rotates `quips.idle` by
+  the minute on `IDLE`. The franchise-flavoured animation is not.
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
 - [x] Birthday screen, date-triggered 23 Sep. **Trigger, art, stage and QR are

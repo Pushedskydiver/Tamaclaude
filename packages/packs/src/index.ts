@@ -12,8 +12,10 @@
  * `packages/renderer/src/pack-swap.test.ts` records what a swap actually moves
  * on the shipping panel: nothing at all with an empty session strip, and one
  * 240px chip per working session — which no longer enumerates it, because a
- * pack carrying a `logo` moves a further 177 pixels on the `typing` screen
- * with the strip empty, and `pack-swap.test.ts` does not measure that. The
+ * pack carrying a `logo` also moves the mark on the `typing` screen, and
+ * `pack-swap.test.ts` does not measure that. How many pixels depends on the
+ * mark; it is not written down here because the only one measured so far is in
+ * a private pack and nobody else can reproduce the figure. The
  * palette's larger role is what quantises to it: the logo does, since 26 Aug,
  * and the pet sprite will.
  *

@@ -175,7 +175,9 @@ const [svgArg, outArg] = positionals;
 if (svgArg === undefined) {
   console.error(
     'usage: node tools/logo2pixel.ts <logo.svg> [out.png] ' +
-      "[--pack <dir>] [--width 48] [--over '#RRGGBB']",
+      "[--pack <dir>] [--width 48] [--over '#RRGGBB'] " +
+      '[--format png|rects|pack] [--scale 8]\n' +
+      '       --format pack is the one the panel can read',
   );
   process.exit(1);
 }

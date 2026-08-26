@@ -1,10 +1,12 @@
 import type { PackManifest } from '@tamaclaude/packs';
 import type { EnvironmentExtent, StageSprite } from '@tamaclaude/renderer';
 
+import { Buffer } from 'node:buffer';
+
 import { describe, expect, it } from 'vitest';
 
 import { packPalette } from '@tamaclaude/packs';
-import { frame } from '@tamaclaude/protocol';
+import { encodeRect, frame } from '@tamaclaude/protocol';
 import { spriteSlots } from '@tamaclaude/renderer';
 
 import { composePanels } from './blit-scene.ts';
@@ -121,5 +123,63 @@ describe('composePanels threads the extent option', () => {
     expect(pixelRightOfStage(compose(undefined))).toBe(
       pixelRightOfStage(compose('panel')),
     );
+  });
+});
+
+describe('the pack mark, through composePanels', () => {
+  // **The three lines that meet Stage 5's exit, gated.** `BUILD_PLAN.md` says
+  // the exit is "met rather than argued" because `panel-mock` draws a
+  // pack-supplied mark — and the wiring that does it was covered by nothing. A
+  // review changed `'typing'` to `'thinking'` in `markFor` and all six gates
+  // stayed green, so the exit could stop being met with no signal at all.
+  //
+  // `packages/cli/src/daemon.test.ts` gates the identical decision for the
+  // daemon. The tool got the wiring and not the test.
+  const MARK = 0xf81f;
+
+  /** A logo the renderer will accept: every pixel drawn, one colour. */
+  function solidLogo(width: number, height: number): PackManifest['logo'] {
+    const words = new Uint16Array(width * height).fill(MARK);
+    const bits = new Uint8Array(Math.ceil((width * height) / 8)).fill(0xff);
+    const padded = new Uint8Array(Math.ceil(bits.length / 2) * 2);
+    padded.set(bits);
+    const blob = (from: Uint16Array): string => {
+      const { mode, payload } = encodeRect(from);
+      const bytes = new Uint8Array(payload.length + 1);
+      bytes[0] = mode;
+      bytes.set(payload, 1);
+      return Buffer.from(bytes).toString('base64');
+    };
+    return {
+      width,
+      height,
+      pixels: blob(words),
+      mask: blob(new Uint16Array(padded.buffer)),
+    };
+  }
+
+  const withLogo: PackManifest = { ...PACK, logo: solidLogo(12, 14) };
+
+  function marked(name: string, pack: PackManifest): number {
+    const [panel] = composePanels([BLANK], {
+      orientation: 'landscape',
+      pack,
+      name,
+    });
+    if (panel === undefined) return -1;
+    return [...panel.pixels].filter((value) => value === MARK).length;
+  }
+
+  it('draws a pack logo on typing and on nothing else', () => {
+    expect(marked('typing', withLogo)).toBe(12 * 14);
+    for (const name of ['thinking', 'gym', 'idle', 'bouldering']) {
+      expect(marked(name, withLogo), name).toBe(0);
+    }
+  });
+
+  it('draws nothing for a pack that carries no logo', () => {
+    // Every pack but the recipient's. The placeholder square in the artwork
+    // shows through, as it always did.
+    expect(marked('typing', PACK)).toBe(0);
   });
 });
