@@ -80,10 +80,21 @@ function run(args: readonly string[]): { output: string; status: number } {
     [join(ROOT, 'tools/logo2pixel.ts'), ...args],
     { cwd: ROOT, encoding: 'utf8' },
   );
-  return {
-    output: `${result.stdout ?? ''}${result.stderr ?? ''}`,
-    status: result.status ?? 1,
-  };
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
+  // Say what is actually wrong on a machine that has never built this repo.
+  // `pnpm install` fetches no browser — pnpm 10 does not run a dependency's
+  // install scripts — so every assertion here failed with `expected 1 to be
+  // +0`, five times, with no mention of Playwright. `frame-palette.test.ts`
+  // already had this guard; found by pointing `PLAYWRIGHT_BROWSERS_PATH` at an
+  // empty directory, which is what Stage 6's clean-account dry run would do
+  // for real.
+  if (/executable doesn't exist/i.test(output)) {
+    throw new Error(
+      'headless Chromium is missing — run `pnpm exec playwright install ' +
+        '--only-shell chromium` (README §Development)',
+    );
+  }
+  return { output, status: result.status ?? 1 };
 }
 
 function fixturePath(svg: string): string {

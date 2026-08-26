@@ -846,12 +846,26 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 - [ ] Run it on Alex's desk all week. Fix what irritates. No new features.
 - [ ] Assemble board in printed case
-- [ ] Dry-run the full install on a clean macOS user account. **Bring this
-      forward — it is the highest-information hour left in the plan.** The
-      untested assumption under everything else is that a Mac which is not this
-      one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
-      full `tsc -b`. Finding out on 19 Sep leaves four days, and the recovery
-      for "no toolchain" is a packaging project rather than a bug fix.
+- [~] Dry-run the full install on a clean macOS user account. **Bring this
+  forward — it is the highest-information hour left in the plan.** The
+  untested assumption under everything else is that a Mac which is not this
+  one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
+  full `tsc -b`. Finding out on 19 Sep leaves four days, and the recovery
+  for "no toolchain" is a packaging project rather than a bug fix.
+  **Half of it is done, and it earns its billing.** A fresh `git clone` of
+  the repo into an empty directory installs, builds and passes all six
+  gates — 49 files, 585 tests, no local state. What that cannot see is
+  anything cached per-_user_ rather than per-checkout, which is where the
+  real risk lives: the Playwright browser is the known one, and pointing
+  `PLAYWRIGHT_BROWSERS_PATH` at an empty directory stands in for the clean
+  account. Doing that has now caught two separate suites failing with no
+  mention of Playwright — `frame-palette` on 25 Aug and `logo2pixel` on
+  26 Aug, the second with five assertions reading `expected 1 to be +0`.
+  Both now name the install command instead.
+  **What is left needs a real account**: Xcode CLT, whether node and pnpm
+  exist at all, the launchd agent, and the device. Run the clone-and-gate
+  check after any change to tooling — it is two minutes and it is the part
+  that does not need one.
 - [ ] Printed card: QR to repo + one-line install
 - [ ] Flash the gift board (not the dev board) with the splash
 
