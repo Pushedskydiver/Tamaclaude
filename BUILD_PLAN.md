@@ -590,12 +590,25 @@ than partially. Eight good screens beat nine plus four rough ones.
      install shows, so "from the recipient's pack" was never achievable as
      written — recognition comes from shape and context, and the tracked art
      carries no mark identifying a specific vehicle.
+
+     **That sentence and `PLANS.md`'s read as a contradiction and are not
+     one**, which cost a review a finding on 26 Aug, so here is the check
+     rather than the assertion. `PLANS.md` says the art "names a colour"; this
+     says it carries no identifying mark. Both are true: the art has no badge,
+     no model name and no silhouette detail, and its red is `#B22222` — the
+     standard CSS `firebrick`, which `birthday.svg` also uses and which
+     `tools/contrast.ts` carries as its worked example. It is a palette red,
+     not a manufacturer's. No make is named anywhere in the tree; grepped.
+     What `CLAUDE.md` forbade was the _link_ — the since-deleted sentence
+     tying the prop to the recipient while the art was coloured — not the
+     colour standing alone, which cannot be removed from a drawing of a car.
      The fallback this line used to name is moot: the trigger shipped seven hours
      before the art — same day, `9fd31c3` at 11:22 and `6540a86` at 18:33 — and
      `DONE` borrowed `idle` in between, so the risk it was written against
      never arrived. An earlier version said a fortnight, which `main`'s history
      does not contain: it starts on 18 Aug. Item 12 already made this exact
      correction for `overheated`.
+
   7. Permission sign, and confused ✅ — Tier A per the screen spec; both were
      missing from every tier in its first draft despite being the two screens
      the whole design principle exists to serve. A `spec-grill` found both
