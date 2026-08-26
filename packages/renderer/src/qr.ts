@@ -2,16 +2,22 @@
  * Drawing a QR code onto the panel.
  *
  * **A packed module matrix, not a raster.** The alternative was to author the
- * QR as an SVG and send it through `bake-sprites`, and that path is a trap:
- * `tools/frame-palette.ts` matches six-digit hex only, so `fill="black"` snaps
- * to nothing and the whole symbol bakes as one solid rectangle — the same
- * failure the logo tool shipped and had to be fixed for. Storing modules also
- * keeps the pixels-per-module a *render-time* number, so the pitch can change
- * with the space available without re-baking anything.
+ * QR as an SVG and send it through `bake-sprites`, and that path has a trap in
+ * it: `tools/frame-palette.ts` reads declared fills with `/#[0-9a-fA-F]{6}/`
+ * (lines 46 and 54), so `fill="black"` is not a declared colour at all and the
+ * snapper has the wrong targets for every pixel in the symbol. What exactly it
+ * would produce is untested — the point is that a QR is the one raster where
+ * being approximately right is worth nothing, and the palette step exists to
+ * be approximately right.
  *
- * The matrix is one bit per module, MSB-first, row-major, base64-encoded. A
- * 21x21 version-1 symbol is 441 bits in 56 bytes, which is 76 base64
+ * Storing modules also keeps the pixels-per-module a *render-time* number, so
+ * the pitch can change with the space available without re-baking anything.
+ *
+ * The matrix is one bit per module, MSB-first, row-major, base64-encoded. The
+ * symbol this ships is 29x29: 841 bits in 106 bytes, which is 144 base64
  * characters — small enough to sit in a source file without anyone minding.
+ * (An earlier draft gave the version-1 figures instead. The arithmetic was
+ * right and the symbol was not the one in `qr.data.ts`.)
  */
 
 import type { Framebuffer } from './framebuffer.js';
@@ -66,7 +72,7 @@ export function moduleAt(qr: QrCode, col: number, row: number): boolean {
  * without the stride cannot be indexed at all.
  *
  * Called once per paint. An earlier draft decoded inside `moduleAt`, which put
- * a base64 decode on every one of the 625 modules of a version-2 symbol, every
+ * a base64 decode on every one of the 841 modules this symbol has, every
  * frame.
  */
 function unpack(qr: QrCode): Unpacked {

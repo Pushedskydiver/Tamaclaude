@@ -15,10 +15,11 @@
  * the failure would surface on 23 September as a square that does not scan.
  *
  * **A matrix, not a raster.** The obvious route — author the QR as an SVG and
- * send it through `bake-sprites` — is a trap: `frame-palette.ts` matches
- * six-digit hex only, so `fill="black"` snaps to nothing and the symbol bakes
- * as one solid rectangle. Storing modules also leaves the pixels-per-module a
- * render-time number, so the same data draws at 5px or 4px without re-baking.
+ * send it through `bake-sprites` — runs into the palette step:
+ * `frame-palette.ts` reads declared fills as six-digit hex, so `fill="black"`
+ * is not declared and the snapper has the wrong targets. Storing modules also
+ * leaves the pixels-per-module a render-time number, so the same data draws at
+ * 5px or 4px without re-baking.
  *
  * The preview is what settles the URL. Module size is the thing a camera
  * either resolves or does not, and it is not worth arguing about in a comment
