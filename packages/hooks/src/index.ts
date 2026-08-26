@@ -11,7 +11,9 @@
  * This package is deliberately near-leaf — its import graph is a latency
  * budget rather than a style preference. The `HookEvent` import is type-only
  * and erases at compile time (`verbatimModuleSyntax`), so at run time this
- * file loads two Node builtins and nothing else. Validation deliberately does
+ * file loads five Node builtins and nothing else — `net`, `os`, `path`,
+ * `process` and `stream/consumers`, which is the count `CLAUDE.md` carries and
+ * `index.test.ts` gates. Validation deliberately does
  * not happen here: the daemon is the trust boundary, and a schema library on
  * this path would be paid for on every tool call of every session.
  *

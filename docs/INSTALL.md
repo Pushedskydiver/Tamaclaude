@@ -21,15 +21,14 @@ Two tools, neither of which macOS ships:
   switch itself to it rather than complain
 
 If you already use [mise](https://mise.jdx.dev), the project pins both and can
-install them for you — but that happens after step 1, once you have the folder:
-`mise trust && mise install` inside it. The `trust` is needed because mise
-ignores a freshly cloned project's tool versions until you allow them. Otherwise install Node 24 from
+install them for you — `mise install` inside the folder, once step 1 has given
+you one. Otherwise install Node 24 from
 [nodejs.org](https://nodejs.org) and then run `corepack enable pnpm`.
 
 Nothing in the project compiles on install, so Xcode itself is not needed.
 Apple's command line tools probably are, because `git` on macOS usually comes
-from them — the first `git` command offers to install them. This is the one
-prerequisite nobody has yet tested on a Mac that has never had them.
+from them — the first `git` command offers to install them. Nobody has yet
+tested this on a Mac that has never had them.
 
 ## 1. Get the project
 
@@ -39,7 +38,7 @@ never used it:
 
 ```bash
 git clone <the repo address>
-cd tamaclaude
+cd Tamaclaude
 ```
 
 If somebody handed you the folder instead, put it somewhere permanent before
@@ -117,10 +116,11 @@ The boot screen should be replaced by Clawd beside his rock pool.
 
 **Then press `Ctrl-C` to stop it before going on.** It will print
 `ELIFECYCLE  Command failed` on the way out — that is what stopping it looks
-like, not a problem. The next step starts the
-same program automatically, and if this one is still running the automatic one
-cannot claim the panel — it dies and retries every thirty seconds, quietly,
-while everything looks installed.
+like, not a problem. The next step starts the same program automatically, and
+two copies cannot both run: the second finds the first still holding its socket
+and exits. The installer checks and says so — `agent loaded but not running;
+last exit 1` — so this is loud rather than silent, but it is easier not to
+cause it.
 
 ## 6. Make it start when you log in
 
@@ -160,14 +160,20 @@ what it says it will add. When it looks right:
 pnpm tamaclaude-install-hooks --apply
 ```
 
-Then ask Claude Code to edit a file, and watch — Clawd should start typing.
-Merely opening a session is not enough to see it: a new session puts him at
-rest, and typing is what he does while Claude edits or writes.
+Then ask Claude Code to **read** a file, and watch — Clawd should start
+climbing. Merely opening a session is not enough: that puts him at rest.
+
+Reading rather than editing, because reading needs no approval. If Claude asks
+your permission for something, the panel shows him holding a sign and keeps
+showing it until the next thing you ask — so a first edit on a fresh install
+tends to sit on the sign rather than the typing you were watching for.
 
 ## Do not move the project folder
 
 Both the login entry and the Claude Code wiring store the full path to this
-folder. Moving, renaming or deleting it stops the panel with no message. If you
+folder. Moving, renaming or deleting it stops the panel. The Claude Code half
+goes quiet with no message at all; the login half shows up in
+`pnpm tamaclaude status` and in the log. If you
 do move it, run steps 6 and 7 again from the new location and both will
 re-point themselves.
 
@@ -191,7 +197,8 @@ anywhere. `status` will look fine. Re-point it:
 pnpm tamaclaude-install-hooks --apply
 ```
 
-**The panel went blank or never came back after a restart.** Usually the login
+**The panel is stuck on the boot screen, or never came back after a
+restart.** Usually the login
 entry pointing at a Node that has moved or been upgraded — same cause,
 different half:
 
@@ -257,7 +264,7 @@ project — including your home folder, which is where a Terminal opens.
 So the first thing to type when something has gone wrong is:
 
 ```bash
-cd ~/tamaclaude          # or wherever you put it
+cd ~/Tamaclaude          # or wherever you put it
 ```
 
 Nothing is installed globally, and there is nothing on your `PATH` to go stale.
