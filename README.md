@@ -57,6 +57,13 @@ start rather than falling back to the example, because a fallback would turn
 "you forgot to point at your pack" into a panel that looks entirely correct.
 `tamaclaude pack` says which one is loaded and when its birthday fires.
 
+## Setting it up
+
+**[docs/INSTALL.md](docs/INSTALL.md)** is the guide for getting a panel
+running: what to install, in what order, and what to do when it stops. Written
+for somebody who was handed one rather than somebody working on it — the
+section below is the other audience.
+
 ## Development
 
 ```bash

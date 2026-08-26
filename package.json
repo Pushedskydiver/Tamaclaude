@@ -25,7 +25,9 @@
     "throughput": "node tools/usb-throughput.ts",
     "bake:splash": "node tools/bake-splash.ts",
     "throughput:sweep": "for c in 256 1024 4096 16384 65536; do echo \"$c B: $(node tools/usb-throughput.ts /dev/cu.usbmodem1101 6 \"$c\" | grep 'device saw' | sed 's/.*-> //')\"; done",
-    "review-triggers": "node tools/review-triggers.ts"
+    "review-triggers": "node tools/review-triggers.ts",
+    "tamaclaude": "node packages/cli/dist/index.js",
+    "install-hooks": "node packages/hooks/dist/install.js"
   },
   "lint-staged": {
     "*.ts": [

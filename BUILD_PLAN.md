@@ -846,7 +846,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 - [ ] Run it on Alex's desk all week. Fix what irritates. No new features.
 - [ ] Assemble board in printed case
-- [~] Dry-run the full install on a clean macOS user account. **Bring this
+- [~] Dry-run the full install on a clean macOS user account, **following
+  `docs/INSTALL.md` and fixing whatever it gets wrong** — the guide is the
+  artefact under test, not just the software. **Bring this
   forward — it is the highest-information hour left in the plan.** The
   untested assumption under everything else is that a Mac which is not this
   one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
@@ -867,7 +869,12 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   check after any change to tooling — it is two minutes and it is the part
   that does not need one.
 - [ ] Printed card: repo QR, and "if it ever stops, open Terminal and run
-      `tamaclaude pack`". **Not a one-line install** — Stage 3 decided against
+      `tamaclaude pack`". **The card's command needs the global link** —
+      `pnpm tamaclaude pack` from the project folder is what works out of the
+      box, and a bare `tamaclaude` needs `pnpm setup` and `pnpm link` first
+      (`docs/INSTALL.md` §A note on the commands). Either do that during the
+      in-person install, or put the `pnpm` form on the card.
+      **Not a one-line install** — Stage 3 decided against
       one and gave the reason: `git clone && pnpm install` needs Xcode CLT,
       node and pnpm first, and a brew tap is a second repo and a formula for
       one Mac. The install happens in person. This line said "one-line
