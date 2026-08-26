@@ -397,7 +397,11 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   a one-line install either: it needs Xcode CLT, node and pnpm first. The
   decision is to install it in person and let the printed card be a
   keepsake carrying something true — the repo QR and "if it ever stops,
-  open Terminal and run `tamaclaude pack`".
+  open Terminal and run `tamaclaude status`". **`status`, not `pack`**, for
+  the reason `packages/cli/src/index.ts` gives where it is defined: `pack`
+  runs under the terminal's environment and node, so it answers cheerfully
+  while the login agent is failing to spawn every thirty seconds. `status`
+  asks launchd instead.
   `tamaclaude status` asks launchd whether it is actually running, and says so
   when the node it was installed with has been upgraded away — the failure a
   version-pinned `process.execPath` creates, and the one `tamaclaude pack`
@@ -848,7 +852,14 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Assemble board in printed case
 - [~] Dry-run the full install on a clean macOS user account, **following
   `docs/INSTALL.md` and fixing whatever it gets wrong** — the guide is the
-  artefact under test, not just the software. **Bring this
+  artefact under test, not just the software.
+  **Exit criterion, written so it can fail:** somebody who is not the author,
+  on an account that is not the author's, gets from a bare machine to a
+  reacting panel using only the guide, with no verbal help and no edit to it.
+  Anything less tests the software with the author standing behind it, which
+  is the one case the guide does not serve. Note this made the item bigger
+  while leaving it on 19 Sep, behind a buffer meant to absorb something else.
+  **Bring this
   forward — it is the highest-information hour left in the plan.** The
   untested assumption under everything else is that a Mac which is not this
   one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
@@ -869,11 +880,16 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   check after any change to tooling — it is two minutes and it is the part
   that does not need one.
 - [ ] Printed card: repo QR, and "if it ever stops, open Terminal and run
-      `tamaclaude pack`". **The card's command needs the global link** —
-      `pnpm tamaclaude pack` from the project folder is what works out of the
-      box, and a bare `tamaclaude` needs `pnpm setup` and `pnpm link` first
-      (`docs/INSTALL.md` §A note on the commands). Either do that during the
-      in-person install, or put the `pnpm` form on the card.
+      `tamaclaude status`" — `status` rather than `pack`, per Stage 3 above
+      and the comment where it is defined.
+      **Decide the form before the card is printed, not at handover.** A bare
+      `tamaclaude` needs `pnpm setup` and `pnpm link` first, so out of the box
+      the working command is `pnpm tamaclaude status` from the project folder.
+      Two strings in the binary print the bare form — `agent.ts`'s
+      upgraded-node remedy and the CLI's `USAGE` block — so whichever form is
+      chosen, those change with it. That is a `packages/**` diff and therefore
+      a `da-review`: cheap now, and not something to discover on a Mac that is
+      not this one.
       **Not a one-line install** — Stage 3 decided against
       one and gave the reason: `git clone && pnpm install` needs Xcode CLT,
       node and pnpm first, and a brew tap is a second repo and a formula for

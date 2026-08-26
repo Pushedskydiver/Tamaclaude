@@ -189,6 +189,9 @@ degrade reasoning accuracy as context grows.
 
 ## Key docs
 
+- **Setting a panel up, or fixing one that stopped:** read `docs/INSTALL.md`.
+  It is the recipient-facing guide, so it uses `pnpm tamaclaude …` — the CLI is
+  a workspace bin and a bare `tamaclaude` needs a global link first.
 - **Before opening a PR:** read `docs/SELF-REVIEW.md`.
 - **Before reviewing a PR:** read `docs/DA-REVIEW.md`.
 - **Before writing a commit message:** read `docs/GIT.md`.
