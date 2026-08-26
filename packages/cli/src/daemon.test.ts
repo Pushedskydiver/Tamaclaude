@@ -611,9 +611,10 @@ describe('what the panel says', () => {
     // planted it in the covered set and all six gates stayed green — a party
     // hat over a session that asked a human a question a minute ago and has not
     // been answered. `message.ts` names that exact outcome as the thing the
-    // feature exists to prevent, and the message band's own table does cover
-    // it; the stage's did not, though the stage's whole thesis is that it must
-    // be stricter.
+    // feature exists to prevent. The band is safe there by construction —
+    // `birthdayLine` gates on `needsAttention`, which is a rank comparison and
+    // cannot miss a state — and the band's test table covers it besides. The
+    // stage had neither, though its whole thesis is that it must be stricter.
     check({
       state: 'WAITING',
       events: [{ sessionId: 's', kind: 'Notification' }],
@@ -638,7 +639,8 @@ describe('what the panel says', () => {
 
     // **An empty desk on the day, which is the likeliest path of all.** He
     // plugs the panel in before opening a terminal, so there is no session at
-    // all: `resolvePanel` returns `emptyDesk()` rather than ranking anything.
+    // all: `resolvePanel` takes its state from `emptyDesk`, the ranking pipeline
+    // having run over an empty array.
     // Every other row here builds a session first, so nothing covered the case
     // the gift actually depends on.
     expect(
@@ -693,7 +695,9 @@ describe('what the panel says', () => {
     const idleAt = (when: number): ReturnType<typeof createRegistry> =>
       observe(createRegistry(when), { sessionId: 's', kind: 'Stop' }, when);
 
-    // `panelSize(ORIENTATION)`, not `{ width: 172, height: 320 }`. The daemon
+    // `panelSize('landscape')`, not `{ width: 172, height: 320 }` — the same
+    // call the daemon makes, spelled out because its `ORIENTATION` const is
+    // module-private and no test can name it. The daemon
     // runs landscape, so its framebuffer is 320 wide; the portrait literal is a
     // geometry the daemon never produces, and it only survived `extractRect`
     // because 172·320 and 320·172 are the same number of pixels. `daemon.ts`
@@ -713,8 +717,10 @@ describe('what the panel says', () => {
       whole,
     });
 
-    // **Three things had to be pinned before this assertion meant anything, and
-    // the first two versions of it pinned none of them.**
+    // **Two things had to be pinned before this assertion meant anything.** The
+    // first version pinned neither; the second pinned the animation name and
+    // said so, and an earlier draft of this very block claimed it pinned
+    // nothing.
     //
     // Comparing the day's frame against another day's passes with the stage
     // un-wired, and the reason matters. The first correction said the two

@@ -1666,10 +1666,10 @@ A `1.5s` breath (three second cycle, eight even iterations) plus a stroke that
 pushes in 1.6s and recovers in 2.4s takes it to **88 of 96**. `3s` was tried
 first and scores 92, but it made this the slowest-breathing screen in the corpus
 — slower than `asleep`, which a crab doing manual work should not be. Measured
-across all fourteen animations as mean absolute travel of the **torso band's**
+across the fourteen animations that existed then, as mean absolute travel of the **torso band's**
 top row per second — the metric matters, because "topmost drawn pixel anywhere"
 ranks `permission-sign` at zero by catching its held sign arm — 1.5s puts
-sweeping **sixth of fourteen at 3.33 px/s**, between `idle` at 3.75 and
+sweeping **sixth of those fourteen at 3.33 px/s**, between `idle` at 3.75 and
 `board-game` at 3.00. At 3s it halves to 1.67 and ranks thirteenth, above only
 `permission-sign`. Four frames of distinctness lose to that, and all eight
 duplicate frames are a whole stroke period apart, where no viewer can pair

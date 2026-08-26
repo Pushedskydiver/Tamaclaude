@@ -273,7 +273,7 @@ harness approximates the bands", and a chosen one.
       The raw art was 24,192,000 bytes of RGB565 plus the same again halved for
       the mask, and encoded it shipped as 1,128,216. **Those are the six-animation
       figures and they are the stale copy.** So was the thirteen-animation copy
-      that replaced them: measured 25 Aug, there are fourteen animations and 936
+      that replaced them: measured 25 Aug at fourteen animations: 936
       frames, 62,899,200 raw and 2,744,512 encoded — the thirteen-animation
       total plus `sweeping` exactly. `tools/bake-sprites.ts` and
       `packages/renderer/src/sprites/index.ts` were said to "carry the live
@@ -495,7 +495,7 @@ than partially. Eight good screens beat nine plus four rough ones.
 - [~] ~~TS generator: base SVG + example + plan → LLM → animated SVG~~ —
   **cut, 25 Aug.** It would have automated `docs/ANIMATION.md` §The
   authoring loop, which is a documented agent procedure. That loop has
-  already produced the entire catalogue — fourteen animations, all of them
+  already produced the entire catalogue, all of it
   CSS against `base.svg` under §The generation contract — so the tool would
   wrap a process that demonstrably works when invoked by hand.
   **This is not the plan's condition firing; nothing conditioned it.** It is
@@ -634,8 +634,8 @@ than partially. Eight good screens beat nine plus four rough ones.
       "Tier C — stretch (2): road bike, beacon. Cut without regret", and this
       is that cut being taken rather than a new judgement.
       It is the most expensive item in the catalogue: the first prop that would
-      carry Clawd, and no animation in the corpus has a seated pose — all
-      fourteen stand, climb or lie. And it has no trigger. `spec.md` specifies
+      carry Clawd, and no animation in the corpus has a seated pose — every
+      one of them stands, climbs or lies. And it has no trigger. `spec.md` specifies
       one ("any tool, same session >90s") but nothing implements it:
       `Refinement` in `animation.ts` is `{ tool?, errorType? }`, so no elapsed
       time reaches the mapping. So the work is a pose the corpus does not have,

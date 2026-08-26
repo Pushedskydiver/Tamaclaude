@@ -273,8 +273,9 @@ function subagentText(sessions: readonly Session[]): string {
  * everywhere else: the stage has one picture, so celebrating over a running
  * tool or a raised hand means *replacing* the thing the panel exists to show.
  *
- * **A total `Record` rather than a `Set`, for the reason `TONE` gives forty
- * lines up and `TOOL_STATES` repeats in `message.ts`: a `Set` compiles clean
+ * **A total `Record` rather than a `Set`, for the reason `TOOL_STATES` gives
+ * in `message.ts` — `TONE` above rejects a chain of ternaries rather than a
+ * `Set`, so the argument generalises from it rather than being stated by it: a `Set` compiles clean
  * when a state is added to `SESSION_STATES` and silently puts it outside.**
  * This was a `Set` until a review planted `WAITING` in it — a party hat over a
  * session that had asked a human a question a minute earlier and not been
@@ -542,18 +543,24 @@ function linkLine(status: LinkStatus): string {
  * `listener` was `Awaited<ReturnType<typeof startSocketServer>>` and
  * `paintOnce` calls exactly one of its methods. The whole type made the
  * function look as though it needed a running server, so the only way to
- * exercise a frame was to start one — which the first five tests in
- * `daemon.test.ts` do, driving real frames through here via `runDaemon` and
- * asserting bytes on the wire. What none of them can do is put this function
- * on a chosen date, which is why the birthday reached the panel untested. An
- * earlier draft of this block said "nothing ever did", which erases those five
- * tests and was falsified by gutting the send and watching three of them fail.
+ * exercise a frame was to start one — which the `describe('the daemon
+ * command')` block does, driving real frames through here via `runDaemon`.
+ * Three of its five assert bytes on the wire; gutting the send fails exactly
+ * those three, which is how the count was arrived at rather than asserted. The
+ * other two assert a byte count is *unchanged* and that the socket is gone.
+ * What none of the five can do is put this function on a chosen date, which is
+ * why the birthday's own path reached the panel untested. An earlier draft said
+ * "nothing ever did", which erases the block entirely.
  *
  * Structural typing means the real `SocketServer` still satisfies this, and
- * `runDaemon` passes it unchanged. `transport` is deliberately *not* narrowed:
- * it is already `Transport` (`ReturnType<typeof openPanel>` resolves to it),
- * and although `close()` goes uncalled here, `Painting` below holds the same
- * type and does call it.
+ * `runDaemon` passes it unchanged.
+ *
+ * `transport` is left as the whole `Transport` and that is worth being honest
+ * about: both this and `Painting` use strict subsets of it — `status` and
+ * `send` here, `status` alone there — so the narrowing argument applies and has
+ * simply not been done. An earlier draft claimed `Painting` calls `close()`. It
+ * does not; the one `close()` is in `runDaemon`'s `stop` closure, on its own
+ * local binding.
  */
 type Painter = {
   readonly transport: Transport;
@@ -595,11 +602,20 @@ export async function paintOnce(
   // **The lists are equal at HEAD**, which is exactly the moment this guard
   // looks deletable and is worst to be without — an earlier version of this
   // comment said so while they were unequal, and the sentence it warned about
-  // is now the state of the tree. They were unequal again as recently as the
-  // commit before this one, when `birthday` was baked and not yet wired.
-  // `pnpm --filter @tamaclaude/daemon exec vitest run src/animation.test.ts`
-  // is what checks it; the count is not written down here because the two
-  // previous attempts to write it down went stale within a week. They are kept because the two lists are
+  // is now the state of the tree. They were unequal at the merge of the
+  // `birthday` art, which baked it without wiring it; the commit after that one
+  // wired it and closed the gap. (An earlier draft put the inequality one
+  // commit later, at the commit that had already fixed it.)
+  //
+  // The count is not written down here: two previous attempts went stale within
+  // a week. What replaced it must be run from the repo root —
+  // `pnpm exec vitest run packages/daemon/src/animation.test.ts` — because a
+  // `pnpm --filter` form resolves the config's globs against the package
+  // directory and exits non-zero having run nothing, which is the trap that
+  // file's own header warns about and which an earlier draft of this line fell
+  // into. And it proves less than the sentence above claims: the assertion is
+  // `ANIMATIONS ⊆ SPRITE_NAMES`, so a name baked and not wired leaves it green.
+  // Equality is checked by nothing. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what

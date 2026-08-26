@@ -68,7 +68,7 @@ today returns more attributes than there are files. Run the grep rather than
 quoting a figure: this count was stated wrong three times in one day before
 anyone checked it against the corpus.
 
-Nor is it one re-bake: fourteen are animations that go through `bake-sprites`,
+Nor is it one re-bake: most are animations that go through `bake-sprites`,
 `splash.svg` bakes to a firmware header and so needs a reflash, and `base.svg`
 bakes to nothing, being the reference the others were copied from. A build step
 rather than a runtime one, and the reason the character is not per-pack.
@@ -529,7 +529,7 @@ It is also among the cheapest things in the repo. `idle` measures 3,609 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
 the six until `permission-sign` (2,645) and `confused` (3,323) landed. The ten
 that existed when this was last measured ran 2,645 / 3,323 / 3,609 / 3,905 /
-5,836 / 6,163 / 6,332 / 9,966 / 14,545 / 22,568; there are fourteen now, so
+5,836 / 6,163 / 6,332 / 9,966 / 14,545 / 22,568; there are more now, so
 treat that spread as a shape rather than a census. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
