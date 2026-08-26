@@ -662,54 +662,60 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 ## Stage 5 — Personalisation (Sun 6 – Sun 13 Sep)
 
-- [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
-      sprite. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
-      points; `tamaclaude pack` confirms which, and prints the countdown.
-      **It is placed by hand and nothing ships it.** Being gitignored is the
-      point — it holds material that should not be on the public internet — but
-      the consequence is that a fresh clone does not contain it, so it travels
-      out of band during the in-person install and exists in exactly one place
-      afterwards. A wiped Mac, a deleted folder or a re-clone loses it, and the
-      daemon then refuses to start with `no pack configured`.
-      **The channel is decided: its own private repository**, created 26 Aug,
-      with the recipient as a collaborator. `docs/INSTALL.md` step 3 clones it
-      straight into `~/.tamaclaude/pack` — `resolvePack` only reads
-      `manifest.json` from the directory and never enumerates it, so the `.git`
-      inside is invisible to the loader.
-      That was the alternative to closing the project, which would have solved
-      the same problem by making the public history a one-way door. It also
-      answers three things at once: delivery, backup (the repository _is_ the
-      copy), and updates, since a quip added later is a `git pull` rather than
-      a hand-off. **The address stays out of this repo** — the guide says "the
-      address you were given", the same way it treats the main one.
-      The remaining risk is his GitHub auth on a new machine, so hand over a
-      copy on whatever ships with the panel as well; the guide takes either.
-      **What the palette reaches today, measured 25 Aug.** `packages/cli`
-      composes with `extent: 'panel'`, so `withEnvironment` paints the
-      environment across the whole framebuffer and replaces the painter's ink
-      with `environmentInk(time)`. Swapping a pack for one that agrees on
-      nothing — magenta background, yellow ink — changes: - **zero** pixels with an empty strip, which is the modal case: `isLive`
-      keeps a session ten minutes, and overnight or any longer gap renders
-      the empty desk; - **zero** for a `resting` chip, because `TONE_ROLE` maps it to `ink`,
-      which has already been substituted — and `DONE`, `IDLE` and `ASLEEP`
-      are all resting; - 240 for an `active` or `attention` chip, capped at five by `MAX_CHIPS`.
-      So `palette[0]` never reaches a shipping pixel, and `palette[1]` only via
-      `sceneColours`' fallback on a pack carrying fewer than four entries.
-      **That is a consequence of a decision already taken, not a defect.**
-      `environment.ts` argues the ink substitution: a pack's ink is chosen
-      against its own background, and white on a midday sky is nearly
-      invisible, so whatever the text sits on should decide its colour. `panel`
-      extent was picked on 22 Aug, in the commit that wired the scenery on,
-      with the trade priced in both directions.
-      **The palette is still load-bearing** — the logo item below quantises to
-      it and the pet sprite is drawn in it — so what needs correcting is this
-      line's implied promise that a recipient will _see_ their palette in the
-      chrome. They will see it in quips, the birthday quip, their logo, their
-      pet, and a 240px chip while a session is working.
-      `packages/renderer/src/pack-swap.test.ts` holds the measurement;
-      `panel-mock --pack <dir>` renders any pack, which no tool could do
-      before — though `blit.ts` still cannot, so nothing yet puts a pack on
-      glass.
+- [~] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
+  sprite. **Four of the five are in, 26 Aug** — a palette chosen for the two
+  entries that actually reach the glass, quips mapped per state plus an idle
+  rotation, `birthday: 09-23`, and a 14x17 mark on the laptop lid. The pet
+  sprite is the remainder, and it needs art rather than a field.
+  It is no longer gitignored-and-nowhere: it is a private repo, cloned to
+  `~/.tamaclaude/pack/` on the author's machine and installed by step 3 of
+  `docs/INSTALL.md`. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
+  points; `tamaclaude pack` confirms which, and prints the countdown.
+  **It is placed by hand and nothing ships it.** Being gitignored is the
+  point — it holds material that should not be on the public internet — but
+  the consequence is that a fresh clone does not contain it, so it travels
+  out of band during the in-person install and exists in exactly one place
+  afterwards. A wiped Mac, a deleted folder or a re-clone loses it, and the
+  daemon then refuses to start with `no pack configured`.
+  **The channel is decided: its own private repository**, created 26 Aug,
+  with the recipient as a collaborator. `docs/INSTALL.md` step 3 clones it
+  straight into `~/.tamaclaude/pack` — `resolvePack` only reads
+  `manifest.json` from the directory and never enumerates it, so the `.git`
+  inside is invisible to the loader.
+  That was the alternative to closing the project, which would have solved
+  the same problem by making the public history a one-way door. It also
+  answers three things at once: delivery, backup (the repository _is_ the
+  copy), and updates, since a quip added later is a `git pull` rather than
+  a hand-off. **The address stays out of this repo** — the guide says "the
+  address you were given", the same way it treats the main one.
+  The remaining risk is his GitHub auth on a new machine, so hand over a
+  copy on whatever ships with the panel as well; the guide takes either.
+  **What the palette reaches today, measured 25 Aug.** `packages/cli`
+  composes with `extent: 'panel'`, so `withEnvironment` paints the
+  environment across the whole framebuffer and replaces the painter's ink
+  with `environmentInk(time)`. Swapping a pack for one that agrees on
+  nothing — magenta background, yellow ink — changes: - **zero** pixels with an empty strip, which is the modal case: `isLive`
+  keeps a session ten minutes, and overnight or any longer gap renders
+  the empty desk; - **zero** for a `resting` chip, because `TONE_ROLE` maps it to `ink`,
+  which has already been substituted — and `DONE`, `IDLE` and `ASLEEP`
+  are all resting; - 240 for an `active` or `attention` chip, capped at five by `MAX_CHIPS`.
+  So `palette[0]` never reaches a shipping pixel, and `palette[1]` only via
+  `sceneColours`' fallback on a pack carrying fewer than four entries.
+  **That is a consequence of a decision already taken, not a defect.**
+  `environment.ts` argues the ink substitution: a pack's ink is chosen
+  against its own background, and white on a midday sky is nearly
+  invisible, so whatever the text sits on should decide its colour. `panel`
+  extent was picked on 22 Aug, in the commit that wired the scenery on,
+  with the trade priced in both directions.
+  **The palette is still load-bearing** — the logo item below quantises to
+  it and the pet sprite is drawn in it — so what needs correcting is this
+  line's implied promise that a recipient will _see_ their palette in the
+  chrome. They will see it in quips, the birthday quip, their logo, their
+  pet, and a 240px chip while a session is working.
+  `packages/renderer/src/pack-swap.test.ts` holds the measurement;
+  `panel-mock --pack <dir>` renders any pack, which no tool could do
+  before — though `blit.ts` still cannot, so nothing yet puts a pack on
+  glass.
 - [x] **Watch the birthday on the panel.** Done 26 Aug, four weeks early and
       without touching the clock: a copy of the real pack dated that day, the
       daemon pointed at it with `TAMACLAUDE_PACK`, and the panel watched
