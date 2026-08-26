@@ -19,8 +19,13 @@
  * other home: turning a `Resolution` into a `Scene`, and turning consecutive
  * framebuffers into the smallest rectangle that changed.
  */
-import type { AnimationName, Session, SessionState } from '@tamaclaude/daemon';
-import type { LinkStatus, SerialSystem } from '@tamaclaude/device';
+import type {
+  AnimationName,
+  createRegistry,
+  Session,
+  SessionState,
+} from '@tamaclaude/daemon';
+import type { LinkStatus, SerialSystem, Transport } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
 import type {
@@ -39,7 +44,7 @@ import {
   startSocketServer,
 } from '@tamaclaude/daemon';
 import { openPanel } from '@tamaclaude/device';
-import { parsePackManifest } from '@tamaclaude/packs';
+import { isBirthday, parsePackManifest } from '@tamaclaude/packs';
 import {
   dirtyRect,
   encodeRect,
@@ -261,6 +266,48 @@ function subagentText(sessions: readonly Session[]): string {
 }
 
 /**
+ * Whether the birthday may take the stage from a state.
+ *
+ * True for the two states whose picture says nothing is happening, and there
+ * the birthday is strictly more informative than a Clawd standing about. False
+ * everywhere else: the stage has one picture, so celebrating over a running
+ * tool or a raised hand means *replacing* the thing the panel exists to show.
+ *
+ * **A total `Record` rather than a `Set`, for the reason `TOOL_STATES` gives
+ * in `message.ts` — `TONE` above rejects a chain of ternaries rather than a
+ * `Set`, so the argument generalises from it rather than being stated by it: a `Set` compiles clean
+ * when a state is added to `SESSION_STATES` and silently puts it outside.**
+ * This was a `Set` until a review planted `WAITING` in it — a party hat over a
+ * session that had asked a human a question a minute earlier and not been
+ * answered — and all six gates stayed green, because no test named `WAITING`
+ * and nothing made one necessary. That is the precise outcome `message.ts`
+ * says the feature exists to prevent. Defaulting safe was not the problem;
+ * "safe by absence" and "decided" are different things, and only one of them
+ * survives a tenth state arriving.
+ *
+ * Not named `RESTING`: `TONE` calls `DONE` resting, and this table
+ * deliberately excludes it.
+ */
+const BIRTHDAY_COVERS: Readonly<Record<SessionState, boolean>> = {
+  // Nothing is happening. The birthday is the more informative picture.
+  IDLE: true,
+  ASLEEP: true,
+  // A real event with its own picture, and a bounded window that falls through
+  // to `IDLE` — so the birthday follows it seconds later rather than losing.
+  DONE: false,
+  // Work in progress. `birthdayLine` covers these on the message band, which is
+  // safe there because the stage still shows the work; here it *is* the stage.
+  WORKING: false,
+  THINKING: false,
+  COMPACTING: false,
+  // Asking for a human. The one day of the year it matters most that the panel
+  // still says when to look is the day nobody is watching it for status.
+  NEEDS_PERMISSION: false,
+  WAITING: false,
+  FAILED: false,
+};
+
+/**
  * Which animation a resolved panel shows.
  *
  * Extracted and exported for one reason: as three lines inlined in `paintOnce`
@@ -273,10 +320,23 @@ function subagentText(sessions: readonly Session[]): string {
  * `sessions[0]` is the hero by construction: `resolve.ts` sorts once and
  * returns `state` from `ranked.at(0)` and `sessions` from the same array, so
  * they cannot disagree.
+ *
+ * **The birthday is decided here rather than in `animationFor`**, which is a
+ * pure function of state in a package that never sees a pack — so the date
+ * stays out of the table that maps states to pictures.
+ *
+ * The same *ordering* `message.ts` uses for the quip: `birthdayLine` runs ahead
+ * of the `quips.mapped[state]` lookup exactly as this check runs ahead of
+ * `animationFor`. Not the same package split, and an earlier draft claimed it
+ * was — `birthdayLine` and `messageFor` are both in `cli`, and nothing in
+ * `daemon` produces a message for it to sit one layer above.
  */
 export function animationForPanel(
   panel: ReturnType<typeof resolvePanel>,
+  pack: PackManifest,
+  now: number,
 ): AnimationName {
+  if (BIRTHDAY_COVERS[panel.state] && isBirthday(pack, now)) return 'birthday';
   return animationFor(panel.state, {
     tool: panel.tool,
     errorType: panel.sessions.at(0)?.errorType,
@@ -477,9 +537,36 @@ function linkLine(status: LinkStatus): string {
   return status.refusal ?? `panel ${status.phase}`;
 }
 
+/**
+ * What one frame needs, narrowed to what it reads.
+ *
+ * `listener` was `Awaited<ReturnType<typeof startSocketServer>>` and
+ * `paintOnce` calls exactly one of its methods. The whole type made the
+ * function look as though it needed a running server, so the only way to
+ * exercise a frame was to start one — which the `describe('the daemon
+ * command')` block does, driving real frames through here via `runDaemon`.
+ * Three of its five assert bytes on the wire; gutting the send fails exactly
+ * those three, which is how the count was arrived at rather than asserted. The
+ * other two assert a byte count is *unchanged* and that the socket is gone.
+ * What none of the five can do is put this function on a chosen date, which is
+ * why the birthday's own path reached the panel untested. An earlier draft said
+ * "nothing ever did", which erases the block entirely.
+ *
+ * Structural typing means the real `SocketServer` still satisfies this, and
+ * `runDaemon` passes it unchanged.
+ *
+ * `transport` is left as the whole `Transport` and that is worth being honest
+ * about: both this and `Painting` use strict subsets of it — `status` and
+ * `send` here, `status` alone there — so the narrowing argument applies and has
+ * simply not been done. An earlier draft claimed `Painting` calls `close()`. It
+ * does not; the one `close()` is in `runDaemon`'s `stop` closure, on its own
+ * local binding.
+ */
 type Painter = {
-  readonly transport: ReturnType<typeof openPanel>;
-  readonly listener: Awaited<ReturnType<typeof startSocketServer>>;
+  readonly transport: Transport;
+  readonly listener: {
+    readonly snapshot: () => ReturnType<typeof createRegistry>;
+  };
   readonly pack: PackManifest;
   readonly now: () => number;
   readonly size: { readonly width: number; readonly height: number };
@@ -492,7 +579,7 @@ type Painter = {
  * Lifted out of `runDaemon` because that function has a fifty-line budget and
  * this is the part of it worth reading on its own.
  */
-async function paintOnce(
+export async function paintOnce(
   ctx: Painter,
   previous: Frame | undefined,
 ): Promise<Frame | undefined> {
@@ -512,10 +599,23 @@ async function paintOnce(
   // before it is wired, which `overheated` did on 24 Aug (art 08:58, wiring
   // 12:01), `board-game` did again on 25 Aug (art 11:07, wiring 12:23), and
   // `sweeping` did the same day at a 5h40m gap (art 16:15, wiring 21:55).
-  // **The lists are equal at HEAD, all fourteen names**, which is exactly the
-  // moment this guard looks deletable and is worst to be without — an earlier
-  // version of this comment said so while they were unequal, and the sentence
-  // it warned about is now the state of the tree. They are kept because the two lists are
+  // **The lists are equal at HEAD**, which is exactly the moment this guard
+  // looks deletable and is worst to be without — an earlier version of this
+  // comment said so while they were unequal, and the sentence it warned about
+  // is now the state of the tree. They were unequal at the merge of the
+  // `birthday` art, which baked it without wiring it; the commit after that one
+  // wired it and closed the gap. (An earlier draft put the inequality one
+  // commit later, at the commit that had already fixed it.)
+  //
+  // The count is not written down here: two previous attempts went stale within
+  // a week. What replaced it must be run from the repo root —
+  // `pnpm exec vitest run packages/daemon/src/animation.test.ts` — because a
+  // `pnpm --filter` form resolves the config's globs against the package
+  // directory and exits non-zero having run nothing, which is the trap that
+  // file's own header warns about and which an earlier draft of this line fell
+  // into. And it proves less than the sentence above claims: the assertion is
+  // `ANIMATIONS ⊆ SPRITE_NAMES`, so a name baked and not wired leaves it green.
+  // Equality is checked by nothing. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what
@@ -526,7 +626,7 @@ async function paintOnce(
   // Earlier versions of this comment said three states fall back to
   // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
   // reached only from `WORKING`, with an unmapped tool or with no tool.
-  const wanted = animationForPanel(panel);
+  const wanted = animationForPanel(panel, pack, at);
   const frames = await framesFor(wanted);
   const showing =
     frames.length > 0

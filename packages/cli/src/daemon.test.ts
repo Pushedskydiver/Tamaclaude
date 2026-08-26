@@ -1,4 +1,6 @@
+import type { AnimationName, SessionState } from '@tamaclaude/daemon';
 import type { SerialSystem, SerialWatch } from '@tamaclaude/device';
+import type { Frame } from '@tamaclaude/protocol';
 
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
@@ -10,12 +12,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { createRegistry, observe, resolvePanel } from '@tamaclaude/daemon';
 import { parsePackManifest } from '@tamaclaude/packs';
-import { loadSprite, render } from '@tamaclaude/renderer';
+import { frame } from '@tamaclaude/protocol';
+import { loadSprite, panelSize, render } from '@tamaclaude/renderer';
 
 import {
   animationForPanel,
   frameAt,
   framesFor,
+  paintOnce,
   runDaemon,
   sceneFor,
 } from './daemon.js';
@@ -372,7 +376,9 @@ describe('what the panel says', () => {
   it('says happy birthday all day, without hiding anything that needs a human', () => {
     // **This is not the rule `DONE` is ranked by, and an earlier version of
     // this comment said it was.** `DONE` loses to `WORKING` and `THINKING`
-    // (`state.ts` ranks it 5 against their 3 and 4) on the grounds that "a
+    // (`state.ts` ranks them above it; the numbers are not repeated here
+    // because this one said "5" until `COMPACTING` took 5 and pushed `DONE` to
+    // 6) on the grounds that "a
     // payoff belongs on a quiet desk". The birthday quip covers them. The two
     // rules share exactly one half — neither covers a state asking for a human
     // — and it was the appeal to precedent that was false, not the behaviour.
@@ -512,6 +518,252 @@ describe('what the panel says', () => {
     ).toBe('nothing doing');
   });
 
+  it('puts the birthday on the stage only where the stage would say nothing', () => {
+    // The stage's half of the birthday, and it is a **stricter** rule than the
+    // message band's. `birthdayLine` covers every state that is not asking for
+    // a human, including `WORKING`, and the work is still legible while it does
+    // — from the animation and the strip chip, not the band. **Not from the
+    // band:** `messageFor` returns the quip early, so on the day the tool name
+    // is suppressed for the whole day. An earlier draft here said the glass
+    // showed "Bash is running" and "happy birthday" at once; it shows one
+    // string.
+    //
+    // The stage cannot do that. It has one picture, so celebrating over a
+    // running tool means *replacing* the tool's picture, and a Clawd in a party
+    // hat while `Bash` runs is a lie of exactly the kind `state.ts` refuses
+    // when it ranks `DONE` below `WORKING`. So this replaces only the two
+    // states that mean nothing is happening — where the alternative is a Clawd
+    // doing nothing, and the birthday is strictly more informative.
+    //
+    // `DONE` keeps `payoff` for the same reason, though the band celebrates on
+    // it: `DONE` is a real event with its own picture, and it is a bounded
+    // window (`DONE_AFTER_MS` to `+ DONE_SHOWN_MS`) that falls through to
+    // `IDLE` — so the birthday follows it seconds later rather than losing.
+    const birthdayPack = parsePackManifest({
+      ...pack,
+      birthday: { date: '09-23', quip: 'happy birthday' },
+    });
+    const onTheDay = new Date(2026, 8, 23, 10, 0, 0).getTime();
+    const dayBefore = new Date(2026, 8, 22, 10, 0, 0).getTime();
+
+    const at = (events: readonly HookEvent[], when: number): Registry =>
+      events.reduce<Registry>(
+        (registry, event) => observe(registry, event, when),
+        createRegistry(when),
+      );
+
+    // Assert the events really produce the state before asserting the picture.
+    // The quip table directly above had two rows that did not produce the state
+    // they named, and a picture-only assertion cannot see that. Caught inside
+    // its own PR rather than after merge — an earlier draft here said it
+    // "shipped", which asserts an event that did not happen.
+    const check = (row: {
+      readonly state: SessionState;
+      readonly events: readonly HookEvent[];
+      readonly shows: AnimationName;
+      readonly builtAt?: number;
+    }): void => {
+      const { state, events, shows, builtAt = onTheDay } = row;
+      const panel = resolvePanel(at(events, builtAt), onTheDay);
+      expect(panel.state, `${state} setup`).toBe(state);
+      expect(animationForPanel(panel, birthdayPack, onTheDay), state).toBe(
+        shows,
+      );
+    };
+
+    const P = { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' } as const;
+    const stop = { sessionId: 's', kind: 'Stop' } as const;
+
+    // Replaced: both resting states, where the stage would otherwise be a
+    // Clawd doing nothing.
+    check({ state: 'IDLE', events: [stop], shows: 'birthday' });
+    check({
+      state: 'ASLEEP',
+      events: [stop],
+      shows: 'birthday',
+      builtAt: onTheDay - 300_000,
+    });
+
+    // Untouched: the picture is carrying information the party hat would erase.
+    check({ state: 'WORKING', events: [P], shows: 'gym' });
+    check({
+      state: 'THINKING',
+      events: [{ sessionId: 's', kind: 'UserPromptSubmit' }],
+      shows: 'thinking',
+    });
+    check({
+      state: 'DONE',
+      events: [P, stop],
+      shows: 'payoff',
+      builtAt: onTheDay - 45_000,
+    });
+    check({
+      state: 'NEEDS_PERMISSION',
+      events: [{ sessionId: 's', kind: 'PermissionRequest' }],
+      shows: 'permission-sign',
+    });
+    check({
+      state: 'FAILED',
+      events: [{ sessionId: 's', kind: 'StopFailure' }],
+      shows: 'dizzy',
+    });
+    // **`WAITING` is the row that matters most and was missing.** A review
+    // planted it in the covered set and all six gates stayed green — a party
+    // hat over a session that asked a human a question a minute ago and has not
+    // been answered. `message.ts` names that exact outcome as the thing the
+    // feature exists to prevent. The band is safe there by construction —
+    // `birthdayLine` gates on `needsAttention`, which is a rank comparison and
+    // cannot miss a state — and the band's test table covers it besides. The
+    // stage had neither, though its whole thesis is that it must be stricter.
+    check({
+      state: 'WAITING',
+      events: [{ sessionId: 's', kind: 'Notification' }],
+      shows: 'confused',
+      builtAt: onTheDay - 60_000,
+    });
+    check({
+      state: 'COMPACTING',
+      events: [{ sessionId: 's', kind: 'PreCompact' }],
+      shows: 'sweeping',
+    });
+
+    // And on any other day the resting states go back to resting, which is the
+    // same assertion read backwards: the date is the only reason it ever wins.
+    expect(
+      animationForPanel(
+        resolvePanel(at([stop], dayBefore), dayBefore),
+        birthdayPack,
+        dayBefore,
+      ),
+    ).toBe('idle');
+
+    // **An empty desk on the day, which is the likeliest path of all.** He
+    // plugs the panel in before opening a terminal, so there is no session at
+    // all: `resolvePanel` takes its state from `emptyDesk`, the ranking pipeline
+    // having run over an empty array.
+    // Every other row here builds a session first, so nothing covered the case
+    // the gift actually depends on.
+    expect(
+      animationForPanel(
+        resolvePanel(createRegistry(onTheDay), onTheDay),
+        birthdayPack,
+        onTheDay,
+      ),
+    ).toBe('birthday');
+
+    // A pack with no birthday never celebrates, on any date. The feature is
+    // opt-in and `packs/example` must behave exactly as it did.
+    expect(
+      animationForPanel(
+        resolvePanel(at([stop], onTheDay), onTheDay),
+        pack,
+        onTheDay,
+      ),
+    ).toBe('idle');
+  });
+
+  it('paints the birthday stage on the day, through the real frame path', async () => {
+    // **The composition, not the function.** `animationForPanel` is unit-tested
+    // above, and that test passes with `paintOnce` calling it as
+    // `animationForPanel(panel, pack, 0)` — epoch 0 is not 09-23, so the
+    // feature is gone on the only path the panel uses and every other test in
+    // `packages/cli` stays green. That mutant was planted and survived, which
+    // is why this exists. It is the same gap the doc block on
+    // `animationForPanel` records for `errorType`, one level up.
+    //
+    // Not "epoch 0 is never a birthday", which is false: under the `TZ` this
+    // suite pins, epoch 0 is 1970-01-01 01:00 local and a pack dated `01-01`
+    // celebrates on it.
+    const birthdayPack = parsePackManifest({
+      ...pack,
+      birthday: { date: '09-23', quip: 'happy birthday' },
+    });
+
+    // **One second past the hour, and that second is load-bearing.** On the
+    // hour, `Math.floor(t / FRAME_MS)` is divisible by every frame count this
+    // repo uses, so every animation sits on frame 0 and a frame-indexing bug is
+    // invisible. At `:01` both animations here are on frame 8, and frame 8 of
+    // each differs from its own frame 0 — checked, not assumed.
+    const onTheDay = new Date(2026, 8, 23, 10, 0, 1).getTime();
+    const dayBefore = new Date(2026, 8, 22, 10, 0, 1).getTime();
+    const FRAME = 8;
+
+    // Idle: one `Stop` and nothing since, which is where the birthday lands.
+    // Built at the instant it is painted at, per side — a registry stamped a
+    // day in the future resolves `IDLE` by accident (every elapsed threshold
+    // fails on a negative) rather than because the state machine said so.
+    const idleAt = (when: number): ReturnType<typeof createRegistry> =>
+      observe(createRegistry(when), { sessionId: 's', kind: 'Stop' }, when);
+
+    // `panelSize('landscape')`, not `{ width: 172, height: 320 }` — the same
+    // call the daemon makes, spelled out because its `ORIENTATION` const is
+    // module-private and no test can name it. The daemon
+    // runs landscape, so its framebuffer is 320 wide; the portrait literal is a
+    // geometry the daemon never produces, and it only survived `extractRect`
+    // because 172·320 and 320·172 are the same number of pixels. `daemon.ts`
+    // records a real throw from exactly that confusion.
+    const size = panelSize('landscape');
+    const whole = { x: 0, y: 0, width: size.width, height: size.height };
+    const painterAt = (when: number): Parameters<typeof paintOnce>[0] => ({
+      transport: {
+        send: () => Promise.resolve(),
+        status: () => ({ phase: 'online', needsPrime: false }),
+        close: () => Promise.resolve(),
+      },
+      listener: { snapshot: () => idleAt(when) },
+      pack: birthdayPack,
+      now: () => when,
+      size,
+      whole,
+    });
+
+    // **Two things had to be pinned before this assertion meant anything.** The
+    // first version pinned neither; the second pinned the animation name and
+    // said so, and an earlier draft of this very block claimed it pinned
+    // nothing.
+    //
+    // Comparing the day's frame against another day's passes with the stage
+    // un-wired, and the reason matters. The first correction said the two
+    // instants pick different frames of whatever is playing. They cannot: two
+    // instants exactly 24 hours apart are 691,200 frames apart at 125 ms, and
+    // every loop length this repo uses divides that, so a day's separation
+    // lands on the *same* index for every animation. What actually differed
+    // was the message band, which celebrates on its own — the same cause as
+    // the neighbouring mutant, not a second one.
+    //
+    // Naming the animation fixes that half. It does not fix the frame index:
+    // re-invoking `frameAt` on the expected side cancels any mutation of it,
+    // and so does re-implementing the formula — `daemon.test.ts` already
+    // records a review that made `frameAt` return a constant and watched the
+    // suite stay green for exactly that reason. So the index is a literal.
+    const onDay = await paintOnce(painterAt(onTheDay), undefined);
+    expect(onDay).toEqual(await expectedFrame('birthday', onTheDay));
+
+    // And on any other day the same path draws the resting stage.
+    const offDay = await paintOnce(painterAt(dayBefore), undefined);
+    expect(offDay).toEqual(await expectedFrame('idle', dayBefore));
+
+    async function expectedFrame(
+      animation: AnimationName,
+      when: number,
+    ): Promise<Frame> {
+      const frames = await framesFor(animation);
+      expect(frames.length, `${animation} frame count`).toBeGreaterThan(FRAME);
+      return frame(
+        render(
+          sceneFor({
+            registry: idleAt(when),
+            pack: birthdayPack,
+            now: when,
+            sprites: frames.slice(FRAME, FRAME + 1),
+            animation,
+          }),
+        ).pixels,
+        size.width,
+      );
+    }
+  });
+
   it('picks overheated for a rate limit on the path the panel actually uses', () => {
     // The production path, not the table. `animationFor` is unit-tested, but
     // `paintOnce` composed the arguments inline and nothing exercised that
@@ -525,8 +777,12 @@ describe('what the panel says', () => {
       { sessionId: 's', kind: 'PreToolUse', tool: 'Bash' },
       { sessionId: 's', kind: 'StopFailure', errorType: 'server_error' },
     );
-    expect(animationForPanel(resolvePanel(limited, NOW))).toBe('overheated');
-    expect(animationForPanel(resolvePanel(other, NOW))).toBe('dizzy');
+    expect(animationForPanel(resolvePanel(limited, NOW), pack, NOW)).toBe(
+      'overheated',
+    );
+    expect(animationForPanel(resolvePanel(other, NOW), pack, NOW)).toBe(
+      'dizzy',
+    );
   });
 
   it('gives a rate limit its own quip, so it is not just a different picture', () => {

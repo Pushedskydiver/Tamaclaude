@@ -273,7 +273,7 @@ harness approximates the bands", and a chosen one.
       The raw art was 24,192,000 bytes of RGB565 plus the same again halved for
       the mask, and encoded it shipped as 1,128,216. **Those are the six-animation
       figures and they are the stale copy.** So was the thirteen-animation copy
-      that replaced them: measured 25 Aug, there are fourteen animations and 936
+      that replaced them: measured 25 Aug at fourteen animations: 936
       frames, 62,899,200 raw and 2,744,512 encoded — the thirteen-animation
       total plus `sweeping` exactly. `tools/bake-sprites.ts` and
       `packages/renderer/src/sprites/index.ts` were said to "carry the live
@@ -495,7 +495,7 @@ than partially. Eight good screens beat nine plus four rough ones.
 - [~] ~~TS generator: base SVG + example + plan → LLM → animated SVG~~ —
   **cut, 25 Aug.** It would have automated `docs/ANIMATION.md` §The
   authoring loop, which is a documented agent procedure. That loop has
-  already produced the entire catalogue — fourteen animations, all of them
+  already produced the entire catalogue, all of it
   CSS against `base.svg` under §The generation contract — so the tool would
   wrap a process that demonstrably works when invoked by hand.
   **This is not the plan's condition firing; nothing conditioned it.** It is
@@ -634,8 +634,8 @@ than partially. Eight good screens beat nine plus four rough ones.
       "Tier C — stretch (2): road bike, beacon. Cut without regret", and this
       is that cut being taken rather than a new judgement.
       It is the most expensive item in the catalogue: the first prop that would
-      carry Clawd, and no animation in the corpus has a seated pose — all
-      fourteen stand, climb or lie. And it has no trigger. `spec.md` specifies
+      carry Clawd, and no animation in the corpus has a seated pose — every
+      one of them stands, climbs or lies. And it has no trigger. `spec.md` specifies
       one ("any tool, same session >90s") but nothing implements it:
       `Refinement` in `animation.ts` is `{ tool?, errorType? }`, so no elapsed
       time reaches the mapping. So the work is a pose the corpus does not have,
@@ -778,8 +778,17 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
-- [~] Birthday screen, date-triggered 23 Sep. **The trigger is built; the
-  screen is not, and no tracked pack carries a date.** `packs` takes an
+- [~] Birthday screen, date-triggered 23 Sep. **Trigger, art and stage are
+  built; the screen has never been seen.** No _tracked_ pack carries a date
+  and none should — the recipient's private pack repo carries it — which is
+  exactly why nothing here has rendered one: `packs/example` has no
+  `birthday` key and `blit.ts` hardcodes `packs/example`, so no tool in this
+  repo can put the triggering pack on glass, and `~/.tamaclaude/pack/` does
+  not exist on the author's machine either. Every check that exists is a
+  unit test against a synthetic pack. This was briefly `[x]` on 26 Aug on
+  the strength of those tests; a review pointed out that nobody has looked
+  at it, and that the clock test below falls four days before the gift,
+  inside the window this plan reserves for bug fixes only. `packs` takes an
   optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
   `isBirthday` compares in local time because the day the panel should
   celebrate is the one the person beside it is having. `02-29` falls back
@@ -804,13 +813,37 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   #B22222 sits on the peach-to-background ramp. Purple does not. §Palette
   snapping asks what edge a new colour sits between, and counting the frame is
   how you answer it.
-  What remains: **nothing draws it yet.** `isBirthday` reaches `message.ts`
-  and the quip band, not `animationFor`, and `ANIMATIONS` has no `birthday`
-  entry. Wiring it is the same ranking question this item already settles for
-  the quip — beats resting and working, loses to anything asking for a human —
-  so it wants that rule applied to the stage as well, and a test, rather than
-  a special case bolted onto a pure function of state. Also still open: a pack
-  that carries a date, which the recipient's private pack repo now does. Selection itself is built — `TAMACLAUDE_PACK`, else
+  **The stage is wired, and to a stricter rule than this item predicted.**
+  The prediction — deleted from this paragraph, so it is quoted rather than
+  pointed at — was that wiring the stage wants the quip's rule: beats resting
+  and working, loses to anything asking for a human. (The line four
+  paragraphs up saying the same of the _quip_ is correct and is not what was
+  wrong.) `animationForPanel` covers `IDLE` and `ASLEEP` only.
+  The reason is not the one the ranking paragraph above gives, and an earlier
+  draft of this line claimed it was. The band can celebrate over `WORKING`
+  because the work stays legible from the animation and the strip chip —
+  though not from the band itself, which shows one string and gives it to the
+  quip for the day. The stage has one picture, so celebrating over a running
+  tool means _replacing_ it. That is a judgement about what a once-a-year
+  screen is worth, not a consequence of `STATE_RANK`, which ranks _sessions_
+  and never sees a birthday. It is written down here because it was chosen.
+  `DONE` keeps `payoff`: a real event with its own picture, on a window that
+  expires 15s later — into `IDLE` usually, but into `WAITING` when the
+  session has a notification, because `DONE_AFTER_MS + DONE_SHOWN_MS` is
+  exactly `WAITING_AFTER_MS` and `effectiveState` checks `WAITING` first.
+  There the birthday does not follow at all; it waits for the human, which is
+  the point.
+  **The known cost is flicker.** On a working birthday the stage alternates
+  between the party hat and the work picture at every turn boundary, all day.
+  Nothing measures how that reads, and the only thing that can is the clock
+  test below.
+  The rule lives in a total `Record<SessionState, boolean>`, not a `Set`.
+  That is what makes a tenth state fail to compile until someone decides; it
+  is **not** what kills a wrong row, since a `Record` takes `WAITING: true`
+  as happily as a `Set` took `'WAITING'`. What kills it is a test row per
+  state, added after a review planted exactly that and watched all six gates
+  stay green.
+  Selection itself is built — `TAMACLAUDE_PACK`, else
   `~/.tamaclaude/pack/` — so the trigger is reachable as soon as a pack names
   a date. What is not built is anything that _sets_ the variable on boot; that
   is the launchd item in Stage 3. This paragraph said the mechanism was
