@@ -1,8 +1,9 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table and an optional birthday. Props and a logo
- * are planned (`BUILD_PLAN.md` Stage 5) and are not fields yet. The character
+ * A pack is a palette, a quip table, an optional birthday and an optional
+ * logo. Props are planned (`BUILD_PLAN.md` Stage 5) and are not fields yet.
+ * The character
  * is deliberately not part of it: there is one base geometry and one animation
  * set, and the sprites are baked to fixed RGB565 by `tools/bake-sprites.ts`, so
  * nothing recolours Clawd per pack — a claim this block made until 25 Aug.
@@ -10,14 +11,23 @@
  * **"Changes every screen" is aspirational, and measured it is not true today.**
  * `packages/renderer/src/pack-swap.test.ts` records what a swap actually moves
  * on the shipping panel: nothing at all with an empty session strip, and one
- * 240px chip per working session. The palette's larger role is the logo and pet
- * sprite that quantise to it, which Stage 5 has yet to build.
+ * 240px chip per working session — which no longer enumerates it, because a
+ * pack carrying a `logo` also moves the mark on the `typing` screen, and
+ * `pack-swap.test.ts` does not measure that. How many pixels depends on the
+ * mark; it is not written down here because the only one measured so far is in
+ * a private pack and nobody else can reproduce the figure. The
+ * palette's larger role is what quantises to it: the logo does, since 26 Aug,
+ * and the pet sprite will.
  *
- * The schema below is `name`, `palette`, `quips` and an optional `birthday`.
- * Props and logo land with the renderer. This line enumerates the schema
- * exhaustively on purpose, so adding a field without touching it is a visible
- * omission — `birthday` was added under the previous wording, which named only
- * the first three and had been correct when written.
+ * The schema below is `name`, `palette`, `quips`, an optional `birthday` and an
+ * optional `logo`. Props land with the renderer. This line enumerates the
+ * schema exhaustively on purpose, so adding a field without touching it is a
+ * visible omission — and it has now caught two: `birthday` went in under the
+ * wording that named only the first three, and `logo` went in under the
+ * wording that named four and said a logo was not a field yet. Both were
+ * correct when written and neither was updated by the commit that falsified
+ * it, which is the failure this paragraph exists to make visible rather than
+ * to prevent.
  */
 
 import { rgb565 } from '@tamaclaude/protocol';
@@ -52,6 +62,16 @@ function dayExists(date: string): boolean {
   const day = Number(date.slice(3));
   return day <= (DAYS_IN_MONTH[month - 1] ?? 0);
 }
+
+/**
+ * What a base64 payload looks like. Deliberately shape-only.
+ *
+ * A pack is hand-edited and is a genuine trust boundary, but this cannot check
+ * that the bytes decode to a mark of the right size — that needs the codec,
+ * which lives above this package. It rejects the obvious paste error and
+ * leaves the rest to the renderer, which treats a bad payload as no logo.
+ */
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/u;
 
 const packManifestSchema = z.object({
   name: z.string().min(1),
@@ -96,6 +116,48 @@ const packManifestSchema = z.object({
         )
         .refine(dayExists, 'birthday.date must be a day that exists'),
       quip: z.string().min(1),
+    })
+    .optional(),
+  /**
+   * A company mark for the laptop lid in `typing`, or nothing.
+   *
+   * **Pixels, not a picture.** The renderer's runtime dependencies are
+   * `@tamaclaude/packs` and `@tamaclaude/protocol` and nothing else — there is
+   * no image decoder anywhere in the shipping graph — so a pack cannot ship a
+   * PNG or an SVG. What it can ship is what the sprites already are: RGB565
+   * through `encodeRect`, base64 of a mode byte and its payload, plus a
+   * separately encoded bit-mask saying which pixels are drawn.
+   * `tools/logo2pixel.ts --format pack` writes both.
+   *
+   * **The lid, not the boot splash**, which is the one place a reader might
+   * expect it. The splash is drawn by the firmware before the daemon is
+   * running, and firmware is flashed rather than configured — so a splash
+   * logo could not be a pack field at all.
+   */
+  logo: z
+    .object({
+      /**
+       * **Bounded by the lid it is drawn on**, which is 84x20 device pixels —
+       * `LID_SLOT` in `packages/renderer/src/logo.ts`, where the numbers come
+       * from and where a test asserts these two agree. This package sits below
+       * the renderer in the dependency order and cannot import them, so the
+       * limits are repeated here and the drift is caught by that test rather
+       * than by a mark drawn across Clawd's face.
+       *
+       * Refused rather than clipped: a clipped mark is a wrong mark shown
+       * confidently, and the pack boundary is where a bad value should be
+       * named.
+       */
+      width: z.number().int().min(1).max(84),
+      height: z.number().int().min(1).max(20),
+      /**
+       * `.min(1)` because the empty string is valid base64 and decodes to
+       * nothing, which `logo.ts` then treats as no logo at all — a pack that
+       * looks configured and shows no mark, with no error anywhere. That is
+       * the class of fault this boundary exists to name.
+       */
+      pixels: z.string().min(1).regex(BASE64, 'logo.pixels must be base64'),
+      mask: z.string().min(1).regex(BASE64, 'logo.mask must be base64'),
     })
     .optional(),
 });

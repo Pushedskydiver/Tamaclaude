@@ -193,3 +193,40 @@ describe('the birthday', () => {
     expect(isBirthday(parsePackManifest(valid), Date.now())).toBe(false);
   });
 });
+
+describe('a pack logo', () => {
+  const base = {
+    name: 'p',
+    palette: [
+      [0, 0, 0],
+      [255, 255, 255],
+    ],
+    quips: { mapped: {}, idle: [] },
+  };
+  const logo = { width: 12, height: 14, pixels: 'AAA=', mask: 'AAA=' };
+
+  it('is optional, and a pack without one is unchanged', () => {
+    expect(parsePackManifest(base).logo).toBeUndefined();
+  });
+
+  it('is accepted when it carries dimensions and both payloads', () => {
+    expect(parsePackManifest({ ...base, logo }).logo).toEqual(logo);
+  });
+
+  it('refuses a mark too large for the lid it is drawn on', () => {
+    // The lid face is 84x20 device pixels and the mark is blitted at a fixed
+    // slot inside it, so anything larger is drawn over the laptop and the
+    // crab. Clipping would hide it silently; refusing says which field is
+    // wrong, at the boundary where the pack is parsed.
+    expect(() => parsePackManifest({ ...base, logo: { ...logo, width: 85 } })).toThrow();
+    expect(() => parsePackManifest({ ...base, logo: { ...logo, height: 21 } })).toThrow();
+  });
+
+  it('refuses a zero dimension, which encodes to nothing at all', () => {
+    expect(() => parsePackManifest({ ...base, logo: { ...logo, width: 0 } })).toThrow();
+  });
+
+  it('refuses a payload that is not base64', () => {
+    expect(() => parsePackManifest({ ...base, logo: { ...logo, pixels: 'not base64!' } })).toThrow();
+  });
+});

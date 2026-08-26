@@ -100,6 +100,37 @@ function placeholderBands(name: string): Pick<Scene, 'status' | 'message'> {
 }
 
 /**
+ * The same raster in every slot.
+ *
+ * `paintStage` draws nothing in a slot it has no sprite for, so a two-up stage
+ * given one raster would be half empty and the comparison would be of the
+ * wrong thing.
+ */
+function everySlot(
+  raster: StageSprite,
+  layout: StageLayout,
+  orientation: Orientation,
+): readonly StageSprite[] {
+  return Array.from(
+    { length: spriteSlots(layout, orientation).length },
+    () => raster,
+  );
+}
+
+/**
+ * The pack's mark, on the one animation that has a lid to put it on.
+ *
+ * The daemon's own rule (`packages/cli/src/daemon.ts`), repeated here so the
+ * artefact is the same picture the panel shows. Without it no tool in this repo
+ * could draw a pack-supplied logo at all, and `BUILD_PLAN.md` Stage 5 sets
+ * exactly that as the item's exit: "if `panel-mock` cannot draw a
+ * pack-supplied mark, stop".
+ */
+function markFor(name: string, pack: PackManifest): Scene['logo'] {
+  return name === 'typing' ? pack.logo : undefined;
+}
+
+/**
  * Render every animation raster into a full-panel framebuffer.
  *
  * Returns `Frame`s rather than `Framebuffer`s because everything downstream —
@@ -203,14 +234,9 @@ export function composePanels(
       orientation: options.orientation,
       layout,
       pack: options.pack,
-      // One per slot: `paintStage` draws nothing in a slot it has no sprite
-      // for, so a two-up stage given one raster would be half empty and the
-      // comparison would be of the wrong thing.
-      sprites: Array.from(
-        { length: spriteSlots(layout, options.orientation).length },
-        () => raster,
-      ),
+      sprites: everySlot(raster, layout, options.orientation),
       sessions: options.sessions ?? [],
+      logo: markFor(options.name, options.pack),
       ...placeholderBands(options.message ?? options.name),
       environment: {
         time: options.time ?? 'day',

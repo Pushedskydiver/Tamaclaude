@@ -47,7 +47,7 @@ export function createDaemon(
 // this barrel the day something outside the package needs it, which is the
 // same rule `packages/renderer/src/index.ts` applies to `band.js`. Adding one
 // early is what `knip` is configured to catch.
-export { animationFor } from './animation.js';
+export { animationFor, ANIMATIONS } from './animation.js';
 export type { AnimationName } from './animation.js';
 export { createRegistry, observe } from './registry.js';
 export { resolvePanel } from './resolve.js';

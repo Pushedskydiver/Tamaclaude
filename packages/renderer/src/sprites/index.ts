@@ -39,7 +39,9 @@
  */
 import type { Frame } from '@tamaclaude/protocol';
 
-import { decodeRect, frame } from '@tamaclaude/protocol';
+import { frame } from '@tamaclaude/protocol';
+
+import { decodeBlob, maskWords, unpackMask } from '../blob.js';
 
 /**
  * Every animation that has been baked.
@@ -103,57 +105,16 @@ const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {
 
 const loaded = new Map<SpriteName, readonly Sprite[]>();
 
-/** A mode byte, then the payload — the shape `bake-sprites.ts` writes. */
-function decode(blob: string, words: number): Uint16Array {
-  // `atob` rather than `Buffer`, because this package had no `node:` import
-  // before the sprites arrived and `BUILD_PLAN.md` Stage 1's open exit is
-  // bundling this renderer for the browser so both ends call one function. A
-  // bare `node:buffer` in the barrel's graph would make that need a polyfill.
-  const binary = atob(blob);
-  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-  const mode = bytes[0];
-  if (mode === undefined) throw new Error('empty sprite frame');
-  return decodeRect(
-    {
-      mode,
-      payload: bytes.subarray(1),
-    },
-    words,
-  );
-}
-
-/**
- * The packed mask, back to one byte per pixel.
- *
- * `drawFrame` wants a byte per pixel and the wire wants a bit, so the expansion
- * happens here rather than in the renderer — the renderer should not have to
- * know that the data it is given was ever packed.
- */
-function unpack(words: Uint16Array, pixels: number): Uint8Array {
-  const packed = new Uint8Array(
-    words.buffer,
-    words.byteOffset,
-    words.byteLength,
-  );
-  const out = new Uint8Array(pixels);
-  for (let index = 0; index < pixels; index += 1) {
-    const byte = packed[index >> 3] ?? 0;
-    out[index] = (byte & (0x80 >> (index & 7))) === 0 ? 0 : 1;
-  }
-  return out;
-}
-
 function rebuild(baked: Baked): readonly Sprite[] {
   const pixels = baked.WIDTH * baked.HEIGHT;
   // The encoder padded an odd-length packed mask to an even one, so the word
   // count has to match what it wrote rather than what the pixels imply.
-  const maskWords = Math.ceil(Math.ceil(pixels / 8) / 2);
   return baked.PIXELS.map((blob, index) => {
     const mask = baked.MASKS[index];
     if (mask === undefined) throw new Error('a frame has pixels but no mask');
     return {
-      frame: frame(decode(blob, pixels), baked.WIDTH),
-      mask: unpack(decode(mask, maskWords), pixels),
+      frame: frame(decodeBlob(blob, pixels), baked.WIDTH),
+      mask: unpackMask(decodeBlob(mask, maskWords(pixels)), pixels),
     };
   });
 }

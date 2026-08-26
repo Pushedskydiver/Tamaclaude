@@ -24,6 +24,7 @@ import {
   spriteSlots,
   stageScale,
 } from './layout.js';
+import { paintLogo } from './logo.js';
 import { paintQr } from './qr.js';
 import { paintStrip } from './strip.js';
 import { drawText, drawTextBlock, ELLIPSIS, measureText } from './text.js';
@@ -140,6 +141,16 @@ export type Scene = {
    * every state the QR does not take.
    */
   readonly qr?: QrCode;
+  /**
+   * A company mark for the laptop lid, or nothing.
+   *
+   * Set by the daemon when the stage is showing `typing` and the pack carries
+   * one — the same shape of decision as `qr` above, and for the same reason:
+   * the renderer draws what it is given and the caller owns when. The lid only
+   * exists in that one animation, so anywhere else this would be a mark
+   * floating over the rock pool.
+   */
+  readonly logo?: PackManifest['logo'];
 };
 
 /**
@@ -227,12 +238,26 @@ function paintStage(painter: Painter, scene: Scene): void {
   for (const [index, slot] of slots.entries()) {
     const sprite = scene.sprites[index];
     if (sprite === undefined) continue;
+    const origin = { x: slot.x, y: slot.y - crop };
     drawFrame(painter.target, sprite.frame, {
-      x: slot.x,
-      y: slot.y - crop,
+      ...origin,
       within: slot,
       mask: sprite.mask,
     });
+    // The mark goes on after the sprite, at the same origin and clipped to the
+    // same slot, so it can only land where the sprite did.
+    //
+    // **`index === 0` is belt-and-braces, not the thing doing the work.** The
+    // intent is that two-up shows two different sessions and a mark on both
+    // would say they are the same machine — but no layout renders a lid on a
+    // second slot, because two-up's slots are 80 or 100 pixels tall and the
+    // lid sits at sprite y 160. The clip gets there first. Deleting this line
+    // changes no pixel today, which a review demonstrated; it is kept because
+    // the day a layout does show two lids, this is the line that was meant to
+    // stop it.
+    if (scene.logo !== undefined && index === 0) {
+      paintLogo(painter.target, { origin, within: slot }, scene.logo);
+    }
   }
 }
 

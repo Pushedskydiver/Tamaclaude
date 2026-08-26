@@ -11,6 +11,7 @@
  *   pnpm build
  *   node tools/blit.ts idle /dev/cu.usbmodem1101
  *   node tools/blit.ts out/typing /dev/cu.usbmodem1101
+ *   node tools/blit.ts out/typing /dev/cu.usbmodem1101 landscape day ~/.tamaclaude/pack
  *
  * `pnpm build` first because this reads panel geometry from
  * `@tamaclaude/renderer`, which is consumed from `dist/`.
@@ -341,7 +342,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length === 0) {
     console.error(
-      'usage: node tools/blit.ts <animation|frameDir> [port] [orientation] [sky]\n' +
+      'usage: node tools/blit.ts <animation|frameDir> [port] [orientation] [sky] [pack]\n' +
         `       port defaults to ${DEFAULT_PORT}\n` +
         `       orientation is ${ORIENTATIONS.join(' or ')}, default ` +
         `${DEFAULT_ORIENTATION} — it must match how the firmware was built ` +
@@ -365,7 +366,13 @@ async function main(): Promise<void> {
   const frameDir = await resolveFrameDir(args[0]);
   const rasters = await decode(frameDir);
   const name = basename(frameDir);
-  const pack = await loadPack(resolve(ROOT, 'packs/example'));
+  // **A pack, so a pack-supplied mark can reach the glass.** This hardcoded
+  // `packs/example` — which has no `logo` — so nothing in this repo could put a
+  // real pack on the device, and `BUILD_PLAN.md` said so in as many words while
+  // an item that needed it was ticked. `panel-mock` got the same flag; this is
+  // the half that touches hardware, and hardware is the only thing that can
+  // answer whether a mark 1.6 mm across reads as a logo or as noise.
+  const pack = await loadPack(resolve(ROOT, args[4] ?? 'packs/example'));
   const panels = composePanels(rasters, { orientation, pack, name, time: sky });
   const plan = planFrames(panels, orientation);
   const { width, height } = panelSize(orientation);

@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { paintLogo } from '../packages/renderer/src/logo.ts';
+
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /**
@@ -143,7 +145,7 @@ describe('logo2pixel, end to end', () => {
       '--pack',
       PACK,
       '--width',
-      '16',
+      '14',
       '--over',
       BACKGROUND,
       '--format',
@@ -163,7 +165,7 @@ describe('logo2pixel, end to end', () => {
 
   it('keeps the mark when the ground is not a palette colour', () => {
     // The surface a mark sits on is usually not a pack colour: the laptop lid
-    // in `typing` is a fixed `#30363B` in the artwork and no pack palette
+    // in `typing` is a fixed `#A91326` in the artwork and no pack palette
     // reaches a baked sprite, so it is that on every install. The ground has
     // to join the snap candidates for anything to be transparent — without
     // that, every pixel comes back opaque and this is a solid block.
@@ -174,7 +176,7 @@ describe('logo2pixel, end to end', () => {
       '--width',
       '16',
       '--over',
-      '#30363B',
+      '#A91326',
       '--format',
       'rects',
     ]);
@@ -240,9 +242,14 @@ describe('logo2pixel warns about colours it cannot keep apart', () => {
     // nearest candidate is the ground snaps to it and renders invisible
     // against that surface — and it is not a *collision*, because no two mark
     // colours merged, so the collision warning cannot see it.
-    const ground = '#30363B';
+    const ground = '#A91326';
+    // A shade off the ground, so its nearest candidate is the ground itself.
+    // It tracked the lid colour when that was `#30363B` and had to move with
+    // it — a near-miss of the *old* ground is a plain palette colour now, and
+    // the test stopped exercising the warning at all.
+    const nearlyTheGround = '#AA1427';
     const { output, status } = run([
-      fixturePath(fixture(paletteAt(2), '#31373C')),
+      fixturePath(fixture(paletteAt(2), nearlyTheGround)),
       '--pack',
       PACK,
       '--width',
@@ -281,5 +288,114 @@ describe('logo2pixel warns about colours it cannot keep apart', () => {
     ]);
     expect(status).toBe(0);
     expect(stdout).toMatch(/cannot tell them apart/);
+  });
+});
+
+/** Paint a pack logo object where the shipping landscape-hero stage puts it. */
+function paintOnHero(logo: unknown): {
+  readonly target: { pixels: Uint16Array; width: number; height: number };
+  readonly painted: ReturnType<typeof paintLogo>;
+} {
+  const target = {
+    pixels: new Uint16Array(320 * 172).fill(0x1234),
+    width: 320,
+    height: 172,
+  };
+  const painted = paintLogo(
+    target,
+    {
+      origin: { x: 0, y: -34 },
+      within: { x: 0, y: 6, width: 168, height: 160 },
+    },
+    logo as { width: number; height: number; pixels: string; mask: string },
+  );
+  return { target, painted };
+}
+
+describe('--format pack', () => {
+  it('round-trips through the renderer that reads it', () => {
+    // **The gate this format did not have.** `pack565` and `blob` here are a
+    // second hand-rolled copy of the framing `bake-sprites.ts` writes, and
+    // their only decoder is `packages/renderer/src/blob.ts`. Nothing connected
+    // the two: a review flipped the mask bit order to LSB-first, and swapped
+    // red and blue in the RGB565 pack, and both left all 612 tests green.
+    //
+    // That is not a hypothetical. `packages/renderer/src/sprites/index.ts`
+    // records a review flipping the bit order and byte-swapping every pixel,
+    // and the whole renderer suite staying green — a near-identical pair, a
+    // 16-bit endianness swap rather than a red/blue one, with the same
+    // outcome. A codec with no round trip is silent corruption waiting.
+    //
+    // So this runs the real tool and hands its output to the real painter,
+    // rather than re-encoding with a private helper the way the renderer's own
+    // tests do — which is how both sides can agree with each other and be
+    // wrong together.
+    const dir = mkdtempSync(join(tmpdir(), 'logo-pack-'));
+    const svg = join(dir, 'mark.svg');
+    // **Asymmetric in both axes, deliberately.** A version of this test built
+    // on the two-bar `fixture` above let the bit-order mutant through — not
+    // because bars are self-mirroring, which a review checked and they are not
+    // (each row packs to `0x3F 0xFC`, which reverses to `0xFC 0x3F` and opens
+    // a four-column gap), but because the two pixels it happened to sample are
+    // drawn under both orderings. A block in one corner and a block in the
+    // opposite corner cannot be sampled into agreement that way.
+    //
+    // The colours are two of the example pack's own, so the snap is exact and
+    // this is about framing rather than about quantising.
+    writeFileSync(
+      svg,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+  <rect x="2" y="2" width="14" height="14" fill="#F77849"/>
+  <rect x="24" y="24" width="14" height="14" fill="#3FB950"/>
+</svg>`,
+    );
+
+    const { output, status } = run([
+      svg,
+      '--width',
+      '14',
+      '--over',
+      '#A91326',
+      '--format',
+      'pack',
+    ]);
+    expect(status, output).toBe(0);
+
+    const logo: unknown = JSON.parse(
+      output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1),
+    );
+    // **14, not 16, and the size is load-bearing.** 14x14 is 196 pixels, which
+    // packs to 25 mask bytes — odd, so the encoder's pad-to-even step is doing
+    // something. At 16x16 it is 32 bytes and the padding is a no-op, which let
+    // a mutant that dropped it pass.
+    expect(logo).toMatchObject({ width: 14, height: 14 });
+
+    // Decode exactly as the panel does, then read the two blocks back out.
+    const { target, painted } = paintOnHero(logo);
+    expect(painted).not.toBeNull();
+    if (painted === null) return;
+
+    const at = (x: number, y: number): number =>
+      target.pixels[y * target.width + x] ?? -1;
+    // `#F77849` and `#3FB950` in RGB565. Written as literals rather than
+    // computed, so a mutation of the pack's own conversion cannot agree with
+    // the expectation.
+    const top = 0xf3c9;
+    const bottom = 0x3dca;
+    // The blocks sit at 5%..40% and 60%..95% of a 40-unit box, so at 14px they
+    // cover roughly columns and rows 1..5 and 8..13. Sampled near the middle
+    // of each, and — the part that catches a mirror — in the two corners that
+    // should be *empty*.
+    const ground = 0x1234;
+    expect(at(painted.x + 3, painted.y + 3), 'top-left block').toBe(top);
+    expect(at(painted.x + 10, painted.y + 10), 'bottom-right block').toBe(
+      bottom,
+    );
+    expect(at(painted.x + 10, painted.y + 3), 'top-right is empty').toBe(
+      ground,
+    );
+    expect(at(painted.x + 3, painted.y + 10), 'bottom-left is empty').toBe(
+      ground,
+    );
   });
 });

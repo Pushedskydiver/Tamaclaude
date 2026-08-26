@@ -29,10 +29,30 @@
  * constraint, not the width.
  *
  *   node tools/logo2pixel.ts pack/logo.svg --width 16 \
- *     --over '#RRGGBB' --format rects
+ *     --over '#RRGGBB' --format pack
  *
- * `--over` is the colour the mark sits on — for the lid that is `#30363B`,
- * fixed in the artwork.
+ * **`--format pack` is the one that reaches the panel.** `png` is to look at
+ * and `rects` is to paste into the SVG; neither can be consumed by the
+ * renderer, which has no image decoder in its graph. `pack` emits the object
+ * that goes in a manifest's `logo` field, and `packages/renderer/src/logo.ts`
+ * draws it on the lid at run time — so the mark stays in the private pack
+ * instead of being baked into tracked animation frames.
+ *
+ * `--over` is the colour the mark sits on — for the lid that is `#A91326`,
+ * fixed in the artwork. It was `#30363B` until the lid was recoloured on
+ * 26 Aug; with `--format pack` it makes no difference to the bytes, because
+ * crisp edges mean a transparent-background mark has no soft edges to snap
+ * against the ground — *unless a mark colour's own nearest candidate is the
+ * ground*, since `--over` joins the candidate list for opaque pixels too. On
+ * the mark that ships it changes nothing; on one drawn in a near-miss of the
+ * lid it changes everything, which is what the warning is for.
+ *
+ * **`--width` scales the viewBox, not the artwork.** A logo drawn inside a
+ * generous viewBox — `0 0 140 140` for a mark that occupies `20 9 100 121` —
+ * comes out proportionally smaller, and at these sizes that is the difference
+ * between a readable mark and four pixels. Crop the viewBox to the artwork
+ * before baking. This tool does not do it for you: guessing where a mark's
+ * margins are meant to be is a design decision, and a wrong guess is silent.
  *
  * **Do not wrap the rects in a new group inside `#fx-laptop-logo`.** That
  * leaves `#logo-lit` and `#logo-dim` in place, so the mark is static and the
@@ -64,10 +84,9 @@
  * construction, which is fine for a one-colour mark on a contrasting ground
  * and wrong for anything else.
  *
- * **Nothing renders the output yet.** `packages/packs` has no logo field and
- * the renderer draws no logo; `BUILD_PLAN.md` Stage 5 carries "A pack `logo`
- * field, and something that draws it" as the item for that. This produces the
- * asset only, which is still worth having early: the pixel art is what needs
+ * **`--format pack` is rendered; the other two are not.** `packages/packs`
+ * takes a `logo` field and `packages/renderer/src/logo.ts` draws it, so the
+ * pack route is complete. `png` and `rects` produce the asset only, which is still worth having early: the pixel art is what needs
  * judging by eye against a real palette, and it can be judged before anything
  * draws it. The other live route is a private re-bake of the animation
  * frames — see `typing.svg`'s note on the logo group for what that costs.
@@ -86,13 +105,17 @@
  * re-bake per surface rather than reusing one output.
  */
 import type { Rgb } from './frame-palette.ts';
+import type { Page } from 'playwright';
 
+import { Buffer } from 'node:buffer';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
+
+import { encodeRect } from '@tamaclaude/protocol';
 
 import { loadPack } from './blit-scene.ts';
 import { snapToPalette } from './frame-palette.ts';
@@ -106,8 +129,8 @@ import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
  * The landscape stage is 168px wide and the message band 152px, so 48 is
  * roughly a third of either — small enough to sit as a prop rather than as
  * the subject, and large enough that a wordmark is still legible at 1:1.
- * Nothing consumes it yet, so this is a starting point for looking, not a
- * measurement of a slot that exists.
+ * A starting point for looking. `--format pack` has a real slot to fit —
+ * 84x20 — so it warns when the result will not fit, and prints it regardless.
  */
 const DEFAULT_WIDTH = 48;
 
@@ -141,8 +164,10 @@ const { values, positionals } = parseArgs({
     scale: { type: 'string', default: '8' },
   },
 });
-if (values.format !== 'png' && values.format !== 'rects') {
-  console.error(`--format takes 'png' or 'rects', not '${values.format}'`);
+if (!['png', 'rects', 'pack'].includes(values.format)) {
+  console.error(
+    `--format takes 'png', 'rects' or 'pack', not '${values.format}'`,
+  );
   process.exit(1);
 }
 
@@ -150,7 +175,9 @@ const [svgArg, outArg] = positionals;
 if (svgArg === undefined) {
   console.error(
     'usage: node tools/logo2pixel.ts <logo.svg> [out.png] ' +
-      "[--pack <dir>] [--width 48] [--over '#RRGGBB']",
+      "[--pack <dir>] [--width 48] [--over '#RRGGBB'] " +
+      '[--format png|rects|pack] [--scale 8]\n' +
+      '       --format pack is the one the panel can read',
   );
   process.exit(1);
 }
@@ -188,7 +215,7 @@ try {
  *
  * Adding it here rather than demanding a pack carry it. The surface a mark
  * sits on is often not a pack colour at all — the laptop lid in `typing` is a
- * fixed `#30363B` in the artwork, and no pack palette reaches a baked sprite,
+ * fixed `#A91326` in the artwork, and no pack palette reaches a baked sprite,
  * so it is that colour on every install. Requiring `--over` to be a palette
  * entry would refuse the tool's own documented workflow.
  *
@@ -220,6 +247,79 @@ if (!Number.isFinite(scale) || scale <= 0) {
 // vanishes against it. No two mark colours merged, so `collisions` cannot see
 // it. Reported separately, and the collision check runs against the pack's
 // palette so it still describes what the *pack* can represent.
+/**
+ * RGBA bytes as RGB565 words plus a packed drawn-mask.
+ *
+ * Its own function because inlining it nests four blocks deep and `max-depth`
+ * is three — but it reads better out here anyway, since the two outputs are
+ * different shapes of the same pass.
+ */
+function pack565(
+  rgba: Uint8ClampedArray,
+  total: number,
+): {
+  readonly words: Uint16Array;
+  readonly padded: Uint8Array;
+  readonly drawn: number;
+} {
+  const words = new Uint16Array(total);
+  const bits = new Uint8Array(Math.ceil(total / 8));
+  let drawn = 0;
+  for (let index = 0; index < total; index += 1) {
+    const r = rgba[index * 4] ?? 0;
+    const g = rgba[index * 4 + 1] ?? 0;
+    const b = rgba[index * 4 + 2] ?? 0;
+    const alpha = rgba[index * 4 + 3] ?? 0;
+    words[index] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+    // Alpha is 0 or 255 after snapping — the ground colour is cleared to
+    // transparent — so a midpoint test is a formality rather than a choice.
+    if (alpha < 128) continue;
+    bits[index >> 3] |= 0x80 >> (index & 7);
+    drawn += 1;
+  }
+  // Padded to an even byte count so it can be read back as 16-bit words,
+  // which is what `maskWords` in the renderer expects.
+  const padded = new Uint8Array(Math.ceil(bits.length / 2) * 2);
+  padded.set(bits);
+  return { words, padded, drawn };
+}
+
+/** The snapped image as RGBA bytes, read back out of the page. */
+async function readPixels(page: Page, uri: string): Promise<number[]> {
+  return page.evaluate(async (source: string) => {
+    const bitmap = await createImageBitmap(await (await fetch(source)).blob());
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (context === null) throw new Error('no 2d context');
+    context.drawImage(bitmap, 0, 0);
+    return [...context.getImageData(0, 0, canvas.width, canvas.height).data];
+  }, uri);
+}
+
+/**
+ * Base64 of a `[mode byte][payload]` blob — the framing the renderer reads.
+ *
+ * The same shape `tools/bake-sprites.ts` writes, because the renderer decodes
+ * both through one function.
+ *
+ * **The decode side is shared; this side is not.** `packages/renderer/src/blob.ts`
+ * consolidated the reading, and there are now three copies of the writing —
+ * here, in `bake-sprites.ts`, and in the renderer's own test helper. That is
+ * the drift this sentence used to warn against while being an instance of it.
+ * What keeps it honest is the round-trip in `logo2pixel.test.ts`: it runs this
+ * tool and hands the bytes to the real painter, so an encoder that disagrees
+ * with the decoder goes red.
+ */
+function blob(words: Uint16Array): string {
+  const { mode, payload } = encodeRect(words);
+  const bytes = new Uint8Array(payload.length + 1);
+  bytes[0] = mode;
+  bytes.set(payload, 1);
+  return Buffer.from(bytes).toString('base64');
+}
+
 const fills = declaredFills(svg);
 for (const fill of fills) {
   if (nearestIn(fill, candidates).every((v, c) => v === over[c])) {
@@ -251,10 +351,31 @@ try {
   // The SVG is stretched to the viewport rather than the viewport sized to the
   // SVG's own width/height attributes, which a logo may not carry at all — the
   // viewBox is the only dimension guaranteed to be there.
+  // **`--format pack` renders without antialiasing, and that is not a
+  // preference.** A mark for the lid is twelve to sixteen pixels across, and
+  // the browser's antialiased edges become mid-tones that `snapToPalette` then
+  // resolves to whichever palette entry happens to be nearest. Measured on a
+  // one-colour white logo: the mark landed on *three* colours — the pack's ink
+  // where it should, but its edges on the attention amber and the active teal,
+  // so a monochrome mark arrived speckled with the two chip colours and
+  // nothing warned, because the merge check looks for two declared fills
+  // colliding and there was only ever one.
+  //
+  // With `crispEdges` every pixel is the fill or nothing. On the mark that
+  // actually ships that is one drawn colour instead of two, and a payload 6.6%
+  // smaller at `--width 14` and 19.3% at 16, because a two-colour image
+  // run-length-encodes better. The three-colour figure above was measured on a
+  // white logo that is not in this repo — it is why the option exists, not a
+  // number anyone here can reproduce.
+  //
+  // `png` and `rects` keep the antialiasing. They are viewed and pasted at
+  // larger sizes, where the dither reads as a smoother edge rather than noise.
+  const crisp = values.format === 'pack' ? 'shape-rendering:crispEdges' : '';
   await page.setContent(
     `<!doctype html><meta charset="utf-8"><style>
        html,body{margin:0;padding:0}
        svg{display:block;width:100%;height:100%}
+       svg *{${crisp}}
      </style>${svg}`,
   );
   // `omitBackground`, unlike the splash: a logo is a prop drawn over whatever
@@ -267,20 +388,49 @@ try {
     bg: over,
   });
   const total = size.width * size.height;
-  if (values.format === 'rects') {
+  if (values.format === 'pack') {
+    // **The only format the renderer can consume.** `png` is to look at, and
+    // `rects` reaches the panel only through a re-bake of the animation art —
+    // the route this format exists to make unnecessary. Neither can be handed
+    // to the renderer, because nothing in the shipping graph decodes an image.
+    // This emits what the
+    // sprites already are — RGB565 through `encodeRect`, base64 of a mode byte
+    // and its payload — plus the bit-mask that says which pixels are drawn.
+    // **Say so, and print it anyway.** Refusing would be worse: the object is
+    // still useful for looking at, and a tool that prints nothing on a size
+    // mistake sends you hunting the wrong thing. The
+    // default width is 48, which on a square mark gives a 48-tall object the
+    // schema refuses outright — and the recipe in this header omits `--width`
+    // often enough that a review hit it. The lid is 84x20.
+    if (size.width > 84 || size.height > 20) {
+      console.error(
+        `warning: ${String(size.width)}x${String(size.height)} does not fit the ` +
+          `lid (84x20) and the pack schema will refuse it — try a smaller --width`,
+      );
+    }
+    const rgba = new Uint8ClampedArray(await readPixels(page, snapped.uri));
+    const { words, padded, drawn } = pack565(rgba, total);
+    console.log(
+      JSON.stringify(
+        {
+          width: size.width,
+          height: size.height,
+          pixels: blob(words),
+          mask: blob(new Uint16Array(padded.buffer)),
+        },
+        null,
+        2,
+      ),
+    );
+    console.error(
+      `${size.width}x${size.height}, ${String(drawn)} of ${String(total)} pixels drawn — ` +
+        `paste the object above into the pack's manifest as "logo"`,
+    );
+  } else if (values.format === 'rects') {
     // Rects are emitted from the origin so placement is the caller's, via an
     // enclosing `<g transform="translate(x,y)">`. Baking a position in would
     // mean three more flags and a tool that only knows about one slot.
-    const pixels = await page.evaluate(async (uri: string) => {
-      const bitmap = await createImageBitmap(await (await fetch(uri)).blob());
-      const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (context === null) throw new Error('no 2d context');
-      context.drawImage(bitmap, 0, 0);
-      return [...context.getImageData(0, 0, canvas.width, canvas.height).data];
-    }, snapped.uri);
+    const pixels = await readPixels(page, snapped.uri);
     const runs = opaqueRuns(
       new Uint8ClampedArray(pixels),
       size.width,

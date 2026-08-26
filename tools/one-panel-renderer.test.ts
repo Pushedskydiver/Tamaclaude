@@ -36,6 +36,12 @@ const ALLOWED = new Map([
     'one-panel-renderer.test.ts',
     'this file, which has to name the colours to look for them',
   ],
+  [
+    'logo2pixel.test.ts',
+    'the pack round-trip fixture paints in two of the example pack colours on' +
+      ' purpose, so the snap is exact and the test is about the codec framing' +
+      ' rather than about quantising',
+  ],
 ]);
 
 /**
