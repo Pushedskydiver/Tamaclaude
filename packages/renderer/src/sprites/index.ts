@@ -51,6 +51,7 @@ import { decodeRect, frame } from '@tamaclaude/protocol';
  */
 export const SPRITE_NAMES = [
   'asleep',
+  'birthday',
   'board-game',
   'bouldering',
   'confused',
@@ -84,6 +85,7 @@ type Baked = {
 
 const SOURCES: Readonly<Record<SpriteName, () => Promise<Baked>>> = {
   asleep: () => import('./asleep.data.js'),
+  birthday: () => import('./birthday.data.js'),
   'board-game': () => import('./board-game.data.js'),
   bouldering: () => import('./bouldering.data.js'),
   confused: () => import('./confused.data.js'),
