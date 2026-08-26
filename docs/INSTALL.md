@@ -17,17 +17,36 @@ one download.
 Two tools, neither of which macOS ships:
 
 - **Node 24** — the version this is pinned to is 24.16.0
-- **pnpm 10.32.1** — exact, and it checks
+- **pnpm 10.32.1** — the project pins this exactly, and a different pnpm will
+  switch itself to it rather than complain
 
-If you already use [mise](https://mise.jdx.dev), the repo pins both and
-`mise install` in the project folder does it. Otherwise install Node 24 from
+If you already use [mise](https://mise.jdx.dev), the repo pins both, and
+`mise trust && mise install` in the project folder does it — the `trust` is
+needed because mise ignores a freshly cloned repo's tool versions until you
+allow them. Otherwise install Node 24 from
 [nodejs.org](https://nodejs.org) and then run `corepack enable pnpm`.
 
-Nothing here compiles anything, so you do not need Xcode or its command line
-tools — unless you use `git` to fetch the project, which on macOS usually comes
-from them.
+Nothing in the project compiles on install, so Xcode itself is not needed.
+Apple's command line tools probably are, because `git` on macOS usually comes
+from them — the first `git` command offers to install them. This is the one
+prerequisite nobody has yet tested on a Mac that has never had them.
 
-## 1. Build it
+## 1. Get the project
+
+If it is not already on your Mac, clone it — the address is on the card, and
+`git` will ask to install Apple's command line tools the first time if you have
+never used it:
+
+```bash
+git clone <the repo address>
+cd tamaclaude
+```
+
+If somebody handed you the folder instead, put it somewhere permanent before
+going on. Both later steps record where it lives, and moving it afterwards
+stops the panel.
+
+## 2. Build it
 
 From inside the project folder:
 
@@ -38,14 +57,16 @@ pnpm build
 
 `pnpm install` fetches a few hundred packages, nearly all of them tooling for
 working on the project rather than running it — the program itself uses exactly
-one third-party library. If pnpm asks about build scripts, you can decline;
-nothing needed to run the panel builds anything.
+one third-party library. pnpm will print a warning that it
+ignored a build script and suggest `pnpm approve-builds`; you can leave it
+alone, because nothing needed to run the panel builds anything.
 
 You do **not** need `pnpm exec playwright install`. That line is in the
-README for people working on the artwork; the animations are already drawn and
+README because `pnpm test` needs a headless browser — but running a panel does
+not, and you are not running the tests. The animations are already drawn and
 baked into the code.
 
-## 2. Give it a pack
+## 3. Give it a pack
 
 A _pack_ is a folder holding the colours and the things Clawd says. There is no
 built-in default — with no pack the program stops and tells you so, rather than
@@ -75,7 +96,7 @@ colours and no birthday. It is there so the software has something to test
 against — copy it only if you have not been given a pack yet, and expect to
 replace it.
 
-## 3. Plug the panel in
+## 4. Plug the panel in
 
 Use the USB cable, into the Mac itself rather than a hub if you have the
 choice. Do this before the next step — the program finds the panel by looking
@@ -83,7 +104,7 @@ for it, so it needs to already be there.
 
 You should see the boot screen: Clawd waving next to the name.
 
-## 4. Start it
+## 5. Start it
 
 ```bash
 pnpm tamaclaude daemon
@@ -96,7 +117,7 @@ same program automatically, and if this one is still running the automatic one
 cannot claim the panel — it dies and retries every thirty seconds, quietly,
 while everything looks installed.
 
-## 5. Make it start when you log in
+## 6. Make it start when you log in
 
 ```bash
 pnpm tamaclaude install-agent
@@ -117,7 +138,7 @@ pnpm tamaclaude status
 It asks the system whether the thing is genuinely running, rather than assuming
 it is.
 
-## 6. Connect it to Claude Code
+## 7. Connect it to Claude Code
 
 The panel reacts to Claude Code by being told what it is doing. This step wires
 that up, and like the last one it shows you the change before making it:
@@ -127,13 +148,15 @@ pnpm install-hooks
 pnpm install-hooks --apply
 ```
 
-Then start a Claude Code session and watch — Clawd should start typing.
+Then ask Claude Code to edit a file, and watch — Clawd should start typing.
+Merely opening a session is not enough to see it: a new session puts him at
+rest, and typing is what he does while Claude edits or writes.
 
 ## Do not move the project folder
 
 Both the login entry and the Claude Code wiring store the full path to this
 folder. Moving, renaming or deleting it stops the panel with no message. If you
-do move it, run steps 5 and 6 again from the new location and both will
+do move it, run steps 6 and 7 again from the new location and both will
 re-point themselves.
 
 ## When it stops working
@@ -174,7 +197,9 @@ use:
 pnpm tamaclaude install-agent
 ```
 
-If none of those, the log is at `~/.tamaclaude/daemon.log`.
+If none of those, the log is at `~/.tamaclaude/daemon.log` — written only by
+the automatic startup from step 6, so it will not exist if you never got that
+far.
 
 ## Changing your pack
 
