@@ -795,9 +795,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   be a lie, while this decides the message band and the animation still
   shows the work. Two reviews caught the claim independently.
   **The art is built.** `assets/clawd/animations/birthday.svg` — a jump, both
-  claws up, a hat, confetti — baked, on the panel at 8fps and 20 KB/s against
-  the 40,000 B/s bar, and it doubles as the hero of the webpage the QR points
-  at. Two findings worth keeping: a claw cannot reach above the head by
+  claws up, a hat, confetti — baked, and on the panel at 8fps and 12,138 B/s
+  against the 40,000 B/s bar. It doubles as the hero of the webpage the QR
+  points at. Two findings worth keeping: a claw cannot reach above the head by
   rotation alone, so both extend the way `gym` and `permission-sign` do; and
   the hat was red until the render was counted, at which point 46 pixels of
   the raised claws' edges were snapping to it rather than to black, because
