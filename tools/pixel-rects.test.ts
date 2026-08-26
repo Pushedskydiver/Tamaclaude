@@ -23,8 +23,9 @@ function bitmap(rows: readonly string[]): {
  *
  * The same expansion `tools/bake-splash.ts` does for the splash wordmark,
  * generalised so a quantised logo can be dropped into an animation's SVG. Runs
- * rather than one rect per pixel because a 12x14 mark is ~170 opaque pixels
- * and ~30 runs, and every rect is a node the rasteriser walks on all 8 frames.
+ * rather than one rect per pixel: a 12x14 letterform measured 93 opaque pixels
+ * of 168, in 24 runs, and every rect is a node the rasteriser walks on each of
+ * `typing.svg`'s 16 frames.
  *
  * Rects on whole pixels also cannot antialias, which is the property the splash
  * header calls out: the art arrives already snapped, and re-rendering it as

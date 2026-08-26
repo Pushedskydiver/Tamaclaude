@@ -685,18 +685,33 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       local date. Five minutes, and it exercises resolution, schema, the
       message band and the panel in one action.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
-- [x] **Company logo → pixel.** `tools/logo2pixel.ts`: rasterise, snap to the
-      pack's palette, emit a PNG to look at or SVG rects to paste.
-      **No `sharp`, and none was needed** — the plan named a dependency the
-      repo already had both halves of. Playwright rasterises the SVG the way
-      `tools/svg2frames.ts` does, and `snapToPalette` was already
-      nearest-neighbour against a palette it is handed; it was written to snap
-      frames to an SVG's own colours, and the palette is a parameter.
-      **It warns when the palette merges two of the logo's colours**, which is
-      the failure that is otherwise silent: a four-entry palette cannot
-      represent an arbitrary logo, and the mark that loses simply is not in the
-      output. Found by looking at a test fixture whose disc had vanished.
-      The logo itself is pack content and is not in this repo.
+- [~] **Company logo → pixel** — the tool is built; nothing draws its output.
+  `tools/logo2pixel.ts` rasterises, snaps to a pack's palette, and emits a
+  PNG to look at or SVG rects to paste.
+  **No `sharp`, and none was needed** — the plan named a dependency the
+  repo already had both halves of. Playwright rasterises the SVG the way
+  `tools/svg2frames.ts` does, and `snapToPalette` was already
+  nearest-neighbour against a palette it is handed; it was written to snap
+  frames to an SVG's own colours, and the palette is a parameter. That is
+  the second time a named raster dependency turned out unnecessary — see
+  the cancelled `@napi-rs/canvas` sink above — and both were retired by the
+  same Playwright decision.
+  **It warns when a palette merges two of a logo's colours**, which is the
+  failure that is otherwise silent: a small palette cannot represent an
+  arbitrary logo, and the mark that loses is simply absent from the output.
+  The warning reads hex `fill` attributes only, so `#fff` shorthand and
+  stroke-only artwork pass it silently.
+  **What is left is the whole of the delivery.** A logo reaches the panel
+  only through a pack `logo` field the schema does not have and a renderer
+  path that does not exist, or through a private re-bake of the animation
+  frames. The item below carries the first; the second needs no plan
+  because it is a build step run once.
+  The logo itself is pack content and is not in this repo.
+- [ ] **A pack `logo` field, and something that draws it.** The half above that
+      is not built. `spec.md` already freezes the manifest as `name`, `palette`,
+      `quips` plus props and logo, so the field is in scope; the artwork stays
+      out of git either way, which is why this is the route rather than pasting
+      a mark into a tracked animation.
 - [ ] Quips mapped to states, never randomised
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).

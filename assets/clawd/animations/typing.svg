@@ -79,9 +79,9 @@
 
     Wrapper groups are `#fx-` prefixed and transparent, but this file is not a
     pure wrapping of `assets/clawd/base.svg` and the tree says so in two
-    places. Every id, rect, coordinate and fill is base.svg's, and both pack
-    recolour hooks — `#body-color-group` and `#eyes-color-group` — are still
-    single elements carrying a single fill. What differs is nesting order: the
+    places. Every id, rect, coordinate and fill is base.svg's, and both colour
+    groups — `#body-color-group` and `#eyes-color-group` — are still single
+    elements carrying a single fill. What differs is nesting order: the
     legs are listed before `#torso` rather than after it (they are the same
     fill and do not overlap, so paint order is not observable), and
     `#eyes-color-group` is a *child* of `#body-color-group` here rather than
@@ -394,12 +394,15 @@
     </g>
   </g>
 
-  <!-- Where a pixelated logo goes. Unlike every other group here, a pack does
-       not recolour this one — it replaces it wholesale, which is why the two
-       rects carry their own fills rather than inheriting a group fill.
+  <!-- Where a pixelated logo goes. The two rects carry their own fills rather
+       than inheriting a group fill, because a mark is replaced wholesale
+       rather than tinted.
 
-       The screen and body above DO take group fills, so a pack recolours the
-       machine without touching the logo on it. -->
+       **No pack does any of this today.** Sprites are baked to fixed RGB565
+       and no pack palette reaches one; `packages/packs` has no logo field.
+       Getting a mark here means editing this file and re-baking, which for
+       personal artwork means a private bake — the repo is public.
+       `tools/logo2pixel.ts` produces the rects. -->
   <g id="fx-laptop-logo">
     <rect id="logo-lit" x="7" y="11.75" width="1" height="1" fill="#58A6FF"/>
     <rect id="logo-dim" x="7" y="11.75" width="1" height="1" fill="#1F6FEB"/>

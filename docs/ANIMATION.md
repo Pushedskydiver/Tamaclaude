@@ -47,14 +47,16 @@ without drowning in decimal path data.
 | `left-eye`         | 4,8 1x2        |                                                                  |
 | `right-eye`        | 10,8 1x2       |                                                                  |
 
-The two colour groups are an authoring convenience: one attribute changes the
-whole crab, so a palette decision is one edit rather than fourteen.
+The two colour groups are an authoring convenience: one attribute per group
+carries the colour, so within a file a change is one edit rather than nine.
 
-**No pack uses them.** Sprites are baked to fixed RGB565 by
-`tools/bake-sprites.ts`, and no pack palette reaches a baked sprite —
-`packages/packs/src/index.ts` records that retraction. Recolouring Clawd means
-editing `assets/clawd/base.svg` and re-baking, which is a build step and not a
-runtime one.
+**No pack uses them, and neither does `base.svg` alone.** Sprites are baked to
+fixed RGB565 by `tools/bake-sprites.ts` and no pack palette reaches a baked
+sprite — `packages/packs/src/index.ts` records that retraction. Each animation
+also carries its own copy of the geometry and its own `fill`, so sixteen
+tracked files under `assets/` declare `body-color-group`. Recolouring Clawd is
+sixteen edits and a re-bake, which is a build step and not a runtime one, and
+is the reason the character is not per-pack.
 
 **`ground-shadow` is the one base element an animation must not carry.** Seven of the eight carried it at half opacity, which is what
 `snapToPalette` drops, and `bouldering` carried it at zero on purpose. Black at

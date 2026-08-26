@@ -204,8 +204,8 @@ defect.
 
 ## Packs
 
-A pack is the customisation surface: a palette, a quip table, an optional
-birthday, props and an optional logo.
+A pack is the customisation surface: a palette, a quip table and an optional
+birthday. Props and a logo are planned and are not fields.
 
 **Selection is an environment variable, then a fixed path.**
 `TAMACLAUDE_PACK` names a pack directory; failing that, `~/.tamaclaude/pack/`.

@@ -23,31 +23,41 @@
  *
  * ## Putting one on the laptop lid
  *
- * `typing.svg`'s `#fx-laptop-logo` is the slot, and its own comment says a
- * pack "replaces it wholesale". Measured, at the stage's 8 device pixels per
- * user unit: the lid is `x 2.25..12.75, y 11..13.5`, so **84 x 20 px**. That
- * height is the binding constraint, not the width.
+ * `typing.svg`'s `#fx-laptop-logo` is the slot a mark replaces. Measured, at
+ * the stage's 8 device pixels per user unit: the lid is
+ * `x 2.25..12.75, y 11..13.5`, so **84 x 20 px**. That height is the binding
+ * constraint, not the width.
  *
  *   node tools/logo2pixel.ts pack/logo.svg --width 12 \
  *     --over '#RRGGBB' --format rects
  *
- * then wrap the output in `<g transform="translate(6.75,11.375)">` inside the
- * logo group. **12 px wide is the size to beat.** A portrait mark at 12 comes
- * out 14 tall, which centres with 3 px of lid above and below; 15 wide fills
- * the lid to within a pixel and reads as crammed; below 12 the interior detail
- * of a mark starts merging into its outline. Those numbers are for an
- * 0.83-aspect mark — recompute for another, since it is height that has to
- * fit.
+ * `--over` is the colour the mark sits on and **must be one of the pack's own
+ * palette entries** — see the note on it below. Wrap the output in
+ * `<g fill="#RRGGBB" transform="translate(x,y)">` inside the logo group: the
+ * rects carry no fill of their own, so without one they default to black.
  *
- * A wider mark gets more pixels inside the same 20 px, which sounds like it
- * should win and does not: recognition at this size comes from structure, and
- * a letterform survives where an abstract shape becomes a blob. Tested.
+ * Centring is arithmetic, not a constant. For a mark `w` x `h` device pixels
+ * at 8 px per unit, `x = 2.25 + (10.5 - w/8)/2` and `y = 11 + (2.5 - h/8)/2` —
+ * a 12x14 mark gives `translate(6.75,11.375)` and leaves 3 px of lid above and
+ * below. **Height is the constraint**: at 20 px there is not much of it, so
+ * pick the width that lands the height you want rather than the other way
+ * round.
  *
- * **Nothing renders the output yet.** `packages/packs` has no logo field —
- * "props and a logo land with the renderer" — so this produces the asset and
- * the schema work is a separate item. That is deliberate: the pixel art is
- * what needs judging by eye against a real palette, and it can be judged
- * before anything draws it.
+ * **`rects` output is a silhouette, not a picture.** `opaqueRuns` reads only
+ * the alpha channel and the rects carry no fill, so the caller's group supplies
+ * one colour for the whole mark. The snap still decides which pixels are
+ * *there* — it is what resolves the antialiased edge to one side — but every
+ * colour in the source becomes that single fill. So the collision warning
+ * below is about the `png` path; in `rects` every colour merges by
+ * construction, which is fine for a one-colour mark on a contrasting ground
+ * and wrong for anything else.
+ *
+ * **Nothing renders the output yet, and no plan item covers making it.**
+ * `packages/packs` has no logo field, and the renderer draws no logo. This
+ * produces the asset only. The pixel art is worth judging by eye against a
+ * real palette before anything draws it, which is what makes the tool useful
+ * now — but a logo reaches the panel only via a pack `logo` field the schema
+ * does not have, or via a private re-bake of the animation frames.
  *
  * **A logo is quantised against a ground, and the ground is a choice.** Partly
  * transparent pixels are composited over `--over` before the nearest colour is
@@ -60,8 +70,8 @@
  */
 import type { Rgb } from './frame-palette.ts';
 
-import { readFile, writeFile } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { basename, dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
 
@@ -83,6 +93,11 @@ import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
  * measurement of a slot that exists.
  */
 const DEFAULT_WIDTH = 48;
+
+/** `#RRGGBB` for a report line. */
+function hexOf(colour: Rgb): string {
+  return `#${colour.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
 
 /** `#RRGGBB` to a triple, for `--over`. */
 function parseHex(hex: string): Rgb {
@@ -130,10 +145,27 @@ const palette = pack.palette.map((entry) => [...entry] as unknown as Rgb);
 const background = palette[0];
 if (background === undefined) throw new Error('pack palette is empty');
 const over = values.over === undefined ? background : parseHex(values.over);
+// **`--over` has to be a palette entry, and this is not a style rule.**
+// `snapToPalette` clears alpha only where a pixel's *snapped* colour equals
+// the ground, and the snapped colour always comes from the palette — so a
+// ground outside it is never matched, every pixel comes back opaque, and the
+// output is a solid rectangle the size of the mark's bounding box. That is
+// silent in `png` and catastrophic in `rects`, where it is what gets pasted.
+// A real branded pack carries the surface colour anyway: the lid is red
+// because the pack's palette is.
+if (!palette.some((entry) => entry.every((v, c) => v === over[c]))) {
+  console.error(
+    `--over ${values.over} is not in ${pack.name}'s palette, so nothing ` +
+      `would be transparent and the output would be a solid block. ` +
+      `Use one of: ${palette.map((c) => hexOf(c)).join(' ')}`,
+  );
+  process.exit(1);
+}
 
-/** `#RRGGBB` for a report line. */
-function hexOf(colour: Rgb): string {
-  return `#${colour.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+const scale = Number(values.scale);
+if (!Number.isFinite(scale) || scale <= 0) {
+  console.error(`--scale must be a positive number, not '${values.scale}'`);
+  process.exit(1);
 }
 
 // **The failure this tool has that nothing else would catch.** A pack palette
@@ -198,7 +230,7 @@ try {
       size.width,
       size.height,
     );
-    const unitsPerPixel = 1 / Number(values.scale);
+    const unitsPerPixel = 1 / scale;
     console.log(
       `<!-- ${basename(resolve(svgArg))} at ${size.width}x${size.height}px, ` +
         `${runs.length} rects, ${unitsPerPixel} units per pixel -->`,
@@ -206,6 +238,9 @@ try {
     console.log(runsToRects(runs, { unitsPerPixel, x: 0, y: 0 }).join('\n'));
   } else {
     const base64 = snapped.uri.replace(/^data:image\/png;base64,/, '');
+    // `out/` is gitignored, so it is absent from every fresh checkout and this
+    // is the first tool that might touch it — `svg2frames.ts` does the same.
+    await mkdir(dirname(resolve(out)), { recursive: true });
     await writeFile(resolve(out), Buffer.from(base64, 'base64'));
     console.log(
       `logo -> ${out} (${size.width}x${size.height}, ` +

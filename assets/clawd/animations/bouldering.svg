@@ -630,8 +630,10 @@
         </g>
 
         <!-- Nested inside the body colour group rather than beside it, because
-             the eyes must ride the bob with the torso and a pack recolours by
-             overriding these two fills wherever they sit. -->
+             the eyes must ride the bob with the torso, and the two colour
+             groups are edited by overriding these fills wherever they sit.
+             That is an authoring edit and a re-bake, not something a pack
+             does — see `docs/ANIMATION.md`. -->
         <g id="eyes-color-group" fill="#000000">
           <g id="eyes-look">
             <rect id="left-eye" x="4" y="8" width="1" height="2"/>

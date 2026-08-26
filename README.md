@@ -47,7 +47,10 @@ colours are baked into the sprites and no pack changes them.
 `packs/example/` is the reference and the only pack in version control.
 Everything else under `packs/` is gitignored, so personal packs sit in your
 working tree without reaching the public repo. Point `TAMACLAUDE_PACK` at one,
-or put it in `~/.tamaclaude/pack/`, and every screen changes without a rebuild.
+or put it in `~/.tamaclaude/pack/`, and the panel picks it up without a
+rebuild. How much changes is measured rather than promised — see
+`packages/renderer/src/pack-swap.test.ts`; today it is the session chips, and
+the logo and pet sprite that will quantise to the palette are Stage 5.
 
 There is no bundled default: with no pack configured the daemon refuses to
 start rather than falling back to the example, because a fallback would turn

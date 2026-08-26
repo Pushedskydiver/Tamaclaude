@@ -8,9 +8,10 @@ export type Run = {
 /**
  * Horizontal runs of opaque pixels in an RGBA bitmap.
  *
- * Runs rather than one entry per pixel: a 12x14 mark is around 170 opaque
- * pixels and around 30 runs, and each becomes a node the rasteriser walks on
- * every frame of the animation it is pasted into.
+ * Runs rather than one entry per pixel. Measured on a 12x14 letterform: 93
+ * opaque pixels of 168, in 24 runs. Each run becomes a node the rasteriser
+ * walks on every frame of the animation it is pasted into, and `typing.svg`
+ * is 16 frames.
  *
  * Opacity is the only channel read. The colour is decided before this — the
  * bitmap arrives already snapped to a palette — so a run carries position and
