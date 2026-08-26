@@ -521,9 +521,12 @@ describe('what the panel says', () => {
   it('puts the birthday on the stage only where the stage would say nothing', () => {
     // The stage's half of the birthday, and it is a **stricter** rule than the
     // message band's. `birthdayLine` covers every state that is not asking for
-    // a human, including `WORKING` — safely, because the animation still shows
-    // the work, so the glass says "Bash is running" and "happy birthday" at
-    // once and neither is false.
+    // a human, including `WORKING`, and the work is still legible while it does
+    // — from the animation and the strip chip, not the band. **Not from the
+    // band:** `messageFor` returns the quip early, so on the day the tool name
+    // is suppressed for the whole day. An earlier draft here said the glass
+    // showed "Bash is running" and "happy birthday" at once; it shows one
+    // string.
     //
     // The stage cannot do that. It has one picture, so celebrating over a
     // running tool means *replacing* the tool's picture, and a Clawd in a party
