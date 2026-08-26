@@ -706,22 +706,45 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   The logo itself is pack content and is not in this repo.
 - [ ] **A pack `logo` field, and something that draws it.** The half above
       that is not built, and the larger half.
-      **Where it goes: the laptop lid, not the splash.** The screen spec's
-      asset table put the logo on the boot splash. That is now settled the
-      other way and nobody wrote it down: the splash shipped on 21 Aug with no
-      logo in it, it is firmware and so is flashed rather than configured, and
-      `PLANS.md` §Typing gives the reason the lid wins — it is on screen every
-      time Claude writes code, where the splash is seen once before setup and
-      never again. The manifest freeze at the same spec allows the field.
-      **Size it before starting.** The bytes travel `cli -> renderer`, so it is
-      a schema entry, a loader, a renderer path and tests across three
-      packages, plus compositing a runtime image onto a baked sprite — which
-      nothing in this repo has done. `PLANS.md` grades pack-supplied art as the
-      most expensive of the three options it costed. Stage 5 ends at feature
-      freeze on 13 Sep, so **if this has not started by 8 Sep, take the private
-      re-bake instead** and accept that the tree stays dirty; `typing.svg`'s
-      logo group says what that costs. If neither happens, no logo ships, and
-      that is a acceptable loss against the date.
+      **Where it goes: the laptop lid, not the splash — and this overrules the
+      freeze rather than filling a gap.** The screen spec's easter-egg table
+      routes the logo to the boot splash, and that spec is the _later_
+      document: `PLANS.md` §Typing argued for the lid on 18 Aug, the splash
+      shipped without a logo on 21 Aug, and the 25 Aug freeze still said
+      splash. The lid wins for a reason the freeze did not have in view — the
+      splash is drawn by the firmware (`draw_splash()` runs unconditionally in
+      `app_main`, so it is on at every power-on until the daemon paints over
+      it), and firmware is flashed rather than configured, so a splash logo
+      cannot be a pack field at all. The manifest freeze at the same spec names
+      `logo`, so the field itself is in scope.
+      **Size it against the codec that exists, not against a decoder.** The
+      renderer's runtime dependencies are `@tamaclaude/packs` and
+      `@tamaclaude/protocol` and nothing else — there is no image decoder in
+      the shipping graph, and Playwright is a build-time dependency that never
+      reaches the recipient. So the pack cannot ship a PNG or an SVG. What it
+      can ship is what the sprites already are: an RGB565 payload through
+      `encodeRect`/`decodeRect` in `@tamaclaude/protocol`, which
+      `packages/renderer/src/sprites/index.ts` already turns back into pixels.
+      That makes this a schema entry, a loader, a blit at a known slot, and a
+      third output format on `tools/logo2pixel.ts` — which today emits a PNG to
+      look at and SVG rects to paste, **neither of which the renderer can
+      consume**. Smaller than it first looked, and the tool is the part that
+      needs the change.
+      **Decide it on an artefact, not on a start date.** If
+      `panel-mock` cannot draw a pack-supplied mark by **10 Sep**, stop: a
+      trigger that fires when someone opens a file is a rubber stamp, which is
+      the objection `PLANS.md` already makes to a gate of that shape. Note the
+      input is also unscheduled — both routes need the recipient's `logo.svg`,
+      and the pack that holds it is itself an open item above.
+      **The fallback does not deliver, and that is why it is not one.** A
+      private re-bake writes the mark into `packages/renderer/src/sprites/`,
+      which is tracked; the recipient installs from a clone of a public repo
+      (`Printed card: QR to repo + one-line install`), so an uncommitted change
+      on one Mac reaches nobody, and committing it puts a company mark in
+      public history permanently. If the field does not land, **no logo ships**
+      — the placeholder stays and the panel is still a gift. Two paragraphs
+      above promise the recipient will see "their logo"; if this is cut, that
+      promise goes with it, and the deferred table takes a row.
 - [ ] Quips mapped to states, never randomised
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).

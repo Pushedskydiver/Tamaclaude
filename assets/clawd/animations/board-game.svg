@@ -121,8 +121,8 @@
 
          On its own wrapper, named for `idle`'s `#fx-eyes-look`. Not on
          `#eyes-color-group`, whose documented job is carrying the eye fill —
-         though note `wizard` animates that group directly, so this is a
-         preference the corpus does not hold uniformly — and not on `#eyes-blink`, where an
+         though note `wizard` puts a transform straight onto that group, so
+         this is a preference the corpus does not hold uniformly — and not on `#eyes-blink`, where an
          `animation` added later would silently replace a transform, which is
          a real hazard on a file that declares it has no blink.
 

@@ -84,7 +84,7 @@ import { chromium } from 'playwright';
 
 import { loadPack } from './blit-scene.ts';
 import { snapToPalette } from './frame-palette.ts';
-import { collisions, declaredFills } from './palette-map.ts';
+import { collisions, declaredFills, nearestIn } from './palette-map.ts';
 import { opaqueRuns, runsToRects } from './pixel-rects.ts';
 import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
 
@@ -201,7 +201,23 @@ if (!Number.isFinite(scale) || scale <= 0) {
 // one merge, and the mark that lost simply is not in the output — no error, no
 // empty file, just a picture missing a shape. A fixture with a purple field
 // and a yellow disc came back as a flat orange rectangle.
-for (const clash of collisions(declaredFills(svg), candidates)) {
+// **A mark colour that resolves to the ground is invisible, and it is not a
+// collision.** Adding the ground to the candidates can only split collisions
+// apart, so a colour that used to merge with a palette entry may now snap to
+// the ground instead — where it renders in the surface's own colour and
+// vanishes against it. No two mark colours merged, so `collisions` cannot see
+// it. Reported separately, and the collision check runs against the pack's
+// palette so it still describes what the *pack* can represent.
+const fills = declaredFills(svg);
+for (const fill of fills) {
+  if (nearestIn(fill, candidates).every((v, c) => v === over[c])) {
+    console.warn(
+      `warning: ${hexOf(fill)} is nearest to the ground ${hexOf(over)}, so ` +
+        `it will disappear into the ground it is drawn on`,
+    );
+  }
+}
+for (const clash of collisions(fills, palette)) {
   const names = clash.sources.map((colour) => hexOf(colour));
   const listed = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
   console.warn(
@@ -274,7 +290,7 @@ try {
     await writeFile(resolve(out), Buffer.from(base64, 'base64'));
     console.log(
       `logo -> ${out} (${size.width}x${size.height}, ` +
-        `${palette.length} colours, ${snapped.soft} of ${total} px snapped)`,
+        `${candidates.length} colours, ${snapped.soft} of ${total} px snapped)`,
     );
   }
 } finally {

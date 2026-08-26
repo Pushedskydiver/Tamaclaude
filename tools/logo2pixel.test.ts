@@ -110,7 +110,10 @@ function bandCount(stdout: string): number {
     ...new Set([...stdout.matchAll(/y="([\d.]+)"/g)].map((m) => Number(m[1]))),
   ].sort((a, b) => a - b);
   if (ys.length === 0) return 0;
-  const step = 1 / 8;
+  // Derived from the tool's own header line rather than assuming `--scale`'s
+  // default, so this stays correct if a caller passes one.
+  const declared = /([\d.]+) units per pixel/.exec(stdout)?.[1];
+  const step = declared === undefined ? 1 / 8 : Number(declared);
   return ys.reduce(
     (bands, y, i) =>
       i > 0 && y - (ys[i - 1] ?? 0) > step * 1.5 ? bands + 1 : bands,
@@ -217,6 +220,29 @@ describe('logo2pixel refuses input that would ship silently wrong', () => {
     // signal as status 1 too, so an exit-code-only assertion passes when the
     // tool cannot start at all.
     expect(output).toMatch(/--scale must be a positive number/);
+  });
+});
+
+describe('logo2pixel warns about colours it cannot keep apart', () => {
+  it('warns when a mark colour resolves to the ground it sits on', () => {
+    // The hazard the ground-as-candidate fix introduces. A logo colour whose
+    // nearest candidate is the ground snaps to it and renders invisible
+    // against that surface — and it is not a *collision*, because no two mark
+    // colours merged, so the collision warning cannot see it.
+    const ground = '#30363B';
+    const { output, status } = run([
+      fixturePath(fixture(paletteAt(2), '#31373C')),
+      '--pack',
+      PACK,
+      '--width',
+      '16',
+      '--over',
+      ground,
+      '--format',
+      'rects',
+    ]);
+    expect(status).toBe(0);
+    expect(output).toMatch(/disappear into the ground|resolves to the ground/);
   });
 
   it('warns when the palette cannot tell two of the mark colours apart', () => {

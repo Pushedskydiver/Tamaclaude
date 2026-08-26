@@ -61,8 +61,9 @@ tracked files under `assets/` declare `body-color-group`.
 colour a second time on `#legs-group`, outside the group, because the legs must
 sit outside it to be animated separately. So the real measure of a recolour is
 the grep, not a count anyone can quote — `grep -ro 'fill="#DE886D"' assets/`
-today returns more attributes than there are files. This number has been stated
-wrong three times in three days; run the grep.
+today returns more attributes than there are files. Run the grep rather than
+quoting a figure: this count was stated wrong three times in one day before
+anyone checked it against the corpus.
 
 Nor is it one re-bake: fourteen are animations that go through `bake-sprites`,
 `splash.svg` bakes to a firmware header and so needs a reflash, and `base.svg`

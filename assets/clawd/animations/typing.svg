@@ -405,8 +405,8 @@
        rects and both ids go with them: `svg2frames` reports two fewer
        animations and does not warn, every gate stays green, and the lid goes
        static. To keep the pulse, emit the mark twice — once inside each of
-       these two elements, which must stay `<g>`s carrying the lit and dim
-       fills — because `tools/logo2pixel.ts --format rects` produces one
+       these two elements, which are `<rect>`s today and would have to become
+       `<g>`s carrying the lit and dim fills — because `tools/logo2pixel.ts --format rects` produces one
        silhouette with no fill of its own, not a two-tone picture.
 
        **No pack does any of this today.** Sprites are baked to fixed RGB565
