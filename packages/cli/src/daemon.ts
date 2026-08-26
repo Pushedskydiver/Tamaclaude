@@ -453,6 +453,11 @@ export function sceneFor(input: SceneInput): Scene {
     // human, or is working, or has just finished, and it comes back when the
     // desk goes quiet. Nothing has to decide when to take it down.
     qr: input.animation === 'birthday' ? BIRTHDAY_QR : undefined,
+    // The lid only exists in `typing`, so the mark is offered nowhere else.
+    // A pack without a `logo` leaves this undefined and the placeholder square
+    // baked into the animation shows through, which is what every pack that is
+    // not the recipient's does.
+    logo: input.animation === 'typing' ? pack.logo : undefined,
     environment: {
       time: timeOfDay(now),
       extent: ENVIRONMENT_EXTENT,

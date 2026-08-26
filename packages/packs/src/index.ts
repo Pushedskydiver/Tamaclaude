@@ -53,6 +53,16 @@ function dayExists(date: string): boolean {
   return day <= (DAYS_IN_MONTH[month - 1] ?? 0);
 }
 
+/**
+ * What a base64 payload looks like. Deliberately shape-only.
+ *
+ * A pack is hand-edited and is a genuine trust boundary, but this cannot check
+ * that the bytes decode to a mark of the right size — that needs the codec,
+ * which lives above this package. It rejects the obvious paste error and
+ * leaves the rest to the renderer, which treats a bad payload as no logo.
+ */
+const BASE64 = /^[A-Za-z0-9+/]*={0,2}$/u;
+
 const packManifestSchema = z.object({
   name: z.string().min(1),
   // Two, not one. Entry 0 is the background and entry 1 is the ink; a pack
@@ -96,6 +106,42 @@ const packManifestSchema = z.object({
         )
         .refine(dayExists, 'birthday.date must be a day that exists'),
       quip: z.string().min(1),
+    })
+    .optional(),
+  /**
+   * A company mark for the laptop lid in `typing`, or nothing.
+   *
+   * **Pixels, not a picture.** The renderer's runtime dependencies are
+   * `@tamaclaude/packs` and `@tamaclaude/protocol` and nothing else — there is
+   * no image decoder anywhere in the shipping graph — so a pack cannot ship a
+   * PNG or an SVG. What it can ship is what the sprites already are: RGB565
+   * through `encodeRect`, base64 of a mode byte and its payload, plus a
+   * separately encoded bit-mask saying which pixels are drawn.
+   * `tools/logo2pixel.ts --format pack` writes both.
+   *
+   * **The lid, not the boot splash**, which is the one place a reader might
+   * expect it. The splash is drawn by the firmware before the daemon is
+   * running, and firmware is flashed rather than configured — so a splash
+   * logo could not be a pack field at all.
+   */
+  logo: z
+    .object({
+      /**
+       * **Bounded by the lid it is drawn on**, which is 84x20 device pixels —
+       * `LID_SLOT` in `packages/renderer/src/logo.ts`, where the numbers come
+       * from and where a test asserts these two agree. This package sits below
+       * the renderer in the dependency order and cannot import them, so the
+       * limits are repeated here and the drift is caught by that test rather
+       * than by a mark drawn across Clawd's face.
+       *
+       * Refused rather than clipped: a clipped mark is a wrong mark shown
+       * confidently, and the pack boundary is where a bad value should be
+       * named.
+       */
+      width: z.number().int().min(1).max(84),
+      height: z.number().int().min(1).max(20),
+      pixels: z.string().regex(BASE64, 'logo.pixels must be base64'),
+      mask: z.string().regex(BASE64, 'logo.mask must be base64'),
     })
     .optional(),
 });

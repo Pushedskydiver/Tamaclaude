@@ -29,7 +29,14 @@
  * constraint, not the width.
  *
  *   node tools/logo2pixel.ts pack/logo.svg --width 16 \
- *     --over '#RRGGBB' --format rects
+ *     --over '#RRGGBB' --format pack
+ *
+ * **`--format pack` is the one that reaches the panel.** `png` is to look at
+ * and `rects` is to paste into the SVG; neither can be consumed by the
+ * renderer, which has no image decoder in its graph. `pack` emits the object
+ * that goes in a manifest's `logo` field, and `packages/renderer/src/logo.ts`
+ * draws it on the lid at run time — so the mark stays in the private pack
+ * instead of being baked into tracked animation frames.
  *
  * `--over` is the colour the mark sits on — for the lid that is `#30363B`,
  * fixed in the artwork.
@@ -86,13 +93,17 @@
  * re-bake per surface rather than reusing one output.
  */
 import type { Rgb } from './frame-palette.ts';
+import type { Page } from 'playwright';
 
+import { Buffer } from 'node:buffer';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
+
+import { encodeRect } from '@tamaclaude/protocol';
 
 import { loadPack } from './blit-scene.ts';
 import { snapToPalette } from './frame-palette.ts';
@@ -141,8 +152,10 @@ const { values, positionals } = parseArgs({
     scale: { type: 'string', default: '8' },
   },
 });
-if (values.format !== 'png' && values.format !== 'rects') {
-  console.error(`--format takes 'png' or 'rects', not '${values.format}'`);
+if (!['png', 'rects', 'pack'].includes(values.format)) {
+  console.error(
+    `--format takes 'png', 'rects' or 'pack', not '${values.format}'`,
+  );
   process.exit(1);
 }
 
@@ -220,6 +233,72 @@ if (!Number.isFinite(scale) || scale <= 0) {
 // vanishes against it. No two mark colours merged, so `collisions` cannot see
 // it. Reported separately, and the collision check runs against the pack's
 // palette so it still describes what the *pack* can represent.
+/**
+ * RGBA bytes as RGB565 words plus a packed drawn-mask.
+ *
+ * Its own function because inlining it nests four blocks deep and `max-depth`
+ * is three — but it reads better out here anyway, since the two outputs are
+ * different shapes of the same pass.
+ */
+function pack565(
+  rgba: Uint8ClampedArray,
+  total: number,
+): {
+  readonly words: Uint16Array;
+  readonly padded: Uint8Array;
+  readonly drawn: number;
+} {
+  const words = new Uint16Array(total);
+  const bits = new Uint8Array(Math.ceil(total / 8));
+  let drawn = 0;
+  for (let index = 0; index < total; index += 1) {
+    const r = rgba[index * 4] ?? 0;
+    const g = rgba[index * 4 + 1] ?? 0;
+    const b = rgba[index * 4 + 2] ?? 0;
+    const alpha = rgba[index * 4 + 3] ?? 0;
+    words[index] = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
+    // Alpha is 0 or 255 after snapping — the ground colour is cleared to
+    // transparent — so a midpoint test is a formality rather than a choice.
+    if (alpha < 128) continue;
+    bits[index >> 3] |= 0x80 >> (index & 7);
+    drawn += 1;
+  }
+  // Padded to an even byte count so it can be read back as 16-bit words,
+  // which is what `maskWords` in the renderer expects.
+  const padded = new Uint8Array(Math.ceil(bits.length / 2) * 2);
+  padded.set(bits);
+  return { words, padded, drawn };
+}
+
+/** The snapped image as RGBA bytes, read back out of the page. */
+async function readPixels(page: Page, uri: string): Promise<number[]> {
+  return page.evaluate(async (source: string) => {
+    const bitmap = await createImageBitmap(await (await fetch(source)).blob());
+    const canvas = document.createElement('canvas');
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (context === null) throw new Error('no 2d context');
+    context.drawImage(bitmap, 0, 0);
+    return [...context.getImageData(0, 0, canvas.width, canvas.height).data];
+  }, uri);
+}
+
+/**
+ * Base64 of a `[mode byte][payload]` blob — the framing the renderer reads.
+ *
+ * The same shape `tools/bake-sprites.ts` writes, because the renderer decodes
+ * both through one function. A second hand-rolled copy of a codec's framing is
+ * how two of them drift apart with nothing to notice.
+ */
+function blob(words: Uint16Array): string {
+  const { mode, payload } = encodeRect(words);
+  const bytes = new Uint8Array(payload.length + 1);
+  bytes[0] = mode;
+  bytes.set(payload, 1);
+  return Buffer.from(bytes).toString('base64');
+}
+
 const fills = declaredFills(svg);
 for (const fill of fills) {
   if (nearestIn(fill, candidates).every((v, c) => v === over[c])) {
@@ -267,20 +346,35 @@ try {
     bg: over,
   });
   const total = size.width * size.height;
-  if (values.format === 'rects') {
+  if (values.format === 'pack') {
+    // **The only format the renderer can consume.** `png` is to look at and
+    // `rects` is to paste into an SVG; neither reaches the panel, because
+    // nothing in the shipping graph decodes an image. This emits what the
+    // sprites already are — RGB565 through `encodeRect`, base64 of a mode byte
+    // and its payload — plus the bit-mask that says which pixels are drawn.
+    const rgba = new Uint8ClampedArray(await readPixels(page, snapped.uri));
+    const { words, padded, drawn } = pack565(rgba, total);
+    console.log(
+      JSON.stringify(
+        {
+          width: size.width,
+          height: size.height,
+          pixels: blob(words),
+          mask: blob(new Uint16Array(padded.buffer)),
+        },
+        null,
+        2,
+      ),
+    );
+    console.error(
+      `${size.width}x${size.height}, ${String(drawn)} of ${String(total)} pixels drawn — ` +
+        `paste the object above into the pack's manifest as "logo"`,
+    );
+  } else if (values.format === 'rects') {
     // Rects are emitted from the origin so placement is the caller's, via an
     // enclosing `<g transform="translate(x,y)">`. Baking a position in would
     // mean three more flags and a tool that only knows about one slot.
-    const pixels = await page.evaluate(async (uri: string) => {
-      const bitmap = await createImageBitmap(await (await fetch(uri)).blob());
-      const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (context === null) throw new Error('no 2d context');
-      context.drawImage(bitmap, 0, 0);
-      return [...context.getImageData(0, 0, canvas.width, canvas.height).data];
-    }, snapped.uri);
+    const pixels = await readPixels(page, snapped.uri);
     const runs = opaqueRuns(
       new Uint8ClampedArray(pixels),
       size.width,
