@@ -833,6 +833,22 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   exactly `WAITING_AFTER_MS` and `effectiveState` checks `WAITING` first.
   There the birthday does not follow at all; it waits for the human, which is
   the point.
+  **The QR is built, and it costs the strip and the message band.** On the
+  birthday, and only on the states the birthday already covers, the right
+  column shows a QR instead. One predicate — `sceneFor` sets it when
+  `animationForPanel` chose `birthday` — so it is gone the moment a session
+  needs a human and back when the desk goes quiet, with nothing to decide when
+  to take it down. The symbol is a module matrix in a tracked file, encoded
+  offline by `tools/bake-qr.ts` with `qrcode` as a root devDependency; the
+  renderer keeps zero third-party runtime deps. EC L rather than Q: both give a
+  4px module, and L's 25 modules leave 16px of slack where Q's 29 fill the band
+  to the pixel and would drop to a 3px module on any layout change.
+  **What it costs is the pack's birthday quip on those two states**, measured
+  rather than estimated: 148px of band, 132 taken by the symbol at the smallest
+  module worth drawing, and a line of text needs 19. The quip still shows on
+  every state the QR does not take. **The URL it points at serves nothing
+  yet** — that is the open item, not the code.
+
   **The known cost is flicker.** On a working birthday the stage alternates
   between the party hat and the work picture at every turn boundary, all day.
   Nothing measures how that reads, and the only thing that can is the clock
@@ -851,6 +867,7 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   already said where the pack goes; the commit that built the resolver left the
   contradiction standing and a review caught it. An earlier version of this
   sentence put the two five lines apart, which is wrong by about thirty.
+
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its

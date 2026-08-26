@@ -3,6 +3,39 @@ import type { Rect } from '@tamaclaude/protocol';
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from '@tamaclaude/protocol';
 
 /**
+ * The quiet zone a QR needs, in modules, on every side.
+ *
+ * Four, which is what the specification asks for. Not negotiated downwards even
+ * though scanners tolerate less: the panel's ground behind it is the sky, so a
+ * symbol with too little margin has no border at all from a camera's point of
+ * view, and the failure is total rather than degraded.
+ *
+ * **Here rather than in `qr.ts` so `tools/bake-qr.ts` can import it.** The tool
+ * has to agree with the renderer about the margin or every number it prints
+ * about pitch is wrong, and it was a hand-copied duplicate with a "must match"
+ * comment until a review set one of the two to 2 and watched all 599 tests
+ * pass. `qr.ts` pulls in `draw.js`, which the tool's type-stripped Node cannot
+ * resolve; this module imports nothing local.
+ */
+export const QUIET_MODULES = 4;
+
+/**
+ * The smallest module, in pixels, worth drawing at all.
+ *
+ * `paintQr` used to refuse only a pitch below one, which is "whole pixels"
+ * rather than "readable pixels" — and in portrait the QR area is 172x96, which
+ * gives a 25-module symbol a 2px module that no camera will resolve. Drawing it
+ * would replace the strip and the message band with a square that cannot be
+ * read, which is worse than not drawing it: `scene.ts` falls back to the bands
+ * and the panel keeps saying something.
+ *
+ * Four because that is what the shipped geometry gives and what the preview is
+ * judged at. It is a floor, not a guarantee — only the panel can tell you
+ * whether four is enough.
+ */
+export const MIN_SCANNABLE_PITCH = 4;
+
+/**
  * Panel layout: the four bands the 172x320 display is divided into.
  *
  * Defined by `.claude/research/screens/spec.md` §2 and shared by everything

@@ -52,6 +52,7 @@ import {
   frame,
 } from '@tamaclaude/protocol';
 import {
+  BIRTHDAY_QR,
   castsShadow,
   loadSprite,
   panelSize,
@@ -403,7 +404,10 @@ export type SceneInput = {
   /**
    * Which animation the sprites are frames of.
    *
-   * Only the ground shadow needs it: the environment is painted before any
+   * **Two things read it now**, and it stays optional, so a caller that omits
+   * it loses the QR on the birthday with no type error to show for it.
+   *
+   * The ground shadow was the first: the environment is painted before any
    * sprite exists, so the layer that draws the shadow cannot tell whether the
    * character about to go in front of it is standing on the ground or half way
    * up a wall. The name is the only thing that knows.
@@ -439,6 +443,16 @@ export function sceneFor(input: SceneInput): Scene {
     },
     sessions: panel.sessions.map((session) => chipFor(session, now)),
     message: messageFor(panel, pack, now),
+    // **One predicate, two consequences.** The QR shows exactly when the
+    // birthday has the stage — which `animationForPanel` has already decided,
+    // date and state together. A second `isBirthday` call here would be a
+    // second rule to keep in step with the first, and the first is the one
+    // that has been argued over and tested per state.
+    //
+    // So the QR inherits all of it: it is gone the moment a session needs a
+    // human, or is working, or has just finished, and it comes back when the
+    // desk goes quiet. Nothing has to decide when to take it down.
+    qr: input.animation === 'birthday' ? BIRTHDAY_QR : undefined,
     environment: {
       time: timeOfDay(now),
       extent: ENVIRONMENT_EXTENT,

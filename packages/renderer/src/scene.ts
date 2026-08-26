@@ -1,10 +1,11 @@
 import type { Painter } from './band.js';
 import type { EnvironmentExtent, TimeOfDay } from './environment.js';
 import type { Framebuffer } from './framebuffer.js';
-import type { Orientation, StageLayout } from './layout.js';
+import type { BandName, Orientation, StageLayout } from './layout.js';
+import type { QrCode } from './qr.js';
 import type { SessionChip } from './strip.js';
 import type { PackManifest } from '@tamaclaude/packs';
-import type { Frame } from '@tamaclaude/protocol';
+import type { Frame, Rect } from '@tamaclaude/protocol';
 
 import {
   centredTextY,
@@ -23,6 +24,7 @@ import {
   spriteSlots,
   stageScale,
 } from './layout.js';
+import { paintQr } from './qr.js';
 import { paintStrip } from './strip.js';
 import { drawText, drawTextBlock, ELLIPSIS, measureText } from './text.js';
 
@@ -117,6 +119,27 @@ export type Scene = {
   readonly sessions: readonly SessionChip[];
   /** Quip, tool label or state text. Wrapped to the band; never clipped silently. */
   readonly message: string;
+  /**
+   * A QR to show instead of the strip and the message band.
+   *
+   * Set by the daemon on the birthday and on no other day. It is a whole
+   * *instead of*, not an overlay: a session chip or a line of quip showing
+   * through a QR is not decoration, it is a symbol that does not decode.
+   *
+   * **The strip and the message are what it costs, including the pack's own
+   * birthday quip, and that was measured rather than waved at.** The area is
+   * 148px tall and a 25-module symbol at the 4px floor takes 132 of it; a line
+   * of text needs 19 (`TEXT_INSET` twice plus `GLYPH_HEIGHT`). Sixteen is not
+   * nineteen, so there is no arrangement that shows both. A review found the
+   * quip silently painted-over here and it is now a recorded trade instead.
+   *
+   * What survives: the stage still shows Clawd and the status band still shows
+   * the clock, so nothing saying *when to look* is given up. And the quip is
+   * not lost for the day — `birthdayLine` covers every non-attention state, so
+   * it is on the band whenever a session is working or thinking, which is
+   * every state the QR does not take.
+   */
+  readonly qr?: QrCode;
 };
 
 /**
@@ -278,7 +301,33 @@ export function render(scene: Scene): Framebuffer {
   const painter = withEnvironment(base, scene);
   paintStatus(painter, scene);
   paintStage(painter, scene);
-  paintStrip(painter, scene.sessions);
-  paintMessage(painter, scene);
+  // The QR takes the session strip, and as much of the message band as it
+  // needs. `paintQr` returns `null` when the modules would be too small to
+  // read, and then the ordinary bands draw: losing the QR is survivable,
+  // losing the panel's only text because something silently drew nothing is
+  // not.
+  const showedQr =
+    scene.qr !== undefined &&
+    paintQr(target, qrArea(painter.bands), scene.qr) !== null;
+  if (!showedQr) {
+    paintStrip(painter, scene.sessions);
+    paintMessage(painter, scene);
+  }
   return target;
+}
+
+/**
+ * The region the QR occupies: the strip and the message band together.
+ *
+ * Derived from the bands rather than written down, so a layout change moves
+ * the QR with them instead of leaving it over the top of something.
+ */
+function qrArea(bands: Readonly<Record<BandName, Rect>>): Rect {
+  const { strip, message } = bands;
+  return {
+    x: strip.x,
+    y: strip.y,
+    width: strip.width,
+    height: message.y + message.height - strip.y,
+  };
 }

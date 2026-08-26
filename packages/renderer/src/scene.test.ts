@@ -377,3 +377,132 @@ describe('the status band marker', () => {
     expect(litPixels(render(short))).not.toEqual(litPixels(render(marked)));
   });
 });
+
+describe('the birthday QR', () => {
+  // 0xaa is alternating bits, so the matrix has both dark and light modules.
+  // An all-zero fill draws a white square with no dark modules at all, which
+  // made the "black and white only" assertion vacuous on the first run.
+  // **25 modules, which is what the real URL encodes to at the EC level that
+  // ships.** Not 21, and — after a review — not 29 either: this said 25 while
+  // `qr.data.ts` held a 29-module symbol, so it claimed to test the shipping
+  // geometry and did not.
+  //
+  // The size matters to what this file can prove. At 21 the block is 145px in
+  // a 148px band and at 29 it is 148px exactly, and in both cases it covers
+  // everything the two bands could ever draw — so "the QR replaces them" and
+  // "the QR is painted over them" become indistinguishable and the overlay
+  // mutant is equivalent. At 25 the block is 132px and the 16px below it is
+  // where the birthday quip goes, which is both a margin to assert against and
+  // the reason the EC level is L.
+  const qr = { size: 25, modules: Buffer.alloc(79, 0xaa).toString('base64') };
+
+  // **A pack whose background is neither black nor white.** `PACK` above has
+  // `[0, 0, 0]` first, which is exactly `DARK` — so a QR drawn in the wrong
+  // place is indistinguishable from untouched ground, and a mutant that moved
+  // the block down 32px passed the whole suite.
+  const blue: PackManifest = {
+    ...PACK,
+    palette: [[0, 0, 128], ...PACK.palette.slice(1)] as PackManifest['palette'],
+  };
+  const ground = packPalette(blue)[0];
+  const landscape = { ...EMPTY, pack: blue, orientation: 'landscape' as const };
+
+  const bands = panelBands('landscape');
+  const area = {
+    x: bands.strip.x,
+    y: bands.strip.y,
+    width: bands.strip.width,
+    height: bands.message.y + bands.message.height - bands.strip.y,
+  };
+  const block = { x: 178, y: 32, width: 132, height: 132 };
+
+  it('takes the strip and message bands, and they do not draw underneath', () => {
+    const busy = {
+      ...landscape,
+      sessions: [{ tone: 'attention' as const, origin: 'local' as const }],
+      message: 'happy birthday',
+    };
+    const painted = render({ ...busy, qr });
+
+    // The stage and the status band are untouched: the crab keeps his half and
+    // the clock still runs on the day.
+    const plain = render(busy);
+    expect(column(painted, bands.stage)).toEqual(column(plain, bands.stage));
+    expect(column(painted, bands.status)).toEqual(column(plain, bands.status));
+
+    // The block is where it should be, and its edge is quiet zone. Pinning a
+    // corner rather than just "some white exists" — a block drawn 32px low is
+    // still all black and white.
+    expect(at(painted, block.x + 2, block.y + 2)).toBe(0xffff);
+    expect(
+      at(painted, block.x + block.width - 3, block.y + block.height - 3),
+    ).toBe(0xffff);
+
+    // The block itself carries nothing but the two QR colours: no chip, no
+    // quip, no pack ink surviving underneath.
+    expect([...new Set(column(painted, block))].sort((a, b) => a - b)).toEqual([
+      0x0000, 0xffff,
+    ]);
+
+    // **And the margin around it is bare ground.** This is what says the bands
+    // did not draw at all, rather than drawing and being covered — a chip one
+    // pixel taller than the block would show here. Asserting only inside the
+    // block passes with the QR as an overlay, which it is not.
+    // All four sides. The left and right strips alone are not enough: both
+    // bands inset their content, so an overlay-drawn QR left them clean and
+    // the mutant survived. The row above the block is inside the strip band,
+    // where a chip does reach.
+    for (const margin of [
+      { x: area.x, y: area.y, width: block.x - area.x, height: area.height },
+      {
+        x: block.x + block.width,
+        y: area.y,
+        width: area.x + area.width - block.x - block.width,
+        height: area.height,
+      },
+      { x: area.x, y: area.y, width: area.width, height: block.y - area.y },
+      {
+        x: area.x,
+        y: block.y + block.height,
+        width: area.width,
+        height: area.y + area.height - block.y - block.height,
+      },
+    ]) {
+      expect(
+        [...new Set(column(painted, margin))],
+        `margin ${String(margin.x)}`,
+      ).toEqual([ground]);
+    }
+  });
+
+  it('falls back to the strip and message when the QR cannot be drawn', () => {
+    // A symbol too big for the band. Losing the QR is survivable; losing the
+    // panel's only text because something silently drew nothing is not.
+    const huge = {
+      size: 177,
+      modules: Buffer.alloc(Math.ceil((177 * 177) / 8), 0xaa).toString(
+        'base64',
+      ),
+    };
+    const busy = { ...landscape, message: 'happy birthday' };
+    expect(render({ ...busy, qr: huge }).pixels).toEqual(render(busy).pixels);
+  });
+});
+
+/** One pixel, by panel coordinates. */
+function at(target: Framebuffer, x: number, y: number): number {
+  return target.pixels[y * target.width + x] ?? -1;
+}
+
+/** Every pixel inside a rect, row-major. */
+function column(target: Framebuffer, rect: Rect): readonly number[] {
+  const out: number[] = [];
+  for (let row = 0; row < rect.height; row += 1) {
+    for (let col = 0; col < rect.width; col += 1) {
+      out.push(
+        target.pixels[(rect.y + row) * target.width + rect.x + col] ?? -1,
+      );
+    }
+  }
+  return out;
+}
