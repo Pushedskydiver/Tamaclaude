@@ -28,6 +28,22 @@
     of the hat. Neither sits against the body edge, which §What a claw cannot
     do says reads as the slab growing a lump.
 
+    ── The shadow, decided rather than left ───────────────────────────────
+
+    There is no `#ground-shadow` here, because §The base geometry says it is
+    the one base element an animation must not carry — black at half opacity
+    snaps to the background and arrives part-transparent, so it draws nothing.
+    A first draft carried it anyway, with a keyframe block shrinking it on the
+    jump, and the whole thing rendered zero pixels while reading as a beat that
+    existed.
+
+    The renderer paints its own contact shadow instead, and `birthday` is
+    deliberately not in `UNGROUNDED`: it is constant, so it does not shrink
+    while he is airborne, but a jumping crab does still cast one and a
+    shadowless crab standing on sand is the worse of the two errors. Composed
+    on the day sky it reads. If the shadow is ever made to follow the sprite,
+    this is the animation that wants it.
+
     ── The hat ────────────────────────────────────────────────────────────
 
     A four-step cone on the torso's centre line (x=7.5, the midpoint of the
