@@ -46,7 +46,7 @@ export const LID_SLOT: Rect = { x: 42, y: 160, width: 84, height: 20 };
  * The pulsing square baked into the artwork, which a pack mark must cover.
  *
  * `typing.svg` carries `#logo-lit` and `#logo-dim` — two rects alternating on a
- * one-second loop, so the lid reads as lit rather than painted. They stay,
+ * one-second loop. On the old grey lid that read as a lit screen; on the red it reads as an inlaid badge, which suits the back of a lid better. They stay,
  * because a pack without a logo should still have a lit screen, and because
  * the SVG calls them load-bearing: the two `#logo-*` rules match nothing else
  * and removing them kills the pulse silently.

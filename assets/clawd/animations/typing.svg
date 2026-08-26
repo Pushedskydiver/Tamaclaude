@@ -31,6 +31,13 @@
     top of his head on three frames of every loop. Snapping resolves an edge;
     it does not choose the side you meant.
 
+    **The numbers above are history: #30363B left this file on 26 Aug when the
+    lid went red.** Kept because the rule is what matters and the worked
+    example is how it was learned. Against the palette that exists now, the
+    same pixel is nearest #6F4436 at 4952, then black at 4978 — a 0.5% margin,
+    which is a coin flip rather than a comfortable landing, and the reason to
+    keep asking the question rather than to stop.
+
     Landing on the grid is a weaker constraint than it sounds, because only 16
     frames exist. The panel plays the rasterised sequence, so the only values a
     track ever takes are the 16 it is sampled at, and an easing curve is just
@@ -180,7 +187,7 @@
          Each bit is two rects at the same place on the same rise: a hot one
          visible for the first half of the climb and a cool one for the second.
          The handover is the fade — a real fade would blend green into black
-         and the snapper would land the result on the laptop's grey, because
+         and the snapper would land the result on the nearest declared colour, which before the lid went red was the laptop's grey, because
          that is genuinely the nearest declared colour to it. Declaring a
          cooler green as its own fill is what makes the tone available instead
          of manufactured.
@@ -263,9 +270,9 @@
          12..15 — deliberately different phases, so the two arms never repeat a
          pair of heights they have already held. */
       @keyframes reach-left {
-        0%,  43%  { transform: translateY(0); }
-        44%, 87%  { transform: translateY(0.125px); }
-        88%, 100% { transform: translateY(0); }
+        0%,  43.75% { transform: translateY(0); }
+        44%, 87.5%  { transform: translateY(0.125px); }
+        88%, 100%   { transform: translateY(0); }
       }
       @keyframes reach-right {
         0%,  24%  { transform: translateY(0.125px); }
@@ -381,8 +388,17 @@
          against a body. It also puts a tone halfway down the ramp from the
          body colour to black, so that any body edge that does soften has
          somewhere warm to land instead of reaching for the screen's grey.
-         That is insurance, not the mechanism: what actually keeps the grey rim
-         off his head is that no body edge softens in the first place. -->
+         That is insurance, not the mechanism: what actually keeps the rim off
+         his head is that no body edge softens in the first place.
+
+         **That was false when written and is true now.** A critic measured 64
+         antialiased pixel-frames per loop, every one of them a 16-pixel bar
+         across #left-arm's top edge on frames 7 and 14 — because `reach-left`
+         held to 43% and 87% while 8fps samples at 43.75% and 87.5%, so those
+         two frames caught the shoulder mid-interpolation. `reach-right` put
+         its boundaries on 25 and 75 and was clean the whole time. Moving the
+         two holds onto the sample points took `svg2frames` from 0.01% snapped
+         to 0.00%, and this file now antialiases nothing at all. -->
     <g id="fx-laptop-shade" fill="#6F4436">
       <rect x="2.25" y="10.75" width="10.5" height="0.25"/>
     </g>
@@ -401,7 +417,7 @@
        **`#logo-lit` and `#logo-dim` are load-bearing ids, and a careless
        replacement kills the pulse silently.** They are the only elements the
        two `#logo-*` rules in the stylesheet above match, and the two of them alternating on a 1s loop is what
-       makes the screen read as lit rather than painted. Paste in a set of
+       made the screen read as lit rather than painted when the lid was a cold grey; on the red it reads as a badge inlaid in the lid, which is the better reading anyway since what is shown is the back of it. Paste in a set of
        rects and both ids go with them: `svg2frames` reports two fewer
        animations and does not warn, every gate stays green, and the lid goes
        static. To keep the pulse, emit the mark twice — once inside each of

@@ -165,7 +165,7 @@ describe('logo2pixel, end to end', () => {
 
   it('keeps the mark when the ground is not a palette colour', () => {
     // The surface a mark sits on is usually not a pack colour: the laptop lid
-    // in `typing` is a fixed `#30363B` in the artwork and no pack palette
+    // in `typing` is a fixed `#A91326` in the artwork and no pack palette
     // reaches a baked sprite, so it is that on every install. The ground has
     // to join the snap candidates for anything to be transparent — without
     // that, every pixel comes back opaque and this is a solid block.
@@ -176,7 +176,7 @@ describe('logo2pixel, end to end', () => {
       '--width',
       '16',
       '--over',
-      '#30363B',
+      '#A91326',
       '--format',
       'rects',
     ]);
@@ -242,9 +242,14 @@ describe('logo2pixel warns about colours it cannot keep apart', () => {
     // nearest candidate is the ground snaps to it and renders invisible
     // against that surface — and it is not a *collision*, because no two mark
     // colours merged, so the collision warning cannot see it.
-    const ground = '#30363B';
+    const ground = '#A91326';
+    // A shade off the ground, so its nearest candidate is the ground itself.
+    // It tracked the lid colour when that was `#30363B` and had to move with
+    // it — a near-miss of the *old* ground is a plain palette colour now, and
+    // the test stopped exercising the warning at all.
+    const nearlyTheGround = '#AA1427';
     const { output, status } = run([
-      fixturePath(fixture(paletteAt(2), '#31373C')),
+      fixturePath(fixture(paletteAt(2), nearlyTheGround)),
       '--pack',
       PACK,
       '--width',
@@ -347,7 +352,7 @@ describe('--format pack', () => {
       '--width',
       '14',
       '--over',
-      '#30363B',
+      '#A91326',
       '--format',
       'pack',
     ]);

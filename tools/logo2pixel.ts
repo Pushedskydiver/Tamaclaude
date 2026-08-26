@@ -210,7 +210,7 @@ try {
  *
  * Adding it here rather than demanding a pack carry it. The surface a mark
  * sits on is often not a pack colour at all — the laptop lid in `typing` is a
- * fixed `#30363B` in the artwork, and no pack palette reaches a baked sprite,
+ * fixed `#A91326` in the artwork, and no pack palette reaches a baked sprite,
  * so it is that colour on every install. Requiring `--over` to be a palette
  * entry would refuse the tool's own documented workflow.
  *
