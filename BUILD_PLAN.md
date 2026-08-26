@@ -513,17 +513,49 @@ than partially. Eight good screens beat nine plus four rough ones.
   is drawn. It takes the logo's shape instead: a blob in the manifest and a
   painter that composites it into a slot, which is what
   `packs/example/README.md` already said it would. So the pet is not animation
-  work at all, and the easter-egg idle is that category alone.
+  work, which leaves the easter-egg idle and the meditation idle variant in that
+  category — the two this bullet already counts twelve lines down. A first
+  version of this sentence said "alone" and contradicted them.
 
-  **That costs something and it is not free to say so.** The spec budgets the
-  pet as a second character rather than set dressing, and a character that
-  never moves beside one that breathes reads as furniture. The privacy rule
-  leaves two ways out and neither is cheap: an animated pack format, which does
-  not exist and which nothing in the shipping graph could decode; or drawing
-  the pet into tracked SVGs, which is the thing that cannot happen. **A static blob
-  is therefore the decision, taken here rather than assumed**, and the cheapest
-  recovery if it reads as furniture on glass is a second blob and an alternate
-  frame — a two-pose blink, not a loop.
+  **The three sentences that used to follow were wrong, and the measurements
+  below replace them.** They ruled out an animated pack format as something
+  "nothing in the shipping graph could decode" — false, and it was the clause
+  carrying the argument: `packages/renderer/src/sprites/index.ts` bakes exactly
+  that shape, arrays of base64 blobs and masks, and `blob.ts` decodes it
+  frame-count-agnostically for the sprites and the logo both. They then offered
+  a "two-pose blink" as the cheap recovery, which is the same mechanism ruled
+  impossible four lines earlier _and_ is not a blink: `frameAt` is
+  `Math.floor(now / FRAME_MS) % frames` with `FRAME_MS` 125, so two poses
+  alternate at 4 Hz. There is no hold.
+
+  **Drawing the pet into tracked art is still out, but not because it "cannot
+  happen".** Item 6 below draws a personal-interest object into tracked
+  animated art, so the absolute is refuted by this file twenty-four lines on.
+  The grounds that hold are narrower: `CLAUDE.md` names the pet specifically as
+  ignored-file content, and unlike that object the pack _can_ supply the pet —
+  the logo proved the route on 26 Aug.
+
+  **What the stage can actually hold**, measured against the character's mask
+  union across all 128 `idle` and 96 `asleep` frames, landscape hero, for a
+  prop that is never occluded:
+
+  | Prop width | Tallest clear of the character | Where            |
+  | ---------- | ------------------------------ | ---------------- |
+  | up to 16   | 51 rows                        | panel (149, 115) |
+  | 20 to 36   | 22 rows                        | panel (0, 144)   |
+  | 40 to 48   | 20 rows                        | panel (0, 146)   |
+  | 52 and up  | 6 rows                         | below the feet   |
+
+  So an unoccluded prop is a bottom-left corner piece at roughly **40x20**, or
+  a tall narrow one at the right. Anything larger must be painted _behind_ the
+  character, which is five lines inside `paintStage`'s existing slot loop
+  rather than a new stage in `render()` — the logo is already composited in
+  that loop, a few lines below where this would go.
+
+  **That choice is open and belongs to the art brief**, because settling it
+  after the art exists means redrawing. This file's own filing says background
+  prop; the frozen spec says Tier A art, not set dressing. Both are
+  load-bearing and they disagree.
   What it would have bought is repeatability across a _series_, which matters
   when many are left. **Two are**, item 13's road bike having been cut since:
   the franchise-flavoured easter-egg idle (Stage 5, unchecked) and the spec's
@@ -685,7 +717,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   sprite. **Four of the five are in, 26 Aug** — a palette chosen for the two
   entries that actually reach the glass, quips mapped per state plus an idle
   rotation, `birthday: 09-23`, and a 14x17 mark on the laptop lid. The pet
-  sprite is the remainder, and it needs art rather than a field.
+  sprite is the remainder, and it needs art **and** a field — a first version
+  of this line said "art rather than a field", contradicting the pet bullet in
+  this same file and `packs/example/README.md`.
   It is no longer gitignored-and-nowhere: it is a private repo, cloned to
   `~/.tamaclaude/pack/` on the author's machine and installed by step 3 of
   `docs/INSTALL.md`. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
@@ -744,7 +778,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band, the stage and the camera in one action.
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
-- [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
+- [ ] Pet sprite, drawn from photos — on idle/asleep, not the
+      mascot. **"Background prop" was the filing the spec retired**, and
+      whether it is set dressing or a second character is the open question in
+      the Stage 4 generator bullet; it decides the size and so the art brief.
+      Needs a hand-drawn source SVG first — nothing in the tree turns a
+      photograph into pixel art
+- [ ] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
+      daemon line that selects it — the logo's sibling item, which the pet had
+      no equivalent of
 - [x] **Company logo → pixel** — the tool is built and the lid draws its output.
       `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
       the mark sits on, and emits a PNG to look at, SVG rects to paste, or — since
