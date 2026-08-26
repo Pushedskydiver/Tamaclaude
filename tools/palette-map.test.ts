@@ -5,30 +5,32 @@ import { describe, expect, it } from 'vitest';
 import { collisions, declaredFills, nearestIn } from './palette-map.ts';
 
 /**
- * A four-entry palette shaped like a real one, not read from any pack.
+ * A synthetic four-entry palette — black, white, crimson, blue.
  *
- * Deliberately not `packs/example`'s. These functions are pure and the
- * assertions below are about relationships between the numbers, so binding
- * them to a shipped manifest would make this test fail when that manifest
- * changed for unrelated reasons. Writing the same values here and *calling*
- * them `packs/example`'s would be worse again: a second source of truth that
- * `tools/one-panel-renderer.test.ts` cannot catch, because that gate greps
- * hex strings and these are decimals.
+ * Deliberately **not** `packs/example`'s, and deliberately not similar to it.
+ * These functions are pure and every assertion below is about a relationship
+ * between numbers, so binding them to a shipped manifest would make this file
+ * fail when that manifest changed for an unrelated reason.
+ *
+ * It carried `packs/example`'s four entries verbatim until 26 Aug, which
+ * `tools/one-panel-renderer.test.ts` cannot catch — that gate builds hex
+ * strings from the manifest and greps for them, and these are decimals. A
+ * comment claiming the values were arbitrary landed before the values were.
  */
 const PACK: Rgb[] = [
-  [13, 17, 23],
-  [201, 209, 217],
-  [247, 120, 73],
-  [63, 185, 80],
+  [0, 0, 0],
+  [255, 255, 255],
+  [220, 20, 60],
+  [20, 120, 200],
 ];
 
 describe('nearestIn', () => {
   it('returns an exact match unchanged', () => {
-    expect(nearestIn([247, 120, 73], PACK)).toEqual([247, 120, 73]);
+    expect(nearestIn([220, 20, 60], PACK)).toEqual([220, 20, 60]);
   });
 
   it('picks the least-distant entry', () => {
-    expect(nearestIn([250, 125, 70], PACK)).toEqual([247, 120, 73]);
+    expect(nearestIn([225, 25, 55], PACK)).toEqual([220, 20, 60]);
   });
 
   it('refuses an empty palette rather than inventing a colour', () => {
@@ -49,12 +51,12 @@ describe('nearestIn', () => {
  */
 describe('collisions', () => {
   it('finds two source colours sharing one palette entry', () => {
-    const purple: Rgb = [123, 45, 142];
-    const yellow: Rgb = [255, 209, 102];
-    const found = collisions([purple, yellow], PACK);
+    const rose: Rgb = [200, 40, 80];
+    const scarlet: Rgb = [240, 10, 40];
+    const found = collisions([rose, scarlet], PACK);
     expect(found).toHaveLength(1);
-    expect(found[0]?.target).toEqual([247, 120, 73]);
-    expect(found[0]?.sources).toEqual([purple, yellow]);
+    expect(found[0]?.target).toEqual([220, 20, 60]);
+    expect(found[0]?.sources).toEqual([rose, scarlet]);
   });
 
   it('reports nothing when every source maps somewhere distinct', () => {
@@ -70,15 +72,15 @@ describe('collisions', () => {
   });
 
   it('does not count one source colour as colliding with itself', () => {
-    expect(collisions([[247, 120, 73]], PACK)).toEqual([]);
+    expect(collisions([[220, 20, 60]], PACK)).toEqual([]);
   });
 
   it('groups three sources onto one entry as a single collision', () => {
     const found = collisions(
       [
-        [250, 125, 70],
-        [245, 118, 75],
-        [240, 130, 80],
+        [225, 25, 55],
+        [215, 15, 65],
+        [230, 30, 70],
       ],
       PACK,
     );
@@ -144,6 +146,28 @@ describe('declaredFills', () => {
     // used single quotes. The warning exists to be believed, so the cases it
     // silently skips have to be the ones nobody writes.
     expect(declaredFills(`<rect fill='#FFD166'/>`)).toEqual([[255, 209, 102]]);
+  });
+});
+
+describe('declaredFills, and what it cannot see', () => {
+  it('sees a fill in a style attribute, and anything else spelled `fill`', () => {
+    // The pattern is `fill` followed by `:` or `=`, unanchored. That is wider
+    // than "attributes only": CSS declarations count, and so does `data-fill`.
+    // Recorded rather than tightened — over-reporting a colour the artwork
+    // really contains is harmless, and the warning is advisory.
+    expect(declaredFills(`<rect data-fill="#FFD166"/>`)).toEqual([
+      [255, 209, 102],
+    ]);
+  });
+
+  it('misses rgb() and gradients, which is the hole that matters', () => {
+    // **A gradient logo gets no warning at all.** Company marks are
+    // gradient-heavy, and a gradient resolves to a `url(#…)` fill that names
+    // no colour, so `collisions` sees an empty set and reports nothing while
+    // the quantiser flattens the whole ramp. Same for `rgb()` notation.
+    // Asserted so the limitation is a recorded fact rather than a surprise.
+    expect(declaredFills(`<rect fill="rgb(255,209,102)"/>`)).toEqual([]);
+    expect(declaredFills(`<rect fill="url(#grad)"/>`)).toEqual([]);
   });
 
   it('ignores fill="none" and named colours rather than guessing', () => {

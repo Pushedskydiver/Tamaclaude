@@ -51,6 +51,20 @@ describe('viewBoxUnits', () => {
     });
   });
 
+  it('reads a single-quoted viewBox, which the same exporters emit', () => {
+    // The other half of the quoting hole. `declaredFills` in
+    // `tools/palette-map.ts` was widened to both quote styles on 26 Aug and
+    // this was not, so a logo exported with single quotes failed here — on the
+    // very first thing `logo2pixel.ts` does with it — while the fix for the
+    // same problem sat one module over.
+    expect(viewBoxUnits(`<svg viewBox='0 0 40 50'></svg>`)).toEqual({
+      width: 40,
+      height: 50,
+    });
+  });
+});
+
+describe('viewBoxUnits refuses what it cannot use', () => {
   it('refuses an SVG with no viewBox', () => {
     expect(() => viewBoxUnits('<svg width="40"></svg>')).toThrow(/viewBox/);
   });

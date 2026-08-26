@@ -63,7 +63,7 @@ function paletteAt(index: number): string {
   return colour;
 }
 
-/** `palette[0]` is the background, and so a legal `--over`. */
+/** `palette[0]` is the background, and the tool's own default ground. */
 const BACKGROUND = paletteAt(0);
 
 /**

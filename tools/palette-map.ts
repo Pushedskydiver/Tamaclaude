@@ -9,9 +9,13 @@ import type { Rgb } from './frame-palette.ts';
  * of a logo it would report a collision against a ground the logo never draws,
  * and it cannot tell a logo's own `#000000` from the ground it injects.
  *
- * Hex fills only. `fill="none"` and named colours are skipped rather than
- * guessed at: a wrong colour in a collision report is worse than a missing
- * one, because the report exists to be believed.
+ * Six-digit hex only, wherever the word `fill` precedes it — so CSS
+ * declarations count, and so does anything else spelled `fill`. Skipped
+ * rather than guessed at: `fill="none"`, named colours, `#fff` shorthand,
+ * `rgb()` notation, and **gradients**, which name no colour at all. A wrong
+ * colour in a collision report is worse than a missing one, because the report
+ * exists to be believed — but a gradient-heavy mark gets no report at all,
+ * which is the limitation worth knowing.
  */
 export function declaredFills(svg: string): Rgb[] {
   const found = new Map<string, Rgb>();

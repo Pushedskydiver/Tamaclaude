@@ -400,7 +400,7 @@
 
        **`#logo-lit` and `#logo-dim` are load-bearing ids, and a careless
        replacement kills the pulse silently.** They are the only elements the
-       rules above match, and the two of them alternating on a 1s loop is what
+       two `#logo-*` rules in the stylesheet above match, and the two of them alternating on a 1s loop is what
        makes the screen read as lit rather than painted. Paste in a set of
        rects and both ids go with them: `svg2frames` reports two fewer
        animations and does not warn, every gate stays green, and the lid goes

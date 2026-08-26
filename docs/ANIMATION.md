@@ -58,8 +58,11 @@ also carries its own copy of the geometry and its own `fill`, so sixteen
 tracked files under `assets/` declare `body-color-group`.
 
 **And the groups do not contain every fill.** Ten animations declare the body
-colour a second time on `#legs-group`, outside the group, because the legs must
-sit outside it to be animated separately. So the real measure of a recolour is
+colour a second time on `#legs-group`, outside the colour group — not because
+legs have to sit outside it to move, since `bouldering` animates each leg from
+inside, but because in those files the group that _moves_ and the group that
+carries the colour are the same element, and a leg cannot both ride the torso
+and step independently. So the real measure of a recolour is
 the grep, not a count anyone can quote — `grep -ro 'fill="#DE886D"' assets/`
 today returns more attributes than there are files. Run the grep rather than
 quoting a figure: this count was stated wrong three times in one day before
@@ -524,9 +527,10 @@ outside the SVG. The variety lives in the animation.
 
 It is also among the cheapest things in the repo. `idle` measures 3,609 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
-the six until `permission-sign` (2,645) and `confused` (3,323) landed; the ten
-now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,163 / 6,332 / 9,966 /
-14,545 / 22,568. The
+the six until `permission-sign` (2,645) and `confused` (3,323) landed. The ten
+that existed when this was last measured ran 2,645 / 3,323 / 3,609 / 3,905 /
+5,836 / 6,163 / 6,332 / 9,966 / 14,545 / 22,568; there are fourteen now, so
+treat that spread as a shape rather than a census. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

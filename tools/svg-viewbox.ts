@@ -1,10 +1,11 @@
 /**
  * The width and height an SVG's viewBox declares, in user units.
  *
- * The one place this repo reads a viewBox. Extracted from `stageDimensions` in
- * `tools/svg2frames.ts` when the logo pixelator needed the same parse: two
- * copies would mean two bug histories, and this parse already has one worth
- * keeping. Splitting on whitespace alone mis-handles `viewBox="0,0,40,50"`,
+ * Extracted from `stageDimensions` in `tools/svg2frames.ts` when the logo
+ * pixelator needed the same parse: two copies would mean two bug histories,
+ * and this parse already has one worth keeping. It is not quite the only
+ * reader — `svg2frames.ts` also pulls `viewBox`'s min-y inside the browser,
+ * in the safe-area walk, where this module cannot reach. Splitting on whitespace alone mis-handles `viewBox="0,0,40,50"`,
  * which SVG permits — the destructure shifts by one position and yields a
  * negative width that dies inside Playwright rather than at the guard here.
  *
@@ -16,7 +17,13 @@ export function viewBoxUnits(svg: string): {
   readonly width: number;
   readonly height: number;
 } {
-  const viewBox = /viewBox="([^"]+)"/.exec(svg)?.[1];
+  // Both quote styles, for the same reason `declaredFills` accepts both: this
+  // runs against third-party artwork, and an exporter that single-quotes one
+  // attribute single-quotes them all.
+  const viewBox = /viewBox=(?:"([^"]+)"|'([^']+)')/
+    .exec(svg)
+    ?.slice(1)
+    .find(Boolean);
   if (viewBox === undefined) throw new Error('no viewBox in input SVG');
   const parts = viewBox
     .trim()

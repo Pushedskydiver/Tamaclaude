@@ -686,8 +686,8 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band and the panel in one action.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
 - [~] **Company logo → pixel** — the tool is built; nothing draws its output.
-  `tools/logo2pixel.ts` rasterises, snaps to a pack's palette, and emits a
-  PNG to look at or SVG rects to paste.
+  `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
+  the mark sits on, and emits a PNG to look at or SVG rects to paste.
   **No `sharp`, and none was needed** — the plan named a dependency the
   repo already had both halves of. Playwright rasterises the SVG the way
   `tools/svg2frames.ts` does, and `snapToPalette` was already
@@ -696,8 +696,11 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   **It warns when a palette merges two of a logo's colours**, which is the
   failure that is otherwise silent: a small palette cannot represent an
   arbitrary logo, and the mark that loses is simply absent from the output.
-  The warning reads hex `fill` attributes only, so `#fff` shorthand and
-  stroke-only artwork pass it silently.
+  The warning reads six-digit hex only, wherever the word `fill` precedes it,
+  so it also picks up CSS declarations. What passes it silently is `#fff`
+  shorthand, stroke-only artwork, `rgb()` notation and — the one that matters
+  for a company mark — **gradients**, which name no colour at all, so a
+  gradient logo gets no warning while the quantiser flattens the whole ramp.
   **What is left is the whole of the delivery.** A logo reaches the panel
   only through a pack `logo` field the schema does not have and a renderer
   path that does not exist, or through a private re-bake of the animation

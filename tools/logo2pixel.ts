@@ -28,16 +28,28 @@
  * `x 2.25..12.75, y 11..13.5`, so **84 x 20 px**. That height is the binding
  * constraint, not the width.
  *
- *   node tools/logo2pixel.ts pack/logo.svg --width 12 \
+ *   node tools/logo2pixel.ts pack/logo.svg --width 16 \
  *     --over '#RRGGBB' --format rects
  *
  * `--over` is the colour the mark sits on — for the lid that is `#30363B`,
- * fixed in the artwork. Wrap the output in
- * `<g fill="#RRGGBB" transform="translate(x,y)">` inside the logo group: the
- * rects carry no fill of their own, so without one they default to black.
+ * fixed in the artwork.
  *
- * Centring is arithmetic, not a constant. For a mark `w` x `h` device pixels
- * at 8 px per unit, `x = 2.25 + (10.5 - w/8)/2` and `y = 11 + (2.5 - h/8)/2` —
+ * **Do not wrap the rects in a new group inside `#fx-laptop-logo`.** That
+ * leaves `#logo-lit` and `#logo-dim` in place, so the mark is static and the
+ * old one-pixel dot goes on flickering through a hole in it — 23 animations,
+ * no warning, every gate green. The rects go *inside* those two elements,
+ * which each become a `<g>` carrying its own fill and the shared
+ * `transform="translate(x,y)"`; they alternate on a 1s loop and that is what
+ * makes the screen read as lit. Emit the mark twice, once per element, and do
+ * not give the copies a fill of their own — an explicit child fill beats the
+ * inherited one and both shades render the same, which is the pulse gone by a
+ * different route.
+ *
+ * Centring is arithmetic, not a constant. **Prefer even `w` and `h`**: an odd
+ * pixel count puts the translate on a half device pixel, which the snap
+ * recovers but which can resolve an edge to the wrong side. For a mark `w` x
+ * `h` device pixels at 8 px per unit,
+ * `x = 2.25 + (10.5 - w/8)/2` and `y = 11 + (2.5 - h/8)/2` —
  * a 16x16 mark gives `translate(6.5,11.25)` and leaves 2 px of lid above and
  * below. **Height is the constraint**: at 20 px there is not much of it, so
  * pick the width that lands the height you want rather than the other way
@@ -282,10 +294,11 @@ try {
     console.log(runsToRects(runs, { unitsPerPixel, x: 0, y: 0 }).join('\n'));
   } else {
     const base64 = snapped.uri.replace(/^data:image\/png;base64,/, '');
-    // `out/` is gitignored, so it is absent from a fresh checkout. Several
-    // tools write there; the ones that might create it — `svg2frames.ts`,
-    // `harness.ts` — mkdir like this. This one had not, and failed with a raw
-    // ENOENT after the browser had launched and done the work.
+    // `out/` is gitignored, so it is absent from a fresh checkout. The tools
+    // that screenshot through Playwright get the directory made for them; the
+    // ones that write bytes themselves — `svg2frames.ts`, `harness.ts` —
+    // mkdir like this. This one writes bytes and did not, and failed with a
+    // raw ENOENT after the browser had launched and done the work.
     await mkdir(dirname(resolve(out)), { recursive: true });
     await writeFile(resolve(out), Buffer.from(base64, 'base64'));
     console.log(
