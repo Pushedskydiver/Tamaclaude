@@ -495,7 +495,7 @@ than partially. Eight good screens beat nine plus four rough ones.
   a judgement that a tool automating a working loop is worth less than the
   days it costs, with 29 left. Nothing depends on it: the only reference in
   the tree was this line. Most of Stage 5's remaining art does not want it — a
-  pixel scene is a drawing and the logo is a `sharp` pipeline — but the pet
+  pixel scene is a drawing and the logo is a quantiser pass — but the pet
   sprite is a background prop _on idle and asleep_, so it lands inside two
   existing animated SVGs, and the spec calls it Tier A art rather than set
   dressing. That and the easter-egg idle are animation work.
@@ -685,7 +685,69 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       local date. Five minutes, and it exercises resolution, schema, the
       message band and the panel in one action.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
-- [ ] Company logo → pixel: SVG → nearest-neighbour → palette quantise (`sharp`)
+- [~] **Company logo → pixel** — the tool is built; nothing draws its output.
+  `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
+  the mark sits on, and emits a PNG to look at or SVG rects to paste.
+  **No `sharp`, and none was needed** — the plan named a dependency the
+  repo already had both halves of. Playwright rasterises the SVG the way
+  `tools/svg2frames.ts` does, and `snapToPalette` was already
+  nearest-neighbour against a palette it is handed; it was written to snap
+  frames to an SVG's own colours, and the palette is a parameter.
+  **It warns when a palette merges two of a logo's colours**, which is the
+  failure that is otherwise silent: a small palette cannot represent an
+  arbitrary logo, and the mark that loses is simply absent from the output.
+  The warning reads six-digit hex only, wherever the word `fill` precedes it,
+  so it also picks up CSS declarations. What passes it silently is `#fff`
+  shorthand, stroke-only artwork, `rgb()` notation and — the one that matters
+  for a company mark — **gradients**, which name no colour at all, so a
+  gradient logo gets no warning while the quantiser flattens the whole ramp.
+  **What is left is the whole of the delivery.** A logo reaches the panel
+  only through a pack `logo` field the schema does not have and a renderer
+  path that does not exist, or through a private re-bake of the animation
+  frames. The item below carries the first; the second needs no plan
+  because it is a build step run once.
+  The logo itself is pack content and is not in this repo.
+- [ ] **A pack `logo` field, and something that draws it.** The half above
+      that is not built, and the larger half.
+      **Where it goes: the laptop lid, not the splash — and this overrules the
+      freeze rather than filling a gap.** The screen spec's easter-egg table
+      routes the logo to the boot splash, and that spec is the _later_
+      document: `PLANS.md` §Typing argued for the lid on 18 Aug, the splash
+      shipped without a logo on 21 Aug, and the 25 Aug freeze still said
+      splash. The lid wins for a reason the freeze did not have in view — the
+      splash is drawn by the firmware (`draw_splash()` runs unconditionally in
+      `app_main`, so it is on at every power-on until the daemon paints over
+      it), and firmware is flashed rather than configured, so a splash logo
+      cannot be a pack field at all. The manifest freeze at the same spec names
+      `logo`, so the field itself is in scope.
+      **Size it against the codec that exists, not against a decoder.** The
+      renderer's runtime dependencies are `@tamaclaude/packs` and
+      `@tamaclaude/protocol` and nothing else — there is no image decoder in
+      the shipping graph, and Playwright is a build-time dependency that never
+      reaches the recipient. So the pack cannot ship a PNG or an SVG. What it
+      can ship is what the sprites already are: an RGB565 payload through
+      `encodeRect`/`decodeRect` in `@tamaclaude/protocol`, which
+      `packages/renderer/src/sprites/index.ts` already turns back into pixels.
+      That makes this a schema entry, a loader, a blit at a known slot, and a
+      third output format on `tools/logo2pixel.ts` — which today emits a PNG to
+      look at and SVG rects to paste, **neither of which the renderer can
+      consume**. Smaller than it first looked, and the tool is the part that
+      needs the change.
+      **Decide it on an artefact, not on a start date.** If
+      `panel-mock` cannot draw a pack-supplied mark by **10 Sep**, stop: a
+      trigger that fires when someone opens a file is a rubber stamp, which is
+      the objection `PLANS.md` already makes to a gate of that shape. Note the
+      input is also unscheduled — both routes need the recipient's `logo.svg`,
+      and the pack that holds it is itself an open item above.
+      **The fallback does not deliver, and that is why it is not one.** A
+      private re-bake writes the mark into `packages/renderer/src/sprites/`,
+      which is tracked; the recipient installs from a clone of a public repo
+      (`Printed card: QR to repo + one-line install`), so an uncommitted change
+      on one Mac reaches nobody, and committing it puts a company mark in
+      public history permanently. If the field does not land, **no logo ships**
+      — the placeholder stays and the panel is still a gift. Two paragraphs
+      above promise the recipient will see "their logo"; if this is cut, that
+      promise goes with it, and the deferred table takes a row.
 - [ ] Quips mapped to states, never randomised
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
@@ -784,12 +846,26 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 - [ ] Run it on Alex's desk all week. Fix what irritates. No new features.
 - [ ] Assemble board in printed case
-- [ ] Dry-run the full install on a clean macOS user account. **Bring this
-      forward — it is the highest-information hour left in the plan.** The
-      untested assumption under everything else is that a Mac which is not this
-      one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
-      full `tsc -b`. Finding out on 19 Sep leaves four days, and the recovery
-      for "no toolchain" is a packaging project rather than a bug fix.
+- [~] Dry-run the full install on a clean macOS user account. **Bring this
+  forward — it is the highest-information hour left in the plan.** The
+  untested assumption under everything else is that a Mac which is not this
+  one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
+  full `tsc -b`. Finding out on 19 Sep leaves four days, and the recovery
+  for "no toolchain" is a packaging project rather than a bug fix.
+  **Half of it is done, and it earns its billing.** A fresh `git clone` of
+  the repo into an empty directory installs, builds and passes all six
+  gates — 49 files, 585 tests, no local state. What that cannot see is
+  anything cached per-_user_ rather than per-checkout, which is where the
+  real risk lives: the Playwright browser is the known one, and pointing
+  `PLAYWRIGHT_BROWSERS_PATH` at an empty directory stands in for the clean
+  account. Doing that has now caught two separate suites failing with no
+  mention of Playwright — `frame-palette` on 25 Aug and `logo2pixel` on
+  26 Aug, the second with five assertions reading `expected 1 to be +0`.
+  Both now name the install command instead.
+  **What is left needs a real account**: Xcode CLT, whether node and pnpm
+  exist at all, the launchd agent, and the device. Run the clone-and-gate
+  check after any change to tooling — it is two minutes and it is the part
+  that does not need one.
 - [ ] Printed card: QR to repo + one-line install
 - [ ] Flash the gift board (not the dev board) with the splash
 

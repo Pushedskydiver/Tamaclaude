@@ -35,7 +35,7 @@ without drowning in decimal path data.
 | ------------------ | -------------- | ---------------------------------------------------------------- |
 | `ground-shadow`    | 3,15 9x1       | **Reference only — do not copy it into an animation.** See below |
 | `master-group`     | —              | Wraps everything animatable                                      |
-| `body-color-group` | fill `#DE886D` | One attribute recolours the whole crab                           |
+| `body-color-group` | fill `#DE886D` | One attribute colours the crab _in this file_ — see below        |
 | `torso`            | 2,6 11x7       |                                                                  |
 | `left-arm`         | 0,9 2x2        | Taps by translating; never rotates                               |
 | `right-arm`        | 13,9 2x2       | Taps by translating; never rotates                               |
@@ -47,8 +47,31 @@ without drowning in decimal path data.
 | `left-eye`         | 4,8 1x2        |                                                                  |
 | `right-eye`        | 10,8 1x2       |                                                                  |
 
-The two colour groups are why packs can stay thin — a pack recolours Clawd by
-overriding two `fill` attributes, not by shipping its own character.
+The two colour groups are an authoring convenience: one attribute per group
+carries the colour, so within a file recolouring the body is one edit rather
+than seven, and the eyes one rather than two.
+
+**No pack uses them, and neither does `base.svg` alone.** Sprites are baked to
+fixed RGB565 by `tools/bake-sprites.ts` and no pack palette reaches a baked
+sprite — `packages/packs/src/index.ts` records that retraction. Each animation
+also carries its own copy of the geometry and its own `fill`, so sixteen
+tracked files under `assets/` declare `body-color-group`.
+
+**And the groups do not contain every fill.** Ten animations declare the body
+colour a second time on `#legs-group`, outside the colour group — not because
+legs have to sit outside it to move, since `bouldering` animates each leg from
+inside, but because in those files the group that _moves_ and the group that
+carries the colour are the same element, and a leg cannot both ride the torso
+and step independently. So the real measure of a recolour is
+the grep, not a count anyone can quote — `grep -ro 'fill="#DE886D"' assets/`
+today returns more attributes than there are files. Run the grep rather than
+quoting a figure: this count was stated wrong three times in one day before
+anyone checked it against the corpus.
+
+Nor is it one re-bake: fourteen are animations that go through `bake-sprites`,
+`splash.svg` bakes to a firmware header and so needs a reflash, and `base.svg`
+bakes to nothing, being the reference the others were copied from. A build step
+rather than a runtime one, and the reason the character is not per-pack.
 
 **`ground-shadow` is the one base element an animation must not carry.** Seven of the eight carried it at half opacity, which is what
 `snapToPalette` drops, and `bouldering` carried it at zero on purpose. Black at
@@ -504,9 +527,10 @@ outside the SVG. The variety lives in the animation.
 
 It is also among the cheapest things in the repo. `idle` measures 3,609 B/s
 against the 562.5 KB/s the link was measured at — 0.63%. It was the lowest of
-the six until `permission-sign` (2,645) and `confused` (3,323) landed; the ten
-now run 2,645 / 3,323 / 3,609 / 3,905 / 5,836 / 6,163 / 6,332 / 9,966 /
-14,545 / 22,568. The
+the six until `permission-sign` (2,645) and `confused` (3,323) landed. The ten
+that existed when this was last measured ran 2,645 / 3,323 / 3,609 / 3,905 /
+5,836 / 6,163 / 6,332 / 9,966 / 14,545 / 22,568; there are fourteen now, so
+treat that spread as a shape rather than a census. The
 figure here used to read 839 B/s against a 700 KB/s floor; both halves were
 stale, the floor because it was never measured and the cost because the palette
 snap changed what the frames contain. `pnpm measure` prints the current

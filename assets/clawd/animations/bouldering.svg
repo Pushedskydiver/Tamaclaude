@@ -630,8 +630,17 @@
         </g>
 
         <!-- Nested inside the body colour group rather than beside it, because
-             the eyes must ride the bob with the torso and a pack recolours by
-             overriding these two fills wherever they sit. -->
+             the eyes must ride the bob with the torso. Editing the two group
+             fills is an authoring change and a re-bake, not anything a pack
+             does — see `docs/ANIMATION.md`.
+
+             Note this file is one of the easy ones — its legs sit inside the
+             body group, as do `asleep`'s and `typing`'s, so a single fill
+             covers them. Most animations declare the body colour a second
+             time outside the group: ten on `#legs-group`, and two more where
+             grepping for legs would miss it (`overheated`'s `#arm-fan`,
+             `permission-sign`'s `#right-arm-joint`). Run the grep in
+             `docs/ANIMATION.md` rather than trusting a heuristic. -->
         <g id="eyes-color-group" fill="#000000">
           <g id="eyes-look">
             <rect id="left-eye" x="4" y="8" width="1" height="2"/>

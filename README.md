@@ -39,14 +39,18 @@ In development. See [BUILD_PLAN.md](BUILD_PLAN.md).
 
 ## Packs
 
-A _pack_ is a palette, a quip table, props and an optional logo. The character
-is **not** part of it — Clawd is shared across every pack and recoloured, so
-there is one base geometry and one animation set to maintain.
+A _pack_ is a palette, a quip table and an optional birthday; props and a logo
+are planned. The character is **not** part of it — Clawd is shared across every
+pack, so there is one base geometry and one animation set to maintain. His
+colours are baked into the sprites and no pack changes them.
 
 `packs/example/` is the reference and the only pack in version control.
 Everything else under `packs/` is gitignored, so personal packs sit in your
 working tree without reaching the public repo. Point `TAMACLAUDE_PACK` at one,
-or put it in `~/.tamaclaude/pack/`, and every screen changes without a rebuild.
+or put it in `~/.tamaclaude/pack/`, and the panel picks it up without a
+rebuild. How much changes is measured rather than promised — see
+`packages/renderer/src/pack-swap.test.ts`; today it is the session chips, and
+the logo and pet sprite that will quantise to the palette are Stage 5.
 
 There is no bundled default: with no pack configured the daemon refuses to
 start rather than falling back to the example, because a fallback would turn

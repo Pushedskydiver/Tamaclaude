@@ -204,8 +204,8 @@ defect.
 
 ## Packs
 
-A pack is the customisation surface: a palette, a quip table, an optional
-birthday, props and an optional logo.
+A pack is the customisation surface: a palette, a quip table and an optional
+birthday. Props and a logo are planned and are not fields.
 
 **Selection is an environment variable, then a fixed path.**
 `TAMACLAUDE_PACK` names a pack directory; failing that, `~/.tamaclaude/pack/`.
@@ -222,10 +222,12 @@ fatal, and `tamaclaude pack` exists to answer the question no schema can — not
 the resolved path, the source, and the date the birthday fires.
 
 **The character is not per-pack.** Clawd is shared — one base geometry, one
-animation set, recoloured and re-dressed per pack. Making the character
-swappable would double the art surface, and the calendar has no room for a
-second character. `assets/clawd/base.svg` and `docs/ANIMATION.md` own the
-character; packs own everything about how he's dressed.
+animation set, baked to fixed RGB565 sprites that no pack alters. Making the
+character swappable would double the art surface, and the calendar has no room
+for a second character. `assets/clawd/base.svg` and `docs/ANIMATION.md` own the
+character; a pack owns the palette, the quips and the birthday. Props and a
+logo are planned and not built, so "dressed per pack" is not true of anything
+today.
 
 `packs/example/` is committed and documents the format. Real packs are gitignored — one per person, named for
 whoever the panel belongs to — because the repo is public and the personal

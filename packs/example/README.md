@@ -3,20 +3,24 @@
 The reference pack. Deliberately generic — this is the one pack committed to a
 public repo, so it demonstrates the format and nothing else.
 
-A pack is the customisation surface: a palette, a quip table, an optional
-birthday, props and an optional logo. Point `TAMACLAUDE_PACK` at a pack
-directory, or put one at `~/.tamaclaude/pack/`, and every screen changes with
-no rebuild and no reflash.
+A pack is the customisation surface: a palette, a quip table and an optional
+birthday. Props and a logo are planned and are not fields yet. Point `TAMACLAUDE_PACK` at a pack
+directory, or put one at `~/.tamaclaude/pack/`, and the panel picks it up with
+no rebuild and no reflash. What a swap actually moves is measured in
+`packages/renderer/src/pack-swap.test.ts`, and it is less than "every screen":
+the session chips today, with the logo and pet sprite still to build.
 
 A pack is the **directory**, not the manifest — `manifest.json` is a file
 inside it, and the logo and pet sprite will be its siblings. With no pack
 configured the daemon refuses to start; there is no bundled default to fall
 back to. Run `tamaclaude pack` to see which one is loaded.
 
-The character is **not** in the pack. Clawd is shared and recoloured via the
-two colour groups in `assets/clawd/base.svg` — making him swappable would mean
-a second animation set, and the calendar has no room for one. See
-`docs/ARCHITECTURE.md` §Packs.
+The character is **not** in the pack. Clawd is shared and his colours are
+baked into the sprites, so nothing here changes them: recolouring him means
+editing every declared fill under `assets/clawd/` — they are not all inside
+the colour groups — and re-baking, which for `splash.svg` means reflashing the
+firmware rather than rebuilding a sprite. Making him swappable would mean a second animation set, and the
+calendar has no room for one. See `docs/ARCHITECTURE.md` §Packs.
 
 ## `manifest.json`
 

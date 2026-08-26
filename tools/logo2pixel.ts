@@ -1,0 +1,311 @@
+#!/usr/bin/env node
+/**
+ * Quantise a logo SVG to a pack's palette, at panel pixel density.
+ *
+ *   node tools/logo2pixel.ts <logo.svg> [out.png] [--pack packs/other]
+ *                            [--width 48] [--over '#RRGGBB']
+ *
+ * `BUILD_PLAN.md` Stage 5 calls this "SVG → nearest-neighbour → palette
+ * quantise (`sharp`)", and the screen spec names a "logo pixelation script"
+ * as the cost of putting one on the boot splash. **It needs no `sharp`.** Both halves already existed for
+ * the animation pipeline: Playwright rasterises the SVG the way
+ * `tools/svg2frames.ts` does, and `snapToPalette` in `tools/frame-palette.ts`
+ * is already nearest-neighbour in RGB against a palette it is handed. That
+ * function was written to snap frames to an SVG's *own* declared colours, to
+ * undo antialiasing; the palette is a parameter, so pointing it at a pack's
+ * palette instead is the whole of the difference.
+ *
+ * **The pack is the palette source, and the logo is never in this repo.** A
+ * logo is personal content, so it lives in a gitignored pack directory beside
+ * `manifest.json` — `packages/cli/src/pack.ts` explains why a pack is a
+ * directory rather than a file. This script takes a path and a pack and writes
+ * a PNG; it names no company and ships no artwork.
+ *
+ * ## Putting one on the laptop lid
+ *
+ * `typing.svg`'s `#fx-laptop-logo` is the slot a mark replaces. Measured, at
+ * the stage's 8 device pixels per user unit: the lid is
+ * `x 2.25..12.75, y 11..13.5`, so **84 x 20 px**. That height is the binding
+ * constraint, not the width.
+ *
+ *   node tools/logo2pixel.ts pack/logo.svg --width 16 \
+ *     --over '#RRGGBB' --format rects
+ *
+ * `--over` is the colour the mark sits on — for the lid that is `#30363B`,
+ * fixed in the artwork.
+ *
+ * **Do not wrap the rects in a new group inside `#fx-laptop-logo`.** That
+ * leaves `#logo-lit` and `#logo-dim` in place, so the mark is static and the
+ * old one-pixel dot goes on flickering through a hole in it — 23 animations,
+ * no warning, every gate green. The rects go *inside* those two elements,
+ * which each become a `<g>` carrying its own fill and the shared
+ * `transform="translate(x,y)"`; they alternate on a 1s loop and that is what
+ * makes the screen read as lit. Emit the mark twice, once per element, and do
+ * not give the copies a fill of their own — an explicit child fill beats the
+ * inherited one and both shades render the same, which is the pulse gone by a
+ * different route.
+ *
+ * Centring is arithmetic, not a constant. **Prefer even `w` and `h`**: an odd
+ * pixel count puts the translate on a half device pixel, which the snap
+ * recovers but which can resolve an edge to the wrong side. For a mark `w` x
+ * `h` device pixels at 8 px per unit,
+ * `x = 2.25 + (10.5 - w/8)/2` and `y = 11 + (2.5 - h/8)/2` —
+ * a 16x16 mark gives `translate(6.5,11.25)` and leaves 2 px of lid above and
+ * below. **Height is the constraint**: at 20 px there is not much of it, so
+ * pick the width that lands the height you want rather than the other way
+ * round.
+ *
+ * **`rects` output is a silhouette, not a picture.** `opaqueRuns` reads only
+ * the alpha channel and the rects carry no fill, so the caller's group supplies
+ * one colour for the whole mark. The snap still decides which pixels are
+ * *there* — it is what resolves the antialiased edge to one side — but every
+ * colour in the source becomes that single fill. So the collision warning
+ * below is about the `png` path; in `rects` every colour merges by
+ * construction, which is fine for a one-colour mark on a contrasting ground
+ * and wrong for anything else.
+ *
+ * **Nothing renders the output yet.** `packages/packs` has no logo field and
+ * the renderer draws no logo; `BUILD_PLAN.md` Stage 5 carries "A pack `logo`
+ * field, and something that draws it" as the item for that. This produces the
+ * asset only, which is still worth having early: the pixel art is what needs
+ * judging by eye against a real palette, and it can be judged before anything
+ * draws it. The other live route is a private re-bake of the animation
+ * frames — see `typing.svg`'s note on the logo group for what that costs.
+ *
+ * There is a third, and it is closed: the boot splash, which is where the
+ * screen spec originally put the logo. `tools/bake-splash.ts` writes a
+ * firmware header, so it is flashed rather than configured, and the splash
+ * shipped on 21 Aug without one. `BUILD_PLAN.md` records why the lid won.
+ *
+ * **A logo is quantised against a ground.** Partly transparent pixels are
+ * composited over `--over` before the nearest colour is picked, and
+ * `snapToPalette` clears alpha only where a pixel both resolved to that ground
+ * and arrived non-opaque — so the ground joins the snap candidates, or nothing
+ * would ever be transparent. The default is `palette[0]`. The same art
+ * quantised against a different ground is a different picture at the edges, so
+ * re-bake per surface rather than reusing one output.
+ */
+import type { Rgb } from './frame-palette.ts';
+
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { basename, dirname, resolve } from 'node:path';
+import process from 'node:process';
+import { parseArgs } from 'node:util';
+
+import { chromium } from 'playwright';
+
+import { loadPack } from './blit-scene.ts';
+import { snapToPalette } from './frame-palette.ts';
+import { collisions, declaredFills, nearestIn } from './palette-map.ts';
+import { opaqueRuns, runsToRects } from './pixel-rects.ts';
+import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
+
+/**
+ * Default width in panel pixels.
+ *
+ * The landscape stage is 168px wide and the message band 152px, so 48 is
+ * roughly a third of either — small enough to sit as a prop rather than as
+ * the subject, and large enough that a wordmark is still legible at 1:1.
+ * Nothing consumes it yet, so this is a starting point for looking, not a
+ * measurement of a slot that exists.
+ */
+const DEFAULT_WIDTH = 48;
+
+/** `#RRGGBB` for a report line. */
+function hexOf(colour: Rgb): string {
+  return `#${colour.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** `#RRGGBB` to a triple, for `--over`. */
+function parseHex(hex: string): Rgb {
+  const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (match?.[1] === undefined) throw new Error(`not a #RRGGBB colour: ${hex}`);
+  const value = Number.parseInt(match[1], 16);
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+}
+
+const { values, positionals } = parseArgs({
+  args: process.argv.slice(2),
+  allowPositionals: true,
+  options: {
+    pack: { type: 'string', default: 'packs/example' },
+    width: { type: 'string', default: String(DEFAULT_WIDTH) },
+    over: { type: 'string' },
+    // `png` to look at, `rects` to paste. An animation SVG cannot embed a
+    // raster and stay hard-edged — `tools/bake-splash.ts` expands the splash
+    // wordmark to rects for the same reason — so the mark that goes into
+    // `typing.svg`'s logo group is geometry, not an image.
+    format: { type: 'string', default: 'png' },
+    // Device pixels per user unit, matching `tools/svg2frames.ts`'s third
+    // argument. The stage renders at 8, so a pixel is 0.125 units.
+    scale: { type: 'string', default: '8' },
+  },
+});
+if (values.format !== 'png' && values.format !== 'rects') {
+  console.error(`--format takes 'png' or 'rects', not '${values.format}'`);
+  process.exit(1);
+}
+
+const [svgArg, outArg] = positionals;
+if (svgArg === undefined) {
+  console.error(
+    'usage: node tools/logo2pixel.ts <logo.svg> [out.png] ' +
+      "[--pack <dir>] [--width 48] [--over '#RRGGBB']",
+  );
+  process.exit(1);
+}
+
+const width = Number(values.width);
+if (!Number.isInteger(width) || width <= 0) {
+  console.error(
+    `--width must be a positive whole number, not '${values.width}'`,
+  );
+  process.exit(1);
+}
+const svg = await readFile(resolve(svgArg), 'utf8');
+const pack = await loadPack(resolve(values.pack));
+const palette = pack.palette.map((entry) => [...entry] as unknown as Rgb);
+const background = palette[0];
+if (background === undefined) throw new Error('pack palette is empty');
+// Both of these threw a raw stack trace until 26 Aug, while `--scale` — a
+// flag that appears in no recipe — had a readable message.
+let over: Rgb;
+try {
+  over = values.over === undefined ? background : parseHex(values.over);
+} catch {
+  console.error(`--over must be a #RRGGBB colour, not '${values.over}'`);
+  process.exit(1);
+}
+/**
+ * The palette the snap actually chooses from: the pack's, plus the ground.
+ *
+ * **The ground has to be a candidate or nothing is transparent.**
+ * `snapToPalette` clears alpha only where a pixel's *snapped* colour equals
+ * the ground and the capture was non-opaque — and the snapped colour comes
+ * from this array. A ground outside it is therefore never matched, every pixel
+ * comes back opaque, and the output is a solid rectangle the size of the
+ * mark's bounding box: silent in `png`, and in `rects` it is what gets pasted.
+ *
+ * Adding it here rather than demanding a pack carry it. The surface a mark
+ * sits on is often not a pack colour at all — the laptop lid in `typing` is a
+ * fixed `#30363B` in the artwork, and no pack palette reaches a baked sprite,
+ * so it is that colour on every install. Requiring `--over` to be a palette
+ * entry would refuse the tool's own documented workflow.
+ *
+ * Opaque interior pixels survive even when they land on the ground, because
+ * the alpha rule needs *both* conditions; only the antialiased edge, which
+ * arrives part-transparent, resolves to the ground and drops out.
+ */
+const candidates: Rgb[] = palette.some((entry) =>
+  entry.every((v, c) => v === over[c]),
+)
+  ? palette
+  : [...palette, over];
+
+const scale = Number(values.scale);
+if (!Number.isFinite(scale) || scale <= 0) {
+  console.error(`--scale must be a positive number, not '${values.scale}'`);
+  process.exit(1);
+}
+
+// **The failure this tool has that nothing else would catch.** A pack palette
+// is four colours; a logo is not. Two marks whose nearest entry is the same
+// one merge, and the mark that lost simply is not in the output — no error, no
+// empty file, just a picture missing a shape. A fixture with a purple field
+// and a yellow disc came back as a flat orange rectangle.
+// **A mark colour that resolves to the ground is invisible, and it is not a
+// collision.** Adding the ground to the candidates can only split collisions
+// apart, so a colour that used to merge with a palette entry may now snap to
+// the ground instead — where it renders in the surface's own colour and
+// vanishes against it. No two mark colours merged, so `collisions` cannot see
+// it. Reported separately, and the collision check runs against the pack's
+// palette so it still describes what the *pack* can represent.
+const fills = declaredFills(svg);
+for (const fill of fills) {
+  if (nearestIn(fill, candidates).every((v, c) => v === over[c])) {
+    console.warn(
+      `warning: ${hexOf(fill)} is nearest to the ground ${hexOf(over)}, so ` +
+        `it will disappear into the ground it is drawn on`,
+    );
+  }
+}
+for (const clash of collisions(fills, palette)) {
+  const names = clash.sources.map((colour) => hexOf(colour));
+  const listed = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
+  console.warn(
+    `warning: ${listed} all become ${hexOf(clash.target)} — this palette ` +
+      `cannot tell them apart, so whichever is drawn over the others will ` +
+      `absorb them`,
+  );
+}
+
+const size = scaleToWidth(viewBoxUnits(svg), width);
+const out = outArg ?? `out/${basename(resolve(svgArg), '.svg')}-${width}.png`;
+
+const browser = await chromium.launch();
+try {
+  const page = await browser.newPage({
+    viewport: size,
+    deviceScaleFactor: 1,
+  });
+  // The SVG is stretched to the viewport rather than the viewport sized to the
+  // SVG's own width/height attributes, which a logo may not carry at all — the
+  // viewBox is the only dimension guaranteed to be there.
+  await page.setContent(
+    `<!doctype html><meta charset="utf-8"><style>
+       html,body{margin:0;padding:0}
+       svg{display:block;width:100%;height:100%}
+     </style>${svg}`,
+  );
+  // `omitBackground`, unlike the splash: a logo is a prop drawn over whatever
+  // is behind it, so it needs the alpha that tells the renderer which pixels
+  // are its own.
+  const raw = await page.screenshot({ omitBackground: true });
+  const snapped = await page.evaluate(snapToPalette, {
+    uri: `data:image/png;base64,${raw.toString('base64')}`,
+    palette: candidates,
+    bg: over,
+  });
+  const total = size.width * size.height;
+  if (values.format === 'rects') {
+    // Rects are emitted from the origin so placement is the caller's, via an
+    // enclosing `<g transform="translate(x,y)">`. Baking a position in would
+    // mean three more flags and a tool that only knows about one slot.
+    const pixels = await page.evaluate(async (uri: string) => {
+      const bitmap = await createImageBitmap(await (await fetch(uri)).blob());
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (context === null) throw new Error('no 2d context');
+      context.drawImage(bitmap, 0, 0);
+      return [...context.getImageData(0, 0, canvas.width, canvas.height).data];
+    }, snapped.uri);
+    const runs = opaqueRuns(
+      new Uint8ClampedArray(pixels),
+      size.width,
+      size.height,
+    );
+    const unitsPerPixel = 1 / scale;
+    console.log(
+      `<!-- ${basename(resolve(svgArg))} at ${size.width}x${size.height}px, ` +
+        `${runs.length} rects, ${unitsPerPixel} units per pixel -->`,
+    );
+    console.log(runsToRects(runs, { unitsPerPixel, x: 0, y: 0 }).join('\n'));
+  } else {
+    const base64 = snapped.uri.replace(/^data:image\/png;base64,/, '');
+    // `out/` is gitignored, so it is absent from a fresh checkout. The tools
+    // that screenshot through Playwright get the directory made for them; the
+    // ones that write bytes themselves — `svg2frames.ts`, `harness.ts` —
+    // mkdir like this. This one writes bytes and did not, and failed with a
+    // raw ENOENT after the browser had launched and done the work.
+    await mkdir(dirname(resolve(out)), { recursive: true });
+    await writeFile(resolve(out), Buffer.from(base64, 'base64'));
+    console.log(
+      `logo -> ${out} (${size.width}x${size.height}, ` +
+        `${candidates.length} colours, ${snapped.soft} of ${total} px snapped)`,
+    );
+  }
+} finally {
+  await browser.close();
+}
