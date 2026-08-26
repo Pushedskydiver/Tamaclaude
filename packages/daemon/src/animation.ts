@@ -34,6 +34,14 @@ export const ANIMATIONS = [
   'wizard',
   'board-game',
   'sweeping',
+  // Not reachable from any state on its own — `animationFor` is a pure
+  // function of state and knows nothing about a date. `cli`'s
+  // `animationForPanel` substitutes it for the two resting states on the day,
+  // which is where the pack is in scope. It is listed here because that is the
+  // list `AnimationName` is drawn from and `framesFor` is typed against, so a
+  // name the panel can show and this list omits is a name the compiler
+  // refuses.
+  'birthday',
 ] as const;
 
 export type AnimationName = (typeof ANIMATIONS)[number];

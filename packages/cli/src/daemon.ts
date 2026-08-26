@@ -19,8 +19,13 @@
  * other home: turning a `Resolution` into a `Scene`, and turning consecutive
  * framebuffers into the smallest rectangle that changed.
  */
-import type { AnimationName, Session, SessionState } from '@tamaclaude/daemon';
-import type { LinkStatus, SerialSystem } from '@tamaclaude/device';
+import type {
+  AnimationName,
+  createRegistry,
+  Session,
+  SessionState,
+} from '@tamaclaude/daemon';
+import type { LinkStatus, SerialSystem, Transport } from '@tamaclaude/device';
 import type { PackManifest } from '@tamaclaude/packs';
 import type { Frame, Rect } from '@tamaclaude/protocol';
 import type {
@@ -39,7 +44,7 @@ import {
   startSocketServer,
 } from '@tamaclaude/daemon';
 import { openPanel } from '@tamaclaude/device';
-import { parsePackManifest } from '@tamaclaude/packs';
+import { isBirthday, parsePackManifest } from '@tamaclaude/packs';
 import {
   dirtyRect,
   encodeRect,
@@ -261,6 +266,22 @@ function subagentText(sessions: readonly Session[]): string {
 }
 
 /**
+ * The states where the stage would otherwise say that nothing is happening.
+ *
+ * These two and no others, because these are the two the birthday can replace
+ * without erasing something true. Every other state's picture is carrying a
+ * fact — a tool is running, a session is asking, something failed — and one
+ * stage cannot show both that and a party hat.
+ *
+ * A `Set` of `SessionState` rather than a comparison chain so that the
+ * exhaustiveness lives in the type: a renamed state fails to compile here.
+ */
+const RESTING: ReadonlySet<SessionState> = new Set<SessionState>([
+  'IDLE',
+  'ASLEEP',
+]);
+
+/**
  * Which animation a resolved panel shows.
  *
  * Extracted and exported for one reason: as three lines inlined in `paintOnce`
@@ -273,10 +294,18 @@ function subagentText(sessions: readonly Session[]): string {
  * `sessions[0]` is the hero by construction: `resolve.ts` sorts once and
  * returns `state` from `ranked.at(0)` and `sessions` from the same array, so
  * they cannot disagree.
+ *
+ * **The birthday is decided here rather than in `animationFor`**, which is a
+ * pure function of state in a package that never sees a pack. This is the same
+ * split `message.ts` makes for the quip, and it keeps the date out of the
+ * table that maps states to pictures.
  */
 export function animationForPanel(
   panel: ReturnType<typeof resolvePanel>,
+  pack: PackManifest,
+  now: number,
 ): AnimationName {
+  if (RESTING.has(panel.state) && isBirthday(pack, now)) return 'birthday';
   return animationFor(panel.state, {
     tool: panel.tool,
     errorType: panel.sessions.at(0)?.errorType,
@@ -477,9 +506,21 @@ function linkLine(status: LinkStatus): string {
   return status.refusal ?? `panel ${status.phase}`;
 }
 
+/**
+ * What one frame needs, narrowed to what it reads.
+ *
+ * `listener` was `Awaited<ReturnType<typeof startSocketServer>>` and
+ * `paintOnce` calls exactly one of its methods. The whole type made the
+ * function look as though it needed a running server, so the only way to
+ * exercise a frame was to start one — and nothing ever did. Structural typing
+ * means the real `SocketServer` still satisfies this, and `runDaemon` passes
+ * it unchanged.
+ */
 type Painter = {
-  readonly transport: ReturnType<typeof openPanel>;
-  readonly listener: Awaited<ReturnType<typeof startSocketServer>>;
+  readonly transport: Transport;
+  readonly listener: {
+    readonly snapshot: () => ReturnType<typeof createRegistry>;
+  };
   readonly pack: PackManifest;
   readonly now: () => number;
   readonly size: { readonly width: number; readonly height: number };
@@ -492,7 +533,7 @@ type Painter = {
  * Lifted out of `runDaemon` because that function has a fifty-line budget and
  * this is the part of it worth reading on its own.
  */
-async function paintOnce(
+export async function paintOnce(
   ctx: Painter,
   previous: Frame | undefined,
 ): Promise<Frame | undefined> {
@@ -526,7 +567,7 @@ async function paintOnce(
   // Earlier versions of this comment said three states fall back to
   // `thinking`, then one. None do: `dizzy` was the last, and `FALLBACK` is now
   // reached only from `WORKING`, with an unmapped tool or with no tool.
-  const wanted = animationForPanel(panel);
+  const wanted = animationForPanel(panel, pack, at);
   const frames = await framesFor(wanted);
   const showing =
     frames.length > 0
