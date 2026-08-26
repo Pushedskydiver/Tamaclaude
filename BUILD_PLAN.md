@@ -657,6 +657,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
       sprite. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
       points; `tamaclaude pack` confirms which, and prints the countdown.
+      **It is placed by hand and nothing ships it.** Being gitignored is the
+      point — it holds material that should not be on the public internet — but
+      the consequence is that a fresh clone does not contain it, so it travels
+      out of band during the in-person install and exists in exactly one place
+      afterwards. A wiped Mac, a deleted folder or a re-clone loses it, and the
+      daemon then refuses to start with `no pack configured`. **Hand over a
+      copy as well as installing it**, or decide that the backup is the
+      author's own and say so. `docs/INSTALL.md` tells the recipient to keep
+      one; that is an instruction, not a mechanism.
       **What the palette reaches today, measured 25 Aug.** `packages/cli`
       composes with `extent: 'panel'`, so `withEnvironment` paints the
       environment across the whole framebuffer and replaces the painter's ink

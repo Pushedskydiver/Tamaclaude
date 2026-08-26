@@ -65,38 +65,41 @@ README because `pnpm test` needs a headless browser — but running a panel does
 not, and you are not running the tests. The animations are already drawn and
 baked into the code.
 
-## 3. Give it a pack
+## 3. Check your pack is there
 
-A _pack_ is a folder holding the colours and the things Clawd says. There is no
-built-in default — with no pack the program stops and tells you so, rather than
-starting up looking correct with somebody else's colours.
+A _pack_ is a folder holding your colours, the things Clawd says, and the date
+he knows about. **Yours was made for you and put in place when this was set
+up** — you should not have to build one. It lives at `~/.tamaclaude/pack/`.
 
-**Use the pack you were given**, not the example one. Copy its contents into
-`~/.tamaclaude/pack/` so that `manifest.json` sits directly inside:
-
-```bash
-mkdir -p ~/.tamaclaude/pack
-cp -R /path/to/your-pack/ ~/.tamaclaude/pack/
-```
-
-Then check:
+Check it:
 
 ```bash
 pnpm tamaclaude pack
 ```
 
-**If instead you get `Cannot find module` and a page of Node output, step 2 did
-not finish — run `pnpm build` again and watch for errors.
+**It should name your pack and say when its birthday fires.** If instead you
+get `Cannot find module` and a page of Node output, step 2 did not finish — run
+`pnpm build` again and watch for errors.
 
-It should name your pack — not `example` — and it should say a birthday is
-in it.** If it says `example`, or `birthday: none in this pack`, the wrong
-folder got copied. That combination is worth stopping for: the panel will look
+If it says `example`, or `birthday: none in this pack`, the wrong folder is in
+place. That is worth stopping for rather than pressing on: the panel will look
 completely correct and quietly do the wrong thing on the one day it matters.
+There is an example pack in the project with placeholder colours and no date,
+which exists so the software has something to test against.
 
-There is an example pack in the project (`packs/example/`) with placeholder
-colours and no birthday. It is there so the software has something to test
-against — copy it only if you have not been given a pack yet, and expect to
-replace it.
+> **Keep a copy of your pack somewhere safe.** It is deliberately not part of
+> the project — it holds things that should not be on the public internet — so
+> it does not come back with a fresh download. If the Mac is wiped or the
+> folder is deleted, a copy is the only way to get it back. Everything else
+> here can be rebuilt from scratch; this cannot.
+
+If you ever need to put one back, copy its contents in so that `manifest.json`
+sits directly inside, and mind the trailing slash:
+
+```bash
+mkdir -p ~/.tamaclaude/pack
+cp -R /path/to/your-pack/ ~/.tamaclaude/pack/
+```
 
 ## 4. Plug the panel in
 
