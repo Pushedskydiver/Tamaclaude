@@ -218,6 +218,9 @@ describe('parseAgentStatus', () => {
     // answers perfectly, because it runs under the shell's node.
     const said = describeAgentStatus({ loaded: true, pid: 1 }, false);
     expect(said).toContain('node it was installed with is gone');
-    expect(said).toContain('install-agent --apply');
+    // The invocation form, not just the subcommand: `install-agent --apply`
+    // is a substring of the bare form too, so asserting it left the decision
+    // this remedy exists to carry entirely unpinned.
+    expect(said).toContain('pnpm tamaclaude install-agent --apply');
   });
 });

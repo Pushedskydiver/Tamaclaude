@@ -442,3 +442,27 @@ describe('the tamaclaude binary', () => {
     });
   });
 });
+
+/**
+ * The commands the CLI tells you to type have to be commands you can type.
+ *
+ * The CLI is a workspace bin, so `pnpm install` links nothing into
+ * `node_modules/.bin` and a bare `tamaclaude` is `command not found` until
+ * somebody runs `pnpm setup` and `pnpm link` — which `docs/INSTALL.md`
+ * deliberately does not ask for, because it would put something on `PATH` that
+ * goes stale when the folder moves.
+ *
+ * These strings are printed exactly where the guide is not open: a typo, a
+ * missing device, and the upgraded-node remedy. `agent.test.ts` asserted
+ * `install-agent --apply`, which is a substring of both forms, so the decision
+ * was unpinned in the one place it mattered.
+ */
+describe('printed commands are runnable', () => {
+  it('prints the pnpm form in usage, not a bare tamaclaude', () => {
+    const said = run(['frobnicate']).out;
+    expect(said).toContain('pnpm tamaclaude daemon');
+    // The bare form must not appear at the start of a usage line, which is
+    // what a reader copies.
+    expect(said).not.toMatch(/^\s*(usage:\s*)?tamaclaude /m);
+  });
+});

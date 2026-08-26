@@ -394,10 +394,17 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   every ten seconds, forever.
   **No brew tap.** A second repo, a formula, a versioned tarball and
   un-privating the package, for one Mac. `git clone && pnpm install` is not
-  a one-line install either: it needs Xcode CLT, node and pnpm first. The
-  decision is to install it in person and let the printed card be a
+  a one-line install either: it needs Xcode CLT, node and pnpm first.
+  **The recipient runs the install himself, from `docs/INSTALL.md`** — this
+  said "install it in person" until 26 Aug, which made the guide's install
+  half look optional and made the clean-account dry run look like a
+  formality. It is neither. What that leaves is a printed card as a
   keepsake carrying something true — the repo QR and "if it ever stops,
-  open Terminal and run `tamaclaude pack`".
+  open Terminal and run `tamaclaude status`". **`status`, not `pack`**, for
+  the reason `packages/cli/src/index.ts` gives where it is defined: `pack`
+  runs under the terminal's environment and node, so it answers cheerfully
+  while the login agent is failing to spawn every thirty seconds. `status`
+  asks launchd instead.
   `tamaclaude status` asks launchd whether it is actually running, and says so
   when the node it was installed with has been upgraded away — the failure a
   version-pinned `process.execPath` creates, and the one `tamaclaude pack`
@@ -653,6 +660,25 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] The recipient's pack (gitignored): palette, quips, `birthday`, logo, pet
       sprite. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
       points; `tamaclaude pack` confirms which, and prints the countdown.
+      **It is placed by hand and nothing ships it.** Being gitignored is the
+      point — it holds material that should not be on the public internet — but
+      the consequence is that a fresh clone does not contain it, so it travels
+      out of band during the in-person install and exists in exactly one place
+      afterwards. A wiped Mac, a deleted folder or a re-clone loses it, and the
+      daemon then refuses to start with `no pack configured`.
+      **The channel is decided: its own private repository**, created 26 Aug,
+      with the recipient as a collaborator. `docs/INSTALL.md` step 3 clones it
+      straight into `~/.tamaclaude/pack` — `resolvePack` only reads
+      `manifest.json` from the directory and never enumerates it, so the `.git`
+      inside is invisible to the loader.
+      That was the alternative to closing the project, which would have solved
+      the same problem by making the public history a one-way door. It also
+      answers three things at once: delivery, backup (the repository _is_ the
+      copy), and updates, since a quip added later is a `git pull` rather than
+      a hand-off. **The address stays out of this repo** — the guide says "the
+      address you were given", the same way it treats the main one.
+      The remaining risk is his GitHub auth on a new machine, so hand over a
+      copy on whatever ships with the panel as well; the guide takes either.
       **What the palette reaches today, measured 25 Aug.** `packages/cli`
       composes with `extent: 'panel'`, so `withEnvironment` paints the
       environment across the whole framebuffer and replaces the painter's ink
@@ -742,8 +768,8 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       **The fallback does not deliver, and that is why it is not one.** A
       private re-bake writes the mark into `packages/renderer/src/sprites/`,
       which is tracked; the recipient installs from a clone of a public repo
-      (`Printed card: QR to repo + one-line install`), so an uncommitted change
-      on one Mac reaches nobody, and committing it puts a company mark in
+      — the recipient clones onto his own machine — so an uncommitted change
+      on this Mac reaches nobody, and committing it puts a company mark in
       public history permanently. If the field does not land, **no logo ships**
       — the placeholder stays and the panel is still a gift. Two paragraphs
       above promise the recipient will see "their logo"; if this is cut, that
@@ -846,7 +872,17 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 
 - [ ] Run it on Alex's desk all week. Fix what irritates. No new features.
 - [ ] Assemble board in printed case
-- [~] Dry-run the full install on a clean macOS user account. **Bring this
+- [~] Dry-run the full install on a clean macOS user account, **following
+  `docs/INSTALL.md` and fixing whatever it gets wrong** — the guide is the
+  artefact under test, not just the software.
+  **Exit criterion, written so it can fail:** somebody who is not the author,
+  on an account that is not the author's, gets from a bare machine to a
+  reacting panel using only the guide and no verbal help. Fixing the guide
+  as it fails is the point — the criterion is that a _second_ pass needs no
+  fixes and no talking. One run that needed edits is a pass for the item and
+  a fail for the guide, which is the distinction worth keeping. Note this made the item bigger
+  while leaving it on 19 Sep, behind a buffer meant to absorb something else.
+  **Bring this
   forward — it is the highest-information hour left in the plan.** The
   untested assumption under everything else is that a Mac which is not this
   one can build and run the repo at all: Xcode CLT, node 24.16.0, pnpm, a
@@ -866,7 +902,23 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   exist at all, the launchd agent, and the device. Run the clone-and-gate
   check after any change to tooling — it is two minutes and it is the part
   that does not need one.
-- [ ] Printed card: QR to repo + one-line install
+- [ ] Printed card: repo QR, and "if it ever stops, open Terminal and run
+      `tamaclaude status`" — `status` rather than `pack`, per Stage 3 above
+      and the comment where it is defined.
+      **The form is decided: `pnpm tamaclaude …`, from the project folder.**
+      A bare `tamaclaude` would need `pnpm setup` and a global link, and that
+      was rejected — it makes the binary's own printed remedies wrong for
+      whichever reader did the opposite, and it puts something on `PATH` that
+      goes stale when the folder moves. The CLI's `USAGE` block and `agent.ts`'s
+      upgraded-node remedy print the `pnpm` form to match.
+      **So the card needs two lines, not one**, because a Terminal opens in the
+      home folder and `pnpm` needs the project folder: `cd` to it, then
+      `pnpm tamaclaude status`.
+      **Not a one-line install** — Stage 3 decided against
+      one and gave the reason: `git clone && pnpm install` needs Xcode CLT,
+      node and pnpm first, and a brew tap is a second repo and a formula for
+      one Mac. This line said "one-line install" until 26 Aug, which would
+      have had someone building a thing the plan had already ruled out.
 - [ ] Flash the gift board (not the dev board) with the splash
 
 ---

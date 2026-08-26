@@ -215,7 +215,7 @@ export function describeAgentStatus(
   if (!nodeExists) {
     return (
       'agent     loaded, but the node it was installed with is gone\n' +
-      '          re-run `tamaclaude install-agent --apply` to point it at the current one'
+      '          re-run `pnpm tamaclaude install-agent --apply` to point it at the current one'
     );
   }
   if (status.pid !== undefined) {

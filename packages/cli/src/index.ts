@@ -367,20 +367,31 @@ function status(): void {
  */
 const GIVE_UP_AFTER = 60;
 
-/** Printed for a missing device, an unknown command, and anything help-shaped. */
+/**
+ * What to type — printed for a missing device, an unknown command, and
+ * anything help-shaped.
+ *
+ * In the form that works from a fresh clone.
+ * `pnpm tamaclaude …` rather than a bare `tamaclaude`, because the CLI is a
+ * workspace bin: `pnpm install` links nothing into `node_modules/.bin`, so the
+ * bare form is `command not found` until somebody has run `pnpm setup` and
+ * `pnpm link`. Printing a command the reader cannot run is worst exactly where
+ * this text appears — a typo, a missing device, or the upgraded-node remedy in
+ * `agent.ts`, none of which happen with `docs/INSTALL.md` open.
+ */
 const USAGE =
-  'usage: tamaclaude daemon [device]\n' +
-  '       tamaclaude pack\n' +
+  'usage: pnpm tamaclaude daemon [device]\n' +
+  '       pnpm tamaclaude pack\n' +
   '  with no device, the panel is found by its USB descriptor\n' +
-  '  e.g. tamaclaude daemon /dev/cu.usbmodem1101\n' +
+  '  e.g. pnpm tamaclaude daemon /dev/cu.usbmodem1101\n' +
   '  the pack comes from $TAMACLAUDE_PACK, else ~/.tamaclaude/pack/\n' +
-  '  `tamaclaude pack` says which one, and when its birthday fires\n' +
+  '  `pnpm tamaclaude pack` says which one, and when its birthday fires\n' +
   '  with no command, prints one line of smoke-test output\n' +
-  '       tamaclaude install-agent [--apply]\n' +
+  '       pnpm tamaclaude install-agent [--apply]\n' +
   '  starts the daemon at login; dry run unless --apply\n' +
-  '       tamaclaude uninstall-agent\n' +
+  '       pnpm tamaclaude uninstall-agent\n' +
   '  stops it and stops it coming back\n' +
-  '       tamaclaude status\n' +
+  '       pnpm tamaclaude status\n' +
   '  asks launchd whether it is actually running\n';
 
 async function devicePathFor(argv: readonly string[]): Promise<string> {
