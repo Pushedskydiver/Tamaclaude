@@ -156,20 +156,37 @@ degrade reasoning accuracy as context grows.
   was the original trigger and it was violated seven PRs running, always in the
   direction of momentum. It is a grep now, not a judgement:
 
-  | Trigger                                            | Review                         |
-  | -------------------------------------------------- | ------------------------------ |
-  | Any change under `packages/**`                     | `da-review`, mandatory         |
-  | Any change under `assets/clawd/animations/**`      | `animation-critic`, mandatory  |
-  | Any change to a blast-radius doc (`docs/GIT.md`)   | `copilot-surrogate`, mandatory |
-  | Diff over 200 LOC excluding lockfiles              | both                           |
-  | A spec or plan, before code moves against it       | `spec-grill`                   |
-  | A static asset with no motion, plus its plan entry | self-review only               |
+  | Trigger                                           | Review                         |
+  | ------------------------------------------------- | ------------------------------ |
+  | Any change under `packages/**`                    | `da-review`, mandatory         |
+  | Any change under `assets/clawd/animations/**`     | `animation-critic`, mandatory  |
+  | Any change to a blast-radius doc (`docs/GIT.md`)  | `copilot-surrogate`, mandatory |
+  | Diff over 200 LOC excluding lockfiles             | both                           |
+  | A spec or plan, before code moves against it      | `spec-grill`                   |
+  | Static art, or a painter that places it in a slot | `pixel-art-critic`, mandatory  |
 
   The assets row used to read "assets plus their own plan entry only", and
   every animation went in under it unreviewed. Six shipped that way, carrying a
   yawn whose mouth hung outside the body. Animations are code — they are
-  stylesheets — and they now get a critic like any other code. Only genuinely
-  static art keeps the exemption.
+  stylesheets — and they now get a critic like any other code.
+
+  That fix covered animations and left static art on `self-review only`, which
+  is where a logo escaped its slot into the session strip under a layout
+  nothing had rendered, and where three drafts of the pet sprite read as a
+  slug, a featureless blob and a shadow in turn. Each was caught by someone
+  rendering it and looking; none by a gate. So static art has a critic too, and
+  the exemption is gone rather than narrowed.
+
+  **`pixel-art-critic` is not `animation-critic` with the motion checks
+  removed.** Its one irreplaceable move is the cold read: render the artefact,
+  say what it looks like, and only then read what it was meant to be. An author
+  cannot run that check on their own work, because they see the intended
+  subject whatever is on the screen.
+
+  **The grep cannot see pack art.** `packs/` is gitignored, so redrawing the
+  logo or the pet changes no tracked file and fires no trigger. The row catches
+  the painters and the tracked art; the pack half is a judgement call that
+  survives, and it is the half most likely to be skipped.
 
   **`pnpm review-triggers` answers this for the current branch.** The table was
   meant to make the rule a grep rather than a judgement, and it still got

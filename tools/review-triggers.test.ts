@@ -56,6 +56,39 @@ describe('the trigger table', () => {
     );
   });
 
+  it('sends static art to the art critic, and animations to neither', () => {
+    // The row this repo added last, because it is the one that had already
+    // failed once: static art sat on `self-review only` while animations were
+    // routed away from it. The two must not overlap — an animation goes to
+    // `animation-critic`, which re-renders frames; a still goes to
+    // `pixel-art-critic`, which reads it cold.
+    expect(fires('static art', ['assets/clawd/splash.svg'])).toBe(true);
+    expect(fires('static art', ['assets/clawd/base.svg'])).toBe(true);
+    expect(fires('static art', ['assets/clawd/animations/wizard.svg'])).toBe(
+      false,
+    );
+    // Images, not everything under `assets/`. The font there is a `.woff2`
+    // beside its licence, and neither is something a critic can render and
+    // read — routing them to one would be noise in the direction that gets a
+    // reporting tool ignored.
+    expect(
+      fires('static art', ['assets/fonts/DepartureMono-Regular.woff2']),
+    ).toBe(false);
+    expect(
+      fires('static art', ['assets/fonts/DepartureMono-LICENSE.txt']),
+    ).toBe(false);
+  });
+
+  it('sends a painter that places art into a slot to the art critic', () => {
+    // Where the defect this row exists for actually lives. A logo drawn
+    // correctly still landed in the session strip, because the code choosing
+    // its rect had never been composed under two-up. The art was fine; the
+    // placement was not, and no art file changed in that diff.
+    expect(fires('static art', ['packages/renderer/src/logo.ts'])).toBe(true);
+    expect(fires('static art', ['packages/renderer/src/qr.ts'])).toBe(true);
+    expect(fires('static art', ['packages/renderer/src/strip.ts'])).toBe(false);
+  });
+
   it('sends a plan to the grill', () => {
     // The row `CLAUDE.md` has always had and this tool never implemented.
     expect(fires('spec or plan', ['assets/clawd/animations/PLANS.md'])).toBe(

@@ -28,6 +28,22 @@ const ROOT = resolve(import.meta.dirname, '..');
 /** Lines over which a diff needs both reviewers, per `CLAUDE.md`. */
 const BIG_DIFF_LINES = 200;
 
+/**
+ * Renderer modules that place static art into a rect.
+ *
+ * A list rather than a pattern, because there is no naming convention to match
+ * and inventing one to make this greppable would be the tail wagging the dog.
+ * It is short and it is checked by a test, which is the trade this file makes
+ * everywhere else too.
+ *
+ * `sprites/` is deliberately absent: those are baked animation frames and
+ * `animation-critic` owns them.
+ */
+const ART_PAINTERS = new Set([
+  'packages/renderer/src/logo.ts',
+  'packages/renderer/src/qr.ts',
+]);
+
 /** Lockfiles are excluded from that count — they are generated bulk. */
 const LOCKFILES = new Set(['pnpm-lock.yaml', 'package-lock.json']);
 
@@ -63,6 +79,43 @@ function blastRadius(): readonly string[] {
     .filter((path) => /\.\w+$/.test(path) || path.endsWith('/**'));
 }
 
+/**
+ * Is this an animation, rather than a still?
+ *
+ * `.svg` rather than the whole directory: `PLANS.md` lives there too, and a
+ * plan-only diff was sending work to a reviewer whose job is to re-render
+ * frames — of animations that diff had not touched. The spec-or-plan row is
+ * what covers a plan.
+ */
+function isAnimation(file: string): boolean {
+  return file.startsWith('assets/clawd/animations/') && file.endsWith('.svg');
+}
+
+/**
+ * Is this a still that a critic could render and read?
+ *
+ * Deliberately disjoint from the animation row: a still under `assets/` comes
+ * here, anything under `assets/clawd/animations/` goes to `animation-critic`,
+ * which re-renders frames. `base.svg` fired neither until this existed, which
+ * was a hole rather than a decision — it is the geometry every animation is
+ * drawn from.
+ *
+ * Images, not everything under `assets/`. The font there is a `.woff2` beside
+ * its licence and neither is renderable art; routing them to a critic is noise
+ * in the direction that gets a reporting tool ignored.
+ *
+ * **This cannot see pack art.** `packs/` is gitignored, so redrawing the logo
+ * or the pet changes no tracked file and fires nothing here at all. This
+ * catches the tracked half; `CLAUDE.md` says plainly that the other half stays
+ * a judgement, and that it is the half most likely to be skipped.
+ */
+function isStaticArt(file: string): boolean {
+  const image =
+    /^assets\/.*\.(?:svg|png)$/.test(file) &&
+    !file.startsWith('assets/clawd/animations/');
+  return image || ART_PAINTERS.has(file);
+}
+
 function touches(files: readonly string[], prefix: string): boolean {
   return files.some((file) => file.startsWith(prefix));
 }
@@ -85,16 +138,7 @@ export function triggers(patterns: readonly string[]): readonly Trigger[] {
     {
       what: 'an animation under assets/clawd/animations/**',
       reviews: ['animation-critic'],
-      // `.svg` rather than the whole directory: `PLANS.md` lives there too,
-      // and a plan-only diff was sending work to a reviewer whose job is to
-      // re-render frames — of animations that diff had not touched. The plan
-      // row below is what covers a plan.
-      fires: (files) =>
-        files.some(
-          (file) =>
-            file.startsWith('assets/clawd/animations/') &&
-            file.endsWith('.svg'),
-        ),
+      fires: (files) => files.some((file) => isAnimation(file)),
     },
     {
       what: 'a spec or plan changed in this diff',
@@ -109,6 +153,11 @@ export function triggers(patterns: readonly string[]): readonly Trigger[] {
             file === 'BUILD_PLAN.md' ||
             file.startsWith('docs/ARCHITECTURE'),
         ),
+    },
+    {
+      what: 'static art, or a painter that places it in a slot',
+      reviews: ['pixel-art-critic'],
+      fires: (files) => files.some((file) => isStaticArt(file)),
     },
     {
       what: 'a change to a blast-radius file (docs/GIT.md)',
