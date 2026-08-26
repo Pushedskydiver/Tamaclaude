@@ -705,11 +705,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       `panel-mock --pack <dir>` renders any pack, which no tool could do
       before — though `blit.ts` still cannot, so nothing yet puts a pack on
       glass.
-- [ ] **Set the Mac's clock to 23 Sep during the dry run and watch the panel.**
-      The only end-to-end test the birthday can ever have: the recipient's pack
-      is gitignored, so CI will never load it, and `isBirthday` reads the host's
-      local date. Five minutes, and it exercises resolution, schema, the
-      message band and the panel in one action.
+- [x] **Watch the birthday on the panel.** Done 26 Aug, four weeks early and
+      without touching the clock: a copy of the real pack dated that day, the
+      daemon pointed at it with `TAMACLAUDE_PACK`, and the panel watched
+      through the states. The party hat and the QR both appeared, and **the QR
+      scanned off the glass** — which was the one thing no test could reach,
+      the module being 0.41 mm at 247 PPI. It exercised resolution, schema, the
+      message band, the stage and the camera in one action.
+      Copying the pack beat moving the clock: no system state changed, and the
+      real pack kept its own date throughout.
 - [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
 - [~] **Company logo → pixel** — the tool is built; nothing draws its output.
   `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
@@ -778,76 +782,73 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
-- [~] Birthday screen, date-triggered 23 Sep. **Trigger, art and stage are
-  built; the screen has never been seen.** No _tracked_ pack carries a date
-  and none should — the recipient's private pack repo carries it — which is
-  exactly why nothing here has rendered one: `packs/example` has no
-  `birthday` key and `blit.ts` hardcodes `packs/example`, so no tool in this
-  repo can put the triggering pack on glass, and `~/.tamaclaude/pack/` does
-  not exist on the author's machine either. Every check that exists is a
-  unit test against a synthetic pack. This was briefly `[x]` on 26 Aug on
-  the strength of those tests; a review pointed out that nobody has looked
-  at it, and that the clock test below falls four days before the gift,
-  inside the window this plan reserves for bug fixes only. `packs` takes an
-  optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
-  `isBirthday` compares in local time because the day the panel should
-  celebrate is the one the person beside it is having. `02-29` falls back
-  to the 28th in a common year, and a day that exists in no month is
-  refused — both because accepting a date that can never fire is a failure
-  nobody can notice until the day has passed.
-  The quip beats the resting and working lines and loses to any state
-  asking for a human. **That is not the rule `DONE` is ranked by**, and
-  two earlier versions of this line said it was: `DONE` ranks below
-  `WORKING` because "a payoff belongs on a quiet desk", and this covers
-  both. They share only the attention half. The reason to differ is that
-  rank decides the stage, where a resting Clawd over a running tool would
-  be a lie, while this decides the message band and the animation still
-  shows the work. Two reviews caught the claim independently.
-  **The art is built.** `assets/clawd/animations/birthday.svg` — a jump, both
-  claws up, a hat, confetti — baked, and on the panel at 8fps and 12,138 B/s
-  against the 40,000 B/s bar. It doubles as the hero of the webpage the QR
-  points at. Two findings worth keeping: a claw cannot reach above the head by
-  rotation alone, so both extend the way `gym` and `permission-sign` do; and
-  the hat was red until the render was counted, at which point 46 pixels of
-  the raised claws' edges were snapping to it rather than to black, because
-  #B22222 sits on the peach-to-background ramp. Purple does not. §Palette
-  snapping asks what edge a new colour sits between, and counting the frame is
-  how you answer it.
-  **The stage is wired, and to a stricter rule than this item predicted.**
-  The prediction — deleted from this paragraph, so it is quoted rather than
-  pointed at — was that wiring the stage wants the quip's rule: beats resting
-  and working, loses to anything asking for a human. (The line four
-  paragraphs up saying the same of the _quip_ is correct and is not what was
-  wrong.) `animationForPanel` covers `IDLE` and `ASLEEP` only.
-  The reason is not the one the ranking paragraph above gives, and an earlier
-  draft of this line claimed it was. The band can celebrate over `WORKING`
-  because the work stays legible from the animation and the strip chip —
-  though not from the band itself, which shows one string and gives it to the
-  quip for the day. The stage has one picture, so celebrating over a running
-  tool means _replacing_ it. That is a judgement about what a once-a-year
-  screen is worth, not a consequence of `STATE_RANK`, which ranks _sessions_
-  and never sees a birthday. It is written down here because it was chosen.
-  `DONE` keeps `payoff`: a real event with its own picture, on a window that
-  expires 15s later — into `IDLE` usually, but into `WAITING` when the
-  session has a notification, because `DONE_AFTER_MS + DONE_SHOWN_MS` is
-  exactly `WAITING_AFTER_MS` and `effectiveState` checks `WAITING` first.
-  There the birthday does not follow at all; it waits for the human, which is
-  the point.
-  **The QR is built, and it costs the strip and the message band.** On the
-  birthday, and only on the states the birthday already covers, the right
-  column shows a QR instead. One predicate — `sceneFor` sets it when
-  `animationForPanel` chose `birthday` — so it is gone the moment a session
-  needs a human and back when the desk goes quiet, with nothing to decide when
-  to take it down. The symbol is a module matrix in a tracked file, encoded
-  offline by `tools/bake-qr.ts` with `qrcode` as a root devDependency; the
-  renderer keeps zero third-party runtime deps. EC L rather than Q: both give a
-  4px module, and L's 25 modules leave 16px of slack where Q's 29 fill the band
-  to the pixel and would drop to a 3px module on any layout change.
-  **What it costs is the pack's birthday quip on those two states**, measured
-  rather than estimated: 148px of band, 132 taken by the symbol at the smallest
-  module worth drawing, and a line of text needs 19. The quip still shows on
-  every state the QR does not take. **The URL it points at serves nothing
-  yet** — that is the open item, not the code.
+- [x] Birthday screen, date-triggered 23 Sep. **Trigger, art, stage and QR are
+      built, and the screen has been seen on the panel.** It went `[~]` earlier on
+      26 Aug for the right reason — every check was a unit test against a synthetic
+      pack, `packs/example` has no `birthday` key and `blit.ts` hardcodes it, so
+      nothing in this repo could put a triggering pack on glass. That is what the
+      live run settled: real pack, real daemon, real panel, and a phone that read
+      the code. No _tracked_ pack carries a date and none should; the recipient's
+      private pack repo carries it. `packs` takes an
+      optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
+      `isBirthday` compares in local time because the day the panel should
+      celebrate is the one the person beside it is having. `02-29` falls back
+      to the 28th in a common year, and a day that exists in no month is
+      refused — both because accepting a date that can never fire is a failure
+      nobody can notice until the day has passed.
+      The quip beats the resting and working lines and loses to any state
+      asking for a human. **That is not the rule `DONE` is ranked by**, and
+      two earlier versions of this line said it was: `DONE` ranks below
+      `WORKING` because "a payoff belongs on a quiet desk", and this covers
+      both. They share only the attention half. The reason to differ is that
+      rank decides the stage, where a resting Clawd over a running tool would
+      be a lie, while this decides the message band and the animation still
+      shows the work. Two reviews caught the claim independently.
+      **The art is built.** `assets/clawd/animations/birthday.svg` — a jump, both
+      claws up, a hat, confetti — baked, and on the panel at 8fps and 12,138 B/s
+      against the 40,000 B/s bar. It doubles as the hero of the webpage the QR
+      points at. Two findings worth keeping: a claw cannot reach above the head by
+      rotation alone, so both extend the way `gym` and `permission-sign` do; and
+      the hat was red until the render was counted, at which point 46 pixels of
+      the raised claws' edges were snapping to it rather than to black, because
+      #B22222 sits on the peach-to-background ramp. Purple does not. §Palette
+      snapping asks what edge a new colour sits between, and counting the frame is
+      how you answer it.
+      **The stage is wired, and to a stricter rule than this item predicted.**
+      The prediction — deleted from this paragraph, so it is quoted rather than
+      pointed at — was that wiring the stage wants the quip's rule: beats resting
+      and working, loses to anything asking for a human. (The line four
+      paragraphs up saying the same of the _quip_ is correct and is not what was
+      wrong.) `animationForPanel` covers `IDLE` and `ASLEEP` only.
+      The reason is not the one the ranking paragraph above gives, and an earlier
+      draft of this line claimed it was. The band can celebrate over `WORKING`
+      because the work stays legible from the animation and the strip chip —
+      though not from the band itself, which shows one string and gives it to the
+      quip for the day. The stage has one picture, so celebrating over a running
+      tool means _replacing_ it. That is a judgement about what a once-a-year
+      screen is worth, not a consequence of `STATE_RANK`, which ranks _sessions_
+      and never sees a birthday. It is written down here because it was chosen.
+      `DONE` keeps `payoff`: a real event with its own picture, on a window that
+      expires 15s later — into `IDLE` usually, but into `WAITING` when the
+      session has a notification, because `DONE_AFTER_MS + DONE_SHOWN_MS` is
+      exactly `WAITING_AFTER_MS` and `effectiveState` checks `WAITING` first.
+      There the birthday does not follow at all; it waits for the human, which is
+      the point.
+      **The QR is built, and it costs the strip and the message band.** On the
+      birthday, and only on the states the birthday already covers, the right
+      column shows a QR instead. One predicate — `sceneFor` sets it when
+      `animationForPanel` chose `birthday` — so it is gone the moment a session
+      needs a human and back when the desk goes quiet, with nothing to decide when
+      to take it down. The symbol is a module matrix in a tracked file, encoded
+      offline by `tools/bake-qr.ts` with `qrcode` as a root devDependency; the
+      renderer keeps zero third-party runtime deps. EC L rather than Q: both give a
+      4px module, and L's 25 modules leave 16px of slack where Q's 29 fill the band
+      to the pixel and would drop to a 3px module on any layout change.
+      **What it costs is the pack's birthday quip on those two states**, measured
+      rather than estimated: 148px of band, 132 taken by the symbol at the smallest
+      module worth drawing, and a line of text needs 19. The quip still shows on
+      every state the QR does not take. **The URL it points at serves nothing
+      yet** — that is the open item, not the code.
 
   **The known cost is flicker.** On a working birthday the stage alternates
   between the party hat and the work picture at every turn boundary, all day.
