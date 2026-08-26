@@ -1,0 +1,310 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-3 -9 21 25" width="168" height="200"
+     data-loop-seconds="2">
+  <!--
+    Clawd: birthday (the 23 September screen)
+
+    `isBirthday` is true and the pack carries a date, so once a year this is
+    what the panel shows. Clawd jumps, both claws up, in a hat, throwing
+    confetti.
+
+    Generated against assets/clawd/base.svg. Every base element appears below
+    at its original coordinates and colours; all motion is CSS applied by ID.
+
+    ── Both claws, and why they extend ────────────────────────────────────
+
+    §What a claw cannot do carries the arithmetic: a 2x2 claw pivoting at the
+    shoulder cannot get its top edge above y=7.76, so the torso top at y=6 is
+    out of reach by 1.76 units and no rotation alone raises a claw over the
+    head. `gym` and `permission-sign` both answer it the same way — rotate
+    *and* `scaleX`, extending the claw along its own axis until it is an arm
+    rather than a lozenge — and this does too, mirrored, because the pose is
+    two arms up rather than one.
+
+    Held at 62deg and scaleX(2.3) through the airborne frames. That puts each
+    tip roughly 2 units above the head and well outboard of the torso, so
+    neither claw sits against the body edge, which §What a claw cannot do
+    says reads as the slab growing a lump.
+
+    ── The hat ────────────────────────────────────────────────────────────
+
+    A four-step cone on the torso's centre line (x=7.5, the midpoint of the
+    11-wide torso), sitting on the head at y=6 and topping out at y=2. §Props
+    need contact: its base row overlaps the torso's top row rather than
+    floating a unit clear.
+
+    **The hat is #A371F7, and it was #B22222 until the render was counted.**
+    §Palette snapping says to ask what edge a new colour now sits between, and
+    the honest answer for a red was: the body. A peach edge fading toward the
+    background passes through mid-dark tones, and (89,54,44) is 8421 from
+    #B22222 against 12773 from black — so red won, and 46 pixels of the raised
+    claws' edges came back as a red rim. Purple is nowhere near that ramp, so
+    those edges resolve to black the way every other animation's do. The count
+    is the check: hat area is 9 units, 576 pixels, and the frame should carry
+    no more of the hat colour than that.
+
+    #A371F7 is `wizard`'s purple and #C9D1D9 the plate tone `thinking` and
+    `permission-sign` use, so neither is a tone the corpus has not already
+    proved against both skies.
+
+    ── The confetti, and why it bursts rather than falls ──────────────────
+
+    §Safe area: the stage is authored 21x25 but landscape crops to the bottom
+    20, y -4 to 16. Confetti raining from off-screen top would spend its first
+    frames in five units that do not exist on the shipping panel, so it bursts
+    outward from the claws instead — which reads better at 8 device pixels per
+    unit anyway, where falling specks are noise.
+
+    Six pieces, 1x1, in four colours the corpus already declares: #7EE787
+    (`payoff`), #A371F7 (`wizard`), #58A6FF (`typing`) and #C9D1D9. §Palette
+    snapping makes every declared colour a snap target for every other
+    colour's antialiased edges, so new tones are not free; these four are
+    already proved to coexist with the body peach and the eye black.
+
+    They translate only — no opacity ramp. A fill at partial opacity is
+    admitted to the palette composited over the background, which would add
+    four more targets sitting between the confetti and the sky. Motion alone
+    costs nothing.
+
+    ── Timing ─────────────────────────────────────────────────────────────
+
+    2s at 8fps is 16 frames, and every keyframe below is on a multiple of
+    6.25% so each lands on a frame boundary rather than between two. One jump
+    per loop: crouch, launch, hang, land, squash, recover, settle. The
+    confetti runs the same 2s so there is one burst per jump and no seam at
+    the wrap.
+  -->
+  <style>
+    /* ── the jump ───────────────────────────────────────────────────
+       The whole body, hat and confetti origin move together, so the hat
+       stays on his head and the confetti leaves from where the claws are
+       rather than from where they started. */
+    #master-group,
+    #fx-hat {
+      animation: hop 2s infinite steps(1, end);
+    }
+
+    @keyframes hop {
+      0%     { transform: translateY(0); }
+      6.25%  { transform: translateY(0.75px); }
+      12.5%  { transform: translateY(1px); }
+      18.75% { transform: translateY(-1.5px); }
+      25%    { transform: translateY(-2.75px); }
+      31.25% { transform: translateY(-3px); }
+      37.5%  { transform: translateY(-2.5px); }
+      43.75% { transform: translateY(-1.25px); }
+      50%    { transform: translateY(0); }
+      56.25% { transform: translateY(1px); }
+      62.5%  { transform: translateY(0.25px); }
+      68.75% { transform: translateY(0); }
+      75%    { transform: translateY(-0.5px); }
+      81.25% { transform: translateY(0); }
+      87.5%  { transform: translateY(-0.25px); }
+      93.75% { transform: translateY(0); }
+    }
+
+    /* The shadow does not ride the jump — it stays on the ground and
+       shrinks, which is what says he left it. */
+    #ground-shadow {
+      animation: shadow 2s infinite steps(1, end);
+      transform-box: fill-box;
+      transform-origin: 50% 50%;
+    }
+
+    @keyframes shadow {
+      0%     { transform: scaleX(1); }
+      12.5%  { transform: scaleX(1.05); }
+      18.75% { transform: scaleX(0.8); }
+      25%    { transform: scaleX(0.62); }
+      31.25% { transform: scaleX(0.58); }
+      37.5%  { transform: scaleX(0.66); }
+      43.75% { transform: scaleX(0.85); }
+      50%    { transform: scaleX(1.08); }
+      56.25% { transform: scaleX(1.12); }
+      68.75% { transform: scaleX(1); }
+    }
+
+    /* ── the claws ──────────────────────────────────────────────────
+       Rotation plus axial scale, on each arm's own shoulder pivot. Up and
+       outward on the launch, held through the hang, down on the landing. */
+    #left-arm {
+      transform-origin: 2px 10px;
+      animation: cheer-left 2s infinite steps(1, end);
+    }
+    #right-arm {
+      transform-origin: 13px 10px;
+      animation: cheer-right 2s infinite steps(1, end);
+    }
+
+    /* **Positive raises the left claw, negative the right**, and the sign is
+       worth stating because a first draft had both backwards and rendered a
+       crab shrugging at the floor. The left claw's centre sits at (-1, 0)
+       from its pivot, so `rotate(a)` sends it to y = -sin(a): up needs a
+       positive angle. `gym` presses to +73deg on the same arm for the same
+       reason.
+
+       Nothing sits between 0 and 42deg. A 2x2 block at a shallow angle is a
+       jagged lozenge — §What a claw cannot do calls the 45deg version an
+       arrowhead, and below that it is worse — so the raise crosses that band
+       inside one frame rather than posing in it. */
+    @keyframes cheer-left {
+      0%, 12.5% { transform: rotate(0deg) scaleX(1); }
+      18.75%    { transform: rotate(46deg) scaleX(1.85); }
+      25%       { transform: rotate(58deg) scaleX(2.25); }
+      31.25%    { transform: rotate(62deg) scaleX(2.3); }
+      37.5%     { transform: rotate(60deg) scaleX(2.28); }
+      43.75%    { transform: rotate(56deg) scaleX(2.2); }
+      50%       { transform: rotate(48deg) scaleX(1.9); }
+      56.25%    { transform: rotate(0deg) scaleX(1); }
+      68.75%    { transform: rotate(52deg) scaleX(2.05); }
+      75%       { transform: rotate(58deg) scaleX(2.25); }
+      87.5%     { transform: rotate(50deg) scaleX(1.95); }
+      93.75%    { transform: rotate(0deg) scaleX(1); }
+    }
+
+    @keyframes cheer-right {
+      0%, 12.5% { transform: rotate(0deg) scaleX(1); }
+      18.75%    { transform: rotate(-46deg) scaleX(1.85); }
+      25%       { transform: rotate(-58deg) scaleX(2.25); }
+      31.25%    { transform: rotate(-62deg) scaleX(2.3); }
+      37.5%     { transform: rotate(-60deg) scaleX(2.28); }
+      43.75%    { transform: rotate(-56deg) scaleX(2.2); }
+      50%       { transform: rotate(-48deg) scaleX(1.9); }
+      56.25%    { transform: rotate(0deg) scaleX(1); }
+      68.75%    { transform: rotate(-52deg) scaleX(2.05); }
+      75%       { transform: rotate(-58deg) scaleX(2.25); }
+      87.5%     { transform: rotate(-50deg) scaleX(1.95); }
+      93.75%    { transform: rotate(0deg) scaleX(1); }
+    }
+
+    /* ── the confetti ───────────────────────────────────────────────
+       Each piece leaves the claws on the launch frame and arcs outward.
+       Translate only, so nothing is added to the palette. */
+    #c1 { animation: c1 2s infinite steps(1, end); }
+    #c2 { animation: c2 2s infinite steps(1, end); }
+    #c3 { animation: c3 2s infinite steps(1, end); }
+    #c4 { animation: c4 2s infinite steps(1, end); }
+    #c5 { animation: c5 2s infinite steps(1, end); }
+    #c6 { animation: c6 2s infinite steps(1, end); }
+
+    @keyframes c1 {
+      0%, 12.5% { transform: translate(0, 0); }
+      18.75%    { transform: translate(-1px, -2px); }
+      25%       { transform: translate(-2px, -3px); }
+      31.25%    { transform: translate(-3px, -3px); }
+      37.5%     { transform: translate(-4px, -2px); }
+      43.75%    { transform: translate(-4px, 0); }
+      50%       { transform: translate(-5px, 2px); }
+      56.25%    { transform: translate(-5px, 5px); }
+      62.5%     { transform: translate(-6px, 8px); }
+      68.75%    { transform: translate(-6px, 12px); }
+      75%, 100% { transform: translate(0, 0); }
+    }
+    @keyframes c2 {
+      0%, 12.5% { transform: translate(0, 0); }
+      18.75%    { transform: translate(1px, -3px); }
+      25%       { transform: translate(1px, -4px); }
+      31.25%    { transform: translate(2px, -4px); }
+      37.5%     { transform: translate(2px, -3px); }
+      43.75%    { transform: translate(3px, -1px); }
+      50%       { transform: translate(3px, 2px); }
+      56.25%    { transform: translate(4px, 5px); }
+      62.5%     { transform: translate(4px, 9px); }
+      68.75%    { transform: translate(5px, 13px); }
+      75%, 100% { transform: translate(0, 0); }
+    }
+    @keyframes c3 {
+      0%, 12.5% { transform: translate(0, 0); }
+      18.75%    { transform: translate(-2px, -1px); }
+      25%       { transform: translate(-3px, -2px); }
+      31.25%    { transform: translate(-4px, -2px); }
+      37.5%     { transform: translate(-5px, -1px); }
+      43.75%    { transform: translate(-6px, 1px); }
+      50%       { transform: translate(-6px, 4px); }
+      56.25%    { transform: translate(-7px, 7px); }
+      62.5%     { transform: translate(-7px, 11px); }
+      68.75%    { transform: translate(-8px, 15px); }
+      75%, 100% { transform: translate(0, 0); }
+    }
+    @keyframes c4 {
+      0%, 12.5% { transform: translate(0, 0); }
+      18.75%    { transform: translate(2px, -2px); }
+      25%       { transform: translate(3px, -3px); }
+      31.25%    { transform: translate(4px, -3px); }
+      37.5%     { transform: translate(5px, -2px); }
+      43.75%    { transform: translate(5px, 0); }
+      50%       { transform: translate(6px, 3px); }
+      56.25%    { transform: translate(6px, 6px); }
+      62.5%     { transform: translate(7px, 10px); }
+      68.75%    { transform: translate(7px, 14px); }
+      75%, 100% { transform: translate(0, 0); }
+    }
+    @keyframes c5 {
+      0%, 12.5% { transform: translate(0, 0); }
+      18.75%    { transform: translate(0, -3px); }
+      25%       { transform: translate(-1px, -5px); }
+      31.25%    { transform: translate(-1px, -6px); }
+      37.5%     { transform: translate(-1px, -5px); }
+      43.75%    { transform: translate(-2px, -3px); }
+      50%       { transform: translate(-2px, 0); }
+      56.25%    { transform: translate(-2px, 4px); }
+      62.5%     { transform: translate(-3px, 8px); }
+      68.75%    { transform: translate(-3px, 13px); }
+      75%, 100% { transform: translate(0, 0); }
+    }
+    @keyframes c6 {
+      0%, 12.5% { transform: translate(0, 0); }
+      18.75%    { transform: translate(1px, -2px); }
+      25%       { transform: translate(2px, -4px); }
+      31.25%    { transform: translate(2px, -5px); }
+      37.5%     { transform: translate(3px, -4px); }
+      43.75%    { transform: translate(3px, -2px); }
+      50%       { transform: translate(4px, 1px); }
+      56.25%    { transform: translate(4px, 5px); }
+      62.5%     { transform: translate(5px, 9px); }
+      68.75%    { transform: translate(5px, 14px); }
+      75%, 100% { transform: translate(0, 0); }
+    }
+  </style>
+
+  <rect id="ground-shadow" x="3" y="15" width="9" height="1" fill="#000000" opacity="0.5"/>
+
+  <!-- Behind the crab, so a piece passing his body reads as going past rather
+       than sticking to him. -->
+  <g id="fx-confetti">
+    <rect id="c1" x="3" y="4" width="1" height="1" fill="#7EE787"/>
+    <rect id="c2" x="11" y="4" width="1" height="1" fill="#A371F7"/>
+    <rect id="c3" x="2" y="6" width="1" height="1" fill="#58A6FF"/>
+    <rect id="c4" x="12" y="6" width="1" height="1" fill="#C9D1D9"/>
+    <rect id="c5" x="5" y="3" width="1" height="1" fill="#A371F7"/>
+    <rect id="c6" x="9" y="3" width="1" height="1" fill="#7EE787"/>
+  </g>
+
+  <g id="master-group">
+    <g id="body-color-group" fill="#DE886D">
+      <rect id="torso" x="2" y="6" width="11" height="7"/>
+      <rect id="left-arm" x="0" y="9" width="2" height="2"/>
+      <rect id="right-arm" x="13" y="9" width="2" height="2"/>
+
+      <rect id="outer-left-leg" x="3" y="13" width="1" height="2"/>
+      <rect id="inner-left-leg" x="5" y="13" width="1" height="2"/>
+      <rect id="inner-right-leg" x="9" y="13" width="1" height="2"/>
+      <rect id="outer-right-leg" x="11" y="13" width="1" height="2"/>
+    </g>
+
+    <g id="eyes-color-group" fill="#000000">
+      <rect id="left-eye" x="4" y="8" width="1" height="2"/>
+      <rect id="right-eye" x="10" y="8" width="1" height="2"/>
+    </g>
+  </g>
+
+  <!-- Drawn after the body so the brim sits in front of the head, and given
+       its own copy of the jump so it rides with him. -->
+  <g id="fx-hat">
+    <g fill="#A371F7">
+      <rect x="5" y="5" width="5" height="1"/>
+      <rect x="6" y="4" width="3" height="1"/>
+      <rect x="7" y="3" width="1" height="1"/>
+    </g>
+    <rect x="7" y="2" width="1" height="1" fill="#C9D1D9"/>
+  </g>
+</svg>
