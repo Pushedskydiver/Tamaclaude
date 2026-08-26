@@ -855,9 +855,10 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   artefact under test, not just the software.
   **Exit criterion, written so it can fail:** somebody who is not the author,
   on an account that is not the author's, gets from a bare machine to a
-  reacting panel using only the guide, with no verbal help and no edit to it.
-  Anything less tests the software with the author standing behind it, which
-  is the one case the guide does not serve. Note this made the item bigger
+  reacting panel using only the guide and no verbal help. Fixing the guide
+  as it fails is the point — the criterion is that a _second_ pass needs no
+  fixes and no talking. One run that needed edits is a pass for the item and
+  a fail for the guide, which is the distinction worth keeping. Note this made the item bigger
   while leaving it on 19 Sep, behind a buffer meant to absorb something else.
   **Bring this
   forward — it is the highest-information hour left in the plan.** The
@@ -882,14 +883,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Printed card: repo QR, and "if it ever stops, open Terminal and run
       `tamaclaude status`" — `status` rather than `pack`, per Stage 3 above
       and the comment where it is defined.
-      **Decide the form before the card is printed, not at handover.** A bare
-      `tamaclaude` needs `pnpm setup` and `pnpm link` first, so out of the box
-      the working command is `pnpm tamaclaude status` from the project folder.
-      Two strings in the binary print the bare form — `agent.ts`'s
-      upgraded-node remedy and the CLI's `USAGE` block — so whichever form is
-      chosen, those change with it. That is a `packages/**` diff and therefore
-      a `da-review`: cheap now, and not something to discover on a Mac that is
-      not this one.
+      **The form is decided: `pnpm tamaclaude …`, from the project folder.**
+      A bare `tamaclaude` would need `pnpm setup` and a global link, and that
+      was rejected — it makes the binary's own printed remedies wrong for
+      whichever reader did the opposite, and it puts something on `PATH` that
+      goes stale when the folder moves. The CLI's `USAGE` block and `agent.ts`'s
+      upgraded-node remedy print the `pnpm` form to match.
+      **So the card needs two lines, not one**, because a Terminal opens in the
+      home folder and `pnpm` needs the project folder: `cd` to it, then
+      `pnpm tamaclaude status`.
       **Not a one-line install** — Stage 3 decided against
       one and gave the reason: `git clone && pnpm install` needs Xcode CLT,
       node and pnpm first, and a brew tap is a second repo and a formula for

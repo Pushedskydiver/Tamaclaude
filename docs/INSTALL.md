@@ -20,10 +20,10 @@ Two tools, neither of which macOS ships:
 - **pnpm 10.32.1** — the project pins this exactly, and a different pnpm will
   switch itself to it rather than complain
 
-If you already use [mise](https://mise.jdx.dev), the repo pins both, and
-`mise trust && mise install` in the project folder does it — the `trust` is
-needed because mise ignores a freshly cloned repo's tool versions until you
-allow them. Otherwise install Node 24 from
+If you already use [mise](https://mise.jdx.dev), the project pins both and can
+install them for you — but that happens after step 1, once you have the folder:
+`mise trust && mise install` inside it. The `trust` is needed because mise
+ignores a freshly cloned project's tool versions until you allow them. Otherwise install Node 24 from
 [nodejs.org](https://nodejs.org) and then run `corepack enable pnpm`.
 
 Nothing in the project compiles on install, so Xcode itself is not needed.
@@ -86,7 +86,10 @@ Then check:
 pnpm tamaclaude pack
 ```
 
-**It should name your pack — not `example` — and it should say a birthday is
+**If instead you get `Cannot find module` and a page of Node output, step 2 did
+not finish — run `pnpm build` again and watch for errors.
+
+It should name your pack — not `example` — and it should say a birthday is
 in it.** If it says `example`, or `birthday: none in this pack`, the wrong
 folder got copied. That combination is worth stopping for: the panel will look
 completely correct and quietly do the wrong thing on the one day it matters.
@@ -112,7 +115,9 @@ pnpm tamaclaude daemon
 
 The boot screen should be replaced by Clawd beside his rock pool.
 
-**Then press `Ctrl-C` to stop it before going on.** The next step starts the
+**Then press `Ctrl-C` to stop it before going on.** It will print
+`ELIFECYCLE  Command failed` on the way out — that is what stopping it looks
+like, not a problem. The next step starts the
 same program automatically, and if this one is still running the automatic one
 cannot claim the panel — it dies and retries every thirty seconds, quietly,
 while everything looks installed.
@@ -144,8 +149,15 @@ The panel reacts to Claude Code by being told what it is doing. This step wires
 that up, and like the last one it shows you the change before making it:
 
 ```bash
-pnpm install-hooks
-pnpm install-hooks --apply
+pnpm tamaclaude-install-hooks
+```
+
+That prints the change and writes nothing. It edits `~/.claude/settings.json`,
+which is also where your own Claude Code settings live, so it is worth reading
+what it says it will add. When it looks right:
+
+```bash
+pnpm tamaclaude-install-hooks --apply
 ```
 
 Then ask Claude Code to edit a file, and watch — Clawd should start typing.
@@ -176,7 +188,7 @@ breaks — it must never interrupt a session, so a failure prints nothing
 anywhere. `status` will look fine. Re-point it:
 
 ```bash
-pnpm install-hooks --apply
+pnpm tamaclaude-install-hooks --apply
 ```
 
 **The panel went blank or never came back after a restart.** Usually the login
@@ -188,7 +200,13 @@ pnpm tamaclaude status                   # says so, if this is why
 pnpm tamaclaude install-agent --apply    # re-points it
 ```
 
-**The panel is not plugged in**, or went in after the program started. Note
+**You started it by hand and forgot.** If a `pnpm tamaclaude daemon` is still
+running in a Terminal window somewhere, the automatic one cannot claim the
+panel — it exits and retries every thirty seconds while everything looks
+installed. `status` shows it loaded but not running. Close that window, or
+press `Ctrl-C` in it, and the automatic one takes over within a minute.
+
+**The panel is not plugged in.** Note
 `status` cannot see the panel — it reports the program, not the hardware. To
 check the panel is found, use the dry run, which prints the device it would
 use:
@@ -203,8 +221,16 @@ far.
 
 ## Changing your pack
 
-Replace the **contents** of `~/.tamaclaude/pack/` and restart the panel. Do not
-set `TAMACLAUDE_PACK` in your shell to point somewhere else — the login entry
+Replace the **contents** of `~/.tamaclaude/pack/`, then make the program start
+again — it reads the pack once when it starts, so unplugging the panel is not
+enough. Logging out and back in does it, or:
+
+```bash
+pnpm tamaclaude uninstall-agent
+pnpm tamaclaude install-agent --apply
+```
+
+Do not set `TAMACLAUDE_PACK` in your shell to point somewhere else — the login entry
 carries its own copy of that setting, so the panel would go on using the old
 pack while `pnpm tamaclaude pack` cheerfully reports the new one. If you do
 want it somewhere else, change it and re-run `install-agent --apply`.
@@ -223,17 +249,15 @@ want it gone entirely.
 
 ## A note on the commands
 
-`pnpm tamaclaude …` works from inside the project folder and installs nothing
-globally. Every command in this guide is written that way.
+**Run everything from the top of the project folder.** `pnpm tamaclaude …`
+resolves against the nearest `package.json`, so it works there and in ordinary
+subfolders like `docs/`, and fails inside `packages/…` or anywhere outside the
+project — including your home folder, which is where a Terminal opens.
 
-If you would rather type `tamaclaude` from anywhere, pnpm can put it on your
-`PATH` — but it needs a one-time setup first, and without it you get
-`ERR_PNPM_NO_GLOBAL_BIN_DIR`:
+So the first thing to type when something has gone wrong is:
 
 ```bash
-pnpm setup                    # then open a new Terminal window
-cd packages/cli && pnpm link
-cd ../..                      # the pnpm commands only work from the top
+cd ~/tamaclaude          # or wherever you put it
 ```
 
-Everything above works either way; this only changes what you type.
+Nothing is installed globally, and there is nothing on your `PATH` to go stale.
