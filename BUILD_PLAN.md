@@ -742,8 +742,8 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       **The fallback does not deliver, and that is why it is not one.** A
       private re-bake writes the mark into `packages/renderer/src/sprites/`,
       which is tracked; the recipient installs from a clone of a public repo
-      (`Printed card: QR to repo + one-line install`), so an uncommitted change
-      on one Mac reaches nobody, and committing it puts a company mark in
+      — the install happens in person, but it is still a clone onto their
+      machine — so an uncommitted change on this Mac reaches nobody, and committing it puts a company mark in
       public history permanently. If the field does not land, **no logo ships**
       — the placeholder stays and the panel is still a gift. Two paragraphs
       above promise the recipient will see "their logo"; if this is cut, that
@@ -866,7 +866,13 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   exist at all, the launchd agent, and the device. Run the clone-and-gate
   check after any change to tooling — it is two minutes and it is the part
   that does not need one.
-- [ ] Printed card: QR to repo + one-line install
+- [ ] Printed card: repo QR, and "if it ever stops, open Terminal and run
+      `tamaclaude pack`". **Not a one-line install** — Stage 3 decided against
+      one and gave the reason: `git clone && pnpm install` needs Xcode CLT,
+      node and pnpm first, and a brew tap is a second repo and a formula for
+      one Mac. The install happens in person. This line said "one-line
+      install" until 26 Aug, which would have had someone building a thing the
+      plan had already ruled out.
 - [ ] Flash the gift board (not the dev board) with the splash
 
 ---
