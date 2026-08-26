@@ -502,16 +502,35 @@ than partially. Eight good screens beat nine plus four rough ones.
   a judgement that a tool automating a working loop is worth less than the
   days it costs, with 29 left. Nothing depends on it: the only reference in
   the tree was this line. Most of Stage 5's remaining art does not want it — a
-  pixel scene is a drawing and the logo is a quantiser pass — but the pet
-  sprite is a background prop _on idle and asleep_, so it lands inside two
-  existing animated SVGs, and the spec calls it Tier A art rather than set
-  dressing. That and the easter-egg idle are animation work.
+  pixel scene is a drawing and the logo is a quantiser pass — and the pet
+  sprite, which the spec ranks Tier A rather than set dressing, is neither.
+
+  **This line said until 26 Aug that the pet "lands inside two existing
+  animated SVGs", meaning `idle.svg` and `asleep.svg`. It cannot.** Both are
+  tracked, the pet is pack content by `CLAUDE.md`'s rule, and drawing it into
+  them would put a personal detail into the public repo and grow the
+  grandfathered set in the same stroke. Tier A says it matters, not where it
+  is drawn. It takes the logo's shape instead: a blob in the manifest and a
+  painter that composites it into a slot, which is what
+  `packs/example/README.md` already said it would. So the pet is not animation
+  work at all, and the easter-egg idle is that category alone.
+
+  **That costs something and it is not free to say so.** The spec budgets the
+  pet as a second character rather than set dressing, and a character that
+  never moves beside one that breathes reads as furniture. The privacy rule
+  leaves two ways out and neither is cheap: an animated pack format, which does
+  not exist and which nothing in the shipping graph could decode; or drawing
+  the pet into tracked SVGs, which is the thing that cannot happen. **A static blob
+  is therefore the decision, taken here rather than assumed**, and the cheapest
+  recovery if it reads as furniture on glass is a second blob and an alternate
+  frame — a two-pose blink, not a loop.
   What it would have bought is repeatability across a _series_, which matters
   when many are left. **Two are**, item 13's road bike having been cut since:
   the franchise-flavoured easter-egg idle (Stage 5, unchecked) and the spec's
   meditation idle variant. Two is not a series and each is one pass of the loop
   — but a first version of this line said "there are none" and called the
   easter-egg idle hypothetical when it is a scheduled box.
+
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
