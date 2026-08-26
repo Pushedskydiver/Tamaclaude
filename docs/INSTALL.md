@@ -65,13 +65,22 @@ README because `pnpm test` needs a headless browser — but running a panel does
 not, and you are not running the tests. The animations are already drawn and
 baked into the code.
 
-## 3. Check your pack is there
+## 3. Put your pack in place
 
 A _pack_ is a folder holding your colours, the things Clawd says, and the date
-he knows about. **Yours was made for you and put in place when this was set
-up** — you should not have to build one. It lives at `~/.tamaclaude/pack/`.
+he knows about. **Yours was made for you and came with the
+panel** — you should not have to build one.
 
-Check it:
+Copy it in so that `manifest.json` sits directly inside `~/.tamaclaude/pack/`.
+Mind the trailing slash on the folder you are copying from — without it you get
+a folder inside a folder, and the program will say it cannot find the pack:
+
+```bash
+mkdir -p ~/.tamaclaude/pack
+cp -R /path/to/your-pack/ ~/.tamaclaude/pack/
+```
+
+Then check it:
 
 ```bash
 pnpm tamaclaude pack
@@ -89,17 +98,9 @@ which exists so the software has something to test against.
 
 > **Keep a copy of your pack somewhere safe.** It is deliberately not part of
 > the project — it holds things that should not be on the public internet — so
-> it does not come back with a fresh download. If the Mac is wiped or the
-> folder is deleted, a copy is the only way to get it back. Everything else
-> here can be rebuilt from scratch; this cannot.
-
-If you ever need to put one back, copy its contents in so that `manifest.json`
-sits directly inside, and mind the trailing slash:
-
-```bash
-mkdir -p ~/.tamaclaude/pack
-cp -R /path/to/your-pack/ ~/.tamaclaude/pack/
-```
+> a fresh download will not bring it back. If this Mac is wiped or the folder
+> deleted, your copy is the only way to restore it. Everything else here can be
+> rebuilt from scratch; this cannot.
 
 ## 4. Plug the panel in
 

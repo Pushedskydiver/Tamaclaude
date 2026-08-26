@@ -394,8 +394,11 @@ node` plus launchd's `PATH=/usr/bin:/bin:/usr/sbin:/sbin` fails to spawn
   every ten seconds, forever.
   **No brew tap.** A second repo, a formula, a versioned tarball and
   un-privating the package, for one Mac. `git clone && pnpm install` is not
-  a one-line install either: it needs Xcode CLT, node and pnpm first. The
-  decision is to install it in person and let the printed card be a
+  a one-line install either: it needs Xcode CLT, node and pnpm first.
+  **The recipient runs the install himself, from `docs/INSTALL.md`** — this
+  said "install it in person" until 26 Aug, which made the guide's install
+  half look optional and made the clean-account dry run look like a
+  formality. It is neither. What that leaves is a printed card as a
   keepsake carrying something true — the repo QR and "if it ever stops,
   open Terminal and run `tamaclaude status`". **`status`, not `pack`**, for
   the reason `packages/cli/src/index.ts` gives where it is defined: `pack`
@@ -662,10 +665,14 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       the consequence is that a fresh clone does not contain it, so it travels
       out of band during the in-person install and exists in exactly one place
       afterwards. A wiped Mac, a deleted folder or a re-clone loses it, and the
-      daemon then refuses to start with `no pack configured`. **Hand over a
-      copy as well as installing it**, or decide that the backup is the
-      author's own and say so. `docs/INSTALL.md` tells the recipient to keep
-      one; that is an instruction, not a mechanism.
+      daemon then refuses to start with `no pack configured`.
+      **This blocks the install, not just recovery.** The recipient works
+      through `docs/INSTALL.md` himself and cannot get past step 3 without the
+      pack in hand, so it has to travel with the panel — decide the channel and
+      write it into the guide's step 3, which currently says only "came with
+      the panel". A copy on the same medium doubles as the backup, and the
+      guide already tells him to keep one; that is an instruction, not a
+      mechanism.
       **What the palette reaches today, measured 25 Aug.** `packages/cli`
       composes with `extent: 'panel'`, so `withEnvironment` paints the
       environment across the whole framebuffer and replaces the painter's ink
@@ -755,8 +762,8 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       **The fallback does not deliver, and that is why it is not one.** A
       private re-bake writes the mark into `packages/renderer/src/sprites/`,
       which is tracked; the recipient installs from a clone of a public repo
-      — the install happens in person, but it is still a clone onto their
-      machine — so an uncommitted change on this Mac reaches nobody, and committing it puts a company mark in
+      — the recipient clones onto his own machine — so an uncommitted change
+      on this Mac reaches nobody, and committing it puts a company mark in
       public history permanently. If the field does not land, **no logo ships**
       — the placeholder stays and the panel is still a gift. Two paragraphs
       above promise the recipient will see "their logo"; if this is cut, that
@@ -904,9 +911,8 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       **Not a one-line install** — Stage 3 decided against
       one and gave the reason: `git clone && pnpm install` needs Xcode CLT,
       node and pnpm first, and a brew tap is a second repo and a formula for
-      one Mac. The install happens in person. This line said "one-line
-      install" until 26 Aug, which would have had someone building a thing the
-      plan had already ruled out.
+      one Mac. This line said "one-line install" until 26 Aug, which would
+      have had someone building a thing the plan had already ruled out.
 - [ ] Flash the gift board (not the dev board) with the splash
 
 ---
