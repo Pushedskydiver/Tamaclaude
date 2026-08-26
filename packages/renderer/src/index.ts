@@ -33,5 +33,9 @@ export * from './scene.js';
 export * from './strip.js';
 
 // Clawd's frames, loaded on demand. See sprites/index.ts.
+// Only the baked symbol is public. `paintQr` and `moduleAt` are called by
+// `scene.ts` inside this package and by `tools/` through the source path, so
+// re-exporting them here is surface nobody imports — which `knip` says so.
+export { BIRTHDAY_QR } from './qr.data.js';
 export { loadSprite, SPRITE_NAMES } from './sprites/index.js';
 export type { Sprite } from './sprites/index.js';

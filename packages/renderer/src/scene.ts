@@ -1,10 +1,11 @@
 import type { Painter } from './band.js';
 import type { EnvironmentExtent, TimeOfDay } from './environment.js';
 import type { Framebuffer } from './framebuffer.js';
-import type { Orientation, StageLayout } from './layout.js';
+import type { BandName, Orientation, StageLayout } from './layout.js';
+import type { QrCode } from './qr.js';
 import type { SessionChip } from './strip.js';
 import type { PackManifest } from '@tamaclaude/packs';
-import type { Frame } from '@tamaclaude/protocol';
+import type { Frame, Rect } from '@tamaclaude/protocol';
 
 import {
   centredTextY,
@@ -23,6 +24,7 @@ import {
   spriteSlots,
   stageScale,
 } from './layout.js';
+import { paintQr } from './qr.js';
 import { paintStrip } from './strip.js';
 import { drawText, drawTextBlock, ELLIPSIS, measureText } from './text.js';
 
@@ -117,6 +119,19 @@ export type Scene = {
   readonly sessions: readonly SessionChip[];
   /** Quip, tool label or state text. Wrapped to the band; never clipped silently. */
   readonly message: string;
+  /**
+   * A QR to show instead of the strip and the message band.
+   *
+   * Set by the daemon on the birthday and on no other day. It is a whole
+   * *instead of*, not an overlay: a session chip or a line of quip showing
+   * through a QR is not decoration, it is a symbol that does not decode.
+   *
+   * The strip and the message are what it costs, and that is the trade. The
+   * stage still shows Clawd and the status band still shows the clock, so
+   * nothing that says *when to look* is given up — and the day's quip is on
+   * the page the QR leads to, at more length than a band could carry.
+   */
+  readonly qr?: QrCode;
 };
 
 /**
@@ -278,7 +293,32 @@ export function render(scene: Scene): Framebuffer {
   const painter = withEnvironment(base, scene);
   paintStatus(painter, scene);
   paintStage(painter, scene);
-  paintStrip(painter, scene.sessions);
-  paintMessage(painter, scene);
+  // The QR takes both lower bands or neither of them. `paintQr` returns `null`
+  // when it cannot give every module a whole pixel, and then the ordinary
+  // bands draw: losing the QR is survivable, losing the panel's only text
+  // because something silently drew nothing is not.
+  if (
+    scene.qr === undefined ||
+    paintQr(target, qrArea(painter.bands), scene.qr) === null
+  ) {
+    paintStrip(painter, scene.sessions);
+    paintMessage(painter, scene);
+  }
   return target;
+}
+
+/**
+ * The region the QR occupies: the strip and the message band together.
+ *
+ * Derived from the bands rather than written down, so a layout change moves
+ * the QR with them instead of leaving it over the top of something.
+ */
+function qrArea(bands: Readonly<Record<BandName, Rect>>): Rect {
+  const { strip, message } = bands;
+  return {
+    x: strip.x,
+    y: strip.y,
+    width: strip.width,
+    height: message.y + message.height - strip.y,
+  };
 }
