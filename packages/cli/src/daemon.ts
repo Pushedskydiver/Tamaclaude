@@ -266,20 +266,45 @@ function subagentText(sessions: readonly Session[]): string {
 }
 
 /**
- * The states where the stage would otherwise say that nothing is happening.
+ * Whether the birthday may take the stage from a state.
  *
- * These two and no others, because these are the two the birthday can replace
- * without erasing something true. Every other state's picture is carrying a
- * fact — a tool is running, a session is asking, something failed — and one
- * stage cannot show both that and a party hat.
+ * True for the two states whose picture says nothing is happening, and there
+ * the birthday is strictly more informative than a Clawd standing about. False
+ * everywhere else: the stage has one picture, so celebrating over a running
+ * tool or a raised hand means *replacing* the thing the panel exists to show.
  *
- * A `Set` of `SessionState` rather than a comparison chain so that the
- * exhaustiveness lives in the type: a renamed state fails to compile here.
+ * **A total `Record` rather than a `Set`, for the reason `TONE` gives forty
+ * lines up and `TOOL_STATES` repeats in `message.ts`: a `Set` compiles clean
+ * when a state is added to `SESSION_STATES` and silently puts it outside.**
+ * This was a `Set` until a review planted `WAITING` in it — a party hat over a
+ * session that had asked a human a question a minute earlier and not been
+ * answered — and all six gates stayed green, because no test named `WAITING`
+ * and nothing made one necessary. That is the precise outcome `message.ts`
+ * says the feature exists to prevent. Defaulting safe was not the problem;
+ * "safe by absence" and "decided" are different things, and only one of them
+ * survives a tenth state arriving.
+ *
+ * Not named `RESTING`: `TONE` calls `DONE` resting, and this table
+ * deliberately excludes it.
  */
-const RESTING: ReadonlySet<SessionState> = new Set<SessionState>([
-  'IDLE',
-  'ASLEEP',
-]);
+const BIRTHDAY_COVERS: Readonly<Record<SessionState, boolean>> = {
+  // Nothing is happening. The birthday is the more informative picture.
+  IDLE: true,
+  ASLEEP: true,
+  // A real event with its own picture, and a bounded window that falls through
+  // to `IDLE` — so the birthday follows it seconds later rather than losing.
+  DONE: false,
+  // Work in progress. `birthdayLine` covers these on the message band, which is
+  // safe there because the stage still shows the work; here it *is* the stage.
+  WORKING: false,
+  THINKING: false,
+  COMPACTING: false,
+  // Asking for a human. The one day of the year it matters most that the panel
+  // still says when to look is the day nobody is watching it for status.
+  NEEDS_PERMISSION: false,
+  WAITING: false,
+  FAILED: false,
+};
 
 /**
  * Which animation a resolved panel shows.
@@ -296,16 +321,21 @@ const RESTING: ReadonlySet<SessionState> = new Set<SessionState>([
  * they cannot disagree.
  *
  * **The birthday is decided here rather than in `animationFor`**, which is a
- * pure function of state in a package that never sees a pack. This is the same
- * split `message.ts` makes for the quip, and it keeps the date out of the
- * table that maps states to pictures.
+ * pure function of state in a package that never sees a pack — so the date
+ * stays out of the table that maps states to pictures.
+ *
+ * The same *ordering* `message.ts` uses for the quip: `birthdayLine` runs ahead
+ * of the `quips.mapped[state]` lookup exactly as this check runs ahead of
+ * `animationFor`. Not the same package split, and an earlier draft claimed it
+ * was — `birthdayLine` and `messageFor` are both in `cli`, and nothing in
+ * `daemon` produces a message for it to sit one layer above.
  */
 export function animationForPanel(
   panel: ReturnType<typeof resolvePanel>,
   pack: PackManifest,
   now: number,
 ): AnimationName {
-  if (RESTING.has(panel.state) && isBirthday(pack, now)) return 'birthday';
+  if (BIRTHDAY_COVERS[panel.state] && isBirthday(pack, now)) return 'birthday';
   return animationFor(panel.state, {
     tool: panel.tool,
     errorType: panel.sessions.at(0)?.errorType,
@@ -512,9 +542,18 @@ function linkLine(status: LinkStatus): string {
  * `listener` was `Awaited<ReturnType<typeof startSocketServer>>` and
  * `paintOnce` calls exactly one of its methods. The whole type made the
  * function look as though it needed a running server, so the only way to
- * exercise a frame was to start one — and nothing ever did. Structural typing
- * means the real `SocketServer` still satisfies this, and `runDaemon` passes
- * it unchanged.
+ * exercise a frame was to start one — which the first five tests in
+ * `daemon.test.ts` do, driving real frames through here via `runDaemon` and
+ * asserting bytes on the wire. What none of them can do is put this function
+ * on a chosen date, which is why the birthday reached the panel untested. An
+ * earlier draft of this block said "nothing ever did", which erases those five
+ * tests and was falsified by gutting the send and watching three of them fail.
+ *
+ * Structural typing means the real `SocketServer` still satisfies this, and
+ * `runDaemon` passes it unchanged. `transport` is deliberately *not* narrowed:
+ * it is already `Transport` (`ReturnType<typeof openPanel>` resolves to it),
+ * and although `close()` goes uncalled here, `Painting` below holds the same
+ * type and does call it.
  */
 type Painter = {
   readonly transport: Transport;
@@ -553,10 +592,14 @@ export async function paintOnce(
   // before it is wired, which `overheated` did on 24 Aug (art 08:58, wiring
   // 12:01), `board-game` did again on 25 Aug (art 11:07, wiring 12:23), and
   // `sweeping` did the same day at a 5h40m gap (art 16:15, wiring 21:55).
-  // **The lists are equal at HEAD, all fourteen names**, which is exactly the
-  // moment this guard looks deletable and is worst to be without — an earlier
-  // version of this comment said so while they were unequal, and the sentence
-  // it warned about is now the state of the tree. They are kept because the two lists are
+  // **The lists are equal at HEAD**, which is exactly the moment this guard
+  // looks deletable and is worst to be without — an earlier version of this
+  // comment said so while they were unequal, and the sentence it warned about
+  // is now the state of the tree. They were unequal again as recently as the
+  // commit before this one, when `birthday` was baked and not yet wired.
+  // `pnpm --filter @tamaclaude/daemon exec vitest run src/animation.test.ts`
+  // is what checks it; the count is not written down here because the two
+  // previous attempts to write it down went stale within a week. They are kept because the two lists are
   // maintained in different packages by different tools — `animation.ts` by
   // hand, `sprites/index.ts` by `bake-sprites.ts` — and
   // `animation.test.ts`'s "names only animations that have been baked" is what

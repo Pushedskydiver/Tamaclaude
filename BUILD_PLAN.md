@@ -778,46 +778,56 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [ ] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the pack
 - [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
       Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
-- [~] Birthday screen, date-triggered 23 Sep. **The trigger is built; the
-  screen is not, and no tracked pack carries a date.** `packs` takes an
-  optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
-  `isBirthday` compares in local time because the day the panel should
-  celebrate is the one the person beside it is having. `02-29` falls back
-  to the 28th in a common year, and a day that exists in no month is
-  refused — both because accepting a date that can never fire is a failure
-  nobody can notice until the day has passed.
-  The quip beats the resting and working lines and loses to any state
-  asking for a human. **That is not the rule `DONE` is ranked by**, and
-  two earlier versions of this line said it was: `DONE` ranks below
-  `WORKING` because "a payoff belongs on a quiet desk", and this covers
-  both. They share only the attention half. The reason to differ is that
-  rank decides the stage, where a resting Clawd over a running tool would
-  be a lie, while this decides the message band and the animation still
-  shows the work. Two reviews caught the claim independently.
-  **The art is built.** `assets/clawd/animations/birthday.svg` — a jump, both
-  claws up, a hat, confetti — baked, and on the panel at 8fps and 12,138 B/s
-  against the 40,000 B/s bar. It doubles as the hero of the webpage the QR
-  points at. Two findings worth keeping: a claw cannot reach above the head by
-  rotation alone, so both extend the way `gym` and `permission-sign` do; and
-  the hat was red until the render was counted, at which point 46 pixels of
-  the raised claws' edges were snapping to it rather than to black, because
-  #B22222 sits on the peach-to-background ramp. Purple does not. §Palette
-  snapping asks what edge a new colour sits between, and counting the frame is
-  how you answer it.
-  What remains: **nothing draws it yet.** `isBirthday` reaches `message.ts`
-  and the quip band, not `animationFor`, and `ANIMATIONS` has no `birthday`
-  entry. Wiring it is the same ranking question this item already settles for
-  the quip — beats resting and working, loses to anything asking for a human —
-  so it wants that rule applied to the stage as well, and a test, rather than
-  a special case bolted onto a pure function of state. Also still open: a pack
-  that carries a date, which the recipient's private pack repo now does. Selection itself is built — `TAMACLAUDE_PACK`, else
-  `~/.tamaclaude/pack/` — so the trigger is reachable as soon as a pack names
-  a date. What is not built is anything that _sets_ the variable on boot; that
-  is the launchd item in Stage 3. This paragraph said the mechanism was
-  missing and cited the Stage 1 line for it, in the same stage whose first item
-  already said where the pack goes; the commit that built the resolver left the
-  contradiction standing and a review caught it. An earlier version of this
-  sentence put the two five lines apart, which is wrong by about thirty.
+- [x] Birthday screen, date-triggered 23 Sep. **Trigger, art and stage are all
+      built.** No _tracked_ pack carries a date, and none should — the recipient's
+      private pack repo carries it. `packs` takes an
+      optional `birthday: { date, quip }` keyed `MM-DD` so it recurs, and
+      `isBirthday` compares in local time because the day the panel should
+      celebrate is the one the person beside it is having. `02-29` falls back
+      to the 28th in a common year, and a day that exists in no month is
+      refused — both because accepting a date that can never fire is a failure
+      nobody can notice until the day has passed.
+      The quip beats the resting and working lines and loses to any state
+      asking for a human. **That is not the rule `DONE` is ranked by**, and
+      two earlier versions of this line said it was: `DONE` ranks below
+      `WORKING` because "a payoff belongs on a quiet desk", and this covers
+      both. They share only the attention half. The reason to differ is that
+      rank decides the stage, where a resting Clawd over a running tool would
+      be a lie, while this decides the message band and the animation still
+      shows the work. Two reviews caught the claim independently.
+      **The art is built.** `assets/clawd/animations/birthday.svg` — a jump, both
+      claws up, a hat, confetti — baked, and on the panel at 8fps and 12,138 B/s
+      against the 40,000 B/s bar. It doubles as the hero of the webpage the QR
+      points at. Two findings worth keeping: a claw cannot reach above the head by
+      rotation alone, so both extend the way `gym` and `permission-sign` do; and
+      the hat was red until the render was counted, at which point 46 pixels of
+      the raised claws' edges were snapping to it rather than to black, because
+      #B22222 sits on the peach-to-background ramp. Purple does not. §Palette
+      snapping asks what edge a new colour sits between, and counting the frame is
+      how you answer it.
+      **The stage is wired, and to a stricter rule than the one this item
+      predicted.** The line above says wiring it wants the quip's rule applied to
+      the stage — beats resting and working, loses to anything asking for a human.
+      That is wrong for the stage and the item's own next paragraph says why
+      without noticing: rank decides the stage, "where a resting Clawd over a
+      running tool would be a lie". The message band can celebrate over `WORKING`
+      because the animation still shows the work and neither half of the glass is
+      false. The stage has one picture, so celebrating over a running tool means
+      _replacing_ the tool's picture. So `animationForPanel` covers `IDLE` and
+      `ASLEEP` only; `DONE` keeps `payoff`, being a real event with its own picture
+      and a window that falls through to `IDLE` fifteen seconds later.
+      The rule lives in a total `Record<SessionState, boolean>`, not a `Set`: a
+      review planted `WAITING` in the `Set` and all six gates stayed green — a
+      party hat over a session that had asked a human a question a minute earlier.
+      Also still open: a pack
+      that carries a date, which the recipient's private pack repo now does. Selection itself is built — `TAMACLAUDE_PACK`, else
+      `~/.tamaclaude/pack/` — so the trigger is reachable as soon as a pack names
+      a date. What is not built is anything that _sets_ the variable on boot; that
+      is the launchd item in Stage 3. This paragraph said the mechanism was
+      missing and cited the Stage 1 line for it, in the same stage whose first item
+      already said where the pack goes; the commit that built the resolver left the
+      contradiction standing and a review caught it. An earlier version of this
+      sentence put the two five lines apart, which is wrong by about thirty.
 - [x] **The boot splash — design it together, then bake it into the firmware.**
       Clawd waving beside the wordmark, landscape, chosen by Alex from four
       rendered candidates on 21 Aug. The far claw is tucked because at its
