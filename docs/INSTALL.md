@@ -79,6 +79,13 @@ Clone it straight into place:
 git clone <the pack address you were given> ~/.tamaclaude/pack
 ```
 
+**It is private, so git has to know who you are** — be signed in to GitHub on
+this Mac and have accepted the invitation before you run that. If you get
+`Repository not found`, that is almost always access rather than a typo:
+GitHub reports a private repo you cannot see and one that does not exist in
+exactly the same words, so the error sends you hunting the address when the
+address is fine.
+
 If you were handed a folder rather than an address, copy its contents in
 instead so that `manifest.json` sits directly inside `~/.tamaclaude/pack/` —
 and mind the trailing slash, because without it you get a folder inside a
@@ -172,6 +179,13 @@ what it says it will add. When it looks right:
 pnpm tamaclaude-install-hooks --apply
 ```
 
+**Start a new Claude Code session before you test.** Hooks are read when a
+session starts, so one that was already open knows nothing about them — and
+`hook-settings.ts` ends every hook command with `2>/dev/null || true`, on
+purpose, so that a broken hook can never interrupt a session. The two
+together mean an already-open session shows you precisely what a failed
+install would show you. It has not failed; it is not listening yet.
+
 Then ask Claude Code to **read** a file, and watch — Clawd should start
 climbing. Merely opening a session is not enough: that puts him at rest.
 
@@ -243,8 +257,15 @@ far.
 If you cloned it, pull:
 
 ```bash
-cd ~/.tamaclaude/pack && git pull
+git -C ~/.tamaclaude/pack pull
 ```
+
+`git -C` rather than `cd`, deliberately: everything else on this page runs
+from the top of the project folder, and a `cd` here leaves you somewhere
+`pnpm tamaclaude` cannot work — the pack folder has no `package.json`, so the
+next command answers `ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND` and the restart
+never happens. The pull succeeds, nothing else does, and the panel goes on
+showing the old pack.
 
 Otherwise replace the **contents** of `~/.tamaclaude/pack/`. Either way the
 program reads the pack once when it starts, so make it start again —
