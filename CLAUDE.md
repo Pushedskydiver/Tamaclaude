@@ -108,12 +108,19 @@ table and rationale: `docs/ARCHITECTURE.md`.
   already narrow the field a long way, and each addition narrows it further
   while passing any "is this one detail identifying?" check.
 
-  **Three things have leaked and been removed after the fact**, all caught by
+  **Four things have leaked and been removed after the fact**, all caught by
   review rather than before merge: a name from three tracked files, an in-joke
-  quip from a renderer test, and the payoff screen's vehicle by make and colour
-  from five files. Assume the next one gets through too, and that removal from
-  the working tree is not removal — see the public-repo row in `BUILD_PLAN.md`,
-  which accepts history in full.
+  quip from a renderer test, the payoff screen's vehicle by make and colour
+  from five files, and a pronoun giving the pet's sex — one word, in the
+  sentence arguing that personal details must not reach tracked files. Assume
+  the next one gets through too.
+
+  **The fourth was removed from history, and the other three were not.** That
+  is not a change of policy, it is an accident of timing: it was caught while
+  its branch was still unpushed, so a rewrite cost nothing and the author asked
+  for one. Once a branch is pushed, removal from the working tree is not
+  removal — see the public-repo row in `BUILD_PLAN.md`, which accepts history
+  in full. The window in which this is cheap is short and closes silently.
 
   **What is deliberately not protected: that this is a birthday gift, and its
   date.** Both are stated four lines into this file and the date drives every
