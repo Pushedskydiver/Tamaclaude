@@ -60,6 +60,15 @@ type PackPet = NonNullable<PackManifest['pet']>;
  * margin is undocumented anywhere else**: a re-bake that drops the eyes a
  * pixel breaks it silently.
  *
+ * **It clips the drooping claw, and the amount was worth measuring.**
+ * `asleep.svg` calls that claw "what distinguishes this from `idle` at a
+ * glance", and the pet's box overlaps its rows. A review read that as the pet
+ * being able to hide the one feature telling the two screens apart. Measured
+ * against the pet's actual mask rather than its box, it hides **13%** of the
+ * claw band per frame — 86 of 643 pixels — so the claw still reads, and the
+ * `Zzz` and the closed eyes are untouched. Real, small, and recorded so a
+ * larger pet is not drawn without re-checking it.
+ *
  * `packages/packs/src/index.ts` repeats these two numbers because it sits
  * below this package and cannot import them; `pet.test.ts` asserts they agree.
  */
