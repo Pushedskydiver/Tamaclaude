@@ -1,8 +1,9 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table, an optional birthday and an optional
- * logo. Props are planned (`BUILD_PLAN.md` Stage 5) and are not fields yet.
+ * A pack is a palette, a quip table, an optional birthday, an optional logo
+ * and an optional pet. Props beyond the pet are planned (`BUILD_PLAN.md`
+ * Stage 5) and are not fields yet.
  * The character
  * is deliberately not part of it: there is one base geometry and one animation
  * set, and the sprites are baked to fixed RGB565 by `tools/bake-sprites.ts`, so
@@ -19,8 +20,8 @@
  * palette's larger role is what quantises to it: the logo does, since 26 Aug,
  * and the pet sprite will.
  *
- * The schema below is `name`, `palette`, `quips`, an optional `birthday` and an
- * optional `logo`. Props land with the renderer. This line enumerates the
+ * The schema below is `name`, `palette`, `quips`, an optional `birthday`, an
+ * optional `logo` and an optional `pet`. Props land with the renderer. This line enumerates the
  * schema exhaustively on purpose, so adding a field without touching it is a
  * visible omission — and it has now caught two: `birthday` went in under the
  * wording that named only the first three, and `logo` went in under the
@@ -158,6 +159,40 @@ const packManifestSchema = z.object({
        */
       pixels: z.string().min(1).regex(BASE64, 'logo.pixels must be base64'),
       mask: z.string().min(1).regex(BASE64, 'logo.mask must be base64'),
+    })
+    .optional(),
+  /**
+   * The recipient's pet, asleep on the sand, or nothing.
+   *
+   * Same shape as `logo` and for the same reason — pixels rather than a
+   * picture, because nothing in the shipping graph decodes an image.
+   * `tools/logo2pixel.ts --format pack` writes this one too; it is not
+   * logo-specific, it quantises any SVG to a pack's palette.
+   *
+   * **Unlike the logo it is not drawn on the character**, so it is bounded by
+   * the sand rather than by a slot on him, and it is painted after him: the
+   * measurement said an unoccluded prop this size has one home, the near
+   * corner, which sits in front of his contact shadow. `BUILD_PLAN.md` carries
+   * the numbers and why "background prop" was retired.
+   */
+  pet: z
+    .object({
+      /**
+       * **Bounded by the clear sand**, 36x22 device pixels — `PET_SLOT` in
+       * `packages/renderer/src/pet.ts`, measured against the character's mask
+       * union over all 128 `idle` and 96 `asleep` frames, with a test there
+       * asserting these agree. This package sits below the renderer and cannot
+       * import them, so the limits are repeated and the drift is caught by
+       * that test.
+       *
+       * **Not the logo's bounds.** That field caps height at 20 and the pet is
+       * 22, so copying it refuses the art this field exists for.
+       */
+      width: z.number().int().min(1).max(36),
+      height: z.number().int().min(1).max(22),
+      /** `.min(1)` for the same reason as the logo's: see above. */
+      pixels: z.string().min(1).regex(BASE64, 'pet.pixels must be base64'),
+      mask: z.string().min(1).regex(BASE64, 'pet.mask must be base64'),
     })
     .optional(),
 });

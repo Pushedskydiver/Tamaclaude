@@ -794,6 +794,35 @@ describe('what the panel says', () => {
     ).toBeUndefined();
   });
 
+  it('offers the pack pet to the quiet screens and to nothing else', () => {
+    // `PET_APPEARS` is a total record, so the compiler catches a *missing*
+    // animation. It cannot catch a wrong *value* — a `true` on the wrong row
+    // reads as valid TypeScript — which is the half this asserts. The spec
+    // puts the pet on loafing and asleep; anywhere else it would stand on the
+    // sand while the character is climbing a wall or holding up a sign.
+    const withPet = parsePackManifest({
+      ...pack,
+      pet: { width: 32, height: 22, pixels: 'AAA=', mask: 'AAA=' },
+    });
+    const registry = after({ sessionId: 's', kind: 'Stop' });
+    const petFor = (animation: AnimationName): unknown =>
+      sceneFor({ registry, pack: withPet, now: NOW, animation }).pet;
+
+    expect(petFor('idle')).toBeDefined();
+    expect(petFor('asleep')).toBeDefined();
+    for (const animation of ANIMATIONS.filter(
+      (name) => name !== 'idle' && name !== 'asleep',
+    )) {
+      expect(petFor(animation), animation).toBeUndefined();
+    }
+
+    // A pack without one offers nothing, which is every pack but the
+    // recipient's — and the sand is simply empty, with no placeholder.
+    expect(
+      sceneFor({ registry, pack, now: NOW, animation: 'idle' }).pet,
+    ).toBeUndefined();
+  });
+
   it('picks overheated for a rate limit on the path the panel actually uses', () => {
     // The production path, not the table. `animationFor` is unit-tested, but
     // `paintOnce` composed the arguments inline and nothing exercised that

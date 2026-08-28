@@ -194,6 +194,54 @@ describe('the birthday', () => {
   });
 });
 
+describe('a pack pet', () => {
+  const base = {
+    name: 'p',
+    palette: [
+      [0, 0, 0],
+      [255, 255, 255],
+    ],
+    quips: { mapped: {}, idle: [] },
+  };
+  const pet = { width: 32, height: 22, pixels: 'AAA=', mask: 'AAA=' };
+
+  it('is optional, and a pack without one is unchanged', () => {
+    expect(parsePackManifest(base).pet).toBeUndefined();
+  });
+
+  it('is accepted when it carries dimensions and both payloads', () => {
+    expect(parsePackManifest({ ...base, pet }).pet).toEqual(pet);
+  });
+
+  it('refuses one larger than the ground it stands on', () => {
+    // 36x22 is the clear sand measured against the character's mask union
+    // over all 128 `idle` and 96 `asleep` frames. Wider than 36 and the only
+    // space left is six rows below the feet.
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, width: 37 } }),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, height: 23 } }),
+    ).toThrow();
+  });
+
+  it('accepts one exactly the size of the slot', () => {
+    // The logo's own bound is 20 high and the pet is 22, so a schema copied
+    // from it refuses the art it was added for.
+    const full = { ...pet, width: 36, height: 22 };
+    expect(parsePackManifest({ ...base, pet: full }).pet).toEqual(full);
+  });
+
+  it('refuses an empty payload, which would show nothing and say nothing', () => {
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, pixels: '' } }),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, mask: 'not base64!' } }),
+    ).toThrow();
+  });
+});
+
 describe('a pack logo', () => {
   const base = {
     name: 'p',

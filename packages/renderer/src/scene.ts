@@ -25,6 +25,7 @@ import {
   stageScale,
 } from './layout.js';
 import { paintLogo } from './logo.js';
+import { paintPet } from './pet.js';
 import { paintQr } from './qr.js';
 import { paintStrip } from './strip.js';
 import { drawText, drawTextBlock, ELLIPSIS, measureText } from './text.js';
@@ -151,6 +152,15 @@ export type Scene = {
    * floating over the rock pool.
    */
   readonly logo?: PackManifest['logo'];
+  /**
+   * The pack's pet, asleep on the sand, or nothing.
+   *
+   * Unlike `logo` this is not tied to a sprite: it stands on the ground, so
+   * `paintPet` places it from the stage band and the stage is what clips it.
+   * The caller decides when it appears — `daemon.ts` shows it on the screens
+   * the spec puts it on and nowhere else.
+   */
+  readonly pet?: PackManifest['pet'];
 };
 
 /**
@@ -258,6 +268,13 @@ function paintStage(painter: Painter, scene: Scene): void {
     if (scene.logo !== undefined && index === 0) {
       paintLogo(painter.target, { origin, within: slot }, scene.logo);
     }
+  }
+  // After the character, deliberately. The pet's only unoccluded home is the
+  // near corner, in front of his contact shadow, so painting it over him is
+  // the correct depth rather than a hazard — and they do not overlap at the
+  // shipping layout anyway. `pet.ts` carries the measurement.
+  if (scene.pet !== undefined) {
+    paintPet(painter.target, painter.bands.stage, scene.pet);
   }
 }
 

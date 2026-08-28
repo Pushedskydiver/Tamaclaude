@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { paintLogo } from '../packages/renderer/src/logo.ts';
+import { LID_SLOT, paintLogo } from '../packages/renderer/src/logo.ts';
+import { PET_SLOT } from '../packages/renderer/src/pet.ts';
+import { SLOTS } from './pack-slots.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -397,5 +399,25 @@ describe('--format pack', () => {
     expect(at(painted.x + 3, painted.y + 10), 'bottom-left is empty').toBe(
       ground,
     );
+  });
+});
+
+describe('the slots this tool quantises for', () => {
+  it('agree with the renderer, which tools cannot import at runtime', () => {
+    // The warning tells you what will and will not fit a pack field. It reads
+    // from a hand-copy, because `tools/` is outside the dependency graph the
+    // boundaries rule enforces — so this is what stops the copy drifting. It
+    // was wrong once already: the warning named only the lid and told anyone
+    // baking a pet that "the pack schema will refuse it", which was false.
+    const named = Object.fromEntries(SLOTS.map((s) => [s.name, s]));
+    expect(named.lid).toMatchObject({
+      width: LID_SLOT.width,
+      height: LID_SLOT.height,
+    });
+    expect(named.pet).toMatchObject({
+      width: PET_SLOT.width,
+      height: PET_SLOT.height,
+    });
+    expect(SLOTS.length).toBe(2);
   });
 });

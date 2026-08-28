@@ -118,6 +118,31 @@ const ORIENTATION = 'landscape';
  */
 const ENVIRONMENT_EXTENT = 'panel';
 
+/**
+ * Which screens the pet appears on.
+ *
+ * The spec puts it on the quiet ones — loafing and asleep — and nowhere else.
+ * Total over `AnimationName`, so adding an animation is a type error here
+ * rather than a silent `false`.
+ */
+const PET_APPEARS: Readonly<Record<AnimationName, boolean>> = {
+  asleep: true,
+  idle: true,
+  birthday: false,
+  'board-game': false,
+  bouldering: false,
+  confused: false,
+  dizzy: false,
+  gym: false,
+  overheated: false,
+  payoff: false,
+  'permission-sign': false,
+  sweeping: false,
+  thinking: false,
+  typing: false,
+  wizard: false,
+};
+
 export type DaemonOptions = {
   readonly socketPath: string;
   readonly devicePath: string;
@@ -458,6 +483,15 @@ export function sceneFor(input: SceneInput): Scene {
     // baked into the animation shows through, which is what every pack that is
     // not the recipient's does.
     logo: input.animation === 'typing' ? pack.logo : undefined,
+    // The pet is on the two screens the frozen spec puts it on and no others.
+    // A total record rather than a `Set` or an `||` chain, deliberately: the
+    // `RESTING` set in this same file accepted a planted typo through all six
+    // gates, because a `Set<string>` cannot be told a member is misspelled and
+    // a missing key here is a `false` the compiler will not see.
+    pet:
+      input.animation !== undefined && PET_APPEARS[input.animation]
+        ? pack.pet
+        : undefined,
     environment: {
       time: timeOfDay(now),
       extent: ENVIRONMENT_EXTENT,
