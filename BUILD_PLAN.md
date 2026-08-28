@@ -546,31 +546,45 @@ than partially. Eight good screens beat nine plus four rough ones.
   | 40 to 48   | 20 rows                        | panel (0, 146)   |
   | 52 and up  | 6 rows                         | below the feet   |
 
-  So an unoccluded prop is a bottom-left corner piece — **32x22** is the one
-  drawn, and the table allows up to 48 wide if it loses two rows — or a tall
-  narrow one at the right. Anything larger must be painted _behind_ the
-  character, which is five lines inside `paintStage`'s existing slot loop
-  rather than a new stage in `render()` — the logo is already composited in
-  that loop, a few lines below where this would go.
+  **That table measures the wrong thing, and the rest of this bullet is the
+  record of finding out.** It is the space a prop can occupy _without touching
+  the character_. Keep it: it is correct, it was recomputed by a reviewer, and
+  it is what a prop drawn behind him would need.
 
-  **Settled 27 Aug: 32x22, in the near corner, in front of the character.**
-  The pet is a foreground prop, and "background prop" — this file's wording
-  since 18 Aug — is retired rather than reconciled, because the geometry will
-  not carry it.
+  **Settled 27 Aug, and reversed on 28 Aug.** The 27th settled "foreground
+  prop, in the near corner", which stands — "background prop", this file's
+  wording since 18 Aug, is retired rather than reconciled. What did not stand
+  was the size that came with it: 32x22 at origin (0, 144), taken straight off
+  the table above.
 
-  The measurement that decides it: the character's own mask fills columns
-  19-31 on every row from 136 to 143 and clears only at 144, so a 32-wide
-  sprite has exactly one unoccluded home, origin y 144, drawn rows 147-165.
-  `groundRow('hero', 'landscape')` is 158, so that base sits seven rows in
-  front of the character's contact shadow. Nothing 24 wide or more fits
-  _behind_ that line anywhere on the stage; 18 wide and under does, in a
-  43-row column at the right, at about a third of the area.
+  **The table's bound does not apply to a prop drawn in front.** Painted after
+  the character, overlapping him is what being in front _means_, so avoiding
+  the overlap bought nothing and cost most of the size. The pet came out a
+  quarter of his width, and on glass it read as a dark lump rather than as an
+  animal. The recipient photographed the panel and said so; every judgement
+  before that had been made on renders at eight to twelve times size,
+  including two cold reads that passed.
 
-  So the choice was a foreground prop at a size that reads as a creature, or a
-  background one that reads as a speck, and the composition argues for the
-  first: the pet asleep in the near corner with the character working behind
-  it. The frozen spec's Tier A ranking survives that — it says the pet
-  matters, and a foreground prop is the reading that honours it.
+  **Now 52x36 art in a 60x42 slot at stage-relative (0, 118)** — panel rows
+  124 to 165, base on the stage's last row, overlapping his torso and lower
+  arm. `packages/renderer/src/pet.ts` owns those numbers and says which are
+  measured and which are chosen: 60 is a judgement, and 42 has a hard floor
+  under it found after the fact, since the lowest pixel of his eye in those
+  columns is row 123.
+
+  **What the reversal cost, recorded because it will happen again.** Nothing
+  detects "too small to read". Every gate passed, both critics passed, and the
+  defect reached glass. `.claude/research/foundations/brief.md` already holds
+  the principle that would have predicted it — recognition comes from
+  silhouette rather than likeness below about 50px a figure — and neither this
+  plan nor the renderer cited it until now.
+
+  The frozen spec's Tier A ranking survives the foreground call — it says the
+  pet matters, and foreground is the reading that honours it. **It does not
+  survive the budget**: the spec makes the pet one of idle's three slots, and
+  a single bake is not a slot of the eight review days. That is a reversal of a
+  recorded grill outcome and it is named here rather than left in a subordinate
+  clause.
   What it would have bought is repeatability across a _series_, which matters
   when many are left. **Two are**, item 13's road bike having been cut since:
   the franchise-flavoured easter-egg idle (Stage 5, unchecked) and the spec's
@@ -782,13 +796,16 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   are all resting; - 240 for an `active` or `attention` chip, capped at five by `MAX_CHIPS`.
   So `palette[0]` never reaches a shipping pixel, and `palette[1]` only via
   `sceneColours`' fallback on a pack carrying fewer than four entries.
-  **Both halves are true of the chrome and the pet sprite will falsify them**,
-  which is worth knowing in advance because the same chrome-versus-art
-  confusion has already had to be corrected once, in `pixel-art-critic`'s own
-  description. A blob decodes to literal RGB565 words: the drawn sprite is 320
-  pixels of `palette[0]` and 73 of `palette[1]`, written straight into the
-  framebuffer with nothing substituting anything. Correct this sentence in the
-  commit that lands the field, not after.
+  **Both halves are true of the chrome and the pet sprite falsified them on
+  28 Aug**, which was flagged in advance because the same chrome-versus-art
+  confusion had already been corrected once, in `pixel-art-critic`'s own
+  description. A blob decodes to literal RGB565 words: the drawn sprite is 793
+  pixels of `palette[0]`, 152 of `palette[1]` and 48 of a fifth entry added for
+  it, written straight into the framebuffer with nothing substituting anything.
+  This line told itself to be corrected "in the commit that lands the field,
+  not after", and the commit that landed the field did not touch it. A
+  self-imposed exit condition naming its own commit is worth no more than the
+  habit of reading it.
   **That is a consequence of a decision already taken, not a defect.**
   `environment.ts` argues the ink substitution: a pack's ink is chosen
   against its own background, and white on a midday sky is nearly
@@ -814,14 +831,18 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
 - [ ] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
-      **A foreground prop, 32x22, origin (0, 144)**, settled against the
-      measurement in the Stage 4 generator bullet; "background prop" was this
-      line's wording until 27 Aug and the stage cannot hold it. Needs a
+      **A foreground prop, 52x36 art in a 60x42 slot at stage-relative
+      (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when the panel showed
+      that size unreadable; the Stage 4 generator bullet carries why. Needs a
       hand-drawn source SVG first — nothing in the tree turns a photograph
-      into pixel art
-- [ ] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
+      into pixel art. **Then look at it on the panel and photograph it** — that
+      is the only check that has ever caught this, and it caught it after two
+      cold reads had passed
+- [x] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
       daemon line that selects it — the logo's sibling item, which the pet had
-      no equivalent of
+      no equivalent of. Landed 28 Aug; the mirror is pinned by a test in
+      `packages/renderer/src/pet.test.ts` and the tool's copy by one in
+      `tools/logo2pixel.test.ts`
 - [x] **Company logo → pixel** — the tool is built and the lid draws its output.
       `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
       the mark sits on, and emits a PNG to look at, SVG rects to paste, or — since

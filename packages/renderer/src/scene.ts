@@ -269,10 +269,12 @@ function paintStage(painter: Painter, scene: Scene): void {
       paintLogo(painter.target, { origin, within: slot }, scene.logo);
     }
   }
-  // After the character, deliberately. The pet's only unoccluded home is the
-  // near corner, in front of his contact shadow, so painting it over him is
-  // the correct depth rather than a hazard — and they do not overlap at the
-  // shipping layout anyway. `pet.ts` carries the measurement.
+  // After the character, deliberately, and they do overlap — 240 of his pixels
+  // per frame on `idle` and 424 on `asleep` fall inside the pet's box. That is
+  // the depth, not a hazard: the pet's base sits on the stage's last row, well
+  // in front of his contact shadow at 158. An earlier version of this comment
+  // said they did not overlap, which was true of a smaller slot and became
+  // false when the slot grew. `pet.ts` carries the measurement.
   if (scene.pet !== undefined) {
     paintPet(painter.target, painter.bands.stage, scene.pet);
   }

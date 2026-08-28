@@ -125,6 +125,14 @@ describe('routing a picture to the critic that looks at it', () => {
     // placement was not, and no art file changed in that diff.
     expect(fires('static art', ['packages/renderer/src/logo.ts'])).toBe(true);
     expect(fires('static art', ['packages/renderer/src/qr.ts'])).toBe(true);
+    // The painter added by the commit that wrote this list fired nothing but
+    // `da-review`. The docstring predicted exactly that — "by construction a
+    // test cannot catch the next omission" — and the next omission was the
+    // author's own, one commit later.
+    expect(fires('static art', ['packages/renderer/src/pet.ts'])).toBe(true);
+    // The file that decides what can be baked at all, which is a bake-time
+    // source by the same taxonomy as `splash-source.ts`.
+    expect(fires('static art', ['tools/pack-slots.ts'])).toBe(true);
     expect(fires('static art', ['packages/renderer/src/strip.ts'])).toBe(false);
   });
 

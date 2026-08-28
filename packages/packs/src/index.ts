@@ -170,10 +170,11 @@ const packManifestSchema = z.object({
    * logo-specific, it quantises any SVG to a pack's palette.
    *
    * **Unlike the logo it is not drawn on the character**, so it is bounded by
-   * the sand rather than by a slot on him, and it is painted after him: the
-   * measurement said an unoccluded prop this size has one home, the near
-   * corner, which sits in front of his contact shadow. `BUILD_PLAN.md` carries
-   * the numbers and why "background prop" was retired.
+   * the stage rather than by a slot on him, and it is painted after him — over
+   * him where they meet, which is what being in front means. An earlier
+   * version of this bounded it to the sand the character never covers; that is
+   * a rule for a prop drawn behind, and following it made the pet a quarter of
+   * his width. `BUILD_PLAN.md` carries the numbers and the reversal.
    */
   pet: z
     .object({
@@ -184,8 +185,8 @@ const packManifestSchema = z.object({
        * import them, so the limits are repeated and the drift is caught by
        * that test.
        *
-       * **Not the logo's bounds.** That field caps height at 20 and the pet is
-       * 22, so copying it refuses the art this field exists for.
+       * **Not the logo's bounds.** That field caps height at 20 and this one
+       * is 42, so copying it refuses the art this field exists for.
        */
       width: z.number().int().min(1).max(60),
       height: z.number().int().min(1).max(42),

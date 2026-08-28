@@ -45,10 +45,20 @@ type PackPet = NonNullable<PackManifest['pet']>;
  * row the stage paints. A first version said 124 and ran six rows past the
  * bottom of the stage; the clip hid it and a test caught it.
  *
- * The width stops at 60 because a prop wider than about a third of the 168px
- * stage stops being a prop and starts competing with the character. The height
- * follows: 42 puts the top at panel row 124, which crosses his legs and not
- * his head.
+ * **60 and 42 are chosen, not derived, and the reasons differ.** 60 is a
+ * judgement: much wider and the prop competes with the character rather than
+ * sitting in front of him. Do not read it as a third of the stage — a third of
+ * 168 is 56, and `tools/logo2pixel.ts` already calls 48 "roughly a third",
+ * so that phrasing was doing no work.
+ *
+ * 42 has one hard floor under it, found after the fact rather than aimed at.
+ * The top lands on panel row 124, and the lowest black pixel of the
+ * character's eye inside these columns is row 123 — so 42 is the largest
+ * height that clears his face, by one row. What it crosses is his torso and
+ * his lower arm, not his legs, which sit at rows 146-157 in columns 48-55; an
+ * earlier version of this sentence said legs and was wrong. **That one-row
+ * margin is undocumented anywhere else**: a re-bake that drops the eyes a
+ * pixel breaks it silently.
  *
  * `packages/packs/src/index.ts` repeats these two numbers because it sits
  * below this package and cannot import them; `pet.test.ts` asserts they agree.

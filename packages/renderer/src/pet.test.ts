@@ -51,6 +51,15 @@ describe('painting a pack pet', () => {
     expect(at?.x).toBe(STAGE.x + PET_SLOT.x);
   });
 
+  it("stands on the stage's last row, which is the whole claim", () => {
+    // The one load-bearing composition claim in `pet.ts` — "its base on the
+    // stage's last row" — was asserted nowhere, and moving `PET_SLOT` to
+    // (20, 100) left all 636 tests green. Both assertions above are
+    // tautologies in the slot; this one is not.
+    expect(PET_SLOT.y + PET_SLOT.height).toBe(STAGE.height);
+    expect(PET_SLOT.x).toBe(0);
+  });
+
   it('paints the pixels it was given, and nothing outside them', () => {
     const target = buffer(168, 172);
     const at = paintPet(target, STAGE, solidPet(8, 10, INK));

@@ -59,6 +59,7 @@ const STATIC_ART_FILES = new Set([
   // Painters.
   'packages/renderer/src/logo.ts',
   'packages/renderer/src/qr.ts',
+  'packages/renderer/src/pet.ts',
   // Baked output.
   'packages/renderer/src/qr.data.ts',
   'packages/device/firmware/blitter/main/splash-data.h',
@@ -67,6 +68,7 @@ const STATIC_ART_FILES = new Set([
   'tools/bake-splash.ts',
   'tools/bake-qr.ts',
   'tools/logo2pixel.ts',
+  'tools/pack-slots.ts',
 ]);
 
 /** Baked animation frames, which `isAnimation` routes rather than this row. */
@@ -150,10 +152,17 @@ function isAnimation(file: string): boolean {
  * its licence and neither is renderable art; routing them to a critic is noise
  * in the direction that gets a reporting tool ignored.
  *
- * **This cannot see pack art.** `packs/` is gitignored, so redrawing the logo
- * or the pet changes no tracked file and fires nothing here at all. This
- * catches the tracked half; `CLAUDE.md` says plainly that the other half stays
- * a judgement, and that it is the half most likely to be skipped.
+ * **This cannot see the recipient's pack** — not because `packs/` is
+ * gitignored, which is false of `packs/example/` and which the clause forty
+ * lines up already corrects, but because their pack is a separate private
+ * repository at `~/.tamaclaude/pack/` and is not in this repo at all.
+ * Redrawing the logo or the pet fires nothing here, and no rule can change
+ * that. This catches the tracked half; `CLAUDE.md` says the other half stays a
+ * judgement, and that it is the half most likely to be skipped.
+ *
+ * That wrong reason had been written down and corrected twice before it was
+ * written here a third time, which is why the correction now sits in the file
+ * rather than only in the doc.
  */
 function isStaticArt(file: string): boolean {
   // **Belt-and-braces, and measured to be so.** Deleting this line fails no

@@ -183,3 +183,55 @@ describe('the pack mark, through composePanels', () => {
     expect(marked('typing', PACK)).toBe(0);
   });
 });
+
+describe('the pack pet, through composePanels', () => {
+  const PET = 0x07e0;
+
+  /** A pet the renderer will accept: every pixel drawn, one colour. */
+  function solidPet(width: number, height: number): PackManifest['pet'] {
+    const bits = new Uint8Array(Math.ceil((width * height) / 8)).fill(0xff);
+    const padded = new Uint8Array(Math.ceil(bits.length / 2) * 2);
+    padded.set(bits);
+    const blob = (from: Uint16Array): string => {
+      const { mode, payload } = encodeRect(from);
+      const bytes = new Uint8Array(payload.length + 1);
+      bytes[0] = mode;
+      bytes.set(payload, 1);
+      return Buffer.from(bytes).toString('base64');
+    };
+    return {
+      width,
+      height,
+      pixels: blob(new Uint16Array(width * height).fill(PET)),
+      mask: blob(new Uint16Array(padded.buffer)),
+    };
+  }
+
+  const withPet: PackManifest = { ...PACK, pet: solidPet(12, 14) };
+
+  function petted(name: string, pack: PackManifest): number {
+    const [panel] = composePanels([BLANK], {
+      orientation: 'landscape',
+      pack,
+      name,
+    });
+    if (panel === undefined) return -1;
+    return [...panel.pixels].filter((value) => value === PET).length;
+  }
+
+  it('draws a pack pet on the quiet screens and on nothing else', () => {
+    // The same hole `markFor` had, in `markFor`'s sibling. Two mutants lived
+    // here through all six gates: zeroing the rect `scene.ts` hands
+    // `paintPet`, and gating `petFor` to `typing`. Nothing rendered a scene
+    // carrying a pet and counted pixels, so the whole feature could be dead
+    // with every gate green — which is verbatim what the block above says
+    // happened to the mark.
+    expect(petted('idle', withPet)).toBe(12 * 14);
+    expect(petted('asleep', withPet)).toBe(12 * 14);
+    for (const name of ['typing', 'thinking', 'gym', 'bouldering']) {
+      expect(petted(name, withPet), name).toBe(0);
+    }
+    // And a pack without one draws nothing rather than throwing.
+    expect(petted('idle', PACK)).toBe(0);
+  });
+});

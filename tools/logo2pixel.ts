@@ -130,8 +130,9 @@ import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
  * The landscape stage is 168px wide and the message band 152px, so 48 is
  * roughly a third of either — small enough to sit as a prop rather than as
  * the subject, and large enough that a wordmark is still legible at 1:1.
- * A starting point for looking. `--format pack` has a real slot to fit —
- * 84x20 — so it warns when the result will not fit, and prints it regardless.
+ * A starting point for looking. `--format pack` has real slots to fit — see
+ * `SLOTS` in `tools/pack-slots.ts` — so it warns when the result fits none of
+ * them, and prints it regardless.
  */
 const DEFAULT_WIDTH = 48;
 
@@ -406,8 +407,8 @@ try {
     //
     // **Two slots, since 27 Aug.** This tool is not logo-specific — it
     // quantises any SVG to a pack's palette — and the pet uses it too. The lid
-    // is 84x20 and the pet's sand is 36x22, so 32x22 fits one and not the
-    // other. Naming only the lid produced a warning that said "the pack schema
+    // is 84x20 and the pet's slot is 60x42, so a tall mark can fit one and not
+    // the other. Naming only the lid produced a warning that said "the pack schema
     // will refuse it" about art the schema accepts, which is a false statement
     // from a tool and worse than no warning.
     const fits = SLOTS.filter(

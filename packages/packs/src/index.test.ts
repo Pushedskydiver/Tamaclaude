@@ -226,7 +226,7 @@ describe('a pack pet', () => {
   });
 
   it('accepts one exactly the size of the slot', () => {
-    // The logo's own bound is 20 high and the pet is 22, so a schema copied
+    // The logo's own bound is 20 high and this one is 42, so a schema copied
     // from it refuses the art it was added for.
     const full = { ...pet, width: 60, height: 42 };
     expect(parsePackManifest({ ...base, pet: full }).pet).toEqual(full);
