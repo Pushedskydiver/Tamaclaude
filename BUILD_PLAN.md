@@ -868,7 +868,14 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       above. The shipped _52x36_ has been composed through `panel-mock` on
       all four grounds and is running on the panel, but has not been
       photographed on glass and has had no cold read. A first version of this
-      line claimed the cold read for it
+      line claimed the cold read for it.
+      **Photographed on glass 28 Aug, on the night ground, and it is the
+      weakest of the four**: the coat is 1.26:1 against night sand, so the
+      silhouette barely separates and the rim over the ears reads as a pale
+      squiggle rather than as ears. On dawn, day and dusk the notch between
+      the ears reads and it is plainly a curled animal. Landed as a
+      background prop at that standard rather than redrawn again, with 16
+      days to the freeze
 - [x] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
       daemon line that selects it — the logo's sibling item, which the pet had
       no equivalent of. Landed 28 Aug; the mirror is pinned by a test in
