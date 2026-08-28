@@ -1885,86 +1885,104 @@ from taste into a check.
 
 ## What is actually missing — a survey, 28 Aug
 
-Written because the question asked was "can we have more animations, for
-workflow and other states?" and the answer turned out to be about a different
-axis than the one in the question.
+Written to answer "can we have more animations, for workflow and other
+states?". **The first version of this section got the answer wrong in the
+direction of more work, and the correction is the useful part.**
 
-### The states are covered. The tools are not.
+### The states are covered
 
-`animationFor` was called for all nine `SessionState` values rather than read:
+`animationFor` called for all nine `SessionState` values gives nine distinct
+animations, except `WORKING` sharing `thinking` — and only when no tool is
+known, since a known tool hits `TOOL_ANIMATIONS` first. There is no
+state-shaped gap. That method could not have found a _refinement_-shaped one:
+production passes `errorType` too, which is how `overheated` is reached, and a
+`birthday` override sits in front of the whole thing.
 
-| State              | Animation         |
-| ------------------ | ----------------- |
-| `ASLEEP`           | `asleep`          |
-| `COMPACTING`       | `sweeping`        |
-| `DONE`             | `payoff`          |
-| `FAILED`           | `dizzy`           |
-| `IDLE`             | `idle`            |
-| `NEEDS_PERMISSION` | `permission-sign` |
-| `THINKING`         | `thinking`        |
-| `WAITING`          | `confused`        |
-| `WORKING`          | `thinking`        |
+### The tools are covered too, and the first version said otherwise
 
-Every state has its own art except `WORKING`, which shares `thinking` — and
-only when no tool is known, since a known tool goes to `TOOL_ANIMATIONS`
-first. So there is no state-shaped gap to fill.
+**Eight tools have their own art**, not seven: `Read` climbs, `Edit`, `Write`
+and `NotebookEdit` type, `Bash` lifts, `WebFetch` and `WebSearch` conjure —
+and **`Agent` plays a board game**, shipped 25 Aug, tested, with a hundred-line
+plan seven hundred lines above this one in this same file.
 
-**The gap is tools.** Seven have their own art — `Read` climbs, `Edit`,
-`Write` and `NotebookEdit` type, `Bash` lifts, `WebFetch` and `WebSearch`
-conjure. **Nine fall through to `thinking`:** `Glob`, `Grep`, `Task`,
-`TodoWrite`, `SlashCommand`, `AskUserQuestion`, `BashOutput`, `KillShell`,
-`ExitPlanMode`. On a normal session the panel therefore shows `thinking` for
-a great deal of work that is not thinking.
+The first version of this section missed it and then ranked it first as the
+thing the panel "cannot express at all". The cause is worth recording, because
+it is a method failure rather than an oversight: the states were surveyed by
+_calling_ `animationFor`, and the tools by passing it **a list of tool names
+invented from memory**. That list contained `Task`. The wire does not carry
+`Task`. `animation.ts` says so ten lines above the mapping, from a live socket
+capture: `{"kind":"PreToolUse","tool":"Agent"}`. One call with the right string
+would have caught it.
 
-### Upstream's art animates our creature, and that is the whole cost story
+### The residual gap is about 4% of tool calls
 
-`../clawd-tank/assets/svg-animations/clawd-static-base.svg` and
-`assets/clawd/base.svg` share **13 of 13 element ids**, and their `<rect>`
-geometry is identical once ids are stripped. It is the same drawing. So
-upstream's ~30 animations are not a different character to be redrawn — they
-move the same skeleton, keyed by the same names.
+`BUILD_PLAN.md` records the distribution across 1,046 transcripts and 44,954
+tool calls: `Bash` 63.9%, `Read` 17.6%, `Edit`/`Write` 7.9%,
+`WebSearch`/`WebFetch` 5.5%, `Agent` 0.7%, `mcp__*` 0.3%. The mapped rows are
+about 95.9% of it.
 
-What differs is framing: upstream's working animations use
-`viewBox="-15 -25 45 45"` against our `-3 -9 21 25`. Adapting one is a
-re-frame plus the checks in `docs/ANIMATION.md`, not a redraw. Call it half a
-day each including `animation-critic`, against a day or more for original art.
+So the tools that fall through to `thinking` — `Glob`, `Grep`, `TodoWrite`,
+`SlashCommand`, `AskUserQuestion`, `BashOutput`, `KillShell`, `ExitPlanMode`,
+and any `mcp__*` — are at most 4.1% between them, and **`Grep` and `Glob` are
+measured at zero.** The first version ranked them second, on the reasoning that
+searching is common. It is not common here, `animation.ts:74` already records
+that as a decision rather than an omission, and reopening it silently is the
+thing this repo keeps catching itself doing.
 
-### Ranked, and short on purpose
+`TodoWrite` is the only candidate left standing, and it is unmeasured rather
+than supported.
 
-1. **`Task` → a second, smaller crab.** Upstream has `mini-crab-typing` and
-   `clawd-mini-clawd` already. A subagent spawning _is_ a second worker
-   appearing, so the mapping is literal rather than decorative, and it is the
-   only candidate here that makes the panel show something it currently
-   cannot express at all.
-2. **`Grep` and `Glob` → `clawd-working-debugger`.** Searching is among the
-   most common things a session does and is currently indistinguishable from
-   thinking.
-3. **`TodoWrite` → `clawd-working-conducting`.** Planning, and it reads as
-   orchestration rather than as more typing.
+### Upstream's base is ours — which is already written down, twice
 
-Below that the returns fall off fast: `BashOutput`, `KillShell` and
-`ExitPlanMode` are rare enough that `thinking` is an honest answer.
+`clawd-static-base.svg` and `assets/clawd/base.svg` are byte-identical.
+That is not a discovery: `.claude/research/foundations/brief.md` records it as
+verbatim, and `CREDITS.md` says what is borrowed. **Animations built on it are
+ours**, which brief.md also says — so adopting an upstream animation makes both
+statements false until they are updated, and that is unbudgeted work.
 
-### `disconnected` cannot work here, and this file said otherwise for an hour
+**"A re-frame rather than a redraw" was too strong.** `clawd-mini-clawd.svg`
+keeps the ids and discards the geometry — a 7x5 torso against base's 11x7, 1x1
+legs against 1x2 — so it is a redrawn smaller crab. `clawd-working-debugger.svg`
+does share the torso and limbs, but drops two groups, replaces an eye, and adds
+four colours outside the two-colour palette plus a translucent lens over the
+torso. **Two drawn colours meeting inside a scaling group is the trap
+`docs/ANIMATION.md` says costs whole rebuilds** — it caught `bouldering` twice
+and `wizard` once. A magnifying glass is exactly that shape of prop.
 
-Upstream's `clawd-disconnected` looked like the standout — the panel losing
-the Mac is a real event with no art. It is unusable. **The Mac renders and
-pushes over USB, so when the link drops the channel and the renderer are the
-same casualty**: `linkLine` in `packages/cli/src/daemon.ts` writes the status
-to the log, because there is nowhere else for it to go. The panel holds its
-last frame. Showing anything would mean the firmware noticing silence and
-drawing from flash itself — firmware work, on a device whose firmware is
-flashed once.
+### And the estimate was in a unit a previous grill retired
 
-This is the second time this architecture's consequences have been reasoned
-about backwards in a day; the first was assuming a hook could write to the
-serial port.
+"Half a day each" prices _authoring_. `BUILD_PLAN.md`: "**8 review days across
+Stages 4-5, not 2 days per animation** … the serial bottleneck is review at
+true size, not authoring." Adapting upstream saves the parallel half and none
+of the serial half — `animation-critic` is the resource being economised, and
+every adapted animation still costs a full pass of it.
 
-### The constraint that shapes any of this
+### `disconnected` is out, and the firmware already said why
 
-`CLAUDE.md`: the four activity-based animations are grandfathered and **the
-set does not grow**. Everything ranked above is a generic crab behaviour —
-searching, orchestrating, a smaller crab — taken from upstream. None of it
-adds a personal detail, and that is what makes it available. New art derived
-from what the recipient enjoys is the thing the rule forbids, and it would not
-become allowed by being drawn well.
+The panel losing the Mac has no art, and cannot have any. The reason is not
+that the firmware would have to draw from flash — `draw_splash` already does.
+It is stated in `packages/device/firmware/blitter/main/main.c`: **"No host
+connected" is not observable on this link** — the USB peripheral sees an
+enumerated Mac whether the daemon is running or not — and the nearest proxy, an
+idle timeout, would wipe the screen during any long still frame. A crab asleep
+is a legitimate picture.
+
+### The recommendation is to do nothing
+
+One candidate shipped three days ago, one is contradicted by a 44,954-call
+measurement, and the third is worth under 4% of tool calls. Against that:
+`BUILD_PLAN.md` puts art complete at **Sun 13 Sep**, the screen list was frozen
+on 25 Aug, and four Stage 5 and 6 boxes are open.
+
+If curiosity outlasts the deadline, the one hour worth spending is a **bake
+spike**: re-frame a single upstream SVG, run it through `svg2frames`, and look
+at the frames. That answers the palette-snap question before any review day is
+committed, and it is the only work here that makes a later decision cheaper
+rather than spending the budget now.
+
+### The constraint, which does not change
+
+`CLAUDE.md`: the four activity-based animations are grandfathered and **the set
+does not grow**. Everything considered above is a generic crab behaviour, which
+is what made it discussable at all. Art derived from what the recipient enjoys
+is forbidden, and drawing it well would not change that.

@@ -851,15 +851,19 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band, the stage and the camera in one action.
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
-- [x] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
-      **A foreground prop, 52x36 art in a 60x42 slot at stage-relative
-      (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when it was raised
-      for presence rather than for legibility — a cold reader had already read
-      the smaller one correctly. The Stage 4 generator bullet carries why. Needs a
-      hand-drawn source SVG first — nothing in the tree turns a photograph
-      into pixel art. **Then look at it on the panel and photograph it** — that
-      is the only check that has ever caught this, and it caught it after two
-      cold reads had passed
+- [x] Pet sprite, drawn from photos — on idle/asleep, not the mascot. Done
+      28 Aug. **A foreground prop, 52x36 art in a 60x42 slot at
+      stage-relative (0, 118)**, hand-drawn as an SVG and baked with
+      `logo2pixel --format pack`; nothing in the tree turns a photograph into
+      pixel art, so the drawing was the work. It was 32x22 at (0, 144) until
+      the same day, when it was raised for presence rather than for
+      legibility — the Stage 4 generator bullet carries the measurement and
+      the reversal.
+      **Checked on the panel, which is what this box was really waiting on**:
+      photographed on glass, and a reader who knew nothing about it called it
+      "a cat curled up sleeping" off that photograph — species, pose and
+      state. Better than either critic managed, both of which judged from
+      enlargements
 - [x] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
       daemon line that selects it — the logo's sibling item, which the pet had
       no equivalent of. Landed 28 Aug; the mirror is pinned by a test in
