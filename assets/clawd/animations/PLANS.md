@@ -1880,3 +1880,91 @@ discounted exactly when it is most needed.
 
 The "not wanted" line is the one that earns its keep. It is what turns a review
 from taste into a check.
+
+---
+
+## What is actually missing — a survey, 28 Aug
+
+Written because the question asked was "can we have more animations, for
+workflow and other states?" and the answer turned out to be about a different
+axis than the one in the question.
+
+### The states are covered. The tools are not.
+
+`animationFor` was called for all nine `SessionState` values rather than read:
+
+| State              | Animation         |
+| ------------------ | ----------------- |
+| `ASLEEP`           | `asleep`          |
+| `COMPACTING`       | `sweeping`        |
+| `DONE`             | `payoff`          |
+| `FAILED`           | `dizzy`           |
+| `IDLE`             | `idle`            |
+| `NEEDS_PERMISSION` | `permission-sign` |
+| `THINKING`         | `thinking`        |
+| `WAITING`          | `confused`        |
+| `WORKING`          | `thinking`        |
+
+Every state has its own art except `WORKING`, which shares `thinking` — and
+only when no tool is known, since a known tool goes to `TOOL_ANIMATIONS`
+first. So there is no state-shaped gap to fill.
+
+**The gap is tools.** Seven have their own art — `Read` climbs, `Edit`,
+`Write` and `NotebookEdit` type, `Bash` lifts, `WebFetch` and `WebSearch`
+conjure. **Nine fall through to `thinking`:** `Glob`, `Grep`, `Task`,
+`TodoWrite`, `SlashCommand`, `AskUserQuestion`, `BashOutput`, `KillShell`,
+`ExitPlanMode`. On a normal session the panel therefore shows `thinking` for
+a great deal of work that is not thinking.
+
+### Upstream's art animates our creature, and that is the whole cost story
+
+`../clawd-tank/assets/svg-animations/clawd-static-base.svg` and
+`assets/clawd/base.svg` share **13 of 13 element ids**, and their `<rect>`
+geometry is identical once ids are stripped. It is the same drawing. So
+upstream's ~30 animations are not a different character to be redrawn — they
+move the same skeleton, keyed by the same names.
+
+What differs is framing: upstream's working animations use
+`viewBox="-15 -25 45 45"` against our `-3 -9 21 25`. Adapting one is a
+re-frame plus the checks in `docs/ANIMATION.md`, not a redraw. Call it half a
+day each including `animation-critic`, against a day or more for original art.
+
+### Ranked, and short on purpose
+
+1. **`Task` → a second, smaller crab.** Upstream has `mini-crab-typing` and
+   `clawd-mini-clawd` already. A subagent spawning _is_ a second worker
+   appearing, so the mapping is literal rather than decorative, and it is the
+   only candidate here that makes the panel show something it currently
+   cannot express at all.
+2. **`Grep` and `Glob` → `clawd-working-debugger`.** Searching is among the
+   most common things a session does and is currently indistinguishable from
+   thinking.
+3. **`TodoWrite` → `clawd-working-conducting`.** Planning, and it reads as
+   orchestration rather than as more typing.
+
+Below that the returns fall off fast: `BashOutput`, `KillShell` and
+`ExitPlanMode` are rare enough that `thinking` is an honest answer.
+
+### `disconnected` cannot work here, and this file said otherwise for an hour
+
+Upstream's `clawd-disconnected` looked like the standout — the panel losing
+the Mac is a real event with no art. It is unusable. **The Mac renders and
+pushes over USB, so when the link drops the channel and the renderer are the
+same casualty**: `linkLine` in `packages/cli/src/daemon.ts` writes the status
+to the log, because there is nowhere else for it to go. The panel holds its
+last frame. Showing anything would mean the firmware noticing silence and
+drawing from flash itself — firmware work, on a device whose firmware is
+flashed once.
+
+This is the second time this architecture's consequences have been reasoned
+about backwards in a day; the first was assuming a hook could write to the
+serial port.
+
+### The constraint that shapes any of this
+
+`CLAUDE.md`: the four activity-based animations are grandfathered and **the
+set does not grow**. Everything ranked above is a generic crab behaviour —
+searching, orchestrating, a smaller crab — taken from upstream. None of it
+adds a personal detail, and that is what makes it available. New art derived
+from what the recipient enjoys is the thing the rule forbids, and it would not
+become allowed by being drawn well.

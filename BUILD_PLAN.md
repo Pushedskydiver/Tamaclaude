@@ -851,7 +851,7 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band, the stage and the camera in one action.
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
-- [ ] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
+- [x] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
       **A foreground prop, 52x36 art in a 60x42 slot at stage-relative
       (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when it was raised
       for presence rather than for legibility — a cold reader had already read
