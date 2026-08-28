@@ -782,6 +782,13 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   are all resting; - 240 for an `active` or `attention` chip, capped at five by `MAX_CHIPS`.
   So `palette[0]` never reaches a shipping pixel, and `palette[1]` only via
   `sceneColours`' fallback on a pack carrying fewer than four entries.
+  **Both halves are true of the chrome and the pet sprite will falsify them**,
+  which is worth knowing in advance because the same chrome-versus-art
+  confusion has already had to be corrected once, in `pixel-art-critic`'s own
+  description. A blob decodes to literal RGB565 words: the drawn sprite is 320
+  pixels of `palette[0]` and 73 of `palette[1]`, written straight into the
+  framebuffer with nothing substituting anything. Correct this sentence in the
+  commit that lands the field, not after.
   **That is a consequence of a decision already taken, not a defect.**
   `environment.ts` argues the ink substitution: a pack's ink is chosen
   against its own background, and white on a midday sky is nearly
