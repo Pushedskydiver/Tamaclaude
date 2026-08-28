@@ -408,9 +408,10 @@ try {
     // **Two slots, since 27 Aug.** This tool is not logo-specific — it
     // quantises any SVG to a pack's palette — and the pet uses it too. The lid
     // is 84x20 and the pet's slot is 60x42, so a tall mark can fit one and not
-    // the other. Naming only the lid produced a warning that said "the pack schema
-    // will refuse it" about art the schema accepts, which is a false statement
-    // from a tool and worse than no warning.
+    // the other. Naming only the lid made the warning say "the pack schema will
+    // refuse it" about art destined for a field that did not exist yet — so it
+    // was misleading about a working tree rather than false about anything
+    // shipped, which is a distinction a review had to make for me.
     const fits = SLOTS.filter(
       (slot) => size.width <= slot.width && size.height <= slot.height,
     );

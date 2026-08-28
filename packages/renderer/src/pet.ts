@@ -51,14 +51,17 @@ type PackPet = NonNullable<PackManifest['pet']>;
  * 168 is 56, and `tools/logo2pixel.ts` already calls 48 "roughly a third",
  * so that phrasing was doing no work.
  *
- * 42 has one hard floor under it, found after the fact rather than aimed at.
- * The top lands on panel row 124, and the lowest black pixel of the
- * character's eye inside these columns is row 123 — so 42 is the largest
- * height that clears his face, by one row. What it crosses is his torso and
- * his lower arm, not his legs, which sit at rows 146-157 in columns 48-55; an
- * earlier version of this sentence said legs and was wrong. **That one-row
- * margin is undocumented anywhere else**: a re-bake that drops the eyes a
- * pixel breaks it silently.
+ * 42 is chosen too. What it crosses is his torso and his lower arm, not his
+ * legs, which sit at rows 146-157 in columns 48-55 — an earlier version of
+ * this sentence said legs and was wrong.
+ *
+ * **It is not derived from his eyes, and a version of this said it was.** The
+ * lowest black pixel anywhere in these columns is panel row 123, one above
+ * the slot, which looks like a one-row margin against his face. It is not: it
+ * occurs in **one frame of 128**, at column 54, and `base.svg` puts the eyes
+ * at rows 102-118. So the margin is real, thin, and about something the
+ * measurement could not name — which is a reason to re-measure if the slot
+ * ever grows upward, not a derivation to rely on.
  *
  * **It clips the drooping claw, and the amount was worth measuring.**
  * `asleep.svg` calls that claw "what distinguishes this from `idle` at a

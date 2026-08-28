@@ -514,7 +514,7 @@ than partially. Eight good screens beat nine plus four rough ones.
   painter that composites it into a slot, which is what
   `packs/example/README.md` already said it would. So the pet is not animation
   work, which leaves the easter-egg idle and the meditation idle variant in that
-  category — the two this bullet already counts twelve lines down. A first
+  category — the two this bullet already counts further down. A first
   version of this sentence said "alone" and contradicted them.
 
   **The three sentences that used to follow were wrong, and the measurements
@@ -530,7 +530,7 @@ than partially. Eight good screens beat nine plus four rough ones.
 
   **Drawing the pet into tracked art is still out, but not because it "cannot
   happen".** Item 6 below draws a personal-interest object into tracked
-  animated art, so the absolute is refuted by this file twenty-four lines on.
+  animated art, so the absolute is refuted by this file's own item 6 below.
   The grounds that hold are narrower: `CLAUDE.md` names the pet specifically as
   ignored-file content, and unlike that object the pack _can_ supply the pet —
   the logo proved the route on 26 Aug.
@@ -625,9 +625,16 @@ than partially. Eight good screens beat nine plus four rough ones.
      rather than the assertion. `PLANS.md` says the art "names a colour"; this
      says it carries no identifying mark. Both are true: the art has no badge,
      no model name and no silhouette detail, and its red is `#B22222` — the
-     standard CSS `firebrick`, which `birthday.svg` also uses and which
-     `tools/contrast.ts` carries as its worked example. It is a palette red,
-     not a manufacturer's. No make is named anywhere in the tree; grepped.
+     standard CSS `firebrick`, which `tools/contrast.ts` carries as its worked
+     example. It is a palette red, not a manufacturer's. No make is named
+     anywhere in the tree; grepped.
+
+     **A first version of this added "which `birthday.svg` also uses", and it
+     does not.** That file mentions the colour once, in a comment recording
+     that the hat _stopped_ being it. The commit asserting this said "checked
+     rather than asserted", and the check was a grep for the string rather
+     than a read of the line it matched — which is the failure mode the whole
+     paragraph is about.
      What `CLAUDE.md` forbade was the _link_ — the since-deleted sentence
      tying the prop to the recipient while the art was coloured — not the
      colour standing alone, which cannot be removed from a drawing of a car.

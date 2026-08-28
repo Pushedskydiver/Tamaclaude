@@ -214,9 +214,9 @@ describe('a pack pet', () => {
   });
 
   it('refuses one larger than the ground it stands on', () => {
-    // 60x42 is `PET_SLOT`. Wider and the prop competes with the character
-    // rather than sitting in front of him; taller and its top row crosses his
-    // face rather than his legs.
+    // 60x42 is `PET_SLOT`, and both numbers are chosen rather than derived —
+    // `packages/renderer/src/pet.ts` says which and why. What this pins is
+    // that the copy here and the constant there do not drift apart.
     expect(() =>
       parsePackManifest({ ...base, pet: { ...pet, width: 61 } }),
     ).toThrow();

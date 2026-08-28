@@ -182,9 +182,11 @@ first — a mark positioned from the lid's own rect is not drawn at all in
 y 160, and it then "lands over the session strip in portrait and off the panel
 entirely in landscape" (`packages/renderer/src/logo.ts`).
 
-**You can only render half of that.** `panel-mock` hardcodes landscape, and
-the firmware refuses portrait until portrait splash art exists, so the
-session-strip case has no picture anywhere in this repo — it was found by
+**You can only render half of that with `panel-mock`,** which hardcodes
+landscape; the firmware refuses portrait until portrait splash art exists.
+`tools/blit.ts` does take an orientation and composes portrait through the
+same `render()`, but it sends to a device rather than writing a file, so the
+session-strip case has no picture you can look at — it was found by
 reasoning over all four layout-and-orientation combinations, not by looking.
 Do both: render `--layout twoUp` (at scale 4, see above) and reason about
 portrait. `--extent stage` is the flag worth adding; `panel` is already the

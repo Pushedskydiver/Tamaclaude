@@ -112,6 +112,8 @@ describe('routing a picture to the critic that looks at it', () => {
     ).toBe(true);
     expect(fires('static art', ['tools/splash-source.ts'])).toBe(true);
     expect(fires('static art', ['tools/bake-splash.ts'])).toBe(true);
+    expect(fires('static art', ['tools/bake-qr.ts'])).toBe(true);
+    expect(fires('static art', ['tools/logo2pixel.ts'])).toBe(true);
     // The one tracked pack. `packs/example/` is un-ignored by `.gitignore`,
     // and the schema lets a manifest carry a logo blob.
     expect(fires('static art', ['packs/example/manifest.json'])).toBe(true);

@@ -655,8 +655,10 @@ the recipient while the tracked art is coloured. **The link was the sentence,
 not the colour** — a distinction this line did not draw until 26 Aug, when a
 review read it against `BUILD_PLAN.md`'s "carries no mark identifying a
 specific vehicle" and reported the two as contradicting. They do not. The red
-is `#B22222`, the standard CSS `firebrick`, shared with `birthday.svg`; a
-drawing of a car cannot have no colour, and this one's is generic. What
+is `#B22222`, the standard CSS `firebrick`; a drawing of a car cannot have no
+colour, and this one's is generic. (A first version said the colour was
+"shared with `birthday.svg`". It is not — that file names it once, in a
+comment recording that its hat stopped being it.) What
 `CLAUDE.md` forbids is naming personal content by content, which the deleted
 sentence did and the fill does not. The section below identified the error and this line was
 not corrected with it. **Named by role throughout.** The vehicle is on the interests list in the
