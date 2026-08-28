@@ -780,9 +780,10 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   sprite. **Four of the five are in, 26 Aug** — a palette chosen for the two
   entries that actually reach the glass, quips mapped per state plus an idle
   rotation, `birthday: 09-23`, and a 14x17 mark on the laptop lid. The pet
-  sprite is the remainder, and it needs art **and** a field — a first version
-  of this line said "art rather than a field", contradicting the pet bullet in
-  this same file and `packs/example/README.md`.
+  sprite was the remainder, and it needed art **and** a field — a first
+  version of this line said "art rather than a field", contradicting the pet
+  bullet in this same file and `packs/example/README.md`. Both landed 28 Aug,
+  so the pack is five of five.
   It is no longer gitignored-and-nowhere: it is a private repo, cloned to
   `~/.tamaclaude/pack/` on the author's machine and installed by step 3 of
   `docs/INSTALL.md`. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
@@ -859,11 +860,15 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       the same day, when it was raised for presence rather than for
       legibility — the Stage 4 generator bullet carries the measurement and
       the reversal.
-      **Checked on the panel, which is what this box was really waiting on**:
-      photographed on glass, and a reader who knew nothing about it called it
-      "a cat curled up sleeping" off that photograph — species, pose and
-      state. Better than either critic managed, both of which judged from
-      enlargements
+      **What was checked, and on which version, because these are not the
+      same artefact**: the _32x22_ went on the panel, was photographed there,
+      and a reader who knew nothing about it called it "a cat curled up
+      sleeping" off that photograph — species, pose and state, better than
+      either critic managed. That is what retired the "unreadable" claim
+      above. The shipped _52x36_ has been composed through `panel-mock` on
+      all four grounds and is running on the panel, but has not been
+      photographed on glass and has had no cold read. A first version of this
+      line claimed the cold read for it
 - [x] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
       daemon line that selects it — the logo's sibling item, which the pet had
       no equivalent of. Landed 28 Aug; the mirror is pinned by a test in

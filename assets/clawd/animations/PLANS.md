@@ -1940,7 +1940,16 @@ verbatim, and `CREDITS.md` says what is borrowed. **Animations built on it are
 ours**, which brief.md also says — so adopting an upstream animation makes both
 statements false until they are updated, and that is unbudgeted work.
 
-**"A re-frame rather than a redraw" was too strong.** `clawd-mini-clawd.svg`
+**"A re-frame rather than a redraw" was too strong, and two tracked docs
+already said so.** `CREDITS.md` records that "upstream redraws poses freely
+across its catalogue"; `docs/ANIMATION.md` puts it at nineteen animations. And
+**11 of upstream's 30 files carry no `id="torso"` at all** — the shared-skeleton
+claim is false for over a third of the catalogue before any of it is opened.
+This file's own §Overheated already had the conclusion: upstream's version is
+where that scene came from, "and **none of its execution transfers** … What we
+take is the pose."
+
+`clawd-mini-clawd.svg`
 keeps the ids and discards the geometry — a 7x5 torso against base's 11x7, 1x1
 legs against 1x2 — so it is a redrawn smaller crab. `clawd-working-debugger.svg`
 does share the torso and limbs, but drops two groups, replaces an eye, and adds
