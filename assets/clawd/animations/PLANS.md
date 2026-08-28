@@ -651,8 +651,16 @@ A vehicle is parked beside Clawd and he rests a claw on it.
 **Not "the vehicle from the recipient's pack", which is how this line read
 until 24 Aug and which was wrong twice over.** The pack cannot supply it —
 sprites bake fixed pixels — and leaving the sentence standing tied the prop to
-the recipient while the tracked art names a colour, which is the link
-`CLAUDE.md` forbids. The section below identified the error and this line was
+the recipient while the tracked art is coloured. **The link was the sentence,
+not the colour** — a distinction this line did not draw until 26 Aug, when a
+review read it against `BUILD_PLAN.md`'s "carries no mark identifying a
+specific vehicle" and reported the two as contradicting. They do not. The red
+is `#B22222`, the standard CSS `firebrick`; a drawing of a car cannot have no
+colour, and this one's is generic. (A first version said the colour was
+"shared with `birthday.svg`". It is not — that file names it once, in a
+comment recording that its hat stopped being it.) What
+`CLAUDE.md` forbids is naming personal content by content, which the deleted
+sentence did and the fill does not. The section below identified the error and this line was
 not corrected with it. **Named by role throughout.** The vehicle is on the interests list in the
 gitignored brief, this repo is public, and `CLAUDE.md` says tracked docs name
 personal content by role and never by content — it read as a make and colour in

@@ -131,6 +131,17 @@ function markFor(name: string, pack: PackManifest): Scene['logo'] {
 }
 
 /**
+ * The pet, on the screens the daemon shows it on.
+ *
+ * `PET_APPEARS` in `packages/cli/src/daemon.ts` is the shipping decision and
+ * this mirrors its two `true` entries. A tool cannot import from `cli`, so it
+ * is a copy — kept to two names so the copy is small enough to check by eye.
+ */
+function petFor(name: string, pack: PackManifest): Scene['pet'] {
+  return name === 'idle' || name === 'asleep' ? pack.pet : undefined;
+}
+
+/**
  * Render every animation raster into a full-panel framebuffer.
  *
  * Returns `Frame`s rather than `Framebuffer`s because everything downstream —
@@ -237,6 +248,7 @@ export function composePanels(
       sprites: everySlot(raster, layout, options.orientation),
       sessions: options.sessions ?? [],
       logo: markFor(options.name, options.pack),
+      pet: petFor(options.name, options.pack),
       ...placeholderBands(options.message ?? options.name),
       environment: {
         time: options.time ?? 'day',

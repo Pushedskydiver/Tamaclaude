@@ -502,16 +502,110 @@ than partially. Eight good screens beat nine plus four rough ones.
   a judgement that a tool automating a working loop is worth less than the
   days it costs, with 29 left. Nothing depends on it: the only reference in
   the tree was this line. Most of Stage 5's remaining art does not want it — a
-  pixel scene is a drawing and the logo is a quantiser pass — but the pet
-  sprite is a background prop _on idle and asleep_, so it lands inside two
-  existing animated SVGs, and the spec calls it Tier A art rather than set
-  dressing. That and the easter-egg idle are animation work.
+  pixel scene is a drawing and the logo is a quantiser pass — and the pet
+  sprite, which the spec ranks Tier A rather than set dressing, is neither.
+
+  **This line said until 26 Aug that the pet "lands inside two existing
+  animated SVGs", meaning `idle.svg` and `asleep.svg`. It cannot.** Both are
+  tracked, the pet is pack content by `CLAUDE.md`'s rule, and drawing it into
+  them would put a personal detail into the public repo and grow the
+  grandfathered set in the same stroke. Tier A says it matters, not where it
+  is drawn. It takes the logo's shape instead: a blob in the manifest and a
+  painter that composites it into a slot, which is what
+  `packs/example/README.md` already said it would. So the pet is not animation
+  work, which leaves the easter-egg idle and the meditation idle variant in that
+  category — the two this bullet already counts further down. A first
+  version of this sentence said "alone" and contradicted them.
+
+  **The three sentences that used to follow were wrong, and the measurements
+  below replace them.** They ruled out an animated pack format as something
+  "nothing in the shipping graph could decode" — false, and it was the clause
+  carrying the argument: `packages/renderer/src/sprites/index.ts` bakes exactly
+  that shape, arrays of base64 blobs and masks, and `blob.ts` decodes it
+  frame-count-agnostically for the sprites and the logo both. They then offered
+  a "two-pose blink" as the cheap recovery, which is the same mechanism ruled
+  impossible four lines earlier _and_ is not a blink: `frameAt` is
+  `Math.floor(now / FRAME_MS) % frames` with `FRAME_MS` 125, so two poses
+  alternate at 4 Hz. There is no hold.
+
+  **Drawing the pet into tracked art is still out, but not because it "cannot
+  happen".** Item 6 below draws a personal-interest object into tracked
+  animated art, so the absolute is refuted by this file's own item 6 below.
+  The grounds that hold are narrower: `CLAUDE.md` names the pet specifically as
+  ignored-file content, and unlike that object the pack _can_ supply the pet —
+  the logo proved the route on 26 Aug.
+
+  **What the stage can actually hold**, measured against the character's mask
+  union across all 128 `idle` and 96 `asleep` frames, landscape hero, for a
+  prop that is never occluded:
+
+  | Prop width | Tallest clear of the character | Where            |
+  | ---------- | ------------------------------ | ---------------- |
+  | up to 16   | 51 rows                        | panel (149, 115) |
+  | 20 to 36   | 22 rows                        | panel (0, 144)   |
+  | 40 to 48   | 20 rows                        | panel (0, 146)   |
+  | 52 and up  | 6 rows                         | below the feet   |
+
+  **That table measures the wrong thing, and the rest of this bullet is the
+  record of finding out.** It is the space a prop can occupy _without touching
+  the character_. Keep it: it is correct, it was recomputed by a reviewer, and
+  it is what a prop drawn behind him would need.
+
+  **Settled 27 Aug, and reversed on 28 Aug.** The 27th settled "foreground
+  prop, in the near corner", which stands — "background prop", this file's
+  wording since 18 Aug, is retired rather than reconciled. What did not stand
+  was the size that came with it: 32x22 at origin (0, 144), taken straight off
+  the table above.
+
+  **The table's bound does not apply to a prop drawn in front.** Painted after
+  the character, overlapping him is what being in front _means_, so avoiding
+  the overlap bought nothing and cost most of the size: the pet came out a
+  quarter of his width. The recipient photographed the panel and said it was
+  small and not obviously a cat, and the size was raised on that.
+
+  **It was raised on a preference, not on a demonstrated failure, and this
+  line said otherwise for a few hours.** It read "the panel showed that size
+  unreadable". It did not. The recipient then showed the same photograph to
+  someone who knew nothing about it, and that person said "a cat curled up
+  sleeping" — species, pose and state, cold, off the 32x22. That is a better
+  result than either critic managed on the same artefact: one wanted 8x
+  magnification to reach 85%, the other offered fox and dog as alternatives at
+  55%.
+
+  So the record is: 32x22 was legible and looked slight; 52x36 is legible and
+  has presence. The second is the better picture and the first was not a
+  defect. **Recorded this way because the wrong version had already reached a
+  blast-radius doc, and inventing a failure to justify a decision is the
+  failure mode this file keeps finding in itself.**
+
+  **Now 52x36 art in a 60x42 slot at stage-relative (0, 118)** — panel rows
+  124 to 165, base on the stage's last row, overlapping his torso and lower
+  arm. `packages/renderer/src/pet.ts` owns those numbers and says which are
+  measured and which are chosen. Both are chosen; an earlier version of this
+  sentence claimed 42 was derived from the row of his eye, and that pixel
+  turns out to appear in one frame of 128.
+
+  **What is still true, and worth keeping.** Nothing in the pipeline detects
+  "too small to read" — no gate, no critic, no tool — and both critics judged
+  from enlargements before anyone looked at glass.
+  `.claude/research/foundations/brief.md` holds the principle that bears on
+  it: recognition comes from silhouette rather than likeness below about 50px
+  a figure. That the one artefact this nearly caught turned out to be fine
+  does not make the hole smaller.
+
+  The frozen spec's Tier A ranking survives the foreground call — it says the
+  pet matters, and foreground is the reading that honours it. **It does not
+  survive the budget**: the spec makes the pet one of idle's three slots, and
+  a single bake is not a slot of the eight review days. That is a reversal of a
+  recorded grill outcome and it is named here rather than left in a subordinate
+  clause.
   What it would have bought is repeatability across a _series_, which matters
   when many are left. **Two are**, item 13's road bike having been cut since:
   the franchise-flavoured easter-egg idle (Stage 5, unchecked) and the spec's
   meditation idle variant. Two is not a series and each is one pass of the loop
   — but a first version of this line said "there are none" and called the
   easter-egg idle hypothetical when it is a scheduled box.
+
 - [x] Playwright SVG→PNG frame renderer (`tools/svg2frames.ts`)
 - [x] Palette quantise (`3be0c30`); RLE pack (the sprite bake)
 - [x] Animations, in priority order — ship each as it lands:
@@ -539,12 +633,32 @@ than partially. Eight good screens beat nine plus four rough ones.
      install shows, so "from the recipient's pack" was never achievable as
      written — recognition comes from shape and context, and the tracked art
      carries no mark identifying a specific vehicle.
+
+     **That sentence and `PLANS.md`'s read as a contradiction and are not
+     one**, which cost a review a finding on 26 Aug, so here is the check
+     rather than the assertion. `PLANS.md` says the art "names a colour"; this
+     says it carries no identifying mark. Both are true: the art has no badge,
+     no model name and no silhouette detail, and its red is `#B22222` — the
+     standard CSS `firebrick`, which `tools/contrast.ts` carries as its worked
+     example. It is a palette red, not a manufacturer's. No make is named
+     anywhere in the tree; grepped.
+
+     **A first version of this added "which `birthday.svg` also uses", and it
+     does not.** That file mentions the colour once, in a comment recording
+     that the hat _stopped_ being it. The commit asserting this said "checked
+     rather than asserted", and the check was a grep for the string rather
+     than a read of the line it matched — which is the failure mode the whole
+     paragraph is about.
+     What `CLAUDE.md` forbade was the _link_ — the since-deleted sentence
+     tying the prop to the recipient while the art was coloured — not the
+     colour standing alone, which cannot be removed from a drawing of a car.
      The fallback this line used to name is moot: the trigger shipped seven hours
      before the art — same day, `9fd31c3` at 11:22 and `6540a86` at 18:33 — and
      `DONE` borrowed `idle` in between, so the risk it was written against
      never arrived. An earlier version said a fortnight, which `main`'s history
      does not contain: it starts on 18 Aug. Item 12 already made this exact
      correction for `overheated`.
+
   7. Permission sign, and confused ✅ — Tier A per the screen spec; both were
      missing from every tier in its first draft despite being the two screens
      the whole design principle exists to serve. A `spec-grill` found both
@@ -666,7 +780,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   sprite. **Four of the five are in, 26 Aug** — a palette chosen for the two
   entries that actually reach the glass, quips mapped per state plus an idle
   rotation, `birthday: 09-23`, and a 14x17 mark on the laptop lid. The pet
-  sprite is the remainder, and it needs art rather than a field.
+  sprite is the remainder, and it needs art **and** a field — a first version
+  of this line said "art rather than a field", contradicting the pet bullet in
+  this same file and `packs/example/README.md`.
   It is no longer gitignored-and-nowhere: it is a private repo, cloned to
   `~/.tamaclaude/pack/` on the author's machine and installed by step 3 of
   `docs/INSTALL.md`. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
@@ -701,6 +817,16 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   are all resting; - 240 for an `active` or `attention` chip, capped at five by `MAX_CHIPS`.
   So `palette[0]` never reaches a shipping pixel, and `palette[1]` only via
   `sceneColours`' fallback on a pack carrying fewer than four entries.
+  **Both halves are true of the chrome and the pet sprite falsified them on
+  28 Aug**, which was flagged in advance because the same chrome-versus-art
+  confusion had already been corrected once, in `pixel-art-critic`'s own
+  description. A blob decodes to literal RGB565 words: the drawn sprite is 793
+  pixels of `palette[0]`, 152 of `palette[1]` and 48 of a fifth entry added for
+  it, written straight into the framebuffer with nothing substituting anything.
+  This line told itself to be corrected "in the commit that lands the field,
+  not after", and the commit that landed the field did not touch it. A
+  self-imposed exit condition naming its own commit is worth no more than the
+  habit of reading it.
   **That is a consequence of a decision already taken, not a defect.**
   `environment.ts` argues the ink substitution: a pack's ink is chosen
   against its own background, and white on a midday sky is nearly
@@ -725,7 +851,20 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band, the stage and the camera in one action.
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
-- [ ] Pet sprite from Alex's photos — background prop on idle/asleep, not the mascot
+- [ ] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
+      **A foreground prop, 52x36 art in a 60x42 slot at stage-relative
+      (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when it was raised
+      for presence rather than for legibility — a cold reader had already read
+      the smaller one correctly. The Stage 4 generator bullet carries why. Needs a
+      hand-drawn source SVG first — nothing in the tree turns a photograph
+      into pixel art. **Then look at it on the panel and photograph it** — that
+      is the only check that has ever caught this, and it caught it after two
+      cold reads had passed
+- [x] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
+      daemon line that selects it — the logo's sibling item, which the pet had
+      no equivalent of. Landed 28 Aug; the mirror is pinned by a test in
+      `packages/renderer/src/pet.test.ts` and the tool's copy by one in
+      `tools/logo2pixel.test.ts`
 - [x] **Company logo → pixel** — the tool is built and the lid draws its output.
       `tools/logo2pixel.ts` rasterises, snaps to a pack's palette plus the ground
       the mark sits on, and emits a PNG to look at, SVG rects to paste, or — since

@@ -194,6 +194,54 @@ describe('the birthday', () => {
   });
 });
 
+describe('a pack pet', () => {
+  const base = {
+    name: 'p',
+    palette: [
+      [0, 0, 0],
+      [255, 255, 255],
+    ],
+    quips: { mapped: {}, idle: [] },
+  };
+  const pet = { width: 32, height: 22, pixels: 'AAA=', mask: 'AAA=' };
+
+  it('is optional, and a pack without one is unchanged', () => {
+    expect(parsePackManifest(base).pet).toBeUndefined();
+  });
+
+  it('is accepted when it carries dimensions and both payloads', () => {
+    expect(parsePackManifest({ ...base, pet }).pet).toEqual(pet);
+  });
+
+  it('refuses one larger than the ground it stands on', () => {
+    // 60x42 is `PET_SLOT`, and both numbers are chosen rather than derived —
+    // `packages/renderer/src/pet.ts` says which and why. What this pins is
+    // that the copy here and the constant there do not drift apart.
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, width: 61 } }),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, height: 43 } }),
+    ).toThrow();
+  });
+
+  it('accepts one exactly the size of the slot', () => {
+    // The logo's own bound is 20 high and this one is 42, so a schema copied
+    // from it refuses the art it was added for.
+    const full = { ...pet, width: 60, height: 42 };
+    expect(parsePackManifest({ ...base, pet: full }).pet).toEqual(full);
+  });
+
+  it('refuses an empty payload, which would show nothing and say nothing', () => {
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, pixels: '' } }),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest({ ...base, pet: { ...pet, mask: 'not base64!' } }),
+    ).toThrow();
+  });
+});
+
 describe('a pack logo', () => {
   const base = {
     name: 'p',

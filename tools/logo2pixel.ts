@@ -119,6 +119,7 @@ import { encodeRect } from '@tamaclaude/protocol';
 
 import { loadPack } from './blit-scene.ts';
 import { snapToPalette } from './frame-palette.ts';
+import { SLOTS } from './pack-slots.ts';
 import { collisions, declaredFills, nearestIn } from './palette-map.ts';
 import { opaqueRuns, runsToRects } from './pixel-rects.ts';
 import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
@@ -129,8 +130,9 @@ import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
  * The landscape stage is 168px wide and the message band 152px, so 48 is
  * roughly a third of either — small enough to sit as a prop rather than as
  * the subject, and large enough that a wordmark is still legible at 1:1.
- * A starting point for looking. `--format pack` has a real slot to fit —
- * 84x20 — so it warns when the result will not fit, and prints it regardless.
+ * A starting point for looking. `--format pack` has real slots to fit — see
+ * `SLOTS` in `tools/pack-slots.ts` — so it warns when the result fits none of
+ * them, and prints it regardless.
  */
 const DEFAULT_WIDTH = 48;
 
@@ -401,11 +403,25 @@ try {
     // mistake sends you hunting the wrong thing. The
     // default width is 48, which on a square mark gives a 48-tall object the
     // schema refuses outright — and the recipe in this header omits `--width`
-    // often enough that a review hit it. The lid is 84x20.
-    if (size.width > 84 || size.height > 20) {
+    // often enough that a review hit it.
+    //
+    // **Two slots, since 27 Aug.** This tool is not logo-specific — it
+    // quantises any SVG to a pack's palette — and the pet uses it too. The lid
+    // is 84x20 and the pet's slot is 60x42, so a tall mark can fit one and not
+    // the other. Naming only the lid made the warning say "the pack schema will
+    // refuse it" about art destined for a field that did not exist yet — so it
+    // was misleading about a working tree rather than false about anything
+    // shipped, which is a distinction a review had to make for me.
+    const fits = SLOTS.filter(
+      (slot) => size.width <= slot.width && size.height <= slot.height,
+    );
+    if (fits.length === 0) {
       console.error(
-        `warning: ${String(size.width)}x${String(size.height)} does not fit the ` +
-          `lid (84x20) and the pack schema will refuse it — try a smaller --width`,
+        `warning: ${String(size.width)}x${String(size.height)} fits no pack slot (` +
+          SLOTS.map(
+            (s) => `${s.name} ${String(s.width)}x${String(s.height)}`,
+          ).join(', ') +
+          ') — try a smaller --width',
       );
     }
     const rgba = new Uint8ClampedArray(await readPixels(page, snapped.uri));
@@ -424,7 +440,7 @@ try {
     );
     console.error(
       `${size.width}x${size.height}, ${String(drawn)} of ${String(total)} pixels drawn — ` +
-        `paste the object above into the pack's manifest as "logo"`,
+        `paste the object above into the pack's manifest as "logo" or "pet"`,
     );
   } else if (values.format === 'rects') {
     // Rects are emitted from the origin so placement is the caller's, via an

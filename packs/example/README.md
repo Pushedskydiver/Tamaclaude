@@ -4,7 +4,8 @@ The reference pack. Deliberately generic — this is the one pack committed to a
 public repo, so it demonstrates the format and nothing else.
 
 A pack is the customisation surface: a palette, a quip table and an optional
-birthday, and an optional logo. Props are planned and are not fields yet. Point `TAMACLAUDE_PACK` at a pack
+birthday, an optional logo and an optional pet. Further props are planned
+and are not fields yet. Point `TAMACLAUDE_PACK` at a pack
 directory, or put one at `~/.tamaclaude/pack/`, and the panel picks it up with
 no rebuild and no reflash. What a swap actually moves is measured in
 `packages/renderer/src/pack-swap.test.ts`, and it is less than "every screen":
