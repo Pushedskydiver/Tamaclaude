@@ -546,16 +546,31 @@ than partially. Eight good screens beat nine plus four rough ones.
   | 40 to 48   | 20 rows                        | panel (0, 146)   |
   | 52 and up  | 6 rows                         | below the feet   |
 
-  So an unoccluded prop is a bottom-left corner piece at roughly **40x20**, or
-  a tall narrow one at the right. Anything larger must be painted _behind_ the
+  So an unoccluded prop is a bottom-left corner piece — **32x22** is the one
+  drawn, and the table allows up to 48 wide if it loses two rows — or a tall
+  narrow one at the right. Anything larger must be painted _behind_ the
   character, which is five lines inside `paintStage`'s existing slot loop
   rather than a new stage in `render()` — the logo is already composited in
   that loop, a few lines below where this would go.
 
-  **That choice is open and belongs to the art brief**, because settling it
-  after the art exists means redrawing. This file's own filing says background
-  prop; the frozen spec says Tier A art, not set dressing. Both are
-  load-bearing and they disagree.
+  **Settled 27 Aug: 32x22, in the near corner, in front of the character.**
+  The pet is a foreground prop, and "background prop" — this file's wording
+  since 18 Aug — is retired rather than reconciled, because the geometry will
+  not carry it.
+
+  The measurement that decides it: the character's own mask fills columns
+  19-31 on every row from 136 to 143 and clears only at 144, so a 32-wide
+  sprite has exactly one unoccluded home, origin y 144, drawn rows 147-165.
+  `groundRow('hero', 'landscape')` is 158, so that base sits seven rows in
+  front of the character's contact shadow. Nothing 24 wide or more fits
+  _behind_ that line anywhere on the stage; 18 wide and under does, in a
+  43-row column at the right, at about a third of the area.
+
+  So the choice was a foreground prop at a size that reads as a creature, or a
+  background one that reads as a speck, and the composition argues for the
+  first: the pet asleep in the near corner with the character working behind
+  it. The frozen spec's Tier A ranking survives that — it says the pet
+  matters, and a foreground prop is the reading that honours it.
   What it would have bought is repeatability across a _series_, which matters
   when many are left. **Two are**, item 13's road bike having been cut since:
   the franchise-flavoured easter-egg idle (Stage 5, unchecked) and the spec's
@@ -791,12 +806,12 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band, the stage and the camera in one action.
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
-- [ ] Pet sprite, drawn from photos — on idle/asleep, not the
-      mascot. **"Background prop" was the filing the spec retired**, and
-      whether it is set dressing or a second character is the open question in
-      the Stage 4 generator bullet; it decides the size and so the art brief.
-      Needs a hand-drawn source SVG first — nothing in the tree turns a
-      photograph into pixel art
+- [ ] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
+      **A foreground prop, 32x22, origin (0, 144)**, settled against the
+      measurement in the Stage 4 generator bullet; "background prop" was this
+      line's wording until 27 Aug and the stage cannot hold it. Needs a
+      hand-drawn source SVG first — nothing in the tree turns a photograph
+      into pixel art
 - [ ] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
       daemon line that selects it — the logo's sibling item, which the pet had
       no equivalent of
