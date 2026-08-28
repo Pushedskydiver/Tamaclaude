@@ -780,9 +780,10 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
   sprite. **Four of the five are in, 26 Aug** — a palette chosen for the two
   entries that actually reach the glass, quips mapped per state plus an idle
   rotation, `birthday: 09-23`, and a 14x17 mark on the laptop lid. The pet
-  sprite is the remainder, and it needs art **and** a field — a first version
-  of this line said "art rather than a field", contradicting the pet bullet in
-  this same file and `packs/example/README.md`.
+  sprite was the remainder, and it needed art **and** a field — a first
+  version of this line said "art rather than a field", contradicting the pet
+  bullet in this same file and `packs/example/README.md`. Both landed 28 Aug,
+  so the pack is five of five.
   It is no longer gitignored-and-nowhere: it is a private repo, cloned to
   `~/.tamaclaude/pack/` on the author's machine and installed by step 3 of
   `docs/INSTALL.md`. Goes at `~/.tamaclaude/pack/` or wherever `TAMACLAUDE_PACK`
@@ -851,15 +852,30 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       message band, the stage and the camera in one action.
       Copying the pack beat moving the clock: no system state changed, and the
       real pack kept its own date throughout.
-- [ ] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
-      **A foreground prop, 52x36 art in a 60x42 slot at stage-relative
-      (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when it was raised
-      for presence rather than for legibility — a cold reader had already read
-      the smaller one correctly. The Stage 4 generator bullet carries why. Needs a
-      hand-drawn source SVG first — nothing in the tree turns a photograph
-      into pixel art. **Then look at it on the panel and photograph it** — that
-      is the only check that has ever caught this, and it caught it after two
-      cold reads had passed
+- [x] Pet sprite, drawn from photos — on idle/asleep, not the mascot. Done
+      28 Aug. **A foreground prop, 52x36 art in a 60x42 slot at
+      stage-relative (0, 118)**, hand-drawn as an SVG and baked with
+      `logo2pixel --format pack`; nothing in the tree turns a photograph into
+      pixel art, so the drawing was the work. It was 32x22 at (0, 144) until
+      the same day, when it was raised for presence rather than for
+      legibility — the Stage 4 generator bullet carries the measurement and
+      the reversal.
+      **What was checked, and on which version, because these are not the
+      same artefact**: the _32x22_ went on the panel, was photographed there,
+      and a reader who knew nothing about it called it "a cat curled up
+      sleeping" off that photograph — species, pose and state, better than
+      either critic managed. That is what retired the "unreadable" claim
+      above. The shipped _52x36_ has been composed through `panel-mock` on
+      all four grounds and is running on the panel, but has not been
+      photographed on glass and has had no cold read. A first version of this
+      line claimed the cold read for it.
+      **Photographed on glass 28 Aug, on the night ground, and it is the
+      weakest of the four**: the coat is 1.26:1 against night sand, so the
+      silhouette barely separates and the rim over the ears reads as a pale
+      squiggle rather than as ears. On dawn, day and dusk the notch between
+      the ears reads and it is plainly a curled animal. Landed as a
+      background prop at that standard rather than redrawn again, with 16
+      days to the freeze
 - [x] Pet sprite: schema field, bounds mirrored from the slot, painter, and the
       daemon line that selects it — the logo's sibling item, which the pet had
       no equivalent of. Landed 28 Aug; the mirror is pinned by a test in
