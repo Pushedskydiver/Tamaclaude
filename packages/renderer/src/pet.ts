@@ -36,9 +36,14 @@ type PackPet = NonNullable<PackManifest['pet']>;
  * the character's mask entirely. That bound belongs to a prop drawn *behind*
  * him. This one is drawn in front, so overlapping his legs is what being in
  * front means, and avoiding it bought nothing — it only made the pet a
- * quarter of his width, which on glass read as a dark lump rather than as an
- * animal. The photograph is what settled it; every render up to that point
- * had been judged at eight times size.
+ * quarter of his width, which looked slight beside him. The recipient's
+ * photograph of the panel is what settled it; every render up to that point
+ * had been judged at eight to twelve times size.
+ *
+ * **Slight, not illegible, and this comment said illegible for a few hours.**
+ * A cold reader shown that same photograph said "a cat curled up sleeping"
+ * off the 32x22 — better than either critic managed on it. The size went up
+ * for presence. `BUILD_PLAN.md` carries the full record.
  *
  * 60x42, bottom-left, with its base on the stage's last row: `y` is
  * stage-relative, so 118 + 42 - 1 = 159, which is panel row 165 and the last

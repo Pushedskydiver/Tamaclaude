@@ -559,25 +559,39 @@ than partially. Eight good screens beat nine plus four rough ones.
 
   **The table's bound does not apply to a prop drawn in front.** Painted after
   the character, overlapping him is what being in front _means_, so avoiding
-  the overlap bought nothing and cost most of the size. The pet came out a
-  quarter of his width, and on glass it read as a dark lump rather than as an
-  animal. The recipient photographed the panel and said so; every judgement
-  before that had been made on renders at eight to twelve times size,
-  including two cold reads that passed.
+  the overlap bought nothing and cost most of the size: the pet came out a
+  quarter of his width. The recipient photographed the panel and said it was
+  small and not obviously a cat, and the size was raised on that.
+
+  **It was raised on a preference, not on a demonstrated failure, and this
+  line said otherwise for a few hours.** It read "the panel showed that size
+  unreadable". It did not. The recipient then showed the same photograph to
+  someone who knew nothing about it, and that person said "a cat curled up
+  sleeping" — species, pose and state, cold, off the 32x22. That is a better
+  result than either critic managed on the same artefact: one wanted 8x
+  magnification to reach 85%, the other offered fox and dog as alternatives at
+  55%.
+
+  So the record is: 32x22 was legible and looked slight; 52x36 is legible and
+  has presence. The second is the better picture and the first was not a
+  defect. **Recorded this way because the wrong version had already reached a
+  blast-radius doc, and inventing a failure to justify a decision is the
+  failure mode this file keeps finding in itself.**
 
   **Now 52x36 art in a 60x42 slot at stage-relative (0, 118)** — panel rows
   124 to 165, base on the stage's last row, overlapping his torso and lower
   arm. `packages/renderer/src/pet.ts` owns those numbers and says which are
-  measured and which are chosen: 60 is a judgement, and 42 has a hard floor
-  under it found after the fact, since the lowest pixel of his eye in those
-  columns is row 123.
+  measured and which are chosen. Both are chosen; an earlier version of this
+  sentence claimed 42 was derived from the row of his eye, and that pixel
+  turns out to appear in one frame of 128.
 
-  **What the reversal cost, recorded because it will happen again.** Nothing
-  detects "too small to read". Every gate passed, both critics passed, and the
-  defect reached glass. `.claude/research/foundations/brief.md` already holds
-  the principle that would have predicted it — recognition comes from
-  silhouette rather than likeness below about 50px a figure — and neither this
-  plan nor the renderer cited it until now.
+  **What is still true, and worth keeping.** Nothing in the pipeline detects
+  "too small to read" — no gate, no critic, no tool — and both critics judged
+  from enlargements before anyone looked at glass.
+  `.claude/research/foundations/brief.md` holds the principle that bears on
+  it: recognition comes from silhouette rather than likeness below about 50px
+  a figure. That the one artefact this nearly caught turned out to be fine
+  does not make the hole smaller.
 
   The frozen spec's Tier A ranking survives the foreground call — it says the
   pet matters, and foreground is the reading that honours it. **It does not
@@ -839,8 +853,9 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       real pack kept its own date throughout.
 - [ ] Pet sprite, drawn from photos — on idle/asleep, not the mascot.
       **A foreground prop, 52x36 art in a 60x42 slot at stage-relative
-      (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when the panel showed
-      that size unreadable; the Stage 4 generator bullet carries why. Needs a
+      (0, 118)**. It was 32x22 at (0, 144) until 28 Aug, when it was raised
+      for presence rather than for legibility — a cold reader had already read
+      the smaller one correctly. The Stage 4 generator bullet carries why. Needs a
       hand-drawn source SVG first — nothing in the tree turns a photograph
       into pixel art. **Then look at it on the panel and photograph it** — that
       is the only check that has ever caught this, and it caught it after two
