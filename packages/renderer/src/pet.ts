@@ -11,13 +11,11 @@
  * and the stage is what clips it.
  *
  * **It is painted after him, and that is a decision rather than an accident.**
- * `PET_SLOT` is the only unoccluded home a prop this size has: measured
- * against the character's mask union over all 128 `idle` and 96 `asleep`
- * frames, columns 19-31 are covered on every row from 136 to 143 and clear
- * only at 144. Sitting there puts it seven rows in front of his contact
- * shadow — nearer the viewer on a receding beach — so it reads as a
- * foreground prop. `BUILD_PLAN.md` carries the measurement and records that
- * "background prop", the plan's wording since 18 Aug, was retired against it.
+ * Its base sits on the stage's last row, well in front of his contact shadow
+ * at 158 — nearer the viewer on a receding beach — so it reads as a foreground
+ * prop and may overlap him. `BUILD_PLAN.md` carries the measurement and
+ * records that "background prop", the plan's wording since 18 Aug, was retired
+ * against it.
  */
 import type { Framebuffer } from './framebuffer.js';
 import type { PackManifest } from '@tamaclaude/packs';
@@ -33,12 +31,29 @@ type PackPet = NonNullable<PackManifest['pet']>;
 /**
  * Where the pet stands, relative to the stage band.
  *
- * Panel row 144 in landscape hero, which is `stage.y + 138`. The width is the
- * measured clear sand: up to 36 leaves 22 rows, and 37 or more leaves six.
+ * **Not the clear sand, and that was an error worth naming.** The first
+ * version of this was 36x22, derived from the largest rectangle that avoids
+ * the character's mask entirely. That bound belongs to a prop drawn *behind*
+ * him. This one is drawn in front, so overlapping his legs is what being in
+ * front means, and avoiding it bought nothing — it only made the pet a
+ * quarter of his width, which on glass read as a dark lump rather than as an
+ * animal. The photograph is what settled it; every render up to that point
+ * had been judged at eight times size.
+ *
+ * 60x42, bottom-left, with its base on the stage's last row: `y` is
+ * stage-relative, so 118 + 42 - 1 = 159, which is panel row 165 and the last
+ * row the stage paints. A first version said 124 and ran six rows past the
+ * bottom of the stage; the clip hid it and a test caught it.
+ *
+ * The width stops at 60 because a prop wider than about a third of the 168px
+ * stage stops being a prop and starts competing with the character. The height
+ * follows: 42 puts the top at panel row 124, which crosses his legs and not
+ * his head.
+ *
  * `packages/packs/src/index.ts` repeats these two numbers because it sits
  * below this package and cannot import them; `pet.test.ts` asserts they agree.
  */
-export const PET_SLOT: Rect = { x: 0, y: 138, width: 36, height: 22 };
+export const PET_SLOT: Rect = { x: 0, y: 118, width: 60, height: 42 };
 
 /**
  * Draw the pet into the stage, and report where it landed.

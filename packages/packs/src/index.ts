@@ -178,18 +178,17 @@ const packManifestSchema = z.object({
   pet: z
     .object({
       /**
-       * **Bounded by the clear sand**, 36x22 device pixels — `PET_SLOT` in
-       * `packages/renderer/src/pet.ts`, measured against the character's mask
-       * union over all 128 `idle` and 96 `asleep` frames, with a test there
-       * asserting these agree. This package sits below the renderer and cannot
+       * **Bounded by the slot it stands in**, 60x42 device pixels — `PET_SLOT` in
+       * `packages/renderer/src/pet.ts`, where the reasoning lives, with a test
+       * there asserting these agree. This package sits below the renderer and cannot
        * import them, so the limits are repeated and the drift is caught by
        * that test.
        *
        * **Not the logo's bounds.** That field caps height at 20 and the pet is
        * 22, so copying it refuses the art this field exists for.
        */
-      width: z.number().int().min(1).max(36),
-      height: z.number().int().min(1).max(22),
+      width: z.number().int().min(1).max(60),
+      height: z.number().int().min(1).max(42),
       /** `.min(1)` for the same reason as the logo's: see above. */
       pixels: z.string().min(1).regex(BASE64, 'pet.pixels must be base64'),
       mask: z.string().min(1).regex(BASE64, 'pet.mask must be base64'),

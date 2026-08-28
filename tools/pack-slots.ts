@@ -15,5 +15,5 @@
  */
 export const SLOTS = [
   { name: 'lid', width: 84, height: 20 },
-  { name: 'pet', width: 36, height: 22 },
+  { name: 'pet', width: 60, height: 42 },
 ] as const;

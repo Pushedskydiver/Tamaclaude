@@ -214,21 +214,21 @@ describe('a pack pet', () => {
   });
 
   it('refuses one larger than the ground it stands on', () => {
-    // 36x22 is the clear sand measured against the character's mask union
-    // over all 128 `idle` and 96 `asleep` frames. Wider than 36 and the only
-    // space left is six rows below the feet.
+    // 60x42 is `PET_SLOT`. Wider and the prop competes with the character
+    // rather than sitting in front of him; taller and its top row crosses his
+    // face rather than his legs.
     expect(() =>
-      parsePackManifest({ ...base, pet: { ...pet, width: 37 } }),
+      parsePackManifest({ ...base, pet: { ...pet, width: 61 } }),
     ).toThrow();
     expect(() =>
-      parsePackManifest({ ...base, pet: { ...pet, height: 23 } }),
+      parsePackManifest({ ...base, pet: { ...pet, height: 43 } }),
     ).toThrow();
   });
 
   it('accepts one exactly the size of the slot', () => {
     // The logo's own bound is 20 high and the pet is 22, so a schema copied
     // from it refuses the art it was added for.
-    const full = { ...pet, width: 36, height: 22 };
+    const full = { ...pet, width: 60, height: 42 };
     expect(parsePackManifest({ ...base, pet: full }).pet).toEqual(full);
   });
 
