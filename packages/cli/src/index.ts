@@ -36,7 +36,7 @@ import {
   parseAgentStatus,
 } from './agent.js';
 import { runDaemon } from './daemon.js';
-import { chooseDevice } from './device.js';
+import { chooseDevice, refusalReport } from './device.js';
 import { resolvePack } from './pack.js';
 
 /** One line naming the loaded pack and where it came from. */
@@ -394,7 +394,10 @@ const USAGE =
   '       pnpm tamaclaude status\n' +
   '  asks launchd whether it is actually running\n';
 
-async function devicePathFor(argv: readonly string[]): Promise<string> {
+async function devicePathFor(
+  argv: readonly string[],
+  supervised: boolean,
+): Promise<string> {
   // **Discovery runs only when nothing was named.** It used to run first and
   // unconditionally, so `tamaclaude daemon /dev/cu.usbmodem1101` — the escape
   // hatch, and what gets typed during the soak week — still shelled to `ioreg`
@@ -406,8 +409,12 @@ async function devicePathFor(argv: readonly string[]): Promise<string> {
     given === undefined ? await findPanels(nodeUsb()) : [],
   );
   if ('refusal' in chosen) {
-    process.stderr.write(`${chosen.refusal}\n${USAGE}`);
-    process.exit(2);
+    // No usage block: see `refusalReport`. An unplugged cable is a runtime
+    // condition, and printing the command line's own documentation for it sent
+    // the reader to check an argument list that was already correct.
+    const { text, code } = refusalReport(chosen, supervised);
+    process.stderr.write(text);
+    process.exit(code);
   }
   return chosen.path;
 }
@@ -422,8 +429,10 @@ async function daemon(argv: readonly string[]): Promise<void> {
   // `--supervised` while discovery, right there, was never consulted. Caught
   // before it shipped, and it is the same shape as the finding a review made
   // one commit earlier about discovery running when a device was named.
+  const supervised = argv.includes('--supervised');
   const devicePath = await devicePathFor(
     argv.filter((argument) => !argument.startsWith('--')),
+    supervised,
   );
   // Resolved before the socket is opened, so a bad pack fails without leaving
   // a listener behind.
@@ -443,7 +452,6 @@ async function daemon(argv: readonly string[]): Promise<void> {
   // panel is found wherever it now is. The supervisor this branch installs is
   // the rediscovery mechanism; teaching `panel.ts` to rediscover would mean
   // the device package choosing its own port, which is the caller's job.
-  const supervised = argv.includes('--supervised');
   const running = await runDaemon({
     socketPath: defaultSocketPath(),
     devicePath,
@@ -557,9 +565,12 @@ try {
       : String(cause);
   process.stderr.write(`${line}\n`);
   // 2 rather than 1 for a pack that was never configured, and for one named
-  // by an empty variable: both are the same class as a missing device path,
-  // which already exits 2 — the command was not usable as typed, rather than
-  // something failing while it ran. The distinction is not cosmetic, because
+  // by an empty variable: the command was not usable as typed, rather than
+  // something failing while it ran. (This used to say "the same class as a
+  // missing device path, which already exits 2". A missing device path is
+  // exactly the opposite class — it is a runtime condition, and since 29 Aug
+  // it exits `EXIT_NO_PANEL`. The conclusion for a bad pack stands; the
+  // comparison it rested on does not.) The distinction is not cosmetic, because
   // the launchd agent in `BUILD_PLAN.md` Stage 3 is what will meet these
   // failures, and a wrapper that retries a crash should not retry a typo.
   process.exit(MISCONFIGURED.test(line) ? 2 : 1);

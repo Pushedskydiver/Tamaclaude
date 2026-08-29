@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { chooseDevice } from './device.js';
+import { chooseDevice, EXIT_NO_PANEL, refusalReport } from './device.js';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '../../../..');
 
@@ -382,6 +382,84 @@ describe('the tamaclaude binary', () => {
       expect(status).toBe(1);
     },
   );
+
+  describe('what a refusal prints, and what it exits with', () => {
+    const absent = () =>
+      ({ kind: 'absent', refusal: 'no panel found. Plug it in.' }) as const;
+
+    // **An unplugged cable is not a usage error.** Until 29 Aug a refusal
+    // printed the whole command-line usage block and exited 2, so under
+    // launchd — which restarts on exit — the log filled with usage text
+    // (1.4 MB of it on the author's machine) and `pnpm tamaclaude status`
+    // reported `loaded but not running; last exit 2`, which reads as a broken
+    // install rather than a panel that is simply not plugged in. The
+    // recipient will hit this the first time the desk moves.
+    it('does not print usage for a panel that is merely absent', () => {
+      const { text } = refusalReport(absent(), false);
+      expect(text).not.toContain('usage:');
+      expect(text).not.toContain('install-agent');
+      expect(text).toContain('no panel found');
+    });
+
+    it('gives an absent panel its own exit code, so status can name it', () => {
+      // A literal, not `EXIT_NO_PANEL`: comparing the constant to itself
+      // passes for any value, so it pinned nothing.
+      expect(refusalReport(absent(), false).code).toBe(3);
+      expect(EXIT_NO_PANEL).toBe(3);
+    });
+
+    it('passes supervision through, which nothing checked', () => {
+      // `devicePathFor` is unexported, so the only guard on its new argument
+      // was reading it. Replacing `supervised` with `false` at the call site
+      // left the whole suite green.
+      const chosen = chooseDevice(undefined, []);
+      if (!('refusal' in chosen)) throw new Error('expected a refusal');
+      expect(refusalReport(chosen, true).text).not.toEqual(
+        refusalReport(chosen, false).text,
+      );
+    });
+
+    it('carries the decision across the two functions, not a string', () => {
+      // **The seam the whole change rests on.** It used to dispatch on
+      // `refusal.startsWith('no panel found')`, coupling two files by a
+      // literal — and prefixing that message with the program name, an
+      // ordinary edit, silently sent an absent panel back to exit 2 and
+      // "see the log" with every gate green. Composed here so the two ends
+      // cannot drift apart.
+      const chosen = chooseDevice(undefined, []);
+      expect('refusal' in chosen).toBe(true);
+      if (!('refusal' in chosen)) return;
+      expect(refusalReport(chosen, false).code).toBe(3);
+    });
+
+    it('says it will look again when something is supervising it', () => {
+      // Matches what `onGiveUp` already says for a panel that vanishes after
+      // opening. The two paths reached the same situation and said different
+      // things about it.
+      const supervised = refusalReport(absent(), true);
+      const alone = refusalReport(absent(), false);
+      expect(supervised.text).toContain('looks again');
+      expect(alone.text).not.toContain('looks again');
+      // And it drops "name the device", which the plist deliberately does not
+      // pass — macOS derives the path from the USB port, so a named one goes
+      // stale the moment the panel changes socket.
+      expect(supervised.text).not.toContain('name the device');
+      expect(alone.text).toContain('Plug it in');
+    });
+
+    it('keeps the ordinary failure code for a refusal a person must resolve', () => {
+      // Two panels plugged in is a choice only a human can make, so it is a
+      // genuine argument problem and keeps exit 2 — but it still does not need
+      // the usage block, because the refusal already lists the paths.
+      const { text, code } = refusalReport(
+        { kind: 'ambiguous', refusal: 'found 2 panels:\n  /dev/a\n  /dev/b' },
+        false,
+      );
+      expect(code).toBe(2);
+      expect(text).not.toContain('usage:');
+      expect(text).toContain('/dev/a');
+    });
+  });
 
   describe('chooseDevice', () => {
     it('does not mistake a flag for a device path', () => {

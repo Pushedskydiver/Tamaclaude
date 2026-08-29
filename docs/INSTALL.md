@@ -239,14 +239,28 @@ panel — it exits and retries every thirty seconds while everything looks
 installed. `status` shows it loaded but not running. Close that window, or
 press `Ctrl-C` in it, and the automatic one takes over within a minute.
 
-**The panel is not plugged in.** Note
-`status` cannot see the panel — it reports the program, not the hardware. To
-check the panel is found, use the dry run, which prints the device it would
-use:
+**The panel is not plugged in.** `status` says so directly:
+
+```
+agent     loaded, waiting for a panel — plug it in and it starts itself
+```
+
+Plug it in and it starts on its own within thirty seconds; there is nothing to
+re-run.
+
+`status` still reports the program rather than the hardware, so it cannot tell
+you the panel is _healthy_ — only that the daemon could not find one. To see
+which device it would use, the dry run prints it:
 
 ```bash
 pnpm tamaclaude install-agent
 ```
+
+**Two panels are plugged in.** If a second board is ever attached — during a
+repair, say — the daemon refuses rather than guessing, because every ESP32 in
+this mode looks identical over USB and driving the wrong one would report
+itself working. `status` says `loaded but not running; last exit 2 — see the
+log`, and the log names both devices. Unplug one.
 
 If none of those, the log is at `~/.tamaclaude/daemon.log` — written only by
 the automatic startup from step 6, so it will not exist if you never got that

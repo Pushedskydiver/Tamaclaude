@@ -43,6 +43,8 @@
  */
 import { join } from 'node:path';
 
+import { EXIT_NO_PANEL } from './device.js';
+
 /** The agent's launchd label, and the basename of its plist. */
 export const AGENT_LABEL = 'com.tamaclaude.daemon';
 
@@ -88,9 +90,12 @@ export function agentPlistPath(home: string): string {
  *
  * The table above says this file makes loops unreachable, and that is true of
  * the ones that mean something is wrong — a missing pack, a node that will not
- * spawn. It is not true of an unplugged panel: `chooseDevice` exits 2 when it
- * finds none, `KeepAlive` restarts, and discovery runs again. That restart
- * *is* the hotplug mechanism. A review pointed out the file claimed otherwise
+ * spawn. It is not true of an unplugged panel: the daemon exits
+ * `EXIT_NO_PANEL` when discovery finds none, `KeepAlive` restarts, and
+ * discovery runs again. That restart *is* the hotplug mechanism. (It said
+ * `chooseDevice` exits 2 until 29 Aug, wrong on both halves — `chooseDevice`
+ * returns rather than exits, and an absent panel has had its own code since
+ * that message stopped being a usage error.) A review pointed out the file claimed otherwise
  * while relying on it, which is worse than either choice on its own.
  *
  * So the interval is a pace rather than a fix. Thirty seconds is slow enough
@@ -227,6 +232,17 @@ export function describeAgentStatus(
   // back as 256. Printing it undecoded made the one number a person needs into
   // a number they would have to look up.
   const signal = exit & 0x7f;
+  // **An absent panel is not a fault, and it used to read as one.** The daemon
+  // exits `EXIT_NO_PANEL` when discovery finds nothing, which is what happens
+  // every time the cable comes out. Sending that to the log made the ordinary
+  // case look like the broken one — and the log is where the genuinely
+  // ambiguous failures live.
+  if (signal === 0 && exit >> 8 === EXIT_NO_PANEL) {
+    return (
+      'agent     loaded, waiting for a panel — plug it in and it starts itself\n' +
+      '          (`pnpm tamaclaude install-agent` prints the device it would use)'
+    );
+  }
   const detail =
     signal === 0 ? `exit ${String(exit >> 8)}` : `signal ${String(signal)}`;
   return `agent     loaded but not running; last ${detail} — see the log`;
