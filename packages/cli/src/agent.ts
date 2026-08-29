@@ -90,9 +90,12 @@ export function agentPlistPath(home: string): string {
  *
  * The table above says this file makes loops unreachable, and that is true of
  * the ones that mean something is wrong — a missing pack, a node that will not
- * spawn. It is not true of an unplugged panel: `chooseDevice` exits 2 when it
- * finds none, `KeepAlive` restarts, and discovery runs again. That restart
- * *is* the hotplug mechanism. A review pointed out the file claimed otherwise
+ * spawn. It is not true of an unplugged panel: the daemon exits
+ * `EXIT_NO_PANEL` when discovery finds none, `KeepAlive` restarts, and
+ * discovery runs again. That restart *is* the hotplug mechanism. (It said
+ * `chooseDevice` exits 2 until 29 Aug, wrong on both halves — `chooseDevice`
+ * returns rather than exits, and an absent panel has had its own code since
+ * that message stopped being a usage error.) A review pointed out the file claimed otherwise
  * while relying on it, which is worse than either choice on its own.
  *
  * So the interval is a pace rather than a fix. Thirty seconds is slow enough

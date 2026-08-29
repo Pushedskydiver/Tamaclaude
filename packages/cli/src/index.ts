@@ -412,7 +412,7 @@ async function devicePathFor(
     // No usage block: see `refusalReport`. An unplugged cable is a runtime
     // condition, and printing the command line's own documentation for it sent
     // the reader to check an argument list that was already correct.
-    const { text, code } = refusalReport(chosen.refusal, supervised);
+    const { text, code } = refusalReport(chosen, supervised);
     process.stderr.write(text);
     process.exit(code);
   }
@@ -565,9 +565,12 @@ try {
       : String(cause);
   process.stderr.write(`${line}\n`);
   // 2 rather than 1 for a pack that was never configured, and for one named
-  // by an empty variable: both are the same class as a missing device path,
-  // which already exits 2 — the command was not usable as typed, rather than
-  // something failing while it ran. The distinction is not cosmetic, because
+  // by an empty variable: the command was not usable as typed, rather than
+  // something failing while it ran. (This used to say "the same class as a
+  // missing device path, which already exits 2". A missing device path is
+  // exactly the opposite class — it is a runtime condition, and since 29 Aug
+  // it exits `EXIT_NO_PANEL`. The conclusion for a bad pack stands; the
+  // comparison it rested on does not.) The distinction is not cosmetic, because
   // the launchd agent in `BUILD_PLAN.md` Stage 3 is what will meet these
   // failures, and a wrapper that retries a crash should not retry a typo.
   process.exit(MISCONFIGURED.test(line) ? 2 : 1);

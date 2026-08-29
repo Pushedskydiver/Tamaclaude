@@ -245,10 +245,8 @@ press `Ctrl-C` in it, and the automatic one takes over within a minute.
 agent     loaded, waiting for a panel — plug it in and it starts itself
 ```
 
-Plug it in and it starts on its own within a minute; there is nothing to
-re-run. Until 29 Aug this case reported `loaded but not running; last exit 2 —
-see the log`, which is what a broken install looks like, and filled the log
-with command-line usage on every retry.
+Plug it in and it starts on its own within thirty seconds; there is nothing to
+re-run.
 
 `status` still reports the program rather than the hardware, so it cannot tell
 you the panel is _healthy_ — only that the daemon could not find one. To see
@@ -257,6 +255,12 @@ which device it would use, the dry run prints it:
 ```bash
 pnpm tamaclaude install-agent
 ```
+
+**Two panels are plugged in.** If a second board is ever attached — during a
+repair, say — the daemon refuses rather than guessing, because every ESP32 in
+this mode looks identical over USB and driving the wrong one would report
+itself working. `status` says `loaded but not running; last exit 2 — see the
+log`, and the log names both devices. Unplug one.
 
 If none of those, the log is at `~/.tamaclaude/daemon.log` — written only by
 the automatic startup from step 6, so it will not exist if you never got that
