@@ -43,6 +43,8 @@
  */
 import { join } from 'node:path';
 
+import { EXIT_NO_PANEL } from './device.js';
+
 /** The agent's launchd label, and the basename of its plist. */
 export const AGENT_LABEL = 'com.tamaclaude.daemon';
 
@@ -227,6 +229,17 @@ export function describeAgentStatus(
   // back as 256. Printing it undecoded made the one number a person needs into
   // a number they would have to look up.
   const signal = exit & 0x7f;
+  // **An absent panel is not a fault, and it used to read as one.** The daemon
+  // exits `EXIT_NO_PANEL` when discovery finds nothing, which is what happens
+  // every time the cable comes out. Sending that to the log made the ordinary
+  // case look like the broken one — and the log is where the genuinely
+  // ambiguous failures live.
+  if (signal === 0 && exit >> 8 === EXIT_NO_PANEL) {
+    return (
+      'agent     loaded, waiting for a panel — plug it in and it starts itself\n' +
+      '          (`pnpm tamaclaude install-agent` prints the device it would use)'
+    );
+  }
   const detail =
     signal === 0 ? `exit ${String(exit >> 8)}` : `signal ${String(signal)}`;
   return `agent     loaded but not running; last ${detail} — see the log`;

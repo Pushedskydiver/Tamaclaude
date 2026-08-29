@@ -50,3 +50,51 @@ export function chooseDevice(
   }
   return { path: only.path };
 }
+
+/**
+ * What the daemon exits with when there is simply no panel plugged in.
+ *
+ * Its own code, so `describeAgentStatus` can say "waiting for a panel" instead
+ * of "see the log". Distinct from 2, which stays for the refusals a person has
+ * to resolve — naming one of two panels — and from 1, which `onGiveUp` uses
+ * when a panel that *was* open goes away.
+ */
+export const EXIT_NO_PANEL = 3;
+
+/**
+ * What to print for a refusal, and what to exit with.
+ *
+ * **Usage is for argument errors, and an unplugged cable is not one.** Until
+ * 29 Aug both refusals printed the whole usage block and exited 2. Under
+ * launchd, which restarts on exit, that filled `~/.tamaclaude/daemon.log` with
+ * usage text — 1.4 MB on the author's machine — and made
+ * `pnpm tamaclaude status` report `loaded but not running; last exit 2`, which
+ * reads as a broken install rather than a panel nobody has plugged in. It is
+ * the most likely thing to happen to a working install, since the cable comes
+ * out whenever the desk moves.
+ *
+ * Separated from the `process.exit` in `index.ts` for the reason `chooseDevice`
+ * was: the branches worth testing are the ones no CI machine can reach by
+ * having hardware plugged in.
+ */
+export function refusalReport(
+  refusal: string,
+  supervised: boolean,
+): { readonly text: string; readonly code: number } {
+  // The multi-panel refusal already lists the paths and says to name one, so
+  // it carries its own remedy too. Neither needs the usage block.
+  const absent = refusal.startsWith('no panel found');
+  if (!absent) return { text: `${refusal}\n`, code: 2 };
+  // Under supervision the refusal's "or name the device" is not actionable —
+  // the plist passes no device on purpose, because macOS derives the path from
+  // the USB port and it changes when the panel moves socket. So say the thing
+  // that is true there instead, in the shape `onGiveUp` already uses for a
+  // panel that goes away after opening.
+  if (supervised) {
+    return {
+      text: 'no panel found; exiting so the agent looks again when one appears\n',
+      code: EXIT_NO_PANEL,
+    };
+  }
+  return { text: `${refusal}\n`, code: EXIT_NO_PANEL };
+}

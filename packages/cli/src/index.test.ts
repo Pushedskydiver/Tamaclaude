@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { chooseDevice } from './device.js';
+import { chooseDevice, EXIT_NO_PANEL, refusalReport } from './device.js';
 
 const ROOT = resolve(fileURLToPath(import.meta.url), '../../../..');
 
@@ -382,6 +382,56 @@ describe('the tamaclaude binary', () => {
       expect(status).toBe(1);
     },
   );
+
+  describe('what a refusal prints, and what it exits with', () => {
+    // **An unplugged cable is not a usage error.** Until 29 Aug a refusal
+    // printed the whole command-line usage block and exited 2, so under
+    // launchd — which restarts on exit — the log filled with usage text
+    // (1.4 MB of it on the author's machine) and `pnpm tamaclaude status`
+    // reported `loaded but not running; last exit 2`, which reads as a broken
+    // install rather than a panel that is simply not plugged in. The
+    // recipient will hit this the first time he moves his desk.
+    it('does not print usage for a panel that is merely absent', () => {
+      const { text } = refusalReport('no panel found. Plug it in.', false);
+      expect(text).not.toContain('usage:');
+      expect(text).not.toContain('install-agent');
+      expect(text).toContain('no panel found');
+    });
+
+    it('gives an absent panel its own exit code, so status can name it', () => {
+      expect(refusalReport('no panel found. Plug it in.', false).code).toBe(
+        EXIT_NO_PANEL,
+      );
+    });
+
+    it('says it will look again when something is supervising it', () => {
+      // Matches what `onGiveUp` already says for a panel that vanishes after
+      // opening. The two paths reached the same situation and said different
+      // things about it.
+      const supervised = refusalReport('no panel found. Plug it in.', true);
+      const alone = refusalReport('no panel found. Plug it in.', false);
+      expect(supervised.text).toContain('looks again');
+      expect(alone.text).not.toContain('looks again');
+      // And it drops "name the device", which the plist deliberately does not
+      // pass — macOS derives the path from the USB port, so a named one goes
+      // stale the moment the panel changes socket.
+      expect(supervised.text).not.toContain('name the device');
+      expect(alone.text).toContain('Plug it in');
+    });
+
+    it('keeps the ordinary failure code for a refusal a person must resolve', () => {
+      // Two panels plugged in is a choice only a human can make, so it is a
+      // genuine argument problem and keeps exit 2 — but it still does not need
+      // the usage block, because the refusal already lists the paths.
+      const { text, code } = refusalReport(
+        'found 2 panels; name the one you mean:\n  /dev/a\n  /dev/b',
+        false,
+      );
+      expect(code).toBe(2);
+      expect(text).not.toContain('usage:');
+      expect(text).toContain('/dev/a');
+    });
+  });
 
   describe('chooseDevice', () => {
     it('does not mistake a flag for a device path', () => {

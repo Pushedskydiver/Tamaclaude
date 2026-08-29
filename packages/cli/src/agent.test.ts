@@ -11,6 +11,7 @@ import {
   describeAgentStatus,
   parseAgentStatus,
 } from './agent.js';
+import { EXIT_NO_PANEL } from './device.js';
 
 /**
  * The value element following a `<key>` in the generated plist.
@@ -222,5 +223,23 @@ describe('parseAgentStatus', () => {
     // is a substring of the bare form too, so asserting it left the decision
     // this remedy exists to carry entirely unpinned.
     expect(said).toContain('pnpm tamaclaude install-agent --apply');
+  });
+});
+
+describe('describeAgentStatus', () => {
+  const loaded = (lastExit: number) => ({ loaded: true, lastExit });
+
+  it('names an absent panel instead of sending the reader to the log', () => {
+    // `LastExitStatus` is a raw wait(2) status, so exit N arrives as N << 8.
+    // The recipient will unplug the panel whenever the desk moves, and until
+    // 29 Aug that read as `last exit 2 — see the log`, indistinguishable from
+    // a broken install.
+    const text = describeAgentStatus(loaded(EXIT_NO_PANEL << 8), true);
+    expect(text).toContain('panel');
+    expect(text).not.toContain('see the log');
+  });
+
+  it('still sends other failures to the log', () => {
+    expect(describeAgentStatus(loaded(2 << 8), true)).toContain('see the log');
   });
 });
