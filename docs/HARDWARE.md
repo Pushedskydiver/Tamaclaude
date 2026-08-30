@@ -122,6 +122,16 @@ Community STLs exist for this exact SKU — no modelling required:
 **Chosen model:** _TBD — record the model and its licence here once picked, for
 `CREDITS.md`._
 
+**This is overdue, not pending, and as of 30 Aug it is the single deadline
+risk on the project.** `BUILD_PLAN.md`'s own mitigation for "case print slips"
+was "brief the printer Thu 20 Aug"; that date has passed and neither this file
+nor the plan records whether a model was chosen, a board measured, or a print
+ordered. Every other outstanding item can be recovered by working harder in
+the last week. This one cannot: it depends on somebody else's time, the
+replacement lead time for the board alone is about a week, and the case has to
+exist by 19 Sep. The bare board remains the stated fallback, which is the
+thing to decide deliberately rather than arrive at.
+
 ## Spares
 
 Buy two boards. One to develop and reflash against, one to give. Replacement
