@@ -1209,17 +1209,32 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
       one Mac. This line said "one-line install" until 26 Aug, which would
       have had someone building a thing the plan had already ruled out.
 - [ ] Flash the gift board (not the dev board) with the splash.
-      **First, power it up and confirm the vendor demo — and do that by Sat
-      6 Sep, not here.** The board arrives with a demo that drives the display;
-      flashing overwrites it, so it is free to check exactly once and only
-      before this step. A dead board found at this line has about a week's
-      replacement lead time (`docs/HARDWARE.md` §Spares) against assembly on
-      19 Sep, so anything discovered after ~12 Sep cannot be recovered. That is
-      the whole reason the check is dated earlier than the step it guards.
-      **This is a rebuild, not a re-flash.** No artefact in
-      `packages/device/firmware/blitter/build/` postdates `main/splash-data.h`,
-      so the ESP-IDF toolchain has not been exercised in this checkout since
-      21 Aug. The risk table prices a toolchain problem at a day.
+      **First, power it up and confirm the vendor demo — and do that by
+      Sun 6 Sep, not here.** (This read "Sat 6 Sep" for a day. 6 Sep 2026 is a
+      Sunday, which this file says correctly in three other places; a date in
+      this file is blast-radius per `docs/GIT.md`, so the slip is recorded
+      rather than silently fixed.)
+      The board should arrive with a vendor demo that drives the display —
+      recorded of the first board in `CREDITS.md`, and an inference about the
+      second. Flashing overwrites it, so checking costs nothing only before
+      this step; afterwards it needs a reflash from the backup
+      (`docs/HARDWARE.md` §Firmware), which is a 4 MB dump of an 8 MB part and
+      restores the demo rather than cloning the chip.
+      **Why the date is earlier than the step.** A dead board has about a
+      week's replacement lead time (`docs/HARDWARE.md` §Spares) against
+      assembly on 19 Sep, so anything found after ~12 Sep cannot be recovered.
+      Stage 6 opens Mon 14 Sep, so this step sits _entirely_ past that horizon
+      — the guard has to be outside the stage that contains it. 6 Sep is the
+      Tier A gate already in the plan, which is why the check is hung there
+      rather than on a date invented for it.
+      **This is a rebuild, not a re-flash.** Nothing in
+      `packages/device/firmware/blitter/build/` postdates `main/splash-data.h`
+      — the current firmware source has never been built in this checkout at
+      all. That sits against Stage 5's claim that the splash was "built clean
+      and confirmed on the panel", so one of the two is wrong or the build
+      happened somewhere unrecorded. The evidence is untracked mtimes on one
+      machine and nobody else can check it. The risk table prices a toolchain
+      problem at a day — but read its mitigation with this line, not alone.
 
 ---
 
@@ -1243,7 +1258,7 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 | LLM SVG generation loop doesn't produce usable output                                                                                                                                                                          | Spike it in Stage 1 (week one), not Stage 4. Fallback: Aseprite by hand, or upstream's MIT-licensed SVGs as a base to modify.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | One animation eats a week                                                                                                                                                                                                      | Batch-generate, batch-review against each plan's "Not wanted" line. Hard gate: if Tier A is not complete by Sun 6 Sep, Tier B is abandoned in full. The per-animation time-box this row used to name was retired by the spec grill — generation is parallel, review is the bottleneck.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Only one board ordered — no spare if it's damaged or bricked                                                                                                                                                                   | Firmware is flashed once and never changes, so the exposure is lower than upstream's design. Still: order a second this week, it's a week's lead time to replace.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ESP-IDF toolchain eats a day                                                                                                                                                                                                   | Start from Waveshare's working demo. Timebox to one day; the panel is the only thing blocked, and the browser sink keeps everything else moving.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ESP-IDF toolchain eats a day                                                                                                                                                                                                   | ~~Start from Waveshare's working demo~~ **superseded — see the Stage 2 item and `docs/HARDWARE.md` step 1, which now both forbid it.** Timebox to one day; the panel is the only thing blocked, and the browser sink keeps everything else moving.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | Case print slips                                                                                                                                                                                                               | STLs already identified; brief the printer Thu 20 Aug — **that date has passed and no model, measurement or order is recorded; see `docs/HARDWARE.md` §Enclosure.** Bare board is an acceptable fallback, and the go/no-go on taking it wants a date earlier than assembly on 19 Sep.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ## Open

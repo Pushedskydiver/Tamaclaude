@@ -11,9 +11,20 @@
 | Flash   | **8MB** (measured — see below)                     |
 | RAM     | 512KB HP SRAM + 16KB LP SRAM, no PSRAM             |
 | USB     | USB-C, USB 2.0 full-speed (12 Mbps ceiling)        |
-| RGB LED | WS2812 on GPIO8 — present, never driven; see below |
+| RGB LED | WS2812 on GPIO8 — present, never driven (see note) |
 | Storage | microSD (TF) slot — unused, we render on the host  |
 | Radio   | Wi-Fi 6 + BLE 5 — unused                           |
+
+**The RGB LED is never driven, and the evidence is here rather than a hop
+away.** `packages/device/firmware/blitter/main/main.c` declares six pins —
+MOSI 6, SCLK 7, CS 14, DC 15, RST 21, BL 22 — and GPIO8 is not among them.
+Neither firmware requests `driver/rmt` or an LED-strip component, and there is
+no `idf_component.yml` in the tree, so nothing is pulled in as a managed
+component either. It is on the board and it will ship dark.
+
+A previous version of this line said only "see below" and put nothing below,
+while the commit that wrote it claimed the evidence had been moved here. It had
+not been; half of it had been deleted.
 
 > ⚠️ **Upstream's README disagreed with Waveshare, and upstream was right.**
 > clawd-tank's README claimed ESP32-C6FH8 with 8MB; the Waveshare wiki for this
@@ -131,25 +142,42 @@ Community STLs exist for this exact SKU — no modelling required:
 `CREDITS.md`._
 
 **Overdue while `BUILD_PLAN.md`'s "Measure board; send chosen STL to the
-printer" is unchecked** — bound to that box rather than to a date, so this
-sentence stops being true when the box is ticked and not before. Its mitigation
-in the risk table was "brief the printer Thu 20 Aug", which has passed.
+printer" is still `[ ]`.** Bound to that box and to a date together, because
+overdue needs both: the box gives "open", the passed date gives "overdue". The
+date is that item's own mitigation, "brief the printer Thu 20 Aug".
+
+`[ ]` rather than "unchecked", deliberately. The likeliest end for this item is
+the one the next paragraph argues for — take the bare board — and a cancelled
+item goes to `[~]`, which is also unchecked. Bound to "unchecked" this file
+would go on calling the case overdue after the project had decided not to have
+one.
 
 What makes it different from the other open items is narrower than it first
 looks, and the plan is worth reading before this is escalated. It is **not** the
 project's largest risk: the same risk row accepts a bare board as the fallback,
-and the always-giftable rule means a present is handed over either way. Nor is
+and the always-giftable rule means a present is handed over either way — though
+that rule is written about art slippage, "with placeholder art if necessary",
+so an enclosure is its general clause rather than its subject. Nor is
 it the only item with an unbounded tail — the clean-account dry run's bad
 branch is "a packaging project rather than a bug fix" in the plan's own words,
 and the gift-board flash is a rebuild against a toolchain last exercised in
 August.
 
-What is distinctive is one thing: **it is the only outstanding item whose
-completion depends on somebody else's calendar.** That cannot be recovered by
-working harder, which is why it wants a decision date rather than a nudge.
-Assembly is scheduled for Sat 19 Sep, so the go/no-go on the bare-board
-fallback belongs meaningfully earlier — decide it deliberately rather than
-arrive at it.
+**Nor is it the only item depending on somebody else's calendar, and this
+paragraph said it was for a day.** That claim was falsified by the item named
+in the sentence above it: the clean-account dry run's exit criterion is
+"somebody who is not the author, on an account that is not the author's" and a
+_second_ pass with no fixes and no talking — two appointments with a person who
+is not the author. The board the flash needs is a supplier's calendar as well.
+A correction that reproduces the error it corrects, one step narrower, is the
+thing this file has now done twice; it is recorded rather than quietly fixed
+because the next one will look just as reasonable.
+
+What is left is smaller and still worth acting on: this item has a **fallback
+that has to be chosen rather than arrived at.** Assembly is scheduled for Sat
+19 Sep, so the go/no-go on the bare board belongs meaningfully earlier than
+that — and unlike a slipped build, nobody finds out it was needed by working
+harder the week before.
 
 ## Spares
 
