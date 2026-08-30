@@ -29,14 +29,17 @@ import { isBirthday } from '@tamaclaude/packs';
 
 import {
   AGENT_LABEL,
+  agentCondition,
   agentPlist,
   agentPlistPath,
   describeAgentInstall,
   describeAgentStatus,
+  describeInstallOutcome,
   parseAgentStatus,
 } from './agent.js';
 import { runDaemon } from './daemon.js';
 import { chooseDevice, refusalReport } from './device.js';
+import { capDaemonLog, daemonLogPath } from './log.js';
 import { resolvePack } from './pack.js';
 
 /** One line naming the loaded pack and where it came from. */
@@ -131,7 +134,7 @@ async function installAgent(argv: readonly string[]): Promise<void> {
     script: fileURLToPath(import.meta.url),
     pack: resolved.directory,
     socket: defaultSocketPath(),
-    log: join(home, '.tamaclaude', 'daemon.log'),
+    log: daemonLogPath(home),
   };
   process.stdout.write(
     describeAgentInstall(options, plistPath, existsSync(plistPath)),
@@ -166,13 +169,16 @@ async function installAgent(argv: readonly string[]): Promise<void> {
   // while the install says it worked.
   await new Promise((resolve) => setTimeout(resolve, 2000));
   const started = parseAgentStatus(agentListing());
+  // One classification, rendered twice. The verdict line and the closing line
+  // used to be decided separately — `describeAgentStatus` from the exit code,
+  // this one from `pid === undefined` alone — so an absent panel printed
+  // "waiting for a panel, it starts itself" and then "It is not running. The
+  // log is at …". Same fact, two moods, and the second one is the sentence
+  // PR #70 removed from `status` for this exact condition.
+  const nodeExists = existsSync(options.node);
+  process.stdout.write(`${describeAgentStatus(started, nodeExists)}\n`);
   process.stdout.write(
-    `${describeAgentStatus(started, existsSync(options.node))}\n`,
-  );
-  process.stdout.write(
-    started.pid === undefined
-      ? `It is not running. The log is at ${options.log}\n`
-      : `Installed and running. Logs go to ${options.log}\n`,
+    describeInstallOutcome(agentCondition(started, nodeExists), options.log),
   );
 }
 
@@ -352,9 +358,7 @@ function status(): void {
   process.stdout.write(`${describeAgentStatus(parsed, existsSync(node))}\n`);
   const resolved = resolvePack();
   process.stdout.write(`pack      ${describePack(resolved)}\n`);
-  process.stdout.write(
-    `log       ${join(homedir(), '.tamaclaude', 'daemon.log')}\n`,
-  );
+  process.stdout.write(`log       ${daemonLogPath(homedir())}\n`);
 }
 
 /**
@@ -423,6 +427,12 @@ async function devicePathFor(
  * `tamaclaude daemon` — listen, render, and drive the panel until killed.
  */
 async function daemon(argv: readonly string[]): Promise<void> {
+  // **Before `devicePathFor`, which is where this exits.** The growth being
+  // bounded is driven by the no-panel restart loop, and that loop never gets
+  // past device discovery — so a rotation placed after it would run only on
+  // the starts that were never the problem. It is a no-op in a terminal:
+  // `rotateDaemonLog` refuses any stdout that is not the log file itself.
+  process.stdout.write(capDaemonLog(homedir()));
   // **Flags are not device paths.** Adding `--supervised` to the plist made
   // `argv[0]` a flag, which `chooseDevice` cheerfully accepted as the device
   // to open — so the agent would have spent forever retrying a port called

@@ -9,6 +9,7 @@ import {
   AGENT_LABEL,
   agentPlist,
   describeAgentStatus,
+  describeInstallOutcome,
   parseAgentStatus,
 } from './agent.js';
 import { EXIT_NO_PANEL } from './device.js';
@@ -241,5 +242,36 @@ describe('describeAgentStatus', () => {
 
   it('still sends other failures to the log', () => {
     expect(describeAgentStatus(loaded(2 << 8), true)).toContain('see the log');
+  });
+});
+
+describe('describeInstallOutcome', () => {
+  it('does not send the reader to the log when a panel is merely absent', () => {
+    // **The defect: the same fact in two moods.** `install-agent --apply`
+    // printed `describeAgentStatus` — which since PR #70 says "waiting for a
+    // panel" — and then, unconditionally on `pid === undefined`, "It is not
+    // running. The log is at …". So the install reassured and alarmed in
+    // consecutive lines, and pointed at the log for exactly the condition #70
+    // stopped pointing at the log for.
+    const text = describeInstallOutcome('waiting-for-panel', '/tmp/daemon.log');
+    expect(text).not.toContain('/tmp/daemon.log');
+    expect(text).not.toContain('not running');
+    expect(text).toContain('panel');
+  });
+
+  it('does not tell a running install that it is not running', () => {
+    // A review found the success path untested: an implementation that routed
+    // `running` into the "Installed, but it is not running" branch passed the
+    // whole suite, and would have sent somebody with a working panel to the
+    // log to find out why it was broken.
+    const text = describeInstallOutcome('running', '/tmp/daemon.log');
+    expect(text).toContain('running');
+    expect(text).not.toContain('not running');
+  });
+
+  it('still names the log for a failure a person has to diagnose', () => {
+    expect(describeInstallOutcome('failed', '/tmp/daemon.log')).toContain(
+      '/tmp/daemon.log',
+    );
   });
 });
