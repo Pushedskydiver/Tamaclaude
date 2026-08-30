@@ -8,7 +8,7 @@ import type { Frame, Rect } from '@tamaclaude/protocol';
 import { describe, expect, it } from 'vitest';
 
 import { packPalette } from '@tamaclaude/packs';
-import { frame } from '@tamaclaude/protocol';
+import { encodeRect, frame } from '@tamaclaude/protocol';
 
 import { sceneColours } from './band.js';
 import {
@@ -506,3 +506,108 @@ function column(target: Framebuffer, rect: Rect): readonly number[] {
   }
   return out;
 }
+
+describe('the rare scene covering the stage', () => {
+  /** Base64 of a `[mode][payload]` blob, the way a pack carries one. */
+  function blob(words: Uint16Array): string {
+    const { mode, payload } = encodeRect(words);
+    const bytes = new Uint8Array(payload.length + 1);
+    bytes[0] = mode;
+    bytes.set(payload, 1);
+    return btoa(String.fromCharCode(...bytes));
+  }
+
+  const COVER_INK = packPalette(PACK)[2] ?? 0;
+  const SPRITE_INK = packPalette(PACK)[3] ?? 0;
+
+  function cover(width: number, height: number) {
+    const count = width * height;
+    return {
+      width,
+      height,
+      pixels: blob(new Uint16Array(count).fill(COVER_INK)),
+      mask: blob(new Uint16Array(Math.ceil(count / 16)).fill(0xffff)),
+    };
+  }
+
+  /** A solid sprite, so its absence under a cover is checkable. */
+  const spriteFrame = frame(new Uint16Array(16 * 16).fill(SPRITE_INK), 16);
+  const sprite: StageSprite = {
+    frame: spriteFrame,
+    mask: opaqueMask(spriteFrame),
+  };
+
+  it('replaces the cast, and the character is not underneath it', () => {
+    // **The cover is the stage picture, not a prop on top of it.** A scene of
+    // two people coding with Clawd also standing there would read as two
+    // pictures fighting. `SCENE_COVERS` keeps this off every working state for
+    // the same reason in reverse: while something is happening the stage has
+    // to show it.
+    const target = render({
+      ...EMPTY,
+      sprites: [sprite],
+      cover: cover(40, 40),
+    });
+    const lit = litPixels(target);
+    expect(lit.some((at) => pixelAt(target, at.x, at.y) === COVER_INK)).toBe(
+      true,
+    );
+    expect(lit.some((at) => pixelAt(target, at.x, at.y) === SPRITE_INK)).toBe(
+      false,
+    );
+  });
+
+  it('leaves the stage alone when the pack carries no scene', () => {
+    // The whole feature is opt-in. A pack with no scene renders exactly as it
+    // did before this existed, which is what `packs/example` must keep doing.
+    const target = render({ ...EMPTY, sprites: [sprite] });
+    const lit = litPixels(target);
+    expect(lit.some((at) => pixelAt(target, at.x, at.y) === SPRITE_INK)).toBe(
+      true,
+    );
+  });
+
+  it('centres in the portrait band rather than in the slot', () => {
+    // The slot is 160 rows and the portrait stage is 200, so centring against
+    // the constant top-aligned the picture and left 40 rows of sand beneath
+    // it. A review raised this, a verifier dismissed it, and a mutant settled
+    // it: `paintCover` now centres against the band it is handed.
+    const target = render({ ...EMPTY, cover: cover(168, 160) });
+    const band = panelBands('portrait').stage;
+    const rows = litPixels(target).map((at) => at.y);
+    expect(Math.min(...rows)).toBe(band.y + (band.height - 160) / 2);
+  });
+
+  it('falls back to the cast when the scene will not decode', () => {
+    // **The defect this test exists for.** The early return used to fire on
+    // the field being present rather than on the paint having succeeded, so an
+    // undecodable blob suppressed the sprites, the lid mark and the pet and
+    // drew nothing in their place — an empty rock pool that reads as a working
+    // panel. The three tests above all passed against that.
+    const broken = { ...cover(40, 40), pixels: 'AAA=' };
+    const target = render({ ...EMPTY, sprites: [sprite], cover: broken });
+    const lit = litPixels(target);
+    expect(lit.some((at) => pixelAt(target, at.x, at.y) === SPRITE_INK)).toBe(
+      true,
+    );
+  });
+
+  it('stays inside the stage band', () => {
+    // **What this pins is placement, not clipping.** It claimed to catch bleed
+    // for a day; it cannot, and neither could any test, because the schema
+    // caps a scene at the stage's own size so there is nothing to clip. A
+    // mutant widening `within` to the whole panel leaves the suite green and
+    // always will. What it does pin is that a full cover lands wholly inside
+    // the band, which is worth having and is what the assertion says.
+    //
+    // Landscape, because that is where a full cover and the band are the same
+    // rectangle. `EMPTY` is portrait, where the band is 200 rows.
+    const target = render({
+      ...EMPTY,
+      orientation: 'landscape',
+      cover: cover(168, 160),
+    });
+    const bands = panelBands('landscape');
+    expect(strayFrom(target, [bands.stage])).toEqual([]);
+  });
+});

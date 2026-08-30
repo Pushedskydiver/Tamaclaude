@@ -53,7 +53,6 @@ import {
 } from '@tamaclaude/protocol';
 import {
   BIRTHDAY_QR,
-  castsShadow,
   loadSprite,
   panelSize,
   render,
@@ -61,6 +60,7 @@ import {
 } from '@tamaclaude/renderer';
 
 import { messageFor } from './message.js';
+import { stageCoverFor } from './midnight.js';
 
 /**
  * How often the panel is recomposed.
@@ -457,6 +457,7 @@ export function sceneFor(input: SceneInput): Scene {
   const { registry, pack, now } = input;
   const sprites = input.sprites ?? [];
   const panel = resolvePanel(registry, now);
+  const stage = stageCoverFor(input, panel.state);
   return {
     orientation: ORIENTATION,
     layout: 'hero',
@@ -492,10 +493,20 @@ export function sceneFor(input: SceneInput): Scene {
       input.animation !== undefined && PET_APPEARS[input.animation]
         ? pack.pet
         : undefined,
+    // The rare scene, which replaces everything above it on the stage rather
+    // than adding to it. `midnight.ts` owns all three conditions so each can be
+    // mutated on its own; here it is one call because the renderer's contract
+    // is the same as for `logo` and `pet` — it draws what it is given and this
+    // file decides when.
+    cover: stage.cover,
     environment: {
       time: timeOfDay(now),
       extent: ENVIRONMENT_EXTENT,
-      contact: input.animation === undefined || castsShadow(input.animation),
+      // No shadow under a cover. The shadow marks where Clawd's feet meet the
+      // ground, and a scene replaces him — so a cover shorter than the stage
+      // would otherwise float above a contact shadow cast by nobody. Suppressed
+      // rather than drawn, because the scene carries its own ground.
+      contact: stage.contact,
     },
   };
 }

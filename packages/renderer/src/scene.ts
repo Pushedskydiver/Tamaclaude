@@ -13,6 +13,7 @@ import {
   sceneColours,
   TEXT_INSET,
 } from './band.js';
+import { paintCover } from './cover.js';
 import { drawFrame } from './draw.js';
 import { environmentInk, paintEnvironment } from './environment.js';
 import { GLYPH_WIDTH } from './font-data.js';
@@ -161,6 +162,21 @@ export type Scene = {
    * the spec puts it on and nowhere else.
    */
   readonly pet?: PackManifest['pet'];
+  /**
+   * The pack's rare scene, covering the stage, or nothing.
+   *
+   * **Unlike `logo` and `pet` this replaces rather than decorates**, so
+   * `paintStage` returns early on it: no sprites, no lid mark, no pet. A
+   * picture of people at their laptops with Clawd also standing there reads as
+   * two pictures fighting, and the point of the thing is that it is a moment,
+   * not a layer.
+   *
+   * The caller owns when, as it does for `logo` and `pet`.
+   * `packages/cli/src/midnight.ts` holds the condition — the small hours, and
+   * only the states where nothing is happening — because a picture that *is*
+   * the stage must not take the stage away from work in progress.
+   */
+  readonly cover?: PackManifest['scene'];
 };
 
 /**
@@ -240,6 +256,29 @@ function paintStatus(painter: Painter, scene: Scene): void {
  * which is the same job `overflow: hidden` does on the mock's `.slot`.
  */
 function paintStage(painter: Painter, scene: Scene): void {
+  // **The cover replaces the cast, not the world.** Everything below draws the
+  // character, his lid mark and the pet; a scene stands in for all three. The
+  // environment is already painted by the time we get here, so a scene smaller
+  // than the stage sits in the sand rather than on a void — which is what
+  // makes a partial raster worth allowing at all.
+  //
+  // **Conditional on the paint having happened, not on the field being set.**
+  // `paintCover` returns null before it draws anything when the blob will not
+  // decode — and the schema validates dimensions and base64 separately, so a
+  // payload whose length disagrees with its declared size loads cleanly and
+  // fails here. Returning early on that left no cover, no sprite, no lid mark
+  // and no pet: the rock pool with nobody in it, which reads as a working
+  // panel rather than a fault. Measured before the fix — a broken cover left 0
+  // sprite pixels where an absent one leaves 256.
+  //
+  // `render` already had this exact shape eight lines away for the QR, and its
+  // comment gives the reason. It was not applied here.
+  if (
+    scene.cover !== undefined &&
+    paintCover(painter.target, painter.bands.stage, scene.cover) !== null
+  ) {
+    return;
+  }
   const crop =
     scene.orientation === 'landscape'
       ? safeAreaCropUnits() * stageScale(scene.layout)

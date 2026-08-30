@@ -1,7 +1,8 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table, an optional birthday, an optional logo
+ * A pack is a palette, a quip table, an optional birthday, an optional logo,
+ * an optional pet and an optional scene
  * and an optional pet. Props beyond the pet are planned (`BUILD_PLAN.md`
  * Stage 5) and are not fields yet.
  * The character
@@ -21,7 +22,7 @@
  * and the pet sprite will.
  *
  * The schema below is `name`, `palette`, `quips`, an optional `birthday`, an
- * optional `logo` and an optional `pet`. Props land with the renderer. This line enumerates the
+ * optional `logo`, an optional `pet` and an optional `scene`. Props land with the renderer. This line enumerates the
  * schema exhaustively on purpose, so adding a field without touching it is a
  * visible omission — and it has now caught two: `birthday` went in under the
  * wording that named only the first three, and `logo` went in under the
@@ -193,6 +194,52 @@ const packManifestSchema = z.object({
       /** `.min(1)` for the same reason as the logo's: see above. */
       pixels: z.string().min(1).regex(BASE64, 'pet.pixels must be base64'),
       mask: z.string().min(1).regex(BASE64, 'pet.mask must be base64'),
+    })
+    .optional(),
+  /**
+   * The rare scene, shown to somebody still working in the small hours.
+   *
+   * **The third piece of pack art, and the first that covers rather than
+   * decorates.** `logo` marks the laptop lid and `pet` stands on the sand; this
+   * replaces the stage picture outright while the desk is resting, which is why
+   * `packages/cli/src/midnight.ts` restricts it to `IDLE` and `ASLEEP` — a
+   * picture that *is* the stage must not take the stage away from work in
+   * progress.
+   *
+   * **It is a pack field for the reason the logo and the pet are.** The scene
+   * depicts two real people. `CLAUDE.md` is unconditional that a personal
+   * detail does not enter a tracked file, so this repo carries the bounds, the
+   * painter and the trigger, and the picture itself lives in a private pack.
+   * `packs/example` has no scene and should never gain one.
+   */
+  scene: z
+    .object({
+      /**
+       * **Bounded by the stage it covers**, 168x160 device pixels —
+       * `COVER_SLOT` in `packages/renderer/src/cover.ts`, where the reasoning
+       * lives, with a test there asserting these agree. This package sits below
+       * the renderer and cannot import them, so the limits are repeated and the
+       * drift is caught by that test.
+       *
+       * **Not the pet's bounds.** That field caps at 60x42 for a prop standing
+       * in a corner of the sand; copying it here would refuse every picture
+       * this field exists for. The pet's own comment warns against copying the
+       * logo's bounds for the same reason — as a hazard it names, not a
+       * mistake anybody committed. This comment said "records the same mistake
+       * being made" for a day, which is a stronger claim than the history
+       * supports.
+       *
+       * Smaller is allowed and costs less: a scene is centred in the stage
+       * rather than required to fill it, so the pack author chooses what the
+       * manifest carries. A full 168x160 is 26,880 pixels against the pet
+       * slot's 2,520 — about eleven times, not the fourteen this said for a
+       * day.
+       */
+      width: z.number().int().min(1).max(168),
+      height: z.number().int().min(1).max(160),
+      /** `.min(1)` for the same reason as the logo's and the pet's. */
+      pixels: z.string().min(1).regex(BASE64, 'scene.pixels must be base64'),
+      mask: z.string().min(1).regex(BASE64, 'scene.mask must be base64'),
     })
     .optional(),
 });

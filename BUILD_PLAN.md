@@ -999,8 +999,21 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [~] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the
   pack. **The quip half is built** — `messageFor` rotates `quips.idle` by
   the minute on `IDLE`. The franchise-flavoured animation is not.
-- [ ] Pixel scene of the two of them coding — rare trigger only (birthday, past midnight).
-      Recognition via silhouette, palette and props; facial likeness is not achievable at ~50px per figure.
+- [~] Pixel scene of the two of them coding — **mechanism built, picture not
+  drawn.** The trigger, the pack field, the slot, the painter and the
+  compositor wiring are in; a pack carrying a scene would show it tonight.
+  What is missing is the art, and the recognition cues it needs are the
+  owner's: silhouette, palette and props, since facial likeness is not
+  achievable at ~50px per figure.
+  **The trigger is "session running past midnight", not "birthday, past
+  midnight".** This line said the latter until 30 Aug and the frozen screen
+  spec said the former; the spec wins, and the reason is worth keeping. On
+  the birthday-gated version the scene fires at most once ever, only if
+  somebody happens to be at the keyboard after midnight on 23 Sep, and on
+  the one night the birthday screen already owns the stage. A picture that
+  may never be seen is not a rare screen, it is a screen with a bug.
+  `packages/cli/src/midnight.ts` holds the condition and the states it may
+  cover; the picture lives in the private pack, per the privacy rule.
 - [x] Birthday screen, date-triggered 23 Sep. **Trigger, art, stage and QR are
       built, and the screen has been seen on the panel.** It went `[~]` earlier on
       26 Aug for the right reason — every check was a unit test against a synthetic

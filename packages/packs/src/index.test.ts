@@ -278,3 +278,43 @@ describe('a pack logo', () => {
     expect(() => parsePackManifest({ ...base, logo: { ...logo, pixels: 'not base64!' } })).toThrow();
   });
 });
+
+describe('a pack scene', () => {
+  const base = {
+    name: 'p',
+    palette: [
+      [0, 0, 0],
+      [255, 255, 255],
+    ],
+    quips: { mapped: {}, idle: [] },
+  };
+  const scene = { width: 96, height: 64, pixels: 'AAA=', mask: 'AAA=' };
+
+  it('is optional, and a pack without one is unchanged', () => {
+    // The whole feature is opt-in, exactly as `birthday`, `logo` and `pet`
+    // are. `packs/example` carries no scene and should not: the picture is of
+    // two real people, so it lives only in a private pack.
+    expect(parsePackManifest(base).scene).toBeUndefined();
+  });
+
+  it('is accepted when it carries dimensions and both payloads', () => {
+    expect(parsePackManifest({ ...base, scene }).scene).toEqual(scene);
+  });
+
+  it('is bounded by the stage, not by the pet slot', () => {
+    // This one covers the stage rather than standing on it, so its bounds are
+    // the stage's own 168x160 — `COVER_SLOT` in
+    // `packages/renderer/src/cover.ts`, with a test there asserting these
+    // agree. Copying the pet's 60x42 would refuse the art this field exists
+    // for, which is the mistake that field's own comment records about the
+    // logo's bounds.
+    expect(() =>
+      parsePackManifest({ ...base, scene: { ...scene, width: 169 } }),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest({ ...base, scene: { ...scene, height: 161 } }),
+    ).toThrow();
+    const full = { ...scene, width: 168, height: 160 };
+    expect(parsePackManifest({ ...base, scene: full }).scene).toEqual(full);
+  });
+});
