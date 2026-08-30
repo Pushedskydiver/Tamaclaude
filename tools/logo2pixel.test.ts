@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { COVER_SLOT } from '../packages/renderer/src/cover.ts';
 import { LID_SLOT, paintLogo } from '../packages/renderer/src/logo.ts';
 import { PET_SLOT } from '../packages/renderer/src/pet.ts';
 import { SLOTS } from './pack-slots.ts';
@@ -414,10 +415,21 @@ describe('the slots this tool quantises for', () => {
       width: LID_SLOT.width,
       height: LID_SLOT.height,
     });
+    // The scene joined the schema without the baker being told, so a valid
+    // 168x160 cover was warned about as fitting no slot and offered only
+    // "logo" or "pet" to paste into. A third slot is a third chance for this
+    // hand-copy to drift.
+    expect(named.scene).toMatchObject({
+      width: COVER_SLOT.width,
+      height: COVER_SLOT.height,
+    });
     expect(named.pet).toMatchObject({
       width: PET_SLOT.width,
       height: PET_SLOT.height,
     });
-    expect(SLOTS.length).toBe(2);
+    // The totality guard, and it earned itself: adding `scene` to the table
+    // failed here first, which is the point of asserting the count as well as
+    // the members.
+    expect(SLOTS.length).toBe(3);
   });
 });

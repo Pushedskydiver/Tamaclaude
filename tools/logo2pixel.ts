@@ -125,6 +125,19 @@ import { opaqueRuns, runsToRects } from './pixel-rects.ts';
 import { scaleToWidth, viewBoxUnits } from './svg-viewbox.ts';
 
 /**
+ * Slot name to manifest field, because they are not the same word.
+ *
+ * The lid's slot is `lid` — where the mark goes — and the field is `logo`.
+ * That gap is why the old message hard-coded its two names rather than
+ * deriving them, and hard-coding is why it never learned about the third.
+ */
+const FIELD_FOR: Readonly<Record<(typeof SLOTS)[number]['name'], string>> = {
+  lid: 'logo',
+  pet: 'pet',
+  scene: 'scene',
+};
+
+/**
  * Default width in panel pixels.
  *
  * The landscape stage is 168px wide and the message band 152px, so 48 is
@@ -438,9 +451,18 @@ try {
         2,
       ),
     );
+    // **Names the fields it actually fits.** This said `"logo" or "pet"`
+    // regardless, so a full-stage scene — a valid field since the rare scene
+    // landed — was offered two slots it could not go in and not the one it
+    // could. `fits` is already computed above for the warning; using it here
+    // is what stops the two disagreeing.
+    const where =
+      fits.length === 0
+        ? 'but it fits no pack field — see the warning above'
+        : `paste the object above into the pack's manifest as ` +
+          fits.map((slot) => `"${FIELD_FOR[slot.name]}"`).join(' or ');
     console.error(
-      `${size.width}x${size.height}, ${String(drawn)} of ${String(total)} pixels drawn — ` +
-        `paste the object above into the pack's manifest as "logo" or "pet"`,
+      `${size.width}x${size.height}, ${String(drawn)} of ${String(total)} pixels drawn — ${where}`,
     );
   } else if (values.format === 'rects') {
     // Rects are emitted from the origin so placement is the caller's, via an
