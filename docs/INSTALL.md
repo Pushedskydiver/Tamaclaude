@@ -266,6 +266,13 @@ If none of those, the log is at `~/.tamaclaude/daemon.log` — written only by
 the automatic startup from step 6, so it will not exist if you never got that
 far.
 
+It does not grow forever. When it passes a megabyte the current one is set
+aside as `~/.tamaclaude/daemon.log.1` and a fresh one starts, so there are
+never more than two and never more than about two megabytes. The first line of
+the new one says that is what happened. Nothing older than those two is kept —
+if you are chasing something intermittent, copy the log somewhere before it
+turns over.
+
 ## Changing your pack
 
 If you cloned it, pull:

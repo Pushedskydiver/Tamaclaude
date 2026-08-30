@@ -202,6 +202,56 @@ export function parseAgentStatus(text: string | undefined): AgentStatus {
 }
 
 /**
+ * What the agent is actually doing, as something other than a sentence.
+ *
+ * **Two commands ask the same question and used to answer it separately.**
+ * `status` rendered a line; `install-agent --apply` re-derived "is it running"
+ * from `pid === undefined` alone. So the install could print "waiting for a
+ * panel — plug it in and it starts itself" and, on the next line, "It is not
+ * running. The log is at …" — the same fact in two moods, and a pointer at the
+ * log for precisely the condition PR #70 stopped pointing at the log for.
+ *
+ * A kind rather than a string, for the reason `device.ts` gives at length: a
+ * caller that re-reads the rendered text couples itself to the wording, and an
+ * ordinary edit to the wording reverts the behaviour with every gate green.
+ * That is not hypothetical here either — it is the exact mutant a review
+ * planted in `refusalReport`.
+ */
+export type AgentCondition =
+  | 'not-installed'
+  | 'node-gone'
+  | 'running'
+  /** Loaded, not running, and the last run ended cleanly or never happened. */
+  | 'idle'
+  | 'waiting-for-panel'
+  | 'failed';
+
+/**
+ * Classify a status. The single decoder of `LastExitStatus`.
+ *
+ * `LastExitStatus` is a raw `wait(2)` status, not an exit code: exit 1 comes
+ * back as 256, and a signalled death puts the signal in the low seven bits.
+ */
+export function agentCondition(
+  status: AgentStatus,
+  nodeExists: boolean,
+): AgentCondition {
+  if (!status.loaded) return 'not-installed';
+  if (!nodeExists) return 'node-gone';
+  if (status.pid !== undefined) return 'running';
+  const exit = status.lastExit;
+  if (exit === undefined || exit === 0) return 'idle';
+  const signal = exit & 0x7f;
+  // **An absent panel is not a fault, and it used to read as one.** The daemon
+  // exits `EXIT_NO_PANEL` when discovery finds nothing, which is what happens
+  // every time the cable comes out. Sending that to the log made the ordinary
+  // case look like the broken one — and the log is where the genuinely
+  // ambiguous failures live.
+  if (signal === 0 && exit >> 8 === EXIT_NO_PANEL) return 'waiting-for-panel';
+  return 'failed';
+}
+
+/**
  * One line a person can act on, given a status and whether node still exists.
  *
  * The `nodeExists` half is the one nobody would think to check.
@@ -216,34 +266,54 @@ export function describeAgentStatus(
   status: AgentStatus,
   nodeExists: boolean,
 ): string {
-  if (!status.loaded) return 'agent     not installed';
-  if (!nodeExists) {
-    return (
-      'agent     loaded, but the node it was installed with is gone\n' +
-      '          re-run `pnpm tamaclaude install-agent --apply` to point it at the current one'
-    );
+  switch (agentCondition(status, nodeExists)) {
+    case 'not-installed':
+      return 'agent     not installed';
+    case 'node-gone':
+      return (
+        'agent     loaded, but the node it was installed with is gone\n' +
+        '          re-run `pnpm tamaclaude install-agent --apply` to point it at the current one'
+      );
+    case 'running':
+      return `agent     running (pid ${String(status.pid)})`;
+    case 'idle':
+      return 'agent     loaded, not running';
+    case 'waiting-for-panel':
+      return (
+        'agent     loaded, waiting for a panel — plug it in and it starts itself\n' +
+        '          (`pnpm tamaclaude install-agent` prints the device it would use)'
+      );
+    case 'failed': {
+      // Printing the wait status undecoded made the one number a person needs
+      // into a number they would have to look up.
+      const exit = status.lastExit ?? 0;
+      const signal = exit & 0x7f;
+      const detail =
+        signal === 0 ? `exit ${String(exit >> 8)}` : `signal ${String(signal)}`;
+      return `agent     loaded but not running; last ${detail} — see the log`;
+    }
   }
-  if (status.pid !== undefined) {
-    return `agent     running (pid ${String(status.pid)})`;
+}
+
+/**
+ * The last line of `install-agent --apply`: what was installed, and whether
+ * there is anything left to do.
+ *
+ * Takes the condition rather than the status so it cannot disagree with the
+ * line printed immediately above it — which is the whole defect this exists to
+ * fix. Only three outcomes matter here: it is running, it is waiting for
+ * hardware nobody has plugged in yet, or something needs diagnosing and the
+ * log is where that happens.
+ */
+export function describeInstallOutcome(
+  condition: AgentCondition,
+  log: string,
+): string {
+  if (condition === 'running') {
+    return `Installed and running. Logs go to ${log}\n`;
   }
-  const exit = status.lastExit;
-  if (exit === undefined || exit === 0) return 'agent     loaded, not running';
-  // `LastExitStatus` is a raw `wait(2)` status, not an exit code: exit 1 comes
-  // back as 256. Printing it undecoded made the one number a person needs into
-  // a number they would have to look up.
-  const signal = exit & 0x7f;
-  // **An absent panel is not a fault, and it used to read as one.** The daemon
-  // exits `EXIT_NO_PANEL` when discovery finds nothing, which is what happens
-  // every time the cable comes out. Sending that to the log made the ordinary
-  // case look like the broken one — and the log is where the genuinely
-  // ambiguous failures live.
-  if (signal === 0 && exit >> 8 === EXIT_NO_PANEL) {
-    return (
-      'agent     loaded, waiting for a panel — plug it in and it starts itself\n' +
-      '          (`pnpm tamaclaude install-agent` prints the device it would use)'
-    );
+  if (condition === 'waiting-for-panel') {
+    return 'Installed. Plug the panel in and it starts itself within thirty seconds; there is nothing else to run.\n';
   }
-  const detail =
-    signal === 0 ? `exit ${String(exit >> 8)}` : `signal ${String(signal)}`;
-  return `agent     loaded but not running; last ${detail} — see the log`;
+  return `Installed, but it is not running. The log is at ${log}\n`;
 }
