@@ -52,11 +52,15 @@ describe('paintCover', () => {
   });
 
   it('agrees with the bounds the pack schema enforces', () => {
-    // **Asks the schema, rather than restating its numbers.** This test read
-    // `expect(COVER_SLOT.width).toBe(168)` for a day — two literals compared
-    // to two literals, which passes however far the schema drifts, while three
-    // comments claimed it was the guard against exactly that. A review caught
-    // it. Parsing a manifest at the boundary is what actually couples them.
+    // **Asks the schema, rather than restating its numbers.** This read
+    // `expect(COVER_SLOT.width).toBe(168)` until a review caught it — two
+    // literals compared to two literals, which passes however far the schema
+    // drifts, while three comments called it the guard against exactly that.
+    // Parsing a manifest at the boundary is what actually couples them.
+    //
+    // It only bites after a rebuild: `packages/packs` is imported from `dist`,
+    // and `pnpm test` runs `tsc -b` first, so the documented command is fine
+    // and a bare `vitest run` is not.
     const base = {
       name: 'p',
       palette: [

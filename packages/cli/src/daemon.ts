@@ -429,8 +429,13 @@ export type SceneInput = {
   /**
    * Which animation the sprites are frames of.
    *
-   * **Two things read it now**, and it stays optional, so a caller that omits
-   * it loses the QR on the birthday with no type error to show for it.
+   * **Five things read it now**, and it stays optional, so a caller that omits
+   * it loses all five with no type error to show for it: the QR on the
+   * birthday, the lid logo, the pet, the contact shadow, and — since the rare
+   * scene landed — the birthday's precedence over that scene, which is decided
+   * from this field in `midnight.ts` rather than from a second `isBirthday`
+   * call. This said "two" while four read it, and the commit that added the
+   * fifth left the count alone.
    *
    * The ground shadow was the first: the environment is painted before any
    * sprite exists, so the layer that draws the shadow cannot tell whether the

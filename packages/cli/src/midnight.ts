@@ -100,9 +100,11 @@ export function coverFor(input: {
 }): PackManifest['scene'] {
   const { pack, state, now, animation } = input;
   // **The birthday outranks it, and this is where that is settled.**
-  // `SCENE_COVERS` and `BIRTHDAY_COVERS` are the same table — both cover
-  // resting states and nothing else — so between midnight and five on 23 Sep
-  // they fire together. Without this line the scene wins by drawing later, and
+  // `SCENE_COVERS` and `BIRTHDAY_COVERS` are the same table — `IDLE` and
+  // `ASLEEP`, and nothing else — so between midnight and five on 23 Sep they
+  // fire together. Not "resting states": `TONE` counts `DONE` as resting and
+  // both tables deliberately exclude it, which `BIRTHDAY_COVERS`'s own doc
+  // closes by warning about. Without this line the scene wins by drawing later, and
   // it wins silently: `daemon.ts` still shows the QR, which is tied to the
   // birthday decision, so the panel would carry a birthday QR under a picture
   // that is not the birthday screen.
