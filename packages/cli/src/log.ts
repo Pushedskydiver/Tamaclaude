@@ -84,6 +84,23 @@ const LOG_MAX_BYTES = 1024 * 1024;
 export type Rotation =
   'rotated' | 'under-cap' | 'absent' | 'not-our-stdout' | 'failed';
 
+/**
+ * Are these two stats the same file?
+ *
+ * Its own predicate purely so the `dev` half can be tested. Inode numbers are
+ * per-volume, so no pair of real files can be arranged to collide across
+ * volumes on demand — a review planted the mutant that drops the `dev`
+ * comparison and every test stayed green, because both fixtures lived in one
+ * temporary directory and `dev` never decided anything. A fabricated pair of
+ * stats can make that decision happen; two real files cannot.
+ */
+export function isSameFile(
+  a: Pick<Stats, 'dev' | 'ino'>,
+  b: Pick<Stats, 'dev' | 'ino'>,
+): boolean {
+  return a.dev === b.dev && a.ino === b.ino;
+}
+
 /** `statSync`, but a missing file is an answer rather than an exception. */
 function statOrMissing(path: string): Stats | undefined {
   try {
@@ -123,11 +140,7 @@ export function rotateDaemonLog(
   // the inode, so two handles on one inode cannot disagree about it. A stdout
   // that is a terminal or a pipe has neither the device nor the inode of a
   // file on the data volume and fails here.
-  if (
-    stdout === undefined ||
-    stdout.dev !== onDisk.dev ||
-    stdout.ino !== onDisk.ino
-  ) {
+  if (stdout === undefined || !isSameFile(stdout, onDisk)) {
     return 'not-our-stdout';
   }
   if (onDisk.size <= maxBytes) return 'under-cap';

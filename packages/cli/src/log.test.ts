@@ -13,7 +13,7 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { capDaemonLog, rotateDaemonLog } from './log.js';
+import { capDaemonLog, isSameFile, rotateDaemonLog } from './log.js';
 
 const root = mkdtempSync(join(tmpdir(), 'tamaclaude-log-'));
 
@@ -147,5 +147,18 @@ describe('capDaemonLog', () => {
     const fd = openSync(path, 'a');
     expect(capDaemonLog(home, fd)).toBe('');
     closeSync(fd);
+  });
+});
+
+describe('isSameFile', () => {
+  it('separates two volumes that reused an inode number', () => {
+    // **The arm no pair of real files can exercise.** Inode numbers are
+    // per-volume, so a cross-volume collision cannot be arranged on demand,
+    // and every fixture above lives in one temporary directory — which is why
+    // a review's mutant deleting the `dev` comparison passed the whole suite.
+    // Fabricated stats can make that comparison decide something.
+    expect(isSameFile({ dev: 1, ino: 42 }, { dev: 1, ino: 42 })).toBe(true);
+    expect(isSameFile({ dev: 2, ino: 42 }, { dev: 1, ino: 42 })).toBe(false);
+    expect(isSameFile({ dev: 1, ino: 43 }, { dev: 1, ino: 42 })).toBe(false);
   });
 });

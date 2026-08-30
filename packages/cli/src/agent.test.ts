@@ -259,6 +259,16 @@ describe('describeInstallOutcome', () => {
     expect(text).toContain('panel');
   });
 
+  it('does not tell a running install that it is not running', () => {
+    // A review found the success path untested: an implementation that routed
+    // `running` into the "Installed, but it is not running" branch passed the
+    // whole suite, and would have sent somebody with a working panel to the
+    // log to find out why it was broken.
+    const text = describeInstallOutcome('running', '/tmp/daemon.log');
+    expect(text).toContain('running');
+    expect(text).not.toContain('not running');
+  });
+
   it('still names the log for a failure a person has to diagnose', () => {
     expect(describeInstallOutcome('failed', '/tmp/daemon.log')).toContain(
       '/tmp/daemon.log',
