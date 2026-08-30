@@ -5,15 +5,15 @@
 **Waveshare ESP32-C6-LCD-1.47**
 ([wiki](https://www.waveshare.com/wiki/ESP32-C6-LCD-1.47))
 
-| Spec    | Value                                             |
-| ------- | ------------------------------------------------- |
-| Display | ST7789, 172×320, 262K colour, SPI                 |
-| Flash   | **8MB** (measured — see below)                    |
-| RAM     | 512KB HP SRAM + 16KB LP SRAM, no PSRAM            |
-| USB     | USB-C, USB 2.0 full-speed (12 Mbps ceiling)       |
-| RGB LED | WS2812 on GPIO8                                   |
-| Storage | microSD (TF) slot — unused, we render on the host |
-| Radio   | Wi-Fi 6 + BLE 5 — unused                          |
+| Spec    | Value                                              |
+| ------- | -------------------------------------------------- |
+| Display | ST7789, 172×320, 262K colour, SPI                  |
+| Flash   | **8MB** (measured — see below)                     |
+| RAM     | 512KB HP SRAM + 16KB LP SRAM, no PSRAM             |
+| USB     | USB-C, USB 2.0 full-speed (12 Mbps ceiling)        |
+| RGB LED | WS2812 on GPIO8 — present, never driven; see below |
+| Storage | microSD (TF) slot — unused, we render on the host  |
+| Radio   | Wi-Fi 6 + BLE 5 — unused                           |
 
 > ⚠️ **Upstream's README disagreed with Waveshare, and upstream was right.**
 > clawd-tank's README claimed ESP32-C6FH8 with 8MB; the Waveshare wiki for this
@@ -46,11 +46,19 @@ rate instead, and that would have been found out at Stage 2 rather than now.
 
 ## Bring-up checklist
 
-1. Flash Waveshare's factory demo. It prints flash size to the LCD and
-   exercises the display and WS2812 — one step confirms the board is good and
-   answers the flash question.
-2. Record the measured flash size above.
-3. Measure the board's physical dimensions before ordering a print.
+1. ~~Flash Waveshare's factory demo.~~ **Do not.** It was written to answer
+   the flash question and confirm the board — the first is answered above, and
+   flashing the blitter confirms the board through the code that ships. Its
+   other half exercised the WS2812, which nothing in either firmware drives:
+   `blitter/main/main.c` declares six pins and GPIO8 is not among them. See
+   §Firmware below, which has said "we did not need Waveshare's demo after
+   all" since 21 Aug while this step went on instructing it.
+   **A board that has never been flashed is a different case**, and there the
+   demo it arrives with is worth one minute before you overwrite it — that is
+   a precondition of Stage 6's gift-board flash, not a step here.
+2. ~~Record the measured flash size above.~~ Done: 8MB, 20 Aug.
+3. Measure the board's physical dimensions before ordering a print. **Still
+   open** — see §Enclosure.
 
 ## Firmware
 
@@ -122,15 +130,26 @@ Community STLs exist for this exact SKU — no modelling required:
 **Chosen model:** _TBD — record the model and its licence here once picked, for
 `CREDITS.md`._
 
-**This is overdue, not pending, and as of 30 Aug it is the single deadline
-risk on the project.** `BUILD_PLAN.md`'s own mitigation for "case print slips"
-was "brief the printer Thu 20 Aug"; that date has passed and neither this file
-nor the plan records whether a model was chosen, a board measured, or a print
-ordered. Every other outstanding item can be recovered by working harder in
-the last week. This one cannot: it depends on somebody else's time, the
-replacement lead time for the board alone is about a week, and the case has to
-exist by 19 Sep. The bare board remains the stated fallback, which is the
-thing to decide deliberately rather than arrive at.
+**Overdue while `BUILD_PLAN.md`'s "Measure board; send chosen STL to the
+printer" is unchecked** — bound to that box rather than to a date, so this
+sentence stops being true when the box is ticked and not before. Its mitigation
+in the risk table was "brief the printer Thu 20 Aug", which has passed.
+
+What makes it different from the other open items is narrower than it first
+looks, and the plan is worth reading before this is escalated. It is **not** the
+project's largest risk: the same risk row accepts a bare board as the fallback,
+and the always-giftable rule means a present is handed over either way. Nor is
+it the only item with an unbounded tail — the clean-account dry run's bad
+branch is "a packaging project rather than a bug fix" in the plan's own words,
+and the gift-board flash is a rebuild against a toolchain last exercised in
+August.
+
+What is distinctive is one thing: **it is the only outstanding item whose
+completion depends on somebody else's calendar.** That cannot be recovered by
+working harder, which is why it wants a decision date rather than a nudge.
+Assembly is scheduled for Sat 19 Sep, so the go/no-go on the bare-board
+fallback belongs meaningfully earlier — decide it deliberately rather than
+arrive at it.
 
 ## Spares
 
