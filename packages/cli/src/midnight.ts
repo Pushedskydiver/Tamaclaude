@@ -14,8 +14,10 @@
  * and `pet`; this repo carries the trigger, the slot and the tests, and names
  * the picture by its role.
  */
-import type { SessionState } from '@tamaclaude/daemon';
+import type { AnimationName, SessionState } from '@tamaclaude/daemon';
 import type { PackManifest } from '@tamaclaude/packs';
+
+import { castsShadow } from '@tamaclaude/renderer';
 
 /**
  * When "past midnight" is, for the rare scene the pack may carry.
@@ -90,11 +92,56 @@ export const SCENE_COVERS: Readonly<Record<SessionState, boolean>> = {
  * and proves nothing about the rest, which is how the device half of the log
  * rotation's identity check went untested until a review found it.
  */
-export function coverFor(
-  pack: PackManifest,
-  state: SessionState,
-  now: number,
-): PackManifest['scene'] {
+export function coverFor(input: {
+  readonly pack: PackManifest;
+  readonly state: SessionState;
+  readonly now: number;
+  readonly animation?: AnimationName | undefined;
+}): PackManifest['scene'] {
+  const { pack, state, now, animation } = input;
+  // **The birthday outranks it, and this is where that is settled.**
+  // `SCENE_COVERS` and `BIRTHDAY_COVERS` are the same table — both cover
+  // resting states and nothing else — so between midnight and five on 23 Sep
+  // they fire together. Without this line the scene wins by drawing later, and
+  // it wins silently: `daemon.ts` still shows the QR, which is tied to the
+  // birthday decision, so the panel would carry a birthday QR under a picture
+  // that is not the birthday screen.
+  //
+  // Asked of the animation rather than of `isBirthday`, deliberately.
+  // `daemon.ts` says of the QR that "a second `isBirthday` call here would be a
+  // second rule to keep in step with the first", and that reasoning binds this
+  // caller too — `animationForPanel` has already decided the date and the state
+  // together, so this reads its answer instead of re-deriving it.
+  if (animation === 'birthday') return undefined;
   if (!SCENE_COVERS[state]) return undefined;
   return isSmallHours(now) ? pack.scene : undefined;
+}
+
+/**
+ * What a cover does to the stage: the picture, and whether a shadow survives.
+ *
+ * **One call, because the two answers are one decision.** A scene replaces the
+ * character, so the contact shadow — the mark of where his feet meet the
+ * ground — would be cast by nobody. The schema invites scenes smaller than the
+ * stage, so that orphan shadow would sit in plain sight beside one.
+ *
+ * Returning both from here rather than deciding them separately in
+ * `daemon.ts` is also what keeps that file under `max-lines`, which is the
+ * second time today a file with no room has been right about where code goes.
+ */
+export function stageCoverFor(
+  input: {
+    readonly pack: PackManifest;
+    readonly now: number;
+    readonly animation?: AnimationName | undefined;
+  },
+  state: SessionState,
+): {
+  readonly cover: PackManifest['scene'];
+  readonly contact: boolean;
+} {
+  const { animation } = input;
+  const cover = coverFor({ ...input, state });
+  const shadow = animation === undefined || castsShadow(animation);
+  return { cover, contact: cover === undefined && shadow };
 }

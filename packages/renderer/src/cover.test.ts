@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { parsePackManifest } from '@tamaclaude/packs';
 import { encodeRect } from '@tamaclaude/protocol';
 
 import { COVER_SLOT, paintCover } from './cover.js';
@@ -51,12 +52,32 @@ describe('paintCover', () => {
   });
 
   it('agrees with the bounds the pack schema enforces', () => {
-    // `packages/packs` sits below the renderer and cannot import this, so its
-    // `scene` field repeats 168x160 as literals. This is the assertion that
-    // catches them drifting apart — the same guard `pet.test.ts` carries, and
-    // the reason that field's comment names this constant.
-    expect(COVER_SLOT.width).toBe(168);
-    expect(COVER_SLOT.height).toBe(160);
+    // **Asks the schema, rather than restating its numbers.** This test read
+    // `expect(COVER_SLOT.width).toBe(168)` for a day — two literals compared
+    // to two literals, which passes however far the schema drifts, while three
+    // comments claimed it was the guard against exactly that. A review caught
+    // it. Parsing a manifest at the boundary is what actually couples them.
+    const base = {
+      name: 'p',
+      palette: [
+        [0, 0, 0],
+        [255, 255, 255],
+      ],
+      quips: { mapped: {}, idle: [] },
+    };
+    const at = (width: number, height: number) => ({
+      ...base,
+      scene: { width, height, pixels: 'AAA=', mask: 'AAA=' },
+    });
+    expect(() =>
+      parsePackManifest(at(COVER_SLOT.width, COVER_SLOT.height)),
+    ).not.toThrow();
+    expect(() =>
+      parsePackManifest(at(COVER_SLOT.width + 1, COVER_SLOT.height)),
+    ).toThrow();
+    expect(() =>
+      parsePackManifest(at(COVER_SLOT.width, COVER_SLOT.height + 1)),
+    ).toThrow();
   });
 
   it('reports null rather than nothing when the payload will not decode', () => {

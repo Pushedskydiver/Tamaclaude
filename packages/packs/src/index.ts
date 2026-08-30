@@ -1,7 +1,8 @@
 /**
  * Pack format: the entire customisation surface.
  *
- * A pack is a palette, a quip table, an optional birthday, an optional logo
+ * A pack is a palette, a quip table, an optional birthday, an optional logo,
+ * an optional pet and an optional scene
  * and an optional pet. Props beyond the pet are planned (`BUILD_PLAN.md`
  * Stage 5) and are not fields yet.
  * The character
@@ -222,13 +223,17 @@ const packManifestSchema = z.object({
        *
        * **Not the pet's bounds.** That field caps at 60x42 for a prop standing
        * in a corner of the sand; copying it here would refuse every picture
-       * this field exists for. The pet's own comment records the same mistake
-       * being made from the logo's bounds one field earlier.
+       * this field exists for. The pet's own comment warns against copying the
+       * logo's bounds for the same reason — as a hazard it names, not a
+       * mistake anybody committed. This comment said "records the same mistake
+       * being made" for a day, which is a stronger claim than the history
+       * supports.
        *
        * Smaller is allowed and costs less: a scene is centred in the stage
        * rather than required to fill it, so the pack author chooses what the
-       * manifest carries. A full 168x160 is roughly fourteen times the pet's
-       * pixel count.
+       * manifest carries. A full 168x160 is 26,880 pixels against the pet
+       * slot's 2,520 — about eleven times, not the fourteen this said for a
+       * day.
        */
       width: z.number().int().min(1).max(168),
       height: z.number().int().min(1).max(160),

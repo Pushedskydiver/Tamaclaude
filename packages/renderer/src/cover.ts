@@ -66,12 +66,8 @@ export function paintCover(
   // Centred. A scene need not fill the stage, and one anchored to a corner
   // would read as a picture that failed to load rather than as a small one.
   const at = {
-    x:
-      stage.x + COVER_SLOT.x + Math.round((COVER_SLOT.width - scene.width) / 2),
-    y:
-      stage.y +
-      COVER_SLOT.y +
-      Math.round((COVER_SLOT.height - scene.height) / 2),
+    x: stage.x + Math.round((stage.width - scene.width) / 2),
+    y: stage.y + Math.round((stage.height - scene.height) / 2),
     width: scene.width,
     height: scene.height,
   };

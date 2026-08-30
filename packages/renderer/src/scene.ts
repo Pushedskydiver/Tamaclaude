@@ -261,8 +261,22 @@ function paintStage(painter: Painter, scene: Scene): void {
   // environment is already painted by the time we get here, so a scene smaller
   // than the stage sits in the sand rather than on a void — which is what
   // makes a partial raster worth allowing at all.
-  if (scene.cover !== undefined) {
-    paintCover(painter.target, painter.bands.stage, scene.cover);
+  //
+  // **Conditional on the paint having happened, not on the field being set.**
+  // `paintCover` returns null before it draws anything when the blob will not
+  // decode — and the schema validates dimensions and base64 separately, so a
+  // payload whose length disagrees with its declared size loads cleanly and
+  // fails here. Returning early on that left no cover, no sprite, no lid mark
+  // and no pet: the rock pool with nobody in it, which reads as a working
+  // panel rather than a fault. Measured before the fix — a broken cover left 0
+  // sprite pixels where an absent one leaves 256.
+  //
+  // `render` already had this exact shape eight lines away for the QR, and its
+  // comment gives the reason. It was not applied here.
+  if (
+    scene.cover !== undefined &&
+    paintCover(painter.target, painter.bands.stage, scene.cover) !== null
+  ) {
     return;
   }
   const crop =

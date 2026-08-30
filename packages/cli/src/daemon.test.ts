@@ -1069,3 +1069,47 @@ describe('Clawd on the stage', () => {
     expect(new Set([at(0), at(125), at(250), at(375)]).size).toBe(4);
   });
 });
+
+describe('the rare scene reaches the stage', () => {
+  const pack = parsePackManifest(examplePack());
+  const withScene = parsePackManifest({
+    ...pack,
+    scene: { width: 96, height: 64, pixels: 'AAA=', mask: 'AAA=' },
+  });
+  const threeAm = new Date(2026, 8, 4, 3).getTime();
+  const teaTime = new Date(2026, 8, 4, 17).getTime();
+  // An empty desk resolves to `IDLE`, which is a state `SCENE_COVERS` covers.
+  const quiet = createRegistry(NOW);
+
+  it('hands the pack scene to the stage, and only then', () => {
+    // **The wiring, not the gate.** `coverFor` is unit-tested in
+    // `midnight.test.ts` and `paintCover` in `cover.test.ts`, and neither
+    // touches the one line in `sceneFor` that joins them: deleting
+    // `cover: coverFor(...)` left all 671 tests green with the feature gone.
+    // A review found it. It is the same shape of gap `animationForPanel`
+    // records having had, where dropping an argument left 430 tests green.
+    expect(
+      sceneFor({ registry: quiet, pack: withScene, now: threeAm }).cover,
+    ).toBeDefined();
+    expect(
+      sceneFor({ registry: quiet, pack: withScene, now: teaTime }).cover,
+    ).toBeUndefined();
+    expect(
+      sceneFor({ registry: quiet, pack, now: threeAm }).cover,
+    ).toBeUndefined();
+  });
+
+  it('drops the contact shadow, because nobody is standing there', () => {
+    // A scene replaces the character, so a shadow marking where his feet meet
+    // the ground would be cast by nobody — and the schema invites scenes
+    // smaller than the stage, so it would be visible beside one.
+    const covered = sceneFor({
+      registry: quiet,
+      pack: withScene,
+      now: threeAm,
+    });
+    const ordinary = sceneFor({ registry: quiet, pack, now: threeAm });
+    expect(covered.environment?.contact).toBe(false);
+    expect(ordinary.environment?.contact).toBe(true);
+  });
+});

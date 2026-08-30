@@ -567,12 +567,47 @@ describe('the rare scene covering the stage', () => {
     );
   });
 
-  it('stays inside the stage band', () => {
-    // A full-size cover is exactly the stage, so anything outside it is bleed
-    // into the status, message or strip bands — the failure `strayFrom` exists
-    // to catch for every other painter here.
+  it('centres in the portrait band rather than in the slot', () => {
+    // The slot is 160 rows and the portrait stage is 200, so centring against
+    // the constant top-aligned the picture and left 40 rows of sand beneath
+    // it. A review raised this, a verifier dismissed it, and a mutant settled
+    // it: `paintCover` now centres against the band it is handed.
     const target = render({ ...EMPTY, cover: cover(168, 160) });
-    const bands = panelBands('portrait');
+    const band = panelBands('portrait').stage;
+    const rows = litPixels(target).map((at) => at.y);
+    expect(Math.min(...rows)).toBe(band.y + (band.height - 160) / 2);
+  });
+
+  it('falls back to the cast when the scene will not decode', () => {
+    // **The defect this test exists for.** The early return used to fire on
+    // the field being present rather than on the paint having succeeded, so an
+    // undecodable blob suppressed the sprites, the lid mark and the pet and
+    // drew nothing in their place — an empty rock pool that reads as a working
+    // panel. The three tests above all passed against that.
+    const broken = { ...cover(40, 40), pixels: 'AAA=' };
+    const target = render({ ...EMPTY, sprites: [sprite], cover: broken });
+    const lit = litPixels(target);
+    expect(lit.some((at) => pixelAt(target, at.x, at.y) === SPRITE_INK)).toBe(
+      true,
+    );
+  });
+
+  it('stays inside the stage band', () => {
+    // **What this pins is placement, not clipping.** It claimed to catch bleed
+    // for a day; it cannot, and neither could any test, because the schema
+    // caps a scene at the stage's own size so there is nothing to clip. A
+    // mutant widening `within` to the whole panel leaves the suite green and
+    // always will. What it does pin is that a full cover lands wholly inside
+    // the band, which is worth having and is what the assertion says.
+    //
+    // Landscape, because that is where a full cover and the band are the same
+    // rectangle. `EMPTY` is portrait, where the band is 200 rows.
+    const target = render({
+      ...EMPTY,
+      orientation: 'landscape',
+      cover: cover(168, 160),
+    });
+    const bands = panelBands('landscape');
     expect(strayFrom(target, [bands.stage])).toEqual([]);
   });
 });
