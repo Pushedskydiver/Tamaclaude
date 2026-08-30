@@ -61,6 +61,7 @@ import {
 } from '@tamaclaude/renderer';
 
 import { messageFor } from './message.js';
+import { coverFor } from './midnight.js';
 
 /**
  * How often the panel is recomposed.
@@ -492,6 +493,12 @@ export function sceneFor(input: SceneInput): Scene {
       input.animation !== undefined && PET_APPEARS[input.animation]
         ? pack.pet
         : undefined,
+    // The rare scene, which replaces everything above it on the stage rather
+    // than adding to it. `midnight.ts` owns all three conditions so each can be
+    // mutated on its own; here it is one call because the renderer's contract
+    // is the same as for `logo` and `pet` — it draws what it is given and this
+    // file decides when.
+    cover: coverFor(pack, panel.state, now),
     environment: {
       time: timeOfDay(now),
       extent: ENVIRONMENT_EXTENT,

@@ -15,6 +15,7 @@
  * the picture by its role.
  */
 import type { SessionState } from '@tamaclaude/daemon';
+import type { PackManifest } from '@tamaclaude/packs';
 
 /**
  * When "past midnight" is, for the rare scene the pack may carry.
@@ -67,3 +68,33 @@ export const SCENE_COVERS: Readonly<Record<SessionState, boolean>> = {
   WAITING: false,
   FAILED: false,
 };
+
+/**
+ * The pack's scene, if this is a moment to show it.
+ *
+ * Two conditions decide it, and a third needs no line:
+ *
+ * - **The state is resting.** `SCENE_COVERS` says which, and the reason is that
+ *   this picture *is* the stage rather than a prop on it.
+ * - **It is the small hours.** The frozen spec's trigger, local.
+ * - **The pack carries one** — which costs nothing to check, because returning
+ *   `pack.scene` returns `undefined` when there is none. An explicit
+ *   `if (pack.scene === undefined) return undefined` stood here until a mutant
+ *   deleting it left every test green: it was not an untested branch, it was a
+ *   branch that could not change an answer. The feature is opt-in either way,
+ *   and `packs/example` carries no scene.
+ *
+ * A single function rather than the condition open-coded at the call site, so
+ * each term can be mutated on its own. That matters more than it looks: a
+ * mutant planted on a whole `&&` chain dies on whichever term it reaches first
+ * and proves nothing about the rest, which is how the device half of the log
+ * rotation's identity check went untested until a review found it.
+ */
+export function coverFor(
+  pack: PackManifest,
+  state: SessionState,
+  now: number,
+): PackManifest['scene'] {
+  if (!SCENE_COVERS[state]) return undefined;
+  return isSmallHours(now) ? pack.scene : undefined;
+}

@@ -1,6 +1,8 @@
+import type { PackManifest } from '@tamaclaude/packs';
+
 import { describe, expect, it } from 'vitest';
 
-import { isSmallHours, SCENE_COVERS } from './midnight.js';
+import { coverFor, isSmallHours, SCENE_COVERS } from './midnight.js';
 
 describe('the midnight scene', () => {
   /** Local-time helper: the panel's day is the day of whoever is beside it. */
@@ -41,5 +43,32 @@ describe('the midnight scene', () => {
     expect(SCENE_COVERS.THINKING).toBe(false);
     expect(SCENE_COVERS.NEEDS_PERMISSION).toBe(false);
     expect(SCENE_COVERS.WAITING).toBe(false);
+  });
+});
+
+describe('coverFor', () => {
+  const scene = { width: 8, height: 8, pixels: 'AAA=', mask: 'AAA=' };
+  const pack = { scene } as unknown as PackManifest;
+  const bare = {} as unknown as PackManifest;
+  const threeAm = new Date(2026, 8, 4, 3).getTime();
+  const teaTime = new Date(2026, 8, 4, 17).getTime();
+
+  it('needs all three: the hour, a resting state, and a pack that has one', () => {
+    // Mutated one at a time rather than as a block. A single mutant on the
+    // whole condition dies on whichever term it happens to hit first and
+    // proves nothing about the other two — which is exactly how the `dev` half
+    // of `isSameFile` went untested until a review found it.
+    expect(coverFor(pack, 'IDLE', threeAm)).toEqual(scene);
+    expect(coverFor(pack, 'WORKING', threeAm)).toBeUndefined();
+    expect(coverFor(pack, 'IDLE', teaTime)).toBeUndefined();
+    expect(coverFor(bare, 'IDLE', threeAm)).toBeUndefined();
+  });
+
+  it('is opt-in, so a pack with no scene is unchanged at every hour', () => {
+    // `packs/example` carries no scene and must not: the picture is of two
+    // real people. A pack without one renders exactly as it did before this
+    // feature existed.
+    expect(coverFor(bare, 'ASLEEP', threeAm)).toBeUndefined();
+    expect(coverFor(bare, 'ASLEEP', teaTime)).toBeUndefined();
   });
 });
