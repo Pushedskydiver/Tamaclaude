@@ -39,7 +39,7 @@ import {
 } from './agent.js';
 import { runDaemon } from './daemon.js';
 import { chooseDevice, refusalReport } from './device.js';
-import { daemonLogPath, LOG_MAX_BYTES, rotateDaemonLog } from './log.js';
+import { capDaemonLog, daemonLogPath } from './log.js';
 import { resolvePack } from './pack.js';
 
 /** One line naming the loaded pack and where it came from. */
@@ -438,10 +438,7 @@ async function daemon(argv: readonly string[]): Promise<void> {
   // past device discovery — so a rotation placed after it would run only on
   // the starts that were never the problem. It is a no-op in a terminal:
   // `rotateDaemonLog` refuses any stdout that is not the log file itself.
-  const log = daemonLogPath(homedir());
-  if (rotateDaemonLog(log, LOG_MAX_BYTES) === 'rotated') {
-    process.stdout.write(`log capped; the previous one is at ${log}.1\n`);
-  }
+  process.stdout.write(capDaemonLog(homedir()));
   const supervised = argv.includes('--supervised');
   const devicePath = await devicePathFor(
     argv.filter((argument) => !argument.startsWith('--')),

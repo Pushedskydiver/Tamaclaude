@@ -60,21 +60,29 @@ export function daemonLogPath(home: string): string {
 /**
  * How large the log may get before the current generation is closed.
  *
- * One mebibyte, so at the unplugged-panel rate — one line per thirty seconds,
- * about 190 KB a day — a generation lasts the better part of a week and the
- * pair on disk covers a soak week and then some. The ceiling is two of these:
- * the live file and `daemon.log.1`.
+ * One mebibyte. The unplugged-panel rate is one 66-byte line per respawn and
+ * a respawn every thirty seconds — 186 KiB a day, and measured at eleven lines
+ * in five minutes on the live agent rather than derived from the throttle
+ * alone. So a generation lasts about five and a half days, and the history on
+ * disk at any moment is between that and twice it, depending where in the
+ * cycle you look. Never a week guaranteed: five and a half is the floor.
+ *
+ * The count on disk is always two, the live file and `daemon.log.1`. The
+ * *size* is bounded only as far as the check below runs, which is at startup —
+ * see the note at the end of this comment.
  */
-export const LOG_MAX_BYTES = 1024 * 1024;
+const LOG_MAX_BYTES = 1024 * 1024;
 
 /**
  * What happened, so the caller can say so rather than guess.
  *
- * `not-our-stdout` is the interesting one: it is the safe refusal, and a
- * caller seeing it in the wild has a daemon whose stdout is not the log it was
- * told about.
+ * `not-our-stdout` is the safe refusal — a caller seeing it in the wild has a
+ * daemon whose stdout is not the log it was told about. `failed` is the one
+ * worth a line of output: the log is over the cap and could not be rotated, so
+ * it will go on growing.
  */
-export type Rotation = 'rotated' | 'under-cap' | 'absent' | 'not-our-stdout';
+export type Rotation =
+  'rotated' | 'under-cap' | 'absent' | 'not-our-stdout' | 'failed';
 
 /** `statSync`, but a missing file is an answer rather than an exception. */
 function statOrMissing(path: string): Stats | undefined {
@@ -111,9 +119,10 @@ export function rotateDaemonLog(
   const stdout = fstatOrMissing(fd);
   // Same device and inode, or it is not the file this process is writing to
   // and truncating it would be vandalism against a bystander. Identity is the
-  // whole test — no separate `isFile` check, because two handles on one inode
-  // cannot disagree about what kind of thing it is, and a stdout that is a
-  // terminal or a pipe fails this comparison on `dev` alone.
+  // whole test, with no separate `isFile` check: file type is a property of
+  // the inode, so two handles on one inode cannot disagree about it. A stdout
+  // that is a terminal or a pipe has neither the device nor the inode of a
+  // file on the data volume and fails here.
   if (
     stdout === undefined ||
     stdout.dev !== onDisk.dev ||
@@ -122,8 +131,45 @@ export function rotateDaemonLog(
     return 'not-our-stdout';
   }
   if (onDisk.size <= maxBytes) return 'under-cap';
-  // Copy before truncating: `renameSync` would take the inode with it.
-  copyFileSync(path, `${path}.1`);
-  truncateSync(path, 0);
-  return 'rotated';
+  try {
+    // Copy before truncating: `renameSync` would take the inode with it.
+    copyFileSync(path, `${path}.1`);
+    truncateSync(path, 0);
+    return 'rotated';
+  } catch {
+    // **Housekeeping must not be able to stop the daemon starting.** This runs
+    // before device discovery, so an uncaught error here exits non-zero,
+    // `KeepAlive` restarts, and the next start fails in the same place — a
+    // full disk would turn a log that is merely too big into a panel that
+    // never comes up. A log that will not rotate is the status quo ante.
+    return 'failed';
+  }
+}
+
+/**
+ * Cap the log, and the one line worth printing about it.
+ *
+ * The daemon's whole involvement, so the decision and the words for it stay in
+ * one place rather than being reassembled at the call site. Usually there is
+ * nothing to say and this returns the empty string, which `process.stdout` is
+ * happy to write.
+ *
+ * `fd` is the descriptor to compare against, defaulting to this process's own
+ * stdout; a test passes a real one, which is what lets the path, the cap and
+ * the message be exercised together rather than one at a time.
+ */
+export function capDaemonLog(home: string, fd = 1): string {
+  const path = daemonLogPath(home);
+  const rotation = rotateDaemonLog(path, LOG_MAX_BYTES, fd);
+  if (rotation === 'rotated') {
+    return `log capped; the previous one is at ${path}.1\n`;
+  }
+  if (rotation === 'failed') {
+    // Costs a second line per respawn on a log that is already too big, which
+    // is the wrong direction. Said anyway: silence here is a log growing
+    // without bound behind the one feature meant to bound it, and this is the
+    // only place that could ever say so.
+    return 'log is over its cap and could not be rotated\n';
+  }
+  return '';
 }

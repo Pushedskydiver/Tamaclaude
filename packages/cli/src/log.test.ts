@@ -1,5 +1,6 @@
 import {
   closeSync,
+  mkdirSync,
   mkdtempSync,
   openSync,
   readFileSync,
@@ -12,7 +13,7 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { rotateDaemonLog } from './log.js';
+import { capDaemonLog, rotateDaemonLog } from './log.js';
 
 const root = mkdtempSync(join(tmpdir(), 'tamaclaude-log-'));
 
@@ -86,6 +87,26 @@ describe('rotateDaemonLog', () => {
     closeSync(fd);
   });
 
+  it('gives up rather than taking the daemon down with it', () => {
+    // **Rotation is housekeeping; the panel is the job.** If the copy or the
+    // truncate throws — a full disk, a permission change, anything — an
+    // uncaught error here happens before `devicePathFor`, so the daemon exits
+    // non-zero, `KeepAlive` restarts it, and it fails again in the same place.
+    // A log that will not rotate is the status quo. A panel that never comes
+    // up is a broken gift.
+    //
+    // Forced by making the destination a directory, so `copyFileSync` gets
+    // EISDIR without needing to fill a disk.
+    const { path, fd } = openLog('undeletable.log', 'x'.repeat(4096));
+    mkdirSync(`${path}.1`);
+
+    expect(rotateDaemonLog(path, 1024, fd)).toBe('failed');
+
+    // And the live log is untouched, rather than half-rotated.
+    expect(statSync(path).size).toBe(4096);
+    closeSync(fd);
+  });
+
   it('is not an error before the log exists', () => {
     // The first start on a machine that has never run this, which is the
     // 19 Sep dry run. launchd creates the file when it spawns, so this is
@@ -94,6 +115,37 @@ describe('rotateDaemonLog', () => {
     const { path, fd } = openLog('gone.log', '');
     rmSync(path);
     expect(rotateDaemonLog(path, 1024, fd)).toBe('absent');
+    closeSync(fd);
+  });
+});
+
+describe('capDaemonLog', () => {
+  it('caps the log under ~/.tamaclaude and says which file the old one is', () => {
+    // The wiring, end to end: the path the agent's plist points at, the cap
+    // itself, and the sentence a person reads in the log — asserted together,
+    // because each of the three has been right while the join between them
+    // was not.
+    const home = join(root, 'home');
+    mkdirSync(join(home, '.tamaclaude'), { recursive: true });
+    const path = join(home, '.tamaclaude', 'daemon.log');
+    writeFileSync(path, 'x'.repeat(1024 * 1024 + 1));
+    const fd = openSync(path, 'a');
+
+    const said = capDaemonLog(home, fd);
+
+    expect(said).toContain(`${path}.1`);
+    expect(statSync(path).size).toBe(0);
+    expect(statSync(`${path}.1`).size).toBe(1024 * 1024 + 1);
+    closeSync(fd);
+  });
+
+  it('says nothing at all when there is nothing to say', () => {
+    const home = join(root, 'quiet');
+    mkdirSync(join(home, '.tamaclaude'), { recursive: true });
+    const path = join(home, '.tamaclaude', 'daemon.log');
+    writeFileSync(path, 'still small\n');
+    const fd = openSync(path, 'a');
+    expect(capDaemonLog(home, fd)).toBe('');
     closeSync(fd);
   });
 });
