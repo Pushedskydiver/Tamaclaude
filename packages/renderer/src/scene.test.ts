@@ -567,6 +567,22 @@ describe('the rare scene covering the stage', () => {
     );
   });
 
+  it('clips a cover that is bigger than the stage', () => {
+    // **The guard the suite was missing.** A schema-valid scene cannot exceed
+    // the stage, so nothing schema-shaped exercises the clip — and the comment
+    // above concluded from that that no test could, which does not follow.
+    // `render` takes a `Scene` literal; the schema guards what a pack may
+    // carry, not what this function may be handed. A widened `within` leaks
+    // thousands of pixels into the status and message bands, and this is what
+    // notices.
+    const target = render({
+      ...EMPTY,
+      orientation: 'landscape',
+      cover: cover(300, 300),
+    });
+    expect(strayFrom(target, [panelBands('landscape').stage])).toEqual([]);
+  });
+
   it('centres in the portrait band rather than in the slot', () => {
     // The slot is 160 rows and the portrait stage is 200, so centring against
     // the constant top-aligned the picture and left 40 rows of sand beneath
@@ -593,12 +609,13 @@ describe('the rare scene covering the stage', () => {
   });
 
   it('stays inside the stage band', () => {
-    // **What this pins is placement, not clipping.** It claimed to catch bleed
-    // for a day; it cannot, and neither could any test, because the schema
-    // caps a scene at the stage's own size so there is nothing to clip. A
-    // mutant widening `within` to the whole panel leaves the suite green and
-    // always will. What it does pin is that a full cover lands wholly inside
-    // the band, which is worth having and is what the assertion says.
+    // **What this pins is placement, not clipping**, because a schema-valid
+    // cover cannot exceed the stage and so has nothing to clip against.
+    //
+    // It said no test could catch a removed clip. That was wrong, and the test
+    // below is the disproof: `render` takes a `Scene` literal and is never
+    // schema-validated at that boundary, so an oversized cover is constructible
+    // and a widened `within` shows 21,440 stray pixels.
     //
     // Landscape, because that is where a full cover and the band are the same
     // rectangle. `EMPTY` is portrait, where the band is 200 rows.
