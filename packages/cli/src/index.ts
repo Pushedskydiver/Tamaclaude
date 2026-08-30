@@ -427,18 +427,18 @@ async function devicePathFor(
  * `tamaclaude daemon` — listen, render, and drive the panel until killed.
  */
 async function daemon(argv: readonly string[]): Promise<void> {
-  // **Flags are not device paths.** Adding `--supervised` to the plist made
-  // `argv[0]` a flag, which `chooseDevice` cheerfully accepted as the device
-  // to open — so the agent would have spent forever retrying a port called
-  // `--supervised` while discovery, right there, was never consulted. Caught
-  // before it shipped, and it is the same shape as the finding a review made
-  // one commit earlier about discovery running when a device was named.
   // **Before `devicePathFor`, which is where this exits.** The growth being
   // bounded is driven by the no-panel restart loop, and that loop never gets
   // past device discovery — so a rotation placed after it would run only on
   // the starts that were never the problem. It is a no-op in a terminal:
   // `rotateDaemonLog` refuses any stdout that is not the log file itself.
   process.stdout.write(capDaemonLog(homedir()));
+  // **Flags are not device paths.** Adding `--supervised` to the plist made
+  // `argv[0]` a flag, which `chooseDevice` cheerfully accepted as the device
+  // to open — so the agent would have spent forever retrying a port called
+  // `--supervised` while discovery, right there, was never consulted. Caught
+  // before it shipped, and it is the same shape as the finding a review made
+  // one commit earlier about discovery running when a device was named.
   const supervised = argv.includes('--supervised');
   const devicePath = await devicePathFor(
     argv.filter((argument) => !argument.startsWith('--')),

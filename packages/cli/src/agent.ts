@@ -227,7 +227,12 @@ export type AgentCondition =
   | 'failed';
 
 /**
- * Classify a status. The single decoder of `LastExitStatus`.
+ * Classify a status, so two callers cannot reach different verdicts about it.
+ *
+ * The single place a condition is *decided*. `describeAgentStatus` takes the
+ * raw number apart again in its `failed` branch, but only to render the digits
+ * — no branch of this function is re-run there, which is what stops the two
+ * drifting.
  *
  * `LastExitStatus` is a raw `wait(2)` status, not an exit code: exit 1 comes
  * back as 256, and a signalled death puts the signal in the low seven bits.
@@ -285,7 +290,9 @@ export function describeAgentStatus(
       );
     case 'failed': {
       // Printing the wait status undecoded made the one number a person needs
-      // into a number they would have to look up.
+      // into a number they would have to look up. The `?? 0` is unreachable —
+      // an undefined `lastExit` classifies as `idle` — and is here because the
+      // compiler cannot see that from the switch.
       const exit = status.lastExit ?? 0;
       const signal = exit & 0x7f;
       const detail =
