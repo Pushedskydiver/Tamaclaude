@@ -383,6 +383,26 @@ describe('the tamaclaude binary', () => {
     },
   );
 
+  it('reports a missing pack rather than dying on it', () => {
+    // **`status` is the command the printed card names**, and the pack is one
+    // of the things most likely to be what broke — not cloned yet, clone
+    // refused for access, folder moved, `TAMACLAUDE_PACK` pointing at nothing.
+    // `resolvePack` throws on all of those, and `status` let it: it printed the
+    // agent line, then died with exit 2 and never reached the log path. So the
+    // one diagnostic told a person with a pack problem less than it tells a
+    // person with no problem at all.
+    //
+    // Found by running the built CLI under a home with no pack, which is the
+    // 19 Sep dry run in miniature.
+    const { out, status } = run(['status']);
+    expect(status).toBe(0);
+    // The problem is reported as a line, in the same shape as every other.
+    expect(out).toMatch(/^pack {6}/mu);
+    expect(out).toContain('no pack configured');
+    // And the log path still arrives, which is what the reader is sent to next.
+    expect(out).toMatch(/^log {7}\S/mu);
+  });
+
   describe('what a refusal prints, and what it exits with', () => {
     const absent = () =>
       ({ kind: 'absent', refusal: 'no panel found. Plug it in.' }) as const;

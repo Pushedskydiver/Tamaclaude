@@ -356,9 +356,33 @@ function status(): void {
     /"ProgramArguments"\s*=\s*\(\s*"([^"]+)"/u.exec(listing ?? '')?.[1] ??
     process.execPath;
   process.stdout.write(`${describeAgentStatus(parsed, existsSync(node))}\n`);
-  const resolved = resolvePack();
-  process.stdout.write(`pack      ${describePack(resolved)}\n`);
+  process.stdout.write(`pack      ${packStatus()}\n`);
   process.stdout.write(`log       ${daemonLogPath(homedir())}\n`);
+}
+
+/**
+ * The pack line, including when there is no pack.
+ *
+ * **A report that dies on the thing it is reporting is not a report.**
+ * `resolvePack` throws for every ordinary pack problem — not cloned yet, a
+ * clone refused for access, the folder moved, `TAMACLAUDE_PACK` pointing at
+ * nothing — and `status` used to let it. It printed the agent line, exited 2,
+ * and never reached the log path. So the one command the printed card names
+ * told somebody *with* a pack problem strictly less than it tells somebody
+ * with no problem at all, and withheld the log path exactly when it was the
+ * next thing to look at.
+ *
+ * Reported as a line and exit 0, for the reason the agent half already works
+ * that way: `not installed` is a status, not a failure of the status command.
+ * Found by running the built CLI under a home with no pack — the 19 Sep dry
+ * run in miniature, done early because a guide is the artefact under test.
+ */
+function packStatus(): string {
+  try {
+    return describePack(resolvePack());
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
 }
 
 /**
