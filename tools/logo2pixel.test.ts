@@ -263,7 +263,13 @@ describe('logo2pixel warns about colours it cannot keep apart', () => {
       'rects',
     ]);
     expect(status).toBe(0);
-    expect(output).toMatch(/disappear into the ground|resolves to the ground/);
+    // The wording changed when a critic pointed out the old sentence was flatly
+    // false for the commonest correct bake there now is — a full-bleed cover
+    // whose own background is the ground colour, which is kept because it
+    // arrives opaque. What the warning is really about is opacity, so that is
+    // what this matches on.
+    expect(output).toMatch(/nearest to the ground/);
+    expect(output).toMatch(/not\* fully opaque/);
   });
 
   it('warns when the palette cannot tell two of the mark colours apart', () => {

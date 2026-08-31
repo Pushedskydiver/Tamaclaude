@@ -999,21 +999,34 @@ a hook cannot — `DONE_AFTER_MS` and `DONE_SHOWN_MS` in `effectiveState`, lande
 - [~] Rare easter eggs: a franchise-flavoured idle, plus idle quips from the
   pack. **The quip half is built** — `messageFor` rotates `quips.idle` by
   the minute on `IDLE`. The franchise-flavoured animation is not.
-- [~] Pixel scene of the two of them coding — **mechanism built, picture not
-  drawn.** The trigger, the pack field, the slot, the painter and the
-  compositor wiring are in; a pack carrying a scene would show it tonight.
-  What is missing is the art, and the recognition cues it needs are the
-  owner's: silhouette, palette and props, since facial likeness is not
-  achievable at ~50px per figure.
-  **The trigger is "session running past midnight", not "birthday, past
-  midnight".** This line said the latter until 30 Aug and the frozen screen
-  spec said the former; the spec wins, and the reason is worth keeping. On
-  the birthday-gated version the scene fires at most once ever, only if
-  somebody happens to be at the keyboard after midnight on 23 Sep, and on
-  the one night the birthday screen already owns the stage. A picture that
-  may never be seen is not a rare screen, it is a screen with a bug.
-  `packages/cli/src/midnight.ts` holds the condition and the states it may
-  cover; the picture lives in the private pack, per the privacy rule.
+- [~] ~~Pixel scene of the two of them coding~~ — **cut 31 Aug, by the owner,
+  on the licence the spec gave it.** The frozen screen spec files it Tier C,
+  "cut without regret", and that is what happened: it was a nice-to-have, the
+  art needed rounds of the owner's judgement that the remaining days are
+  better spent on the board and the install, and nothing else depends on it.
+
+  **The mechanism stays, and it is a capability rather than dead code.** A pack
+  _may_ carry a `scene`; none does, which is the status `birthday` had before a
+  pack carried a date. `packages/cli/src/midnight.ts` holds the trigger and the
+  states it may cover, `packages/renderer/src/cover.ts` paints it, and a pack
+  without one renders exactly as it did before any of it — `packs/example` has
+  no scene and never should. Removing it was considered and rejected on the
+  date: it is merged, tested and inert, and a removal thirteen days from
+  feature freeze buys tidiness at the cost of another review round on code that
+  currently cannot misbehave.
+
+  Three things its construction left behind that are worth keeping, none of
+  which depend on the scene ever existing: `logo2pixel` now knows the slot it
+  bakes for rather than misdirecting an author to two fields that do not fit;
+  its ground warning names opacity, which is the condition that actually
+  deletes pixels; and `--full-colour` exists for any future art that replaces
+  the stage rather than sitting inside it.
+
+  The art got as far as a third draft that reads correctly — the kneeling chair
+  carries the recognition, which is what a photograph of the desk made
+  obvious. It is untracked in the private pack if it is ever wanted; adding it
+  is one key in a manifest, decidable on 22 Sep with the panel in hand.
+
 - [x] Birthday screen, date-triggered 23 Sep. **Trigger, art, stage and QR are
       built, and the screen has been seen on the panel.** It went `[~]` earlier on
       26 Aug for the right reason — every check was a unit test against a synthetic

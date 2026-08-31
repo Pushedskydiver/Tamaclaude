@@ -11,10 +11,14 @@
  * because `tools/` sits outside the dependency graph
  * `eslint-plugin-boundaries` enforces.
  *
- * **`scene` is the whole stage, which is why it is last.** The list is
- * ordered smallest-first so the fit check names the tightest slot a picture
- * could be meant for; a 168x160 entry matches almost anything, so putting it
- * first would make the warning useless.
+ * **`scene` is last, and the reason is smaller than the first version claimed.**
+ * The list reads smallest-first by area and by height — not by width, where
+ * the pet is narrower than the lid — so the tightest slot a picture could be
+ * meant for prints first. That is readability, not correctness: the fit check
+ * is a `filter`, so every matching slot is named whatever the order, and the
+ * no-fit warning lists them all regardless. This comment said putting `scene`
+ * first "would make the warning useless", which a critic disproved by running
+ * it — a 40x28 bake would simply read `"scene" or "pet"` instead, both true.
  * `logo2pixel.test.ts` imports both sides and asserts they agree, which is
  * what stops the copy drifting.
  *

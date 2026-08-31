@@ -177,8 +177,26 @@ const { values, positionals } = parseArgs({
     // Device pixels per user unit, matching `tools/svg2frames.ts`'s third
     // argument. The stage renders at 8, so a pixel is 0.125 units.
     scale: { type: 'string', default: '8' },
+    // Keep every colour the SVG asked for, rather than snapping to the pack's.
+    // For the `scene` cover only — see the note at the snap itself.
+    'full-colour': { type: 'boolean', default: false },
   },
 });
+if (values['full-colour'] && values.format === 'rects') {
+  // **`rects` only.** Rects are pasted into an animation SVG, which is
+  // palette-bound, so an unsnapped one is meaningless there. Refused rather
+  // than ignored: a flag that silently does nothing is how somebody concludes
+  // the feature does not work.
+  //
+  // `png` is explicitly allowed, and the first version of this guard refused
+  // it — which made it impossible to look at what `--format pack` would ship,
+  // in a repo whose costliest lesson is that metrics read fine while the
+  // artefact is wrong. A preview you cannot generate is not a preview.
+  console.error(
+    `--full-colour cannot be pasted into an animation: not --format rects`,
+  );
+  process.exit(2);
+}
 if (!['png', 'rects', 'pack'].includes(values.format)) {
   console.error(
     `--format takes 'png', 'rects' or 'pack', not '${values.format}'`,
@@ -336,15 +354,29 @@ function blob(words: Uint16Array): string {
 }
 
 const fills = declaredFills(svg);
-for (const fill of fills) {
+// **Silent under `--full-colour`, because nothing snaps.** These two loops
+// report consequences of quantising to the pack's palette; with the snap
+// skipped there is no nearest-entry to collide with and no ground to resolve
+// into, so firing them would be reporting a step that did not run.
+for (const fill of values['full-colour'] ? [] : fills) {
   if (nearestIn(fill, candidates).every((v, c) => v === over[c])) {
+    // **Names the condition, not just the collision.** `frame-palette.ts`
+    // clears a pixel only where it resolves to the ground *and* arrived
+    // non-opaque, so a fully opaque fill in this colour is kept and drawn. The
+    // message said flatly that it "will disappear", which is false for the
+    // commonest correct case there now is — a full-bleed cover whose own
+    // background is the ground colour — and that case is about to fire this
+    // warning on every successful bake. A warning learned as noise stops being
+    // read, and this is the only signal for the case that really is fatal.
     console.warn(
-      `warning: ${hexOf(fill)} is nearest to the ground ${hexOf(over)}, so ` +
-        `it will disappear into the ground it is drawn on`,
+      `warning: ${hexOf(fill)} is nearest to the ground ${hexOf(over)} — ` +
+        `wherever it is *not* fully opaque it will be cleared to nothing. ` +
+        `Fully opaque areas are kept, so a full-bleed cover is fine; ` +
+        `an \`opacity\` or \`fill-opacity\` on this colour is not.`,
     );
   }
 }
-for (const clash of collisions(fills, palette)) {
+for (const clash of collisions(values['full-colour'] ? [] : fills, palette)) {
   const names = clash.sources.map((colour) => hexOf(colour));
   const listed = `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`;
   console.warn(
@@ -397,11 +429,25 @@ try {
   // is behind it, so it needs the alpha that tells the renderer which pixels
   // are its own.
   const raw = await page.screenshot({ omitBackground: true });
-  const snapped = await page.evaluate(snapToPalette, {
-    uri: `data:image/png;base64,${raw.toString('base64')}`,
-    palette: candidates,
-    bg: over,
-  });
+  const rawUri = `data:image/png;base64,${raw.toString('base64')}`;
+  // **`--full-colour` exists for the cover and nothing else.** A logo and a pet
+  // are props drawn *inside* the panel's own scene, so they must use the pack's
+  // palette or they read as stickers. The cover replaces the stage, and nothing
+  // downstream constrains it: `packages/renderer/src/cover.ts` and `blob.ts`
+  // mention no palette, the blob decodes straight to RGB565 words, and the
+  // schema asks only for base64. Snapping a full-bleed illustration to five
+  // colours throws away depth it is allowed to keep.
+  //
+  // Skipping the snap also skips its alpha clearing, which is correct here for
+  // the same reason: that step exists to drop a prop's background so what is
+  // behind it shows through, and a cover has nothing behind it worth showing.
+  const snapped = values['full-colour']
+    ? { uri: rawUri, soft: 0 }
+    : await page.evaluate(snapToPalette, {
+        uri: rawUri,
+        palette: candidates,
+        bg: over,
+      });
   const total = size.width * size.height;
   if (values.format === 'pack') {
     // **The only format the renderer can consume.** `png` is to look at, and
