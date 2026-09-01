@@ -68,8 +68,9 @@ rate instead, and that would have been found out at Stage 2 rather than now.
    demo it arrives with is worth one minute before you overwrite it — that is
    a precondition of Stage 6's gift-board flash, not a step here.
 2. ~~Record the measured flash size above.~~ Done: 8MB, 20 Aug.
-3. Measure the board's physical dimensions before ordering a print. **Still
-   open** — see §Enclosure.
+3. Measure the board's physical dimensions before ordering a print. **Mostly
+   answered without a ruler**, and what is left is one number — see
+   §Dimensions below.
 
 ## Firmware
 
@@ -178,6 +179,28 @@ that has to be chosen rather than arrived at.** Assembly is scheduled for Sat
 19 Sep, so the go/no-go on the bare board belongs meaningfully earlier than
 that — and unlike a slipped build, nobody finds out it was needed by working
 harder the week before.
+
+## Dimensions
+
+**36.37 x 20.32 mm, not including the USB port.** Quoted verbatim from
+[CNX Software's write-up of the board][cnx], checked 1 Sep 2026 against the
+article itself rather than a search summary. Waveshare's own wiki and docs
+platform both publish the figure only as an image, and both refuse automated
+fetching, so this is the best sourced number available without measuring.
+
+[cnx]: https://www.cnx-software.com/2024/09/24/esp32-c6-wifi-6-and-bluetooth-5-0-usb-c-development-board-integrates-1-47-inch-tft-lcd-display/
+
+**Two numbers are still missing and both need the board in hand:**
+
+- **Thickness.** Not published anywhere found. It is the one that decides a
+  box's depth and an enclosure's internal clearance, so it is the measurement
+  worth taking first.
+- **Length including the USB-C connector.** The quoted figure excludes it, and
+  the connector sits on a short edge, so anything the board has to fit inside
+  needs the larger number.
+
+Recorded here because it was an open checklist item since 20 Aug, and because a
+sourced figure a reader can check beats a measurement nobody wrote down.
 
 ## Spares
 
