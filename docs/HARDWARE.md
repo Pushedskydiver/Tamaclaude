@@ -190,14 +190,23 @@ fetching, so this is the best sourced number available without measuring.
 
 [cnx]: https://www.cnx-software.com/2024/09/24/esp32-c6-wifi-6-and-bluetooth-5-0-usb-c-development-board-integrates-1-47-inch-tft-lcd-display/
 
-**Two numbers are still missing and both need the board in hand:**
+**The two the spec does not give were measured on 1 Sep**, by the owner, with a
+ruler rather than calipers — so they are approximate and stated as such:
 
-- **Thickness.** Not published anywhere found. It is the one that decides a
-  box's depth and an enclosure's internal clearance, so it is the measurement
-  worth taking first.
-- **Length including the USB-C connector.** The quoted figure excludes it, and
-  the connector sits on a short edge, so anything the board has to fit inside
-  needs the larger number.
+- **Thickness: about 10 mm.** Unpublished anywhere found. It is what decides an
+  enclosure's internal clearance and a box's depth.
+- **Length including the USB-C connector: about 37 mm.** The spec's 36.37 mm
+  excludes the connector, which sits on a short edge, so anything the board fits
+  inside needs this number rather than that one.
+
+**So, working figures: 37 x 20.3 x 10 mm.** Two measured to the nearest
+millimetre and one sourced to two decimal places, which is a false precision
+worth noticing — round the lot to 37 x 21 x 10 before cutting anything, and
+re-measure with calipers if a tolerance below a millimetre ever matters.
+
+**For scale, the box it shipped in is 70 x 50 x 16 mm**, also measured on
+1 Sep. That is 33 mm of spare length, 30 mm of width and 6 mm of depth around
+the board, which is a useful reference point for anything built to hold it.
 
 Recorded here because it was an open checklist item since 20 Aug, and because a
 sourced figure a reader can check beats a measurement nobody wrote down.
