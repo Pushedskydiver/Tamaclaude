@@ -211,6 +211,34 @@ the board, which is a useful reference point for anything built to hold it.
 Recorded here because it was an open checklist item since 20 Aug, and because a
 sourced figure a reader can check beats a measurement nobody wrote down.
 
+## Rebuilding the firmware, when the toolchain has rotted
+
+The blitter is flashed once and never touched, which means the toolchain is
+cold every time anybody needs it. On 2 Sep a rebuild took four fixes before
+`idf.py build` would run at all, on a machine where ESP-IDF v5.3.2 and the
+RISC-V toolchain were both already installed. In order:
+
+1. **The Python environment did not exist.**
+   `python3 $IDF_PATH/tools/idf_tools.py install-python-env`
+2. **`pyclang` could not import `ruamel.yaml`.** The installer pulls 0.19,
+   whose API it does not accept: `pip install "ruamel.yaml<0.18"`.
+3. **`ruamel.yaml.clib` was then missing** — 0.17 needs the C extension that
+   0.19 had made unnecessary: `pip install ruamel.yaml.clib`.
+4. **ESP-IDF still could not see it.** Modern pip writes
+   `ruamel_yaml_clib-*.dist-info`; the v5.3 dependency checker looks for the
+   dotted `ruamel.yaml.clib`. The error names `ruamel.yaml.clib` as missing
+   whatever requirement it happens to be checking, which is what makes it hard
+   to read. Fixed by copying the dist-info to the dotted name and setting
+   `Name:` in its METADATA to match.
+
+**That fourth fix is still in place and should stay.** It lives in
+`~/.espressif/python_env/idf5.3_py3.9_env/lib/python3.9/site-packages/` and
+removing it breaks the build again. It is a local environment fix, not
+something this repo can carry.
+
+Then `idf.py fullclean` before building: a build directory left from an earlier
+Python refuses to configure against a new one, and says so clearly.
+
 ## Spares
 
 Buy two boards. One to develop and reflash against, one to give. Replacement
