@@ -80,13 +80,23 @@ Two of them:
 
 - `throughput/` — 83 lines that read USB-CDC and discard, written to measure
   the link and nothing else (`docs/ARCHITECTURE.md` §Why it fits down the wire).
-- `blitter/` — the real one. It does exactly three things:
+- `blitter/` — the real one. It does exactly four things:
   1. Read framed commands from USB-CDC
   2. Decode RLE RGB565 and blit the rectangle to SPI
   3. Show an embedded splash when nothing has ever driven the panel
+  4. Drop the backlight after `IDLE_BLANK_MS` of silence, and raise it on the
+     next blitted rect
+
+"Three" until 6 Sep, when the fourth landed. The rule below is why the count is
+worth keeping honest: each addition is a thing that cannot be changed without
+physical access to the board.
 
 It is flashed once. If a change to it seems necessary, that is a strong signal
-the change belongs on the host instead.
+the change belongs on the host instead — and the idle blank was weighed against
+that test rather than waved past it. The host half (stop sending) is easy; the
+half only firmware can do is the backlight GPIO, which no protocol message
+reaches, so a host that crashes rather than exits cleanly cannot darken the
+panel by itself.
 
 **We did not need Waveshare's demo after all.** This section used to insist on
 starting from it, so as not to re-derive the ST7789 init sequence by hand — the
@@ -126,7 +136,21 @@ with `tools/colour-bars.ts`, which paints six known values across the panel.
 That tool exists because a wrong byte order and a wrong invert and a wrong
 element order all look like "the colours are off", and each maps that set of
 six somewhere distinguishable — so one look identifies which is in play. Reach
-for it before theorising. Photographs are not evidence here: a warm-lit room
+for it before theorising.
+
+**Since 6 Sep the bars only last thirty seconds.** `colour-bars.ts` paints,
+holds the port briefly and exits, and `IDLE_BLANK_MS` reads a host that has
+stopped talking as a host that has gone — which is exactly right for the
+daemon and a nuisance for a one-shot painter. `tools/blit.ts` does **not** — an earlier version of this
+paragraph said it did. It sets `REPRIME_MS = 5000` and writes a whole frame
+every five seconds regardless of whether anything changed, so it is never
+silent for thirty seconds while running. That is its own undeclared
+dependency on `IDLE_BLANK_MS`, and `packages/device/src/panel.test.ts` does
+not gate it — the test reads `panel.ts` and `main.c` only. Raise `REPRIME_MS`
+past 30000 and a live panel blanks mid-run under a tool reporting healthy fps. Look at the glass promptly, or re-run the tool;
+the panel is not faulty and nothing was lost. This is the one case the retired
+"an idle timeout would wipe a legitimately still frame" argument was right
+about, and it survives because these tools are not the daemon. Photographs are not evidence here: a warm-lit room
 makes a camera white-balance a neutral panel to blue, which cost an evening of
 chasing a colour bug that did not exist.
 
@@ -161,8 +185,9 @@ that rule is written about art slippage, "with placeholder art if necessary",
 so an enclosure is its general clause rather than its subject. Nor is
 it the only item with an unbounded tail — the clean-account dry run's bad
 branch is "a packaging project rather than a bug fix" in the plan's own words,
-and the gift-board flash is a rebuild against a toolchain last exercised in
-August.
+and the gift-board flash was, at the time this was written, a rebuild against
+a toolchain last exercised in August. That has since happened twice — 2 Sep
+and 6 Sep — and §Rebuilding records what each cost.
 
 **Nor is it the only item depending on somebody else's calendar, and this
 paragraph said it was for a day.** That claim was falsified by the item named
@@ -211,9 +236,9 @@ the board, which is a useful reference point for anything built to hold it.
 Recorded here because it was an open checklist item since 20 Aug, and because a
 sourced figure a reader can check beats a measurement nobody wrote down.
 
-## Rebuilding the firmware, when the toolchain has rotted
+## Rebuilding the firmware, when the toolchain fights back
 
-The blitter is flashed once and never touched, which means the toolchain is
+The blitter is flashed rarely, which means the toolchain is
 cold every time anybody needs it. On 2 Sep a rebuild took four fixes before
 `idf.py build` would run at all, on a machine where ESP-IDF v5.3.2 and the
 RISC-V toolchain were both already installed. In order:
@@ -231,15 +256,115 @@ RISC-V toolchain were both already installed. In order:
    to read. Fixed by copying the dist-info to the dotted name and setting
    `Name:` in its METADATA to match.
 
-**That fourth fix is still in place and should stay.** It lives in
-`~/.espressif/python_env/idf5.3_py3.9_env/lib/python3.9/site-packages/` and
-removing it breaks the build again. It is a local environment fix, not
-something this repo can carry.
+**That fourth fix is gone, along with the rest of the install, and a rebuild
+from nothing on 6 Sep needed none of the four.** `~/esp` and `~/.espressif` had
+both disappeared by then. What worked, start to finish in about twenty minutes:
 
-Then `idf.py fullclean` before building: a build directory left from an earlier
-Python refuses to configure against a new one, and says so clearly.
+```bash
+git clone -b v5.3.2 --depth 1 --recursive --shallow-submodules \
+  https://github.com/espressif/esp-idf.git ~/esp/esp-idf
+~/esp/esp-idf/install.sh esp32c6
+brew install cmake ninja          # a prerequisite, not part of install.sh
+. ~/esp/esp-idf/export.sh
+cd packages/device/firmware/blitter && idf.py set-target esp32c6 && idf.py build
+```
+
+Two things that cost time. **`cmake` and `ninja` are not installed by
+`install.sh` on macOS** — `tools.json` marks both `on_request` except on
+Windows, so it installs the RISC-V toolchain and expects these from Homebrew,
+and the failure is a bare "cmake must be available on the PATH". Espressif's
+own Linux/macOS setup page _does_ list `brew install cmake ninja dfu-util` as a
+prerequisite; an earlier version of this paragraph said it did not, which is
+worse than useless because it invites skipping the prerequisites. The lesson is
+"`install.sh` is not the prerequisites step", not "the vendor omits it". And **`set-target` must run after cmake exists**: a
+`set-target` that failed for want of cmake leaves a build directory configured
+for the default Xtensa target, and the next build asks for
+`xtensa-esp32-elf-gcc` on a RISC-V part. `rm -rf build sdkconfig` and redo it.
+
+So the four fixes above did not recur. **The tempting conclusion — that they
+were symptoms of a rotted install — is not what the evidence shows**, because
+fix 2 blames `install.sh` itself ("the installer pulls 0.19, whose API it does
+not accept"), and a fresh `install.sh` should have reproduced that. It did.
+Measured in the fresh environment on 6 Sep:
+
+```
+ruamel.yaml            0.19.1
+ruamel.yaml.clib       NOT INSTALLED
+pyclang                0.7.0
+import pyclang         OK
+```
+
+So the exact condition fix 2 blames — 0.19 installed, no C extension — was
+reproduced and did not bite. That kills "the install had rotted" as the
+explanation, and it is as far as the evidence goes.
+
+**Two candidates remain and one run each way cannot separate them.** The Python
+moved (`idf5.3_py3.9_env` then, `idf5.3_py3.14_env` now — the only trace of the
+old environment left) and `pyclang` moved (0.7.0 now, unrecoverable then). A
+newer `pyclang` that simply accepts ruamel 0.19 explains every observation
+without Python entering into it, and it is the likelier of the two.
+
+An earlier version of this paragraph picked the Python and wrote it as the
+usable rule. It was reasoning from a directory name, which records the Python
+version and nothing else. If the four bite you, start from the list; if they do
+not, record your `pyclang` and Python versions beside the outcome, because two
+data points would settle this and one cannot.
+
+That numbered list is the path where the four bite. On it, `idf.py fullclean` before
+building: a build directory left from an earlier Python refuses to configure
+against a new one, and says so clearly. The fresh recipe above has no build
+directory to clean — its equivalent trap is the `set-target` ordering, which is
+already named there.
+
+## Which firmware is on the board
+
+Kept here because nothing else can hold it: the binary is not in the repo, and
+the board cannot be asked what it will do, only what it was built from.
+
+| Flashed    | Built from | What changed                                  |
+| ---------- | ---------- | --------------------------------------------- |
+| 2 Sep 2026 | `46ea9e2`  | Real splash art                               |
+| 6 Sep 2026 | `5db74eb`  | `IDLE_BLANK_MS` — blanks after 30s of silence |
+
+**Read it off the board rather than trusting this table.** ESP-IDF stamps the
+app descriptor with `git describe`, which — no tags in this repo — falls back to
+the short hash, plus `-dirty` when the working tree did not match it. The
+version field is 32 bytes at `0x30` into the app image, and the app partition
+starts at `0x10000`:
+
+```bash
+. ~/esp/esp-idf/export.sh
+esptool.py --chip esp32c6 -p /dev/cu.usbmodem* read_flash 0x10030 32 /tmp/v.bin
+strings /tmp/v.bin | head -1
+```
+
+Run against the desk board on 6 Sep that returned `5db74eb`, clean — which is
+what makes row 2 a measurement rather than a claim, and the same check produced
+row 1's `46ea9e2`. A `-dirty` suffix means the build matched no commit and the
+row cannot be trusted at all.
+
+**These hashes are branch-local.** `main` is squash-merged, so `5db74eb` will
+not resolve in a fresh clone once this lands, and the board will keep reporting
+a hash the repo no longer contains. Match on the date when that happens.
+
+The hash is the commit whose _behaviour_ is on the board. Later commits have
+touched `main.c` for comments only, so a diff against the working tree will
+show changes the board does not have and does not need — check the code, not
+the prose, before concluding a reflash is due.
+
+With one board there is no panel on an older build, so `docs/INSTALL.md` can
+describe the thirty-second blank as simply what the panel does. **That stops
+being true the moment a second board exists** — one still on `46ea9e2` holds
+its last frame for ever instead — so a second board needs a row here before it
+needs anything else.
 
 ## Spares
+
+**Advice that was not taken: there is one board.** It was written before
+bring-up and it is still the right advice — everything below holds — but the
+project ran on a single board throughout, which is why §"Which firmware is on
+the board" has one row per flash rather than one per device, and why a reflash
+has always meant the working panel going down.
 
 Buy two boards. One to develop and reflash against, one to give. Replacement
 lead time is roughly a week, and September has no week to spare.

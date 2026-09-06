@@ -41,6 +41,7 @@
  * silent-wrong-pack failure arriving through the tool built to detect it.
  * Naming them also makes `launchctl print` ground truth rather than a guess.
  */
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 import { EXIT_NO_PANEL } from './device.js';
@@ -56,6 +57,17 @@ export type AgentOptions = {
   readonly pack: string;
   readonly socket: string;
   readonly log: string;
+  /**
+   * Quiet hours, carried through a reinstall rather than invented here.
+   *
+   * Optional because it is the one setting with no default: absent means the
+   * panel behaves as it always did. `index.ts` reads the existing window off
+   * the running job before rewriting the plist, so `install-agent --apply`
+   * preserves it. It used to delete it — silently, on the command
+   * `docs/INSTALL.md` prescribes whenever node moves, which is the worst
+   * possible place to lose a setting.
+   */
+  readonly quiet?: string;
 };
 
 /**
@@ -123,7 +135,13 @@ export function agentPlist(options: AgentOptions): string {
     <key>TAMACLAUDE_PACK</key>
     <string>${xml(options.pack)}</string>
     <key>TAMACLAUDE_SOCKET</key>
-    <string>${xml(options.socket)}</string>
+    <string>${xml(options.socket)}</string>${
+      options.quiet === undefined
+        ? ''
+        : `
+    <key>TAMACLAUDE_QUIET</key>
+    <string>${xml(options.quiet)}</string>`
+    }
   </dict>
   <key>RunAtLoad</key>
   <true/>
@@ -164,7 +182,10 @@ export function describeAgentInstall(
     `script     ${options.script}\n` +
     `pack       ${options.pack}\n` +
     `socket     ${options.socket}\n` +
-    `log        ${options.log}\n`
+    `log        ${options.log}\n` +
+    // The setting this command used to delete is the one the dry run could
+    // not show. "off" rather than blank, because absent is a real answer.
+    `quiet      ${options.quiet ?? 'off'}\n`
   );
 }
 
@@ -323,4 +344,42 @@ export function describeInstallOutcome(
     return 'Installed. Plug the panel in and it starts itself within thirty seconds; there is nothing else to run.\n';
   }
   return `Installed, but it is not running. The log is at ${log}\n`;
+}
+
+/** What `launchctl list` says about our label, or undefined if it says nothing. */
+export function agentListing(): string | undefined {
+  try {
+    return execFileSync('launchctl', ['list', AGENT_LABEL], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return undefined; // Not loaded.
+  }
+}
+
+/**
+ * The running job's own environment, via `launchctl print`.
+ *
+ * **`agentListing` cannot answer this and it is not obvious why.** `launchctl
+ * list` prints `ProgramArguments`, `Program`, `PID` and the exit status, and
+ * omits `EnvironmentVariables` entirely — measured against a job whose plist
+ * carries three of them. `launchctl print` prints an `environment` block with
+ * the values the process was actually given, which is the difference between
+ * what is configured and what is in force.
+ *
+ * Both are kept because they answer different questions: `list` is the cheap
+ * "is it loaded and what did it exit with", this is "and what does it think it
+ * is doing".
+ */
+export function agentEnvironment(): string | undefined {
+  try {
+    return execFileSync(
+      'launchctl',
+      ['print', `gui/${String(process.getuid?.() ?? 0)}/${AGENT_LABEL}`],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+  } catch {
+    return undefined; // Not loaded.
+  }
 }

@@ -5,12 +5,17 @@
  * There is deliberately no menu bar app: one would need a native shim or
  * Electron, which reintroduces a signed `.app` and Gatekeeper for a gift that
  * has to work on someone else's Mac on the day. The panel is its own UI, and
- * the CLI covers the rest. See BUILD_PLAN §Deliberately not scheduled.
+ * the CLI covers the rest. (That cited a `BUILD_PLAN` section which has never
+ * existed under that name — the decision stands on the sentence above it.)
  */
-import type { ResolvedPack } from './pack.js';
-
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import process from 'node:process';
@@ -30,6 +35,8 @@ import { isBirthday } from '@tamaclaude/packs';
 import {
   AGENT_LABEL,
   agentCondition,
+  agentEnvironment,
+  agentListing,
   agentPlist,
   agentPlistPath,
   describeAgentInstall,
@@ -40,13 +47,9 @@ import {
 import { runDaemon } from './daemon.js';
 import { chooseDevice, refusalReport } from './device.js';
 import { capDaemonLog, daemonLogPath } from './log.js';
-import { resolvePack } from './pack.js';
-
-/** One line naming the loaded pack and where it came from. */
-function describePack(resolved: ResolvedPack): string {
-  const how = resolved.source === 'default' ? 'default' : '$TAMACLAUDE_PACK';
-  return `${resolved.parsed.name} at ${resolved.directory} (${how})`;
-}
+import { describePack, resolvePack } from './pack.js';
+import { quietGate, quietSpecToKeep } from './quiet.js';
+import { status } from './status.js';
 
 /**
  * The search window for the next birthday: long enough to contain every date.
@@ -135,6 +138,20 @@ async function installAgent(argv: readonly string[]): Promise<void> {
     pack: resolved.directory,
     socket: defaultSocketPath(),
     log: daemonLogPath(home),
+    /*
+     * Carried forward, not set here. This command rewrites the plist whole, so
+     * before it learned to read the existing window, `--apply` deleted quiet
+     * hours — silently, and on the command `docs/INSTALL.md` prescribes
+     * whenever node moves. There is no flag to set it because there is nowhere
+     * better for it to live than the job's own environment; what there has to
+     * be is a guarantee that reinstalling does not throw it away.
+     */
+    quiet: quietSpecToKeep({
+      running: agentEnvironment(),
+      plist: existsSync(plistPath)
+        ? readFileSync(plistPath, 'utf8')
+        : undefined,
+    }),
   };
   process.stdout.write(
     describeAgentInstall(options, plistPath, existsSync(plistPath)),
@@ -328,63 +345,6 @@ function uninstallAgent(): void {
   );
 }
 
-/** What `launchctl list` says about our label, or undefined if it says nothing. */
-function agentListing(): string | undefined {
-  try {
-    return execFileSync('launchctl', ['list', AGENT_LABEL], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
-  } catch {
-    return undefined; // Not loaded.
-  }
-}
-
-/**
- * `tamaclaude status` — is it actually working?
- *
- * **The command the printed card should name.** `tamaclaude pack` answers
- * "which pack", which is the question a schema cannot answer — but it runs in
- * the terminal's environment and under the terminal's node, so it answers
- * cheerfully while a launchd agent is failing to spawn every thirty seconds.
- * This asks launchd instead.
- */
-function status(): void {
-  const listing = agentListing();
-  const parsed = parseAgentStatus(listing);
-  const node =
-    /"ProgramArguments"\s*=\s*\(\s*"([^"]+)"/u.exec(listing ?? '')?.[1] ??
-    process.execPath;
-  process.stdout.write(`${describeAgentStatus(parsed, existsSync(node))}\n`);
-  process.stdout.write(`pack      ${packStatus()}\n`);
-  process.stdout.write(`log       ${daemonLogPath(homedir())}\n`);
-}
-
-/**
- * The pack line, including when there is no pack.
- *
- * **A report that dies on the thing it is reporting is not a report.**
- * `resolvePack` throws for every ordinary pack problem — not cloned yet, a
- * clone refused for access, the folder moved, `TAMACLAUDE_PACK` pointing at
- * nothing — and `status` used to let it. It printed the agent line, exited 2,
- * and never reached the log path. So the one command the printed card names
- * told somebody *with* a pack problem strictly less than it tells somebody
- * with no problem at all, and withheld the log path exactly when it was the
- * next thing to look at.
- *
- * Reported as a line and exit 0, for the reason the agent half already works
- * that way: `not installed` is a status, not a failure of the status command.
- * Found by running the built CLI under a home with no pack — the 19 Sep dry
- * run in miniature, done early because a guide is the artefact under test.
- */
-function packStatus(): string {
-  try {
-    return describePack(resolvePack());
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-}
-
 /**
  * Failed opens before a supervised daemon exits to be restarted.
  *
@@ -486,10 +446,24 @@ async function daemon(argv: readonly string[]): Promise<void> {
   // panel is found wherever it now is. The supervisor this branch installs is
   // the rediscovery mechanism; teaching `panel.ts` to rediscover would mean
   // the device package choosing its own port, which is the caller's job.
+  /*
+   * Quiet hours come from the environment, not the pack and not a flag.
+   *
+   * The pack is the recipient's *content*; the hours somebody sleeps are a
+   * property of their desk, and putting them in a manifest would mean a schema
+   * change for a setting one machine has. A flag would mean the launchd plist
+   * carrying it anyway, which is where it ends up either way — beside
+   * `TAMACLAUDE_PACK`, off this public repo, and absent by default so nothing
+   * changes for anybody who has not set it.
+   *
+   * Unreadable is off, deliberately: see `quiet.ts` §WINDOW. A window this
+   * misread would be a dark panel at the wrong time with nothing saying why.
+   */
   const running = await runDaemon({
     socketPath: defaultSocketPath(),
     devicePath,
     pack: resolved.manifest,
+    quiet: quietGate(process.env['TAMACLAUDE_QUIET']),
     giveUpAfter: supervised ? GIVE_UP_AFTER : undefined,
     onGiveUp: supervised
       ? (): void => {
