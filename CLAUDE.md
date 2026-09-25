@@ -124,7 +124,7 @@ table and rationale: `docs/ARCHITECTURE.md`.
   in full. The window in which this is cheap is short and closes silently.
 
   **What is deliberately not protected: that this is a birthday gift, and its
-  date.** Both are stated four lines into this file and the date drives every
+  date.** Both are stated at the top of this file and the date drives every
   stage heading in `BUILD_PLAN.md`; a plan that cannot name its own deadline is
   not a plan. An earlier version of this rule listed the date as protected
   while the same file stated it, which is worse than either choice — a rule
