@@ -3,8 +3,8 @@
 A tiny desk display for your Claude Code sessions. An animated pixel crab
 (Clawd) lives on a 172×320 panel and reacts to what Claude is doing.
 
-**This is a birthday gift with an immovable date: Wednesday 23 September 2026.**
-When a trade-off appears between scope and the date, the date wins. See
+**This is a birthday gift for Wednesday 23 September 2026.** It was handed
+over on 2 September, so the date no longer bounds scope. See
 `BUILD_PLAN.md` for stages and `.claude/research/foundations/brief.md` for why
 the architecture is what it is.
 
@@ -101,7 +101,8 @@ table and rationale: `docs/ARCHITECTURE.md`.
   **What is already tracked is grandfathered, and listed here so nobody has to
   guess.** Four activities appear as animation names, SVG filenames,
   `ANIMATIONS` entries and a `package.json` script — 25, 18, 4 and 2 tracked
-  files. They are the catalogue. The date is four lines up, deliberately.
+  files. They are the catalogue. The date is at the top of this file,
+  deliberately.
 
   **The grandfathered set does not grow**, and the reason is combination, which
   no per-detail test can see: an exact date, four activities and a public author
@@ -123,7 +124,7 @@ table and rationale: `docs/ARCHITECTURE.md`.
   in full. The window in which this is cheap is short and closes silently.
 
   **What is deliberately not protected: that this is a birthday gift, and its
-  date.** Both are stated four lines into this file and the date drives every
+  date.** Both are stated at the top of this file and the date drives every
   stage heading in `BUILD_PLAN.md`; a plan that cannot name its own deadline is
   not a plan. An earlier version of this rule listed the date as protected
   while the same file stated it, which is worse than either choice — a rule
