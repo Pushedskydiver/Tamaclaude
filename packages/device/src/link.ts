@@ -142,26 +142,44 @@ function refusalFor(
 }
 
 /**
- * The panel stopped accepting a write, and there is no way back in software.
+ * Refuse the link because a write took too long to be believed.
  *
- * **Refused rather than retried, and the reason is libuv.** A `write(2)` to a
- * device whose tx buffer has filled blocks in the threadpool, and abandoning
- * the promise does not abandon the write: the thread is never released, the fd
- * stays open, and the bytes may still land. Measured — four abandoned writes
- * exhaust the default four-thread pool, after which `fs.open` never completes
- * anywhere in the process. `serial.ts` opens the port with `fs.open`, so the
- * daemon would then be unable to reopen it *ever*, including after a replug:
- * the same permanent freeze the bound was added to prevent, arrived at four
- * retries later and now poisoning the whole process.
+ * **The reason this is absorbing changed on 2026-09-06, and the new one is
+ * better evidenced than the old one.** It used to be that a blocked `write(2)`
+ * could not be taken back, so every reopen cost a threadpool thread and an fd
+ * until `fs.open` stopped completing anywhere in the process. `serial.ts`
+ * §WRITE_RETRY_MS removed that: the fd is `O_NONBLOCK`, nothing parks, and a
+ * reopen is cheap. On that reasoning alone this refusal should have become an
+ * ordinary reconnect, and a change doing exactly that was written and then
+ * withdrawn.
  *
- * Holding the old fd is the second reason. A tty drops DTR on the *last* close,
- * and `afterOpen` depends on that toggle to reset the board — so while the
- * abandoned write holds the fd, the reopen this would retry does not reset
- * anything and would wedge again.
+ * What settled it was watching the real failure. A genuine wedge on the
+ * non-blocking fd, twice in about four minutes: the daemon refused, a
+ * supervisor restarted it, it reopened the port, reported `panel online`, and
+ * wedged again straight away.
  *
- * So: one wedged write, then stop, and say what a person has to do. Unplugging
- * the panel power-cycles the board whatever the host thinks, which is the one
- * thing that does work.
+ * **Be careful what that shows, because the first version of this paragraph
+ * was not.** It concluded "reopening does not reset a board that has stopped
+ * accepting data", which is one explanation and not the only one. The other
+ * is that the reset fired exactly as `serial.ts` §BOOT_SETTLE_MS says it does,
+ * the board came up clean, and this host's traffic wedged it again within
+ * seconds. Two re-wedges cannot tell those apart, and the second is the one
+ * the rest of the tree predicts — four separate places assert that opening
+ * toggles DTR/RTS and reboots the chip, and nothing here outranks them.
+ *
+ * The decision survives either way, which is why it is safe to leave the
+ * question open: on both readings a reconnect on a timer ends up back here
+ * within seconds, having paid `serial.ts` §raw's `stty` against a port that
+ * can park it. What a replug adds over a reopen is unestablished; that it is
+ * what has actually recovered this panel every time is not.
+ *
+ * So this stays absorbing, for a reason that is now about the *device* rather
+ * than about the host's threadpool. The cost is real and worth naming: after
+ * the person does unplug the panel, this state does not notice, and the daemon
+ * has to be restarted before the healthy board is used. Retrying when the
+ * device instance *changes* — which is what a replug looks like from here, and
+ * what the watchdog already discriminates on — would close that, and is the
+ * obvious next change rather than one this comment should pretend it made.
  */
 export function afterWedge(state: LinkState): LinkState {
   if (state.phase === 'refused') return state;
@@ -170,11 +188,10 @@ export function afterWedge(state: LinkState): LinkState {
     phase: 'refused',
     needsPrime: true,
     refusal:
-      'the panel stopped accepting data and the write could not be taken back ' +
-      '— unplug it and plug it back in. Retrying in software cannot help: the ' +
-      'blocked write holds both a thread and the port open, so the reopen ' +
-      'would neither reset the board nor, after a few attempts, be able to ' +
-      'open anything at all.',
+      'the panel stopped accepting data — unplug it from the hub, plug it ' +
+      'back in, and restart the daemon. Retrying in software does not help: ' +
+      'reopening the port does not reset a board in this state, which was ' +
+      'measured rather than assumed.',
   };
 }
 
